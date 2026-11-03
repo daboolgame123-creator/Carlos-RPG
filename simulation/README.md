@@ -106,3 +106,22 @@ PYTHONPATH=src python scenarios/test_village/demo_actions.py
 ```
 
 This remains a **trusted local** prototype without API authentication. It does not automatically decide another action after completion, generate NPC discoveries, simulate food production or payments, or modify Carlos's real story. Logical time and action effects cannot advance while the play session is closed. World schema/rules versions: **5 / 6**. Older experimental SQLite databases require explicit migration/recreation.
+
+## Phase 01-E — Autonomous NPC lifecycle (opt-in)
+
+`LivingWorldEngine` coordinates the full **decision → action start → scheduled completion → re-evaluation** cycle during an explicit player-time command. It does not use real elapsed time, a background worker, or internet connectivity. A player-interrupting signal stops the cycle at that logical instant; remaining seconds are returned. Concurrent NPC actions complete independently and may automatically restart after their need-based decision. The whole requested step is committed as **one atomic event batch**; if a rule fails or a configurable event bound is reached, nothing is written.
+
+```python
+from carlos_sim import SQLiteEventStore, TimeEngine, LivingWorldEngine
+
+# Using an already created and configured *test* world:
+with SQLiteEventStore('test_world.sqlite') as store:
+    clock = TimeEngine(store)
+    clock.open_session('village-test')
+    result = LivingWorldEngine(store, clock, max_events_per_advance=1000).advance(
+        'village-test', seconds=300, command_id='player-moves-1',
+        expected_revision=store.load('village-test').revision)
+    clock.close_session('village-test')
+```
+
+The existing `TimeEngine.advance` remains manual and **does not** automatically make NPC decisions; applications must opt in to `LivingWorldEngine`. The five-person test demo runs using `PYTHONPATH=src python scenarios/test_village/demo_living_world.py`. All actions and policy weights remain experimental; no Harthn or Carlos story data is imported. The coordinator uses the existing schema 5/rules 6 event formats; it introduces no DB schema migration. No authenticated/public API is included. Explicit command IDs must be unique; duplicate high-level commands raise `DuplicateCommand` rather than replaying a historical result. A too-large advancement request fails atomically at the event cap; callers can explicitly advance in smaller steps.
