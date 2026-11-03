@@ -29,7 +29,7 @@ class SocialIntent:
     reason: str
 
 
-def _unavailable(state: WorldState, npc_id: str) -> bool:
+def _physically_unavailable(state: WorldState, npc_id: str) -> bool:
     if npc_id not in state.npcs:
         return True
     if any(t['npc_id'] == npc_id and t['status'] == 'traveling'
@@ -38,9 +38,7 @@ def _unavailable(state: WorldState, npc_id: str) -> bool:
     if any(a['npc_id'] == npc_id and a['status'] == 'running'
            for a in state.actions.values()):
         return True
-    # Manual intention already recorded at this tick belongs to that actor.
-    pending = state.npcs[npc_id]['last_decision']
-    return pending is not None and pending['at'] == state.time
+    return False
 
 
 def choose_social_intent(state: WorldState, npc_id: str, *, cooldown: int = MIN_SOCIAL_COOLDOWN) -> SocialIntent | None:
@@ -51,7 +49,11 @@ def choose_social_intent(state: WorldState, npc_id: str, *, cooldown: int = MIN_
     """
     if type(cooldown) is not int or cooldown < MIN_SOCIAL_COOLDOWN:
         raise ValueError('social cooldown must be >= 180 simulated seconds')
-    if _unavailable(state, npc_id):
+    if _physically_unavailable(state, npc_id):
+        return None
+    # The sender may use their own private intention to defer social action.
+    own_decision = state.npcs[npc_id]['last_decision']
+    if own_decision is not None and own_decision['at'] == state.time:
         return None
     history = state.social_messages
     # The actor cannot spam many recipients to evade the per-speaker cooldown.
@@ -62,7 +64,7 @@ def choose_social_intent(state: WorldState, npc_id: str, *, cooldown: int = MIN_
     own = state.npcs[npc_id]
     candidates: list[tuple[int, str, str, str]] = []
     for peer_id in sorted(state.npcs):
-        if peer_id == npc_id or _unavailable(state, peer_id):
+        if peer_id == npc_id or _physically_unavailable(state, peer_id):
             continue
         if state.entities[peer_id]['location_id'] != location:
             continue
