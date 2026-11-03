@@ -15,6 +15,7 @@ class DuplicateCommand(Exception): pass
 class SQLiteEventStore:
     def __init__(self, path: str | Path):
         self.db = sqlite3.connect(str(path), isolation_level=None)
+        self._active_worlds: set[str] = set()
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.execute("PRAGMA busy_timeout=5000")
         self.db.executescript("""
@@ -41,6 +42,7 @@ class SQLiteEventStore:
         """)
 
     def close(self) -> None:
+        self._active_worlds.clear()
         self.db.close()
 
     def __enter__(self): return self
@@ -113,6 +115,11 @@ class SQLiteEventStore:
             raise InvalidEvent("clock advancement/firing requires a trusted clock capability")
         if not npc_authorized and any(e.event_type == "NPCDecisionRecorded" for e in events):
             raise InvalidEvent("NPC decisions require a trusted planner capability")
+        npc_mutations = {"NPCInformationDelivered", "NPCBeliefReceived", "NPCNeedChanged", "NPCDecisionRecorded"}
+        if any(e.event_type in npc_mutations for e in events) and world_id not in self._active_worlds:
+            raise InvalidEvent("NPC state cannot change outside an active play session")
+        if any(e.event_type == "NPCInformationDelivered" for e in events) and not npc_authorized:
+            raise InvalidEvent("information delivery requires a trusted NPC capability")
         serialized = [e.to_dict() for e in events]
         request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized})
         self.db.execute("BEGIN IMMEDIATE")
