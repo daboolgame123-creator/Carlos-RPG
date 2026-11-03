@@ -9,8 +9,8 @@ from typing import Any, Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 3
-RULES_VERSION = 4
+SCHEMA_VERSION = 4
+RULES_VERSION = 5
 
 
 def _thaw(value: Any) -> Any:
@@ -173,7 +173,7 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if p["id"] in d["entities"] or p["id"] in d["locations"]:
             raise ValueError("duplicate entity")
         d["entities"][p["id"]] = {k: p[k] for k in ("name", "location_id", "controller")}
-    elif kind in ("NPCConfigured", "NPCBeliefReceived", "NPCNeedChanged", "NPCDecisionRecorded"):
+    elif kind in ("NPCConfigured", "NPCInformationDelivered", "NPCBeliefReceived", "NPCNeedChanged", "NPCDecisionRecorded"):
         from .npc import project_npc_event
         project_npc_event(d, e, bootstrap=bootstrap)
     elif kind == "ResourceChanged":
