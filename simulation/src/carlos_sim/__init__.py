@@ -10,3 +10,4 @@ from .actions import NPCActionService, ActionStart, DURATIONS
 from .living_world import LivingWorldEngine, LivingAdvanceResult
 from .movement import NPCMovementService, TravelStart, perceive_local
 from .navigation import NPCNavigationService, shortest_known_route, next_route
+from .social import NPCSocialService, SocialResult
