@@ -244,6 +244,7 @@ def test_departed_traveler_not_locally_visible_to_other_people(village):
     assert 'nora' not in visible
     assert 'carlos' in visible and 'basim' in visible
     assert during.entities['nora']['location_id'] == 'market'  # saved origin is not presence
+    # Nora only appears at the destination when her journey completes.
     arrived = clock.advance('village', seconds=120, command_id='arrive',
                             expected_revision=during.revision)
     assert 'nora' in perceive_local(arrived.state, 'nora')['occupants']
