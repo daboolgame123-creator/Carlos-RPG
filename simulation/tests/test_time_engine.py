@@ -201,3 +201,39 @@ def test_firing_cannot_impersonate_npc(env):
     db.append("village","time",3,[DomainEvent("TimeAdvanced",None,"test",10,{"from":0,"to":10})],clock_authorized=True)
     with pytest.raises(InvalidEvent, match="impersonate"):
         db.append("village","badfire",4,[DomainEvent("ScheduledEventFired","n","fake",10,{"id":"signal"})],clock_authorized=True)
+
+
+def test_scheduled_firing_cannot_change_logical_time(env):
+    db, clock = env
+    clock.open_session("village")
+    clock.schedule_signal("village", "alarm", due=10, payload={}, expected_revision=0)
+    clock.advance("village", seconds=10, command_id="advance", expected_revision=1)
+    state = db.load("village")
+    assert state.time == 10 and "alarm" not in state.scheduled
+    # Fresh scheduled item due at current time cannot be added, so use a separate
+    # valid pending event and advance the clock to its due time without firing it.
+    with SQLiteEventStore(":memory:") as isolated:
+        isolated.create_world("isolated")
+        isolated.append("isolated", "schedule", 0, [DomainEvent(
+            "ScheduledEventCreated", None, "fixture", 0,
+            {"id": "signal", "due": 10, "order": 1, "kind": "signal", "payload": {}, "interrupt": False})])
+        isolated.append("isolated", "advance", 1, [DomainEvent(
+            "TimeAdvanced", None, "fixture", 10, {"from": 0, "to": 10})], clock_authorized=True)
+        original = isolated.load("isolated").to_dict()
+        with pytest.raises(InvalidEvent, match="logical time"):
+            isolated.append("isolated", "exploit", 2, [DomainEvent(
+                "ScheduledEventFired", None, "fixture", 999, {"id": "signal"})], clock_authorized=True)
+        assert isolated.load("isolated").to_dict() == original
+
+
+def test_event_processing_cap_checked_before_interrupt(env):
+    db, clock = env
+    clock.open_session("village")
+    clock.schedule_signal("village", "interrupt", due=10, payload={}, interrupt=True, expected_revision=0)
+    limited = TimeEngine(db, max_events_per_advance=1)
+    limited.open_session("village")
+    original = db.load("village").to_dict()
+    with pytest.raises(AdvanceLimitExceeded):
+        limited.advance("village", seconds=20, command_id="too-many", expected_revision=1)
+    assert db.load("village").to_dict() == original
+    assert db.db.execute("SELECT count(*) FROM commands WHERE command_id='too-many'").fetchone()[0] == 0
