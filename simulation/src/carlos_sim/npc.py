@@ -15,6 +15,7 @@ from .time_engine import TimeEngine
 ACTIONS = ("rest", "work", "investigate", "wait")
 NEEDS = ("fatigue", "hunger", "safety")
 GOALS = ("earn", "explore", "survive")
+MIN_DECISION_COOLDOWN = 60
 
 
 def _integer(value: Any, *, minimum: int = 0, maximum: int = 100) -> bool:
@@ -31,7 +32,7 @@ def _validate_claim(claim: Any) -> None:
 
 
 def validate_npc_state(npc: Any) -> None:
-    if not isinstance(npc, dict) or set(npc) != {"role", "needs", "goals", "beliefs", "next_decision_at", "last_decision"}:
+    if not isinstance(npc, dict) or set(npc) != {"role", "needs", "goals", "beliefs", "inbox", "delivery_history", "next_decision_at", "last_decision"}:
         raise ValueError("invalid NPC state")
     if not isinstance(npc["role"], str) or not npc["role"]:
         raise ValueError("invalid NPC role")
@@ -43,6 +44,16 @@ def validate_npc_state(npc: Any) -> None:
         raise ValueError("invalid NPC knowledge")
     for claim in npc["beliefs"].values():
         _validate_claim(claim)
+    if not isinstance(npc["delivery_history"], list) or any(not isinstance(x, str) or not x for x in npc["delivery_history"]) or len(set(npc["delivery_history"])) != len(npc["delivery_history"]):
+        raise ValueError("invalid delivery history")
+    if not isinstance(npc["inbox"], dict):
+        raise ValueError("invalid NPC inbox")
+    for delivery_id, item in npc["inbox"].items():
+        if not isinstance(delivery_id, str) or not delivery_id or not isinstance(item, dict) or set(item) != {"key", "claim", "sender_id", "location_id", "method"}:
+            raise ValueError("invalid pending delivery")
+        if not isinstance(item["key"], str) or not item["key"] or not isinstance(item["sender_id"], str) or not item["sender_id"] or not isinstance(item["location_id"], str) or not item["location_id"] or item["method"] not in ("message", "observation"):
+            raise ValueError("invalid delivery provenance")
+        _validate_claim(item["claim"])
     if not _integer(npc["next_decision_at"], maximum=2**63 - 1):
         raise ValueError("invalid decision schedule")
     last = npc["last_decision"]
@@ -64,24 +75,45 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
         if not bootstrap or state["time"] != 0 or event.actor_id is not None:
             raise ValueError("NPC setup requires trusted bootstrap")
         profile = {"role": p["role"], "needs": p["needs"], "goals": p["goals"],
-                   "beliefs": {}, "next_decision_at": 0, "last_decision": None}
+                   "beliefs": {}, "inbox": {}, "delivery_history": [], "next_decision_at": 0, "last_decision": None}
         validate_npc_state(profile)
         state["npcs"][ident] = _json_copy(profile)
         return
     if ident not in state["npcs"]:
         raise ValueError("NPC not configured")
     npc = state["npcs"][ident]
-    if event.event_type == "NPCBeliefReceived":
-        if set(p) != {"npc_id", "key", "claim"} or not isinstance(p["key"], str) or not p["key"]:
-            raise ValueError("invalid knowledge delivery")
+    if event.event_type == "NPCInformationDelivered":
+        if set(p) != {"npc_id", "delivery_id", "key", "claim", "sender_id", "location_id", "method"}:
+            raise ValueError("invalid information delivery")
+        delivery_id = p["delivery_id"]]
+        if not isinstance(delivery_id, str) or not delivery_id or delivery_id in npc["delivery_history"]:
+            raise ValueError("invalid or duplicate delivery ID")
+        if not isinstance(p["key"], str) or not p["key"] or p["method"] not in ("message", "observation"):
+            raise ValueError("invalid delivery kind/key")
         _validate_claim(p["claim"])
+        sender = p["sender_id"]
+        if not isinstance(sender, str) or sender not in state["entities"] or event.actor_id != sender:
+            raise ValueError("delivery must be attributed to a real sender")
+        location = state["entities"][ident]["location_id"]
+        if p["location_id"] != location or state["entities"][sender]["location_id"] != location:
+            raise ValueError("sender and recipient must share the recorded location")
         if p["claim"]["received_at"] != state["time"]:
-            raise ValueError("knowledge must be delivered at current simulation time")
-        if event.actor_id != ident and event.actor_id is not None:
-            raise ValueError("untrusted third-party delivery actor")
-        # A system event with no actor means a trusted externally resolved delivery.
-        # No omniscient state is read here.
-        npc["beliefs"][p["key"]] = _json_copy(p["claim"])
+            raise ValueError("delivery must happen at current world time")
+        if p["method"] == "message":
+            if sender == ident or p["claim"]["source"] != sender:
+                raise ValueError("message must identify another character as source")
+        elif sender != ident or p["claim"]["source"] != "observation:" + location:
+            raise ValueError("observation must belong to the perceiving NPC and location")
+        npc["inbox"][delivery_id] = {k: _json_copy(p[k]) for k in ("key", "claim", "sender_id", "location_id", "method")}
+        npc["delivery_history"].append(delivery_id)
+    elif event.event_type == "NPCBeliefReceived":
+        if set(p) != {"npc_id", "key", "delivery_id"} or event.actor_id != ident:
+            raise ValueError("belief requires recipient acknowledgement of prior delivery")
+        delivery = npc["inbox"].get(p["delivery_id"])
+        if delivery is None or delivery["key"] != p["key"]:
+            raise ValueError("belief has no matching pending information delivery")
+        npc["beliefs"][p["key"]] = delivery["claim"]
+        del npc["inbox"][p["delivery_id"]
     elif event.event_type == "NPCNeedChanged":
         if set(p) != {"npc_id", "need", "previous", "current"} or p["need"] not in NEEDS:
             raise ValueError("invalid need change")
@@ -97,7 +129,7 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
             raise ValueError("NPC decision attempted before next allowed time")
         if p["action"] not in ACTIONS or type(p["score"]) is not int or not isinstance(p["reason"], str) or not p["reason"]:
             raise ValueError("invalid decision contents")
-        if not _integer(p["next_decision_at"], maximum=2**63-1) or p["next_decision_at"] <= state["time"]:
+        if not _integer(p["next_decision_at"], maximum=2**63-1) or p["next_decision_at"] < state["time"] + MIN_DECISION_COOLDOWN:
             raise ValueError("next decision must be in future")
         expected = _score_choice(npc, ident)
         if (p["action"], p["score"], p["reason"]) != (expected.action, expected.score, expected.reason):
@@ -154,8 +186,8 @@ class NPCService:
     This stage does not yet execute actions; that requires action resolvers.
     """
     def __init__(self, store: SQLiteEventStore, clock: "TimeEngine", *, decision_cooldown: int = 60):
-        if type(decision_cooldown) is not int or decision_cooldown < 1:
-            raise ValueError("cooldown must be a positive integer")
+        if type(decision_cooldown) is not int or decision_cooldown < MIN_DECISION_COOLDOWN:
+            raise ValueError("decision cooldown must be at least 60 simulation seconds")
         self.store = store
         self.clock = clock
         if clock.store is not store:
