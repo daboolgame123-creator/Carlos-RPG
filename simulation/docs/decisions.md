@@ -66,3 +66,14 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Fail closed on missing required resource counters or duplicate action IDs; do not invent resources, discoveries or results.
 - Keep `TimeEngine.advance` unchanged for backward compatibility; applications wishing for autonomy must explicitly use the new coordinator.
 - No change to schema 5/rules 6; original test databases can be opened with the same event formats.
+
+## Phase 01-F decisions
+
+- World geography is an explicitly constructed, bidirectional graph; no arbitrary teleportation and no pathfinding or goal-based travel yet.
+- Moving consumes simulation time, survives an application restart, and respects player-interrupt signals.
+- A traveling NPC is physically anchored to its departure location in state until arrival, while its `traveling` flag prevents local action/perception; precise in-transit positions are outside current scope.
+- Perception captures only currently co-located entity IDs at an event timestamp, never omniscient/current global knowledge.
+- Observation snapshots can be stale and are not automatically converted to the NPC's private semantic beliefs.
+- Multiple arrivals at the same tick are resolved in persistent schedule order; each snapshot reflects the world as of that completion event.
+- No automatic route choice, sight/occlusion, stealth, encounters, combat, hearing, moving player characters or canonical Harthn geography yet.
+- Movement capability and session flags are trusted local controls, **not network authentication**. Schema/rules versions advance to 6/7.
