@@ -12,7 +12,7 @@
 
 ## Verification
 
-Local command: `cd simulation && python -m pytest -q` — **110 passed** (84 prior tests + 26 new Phase 01-D tests). `python -m compileall -q src tests scenarios` passed. The five-character offline demo was run successfully and completed all five scheduled NPC actions, with differentiated outcomes. No GitHub CI run.
+Local command: `cd simulation && python -m pytest -q` — **112 passed after review** (84 prior tests + 28 Phase 01-D tests). `python -m compileall -q src tests scenarios` passed. The five-character offline demo was run successfully and completed all five scheduled NPC actions, with differentiated outcomes. No GitHub CI run.
 
 Regression coverage includes cross-NPC concurrency; exact completion timing and results; interruption and resumption; session close/reopen; snapshot and genesis replay; unknown counters; forged schedule/action events; duplicate IDs; stale revisions; tampering and resource minting; over-early firing; action repeat; original Carlos/story unaffected.
 
@@ -30,3 +30,13 @@ Regression coverage includes cross-NPC concurrency; exact completion timing and 
 - Action records are append-only and currently retained indefinitely; archival/compaction strategy deferred.
 - World schema 5 / rules 6, incompatible with older experimental data without migration. All local databases used in tests are isolated and disposable.
 - The GitHub branch is a staging implementation; do not merge to main until reviewed.
+
+## Post-implementation review and corrective action
+
+An additional edge-case test identified a durable orphan reservation bug: a caller holding the internal `action_authorized` capability could commit `ScheduledEventCreated` with reserved `__npc_action_id` without a matching `NPCActionStarted` in the same transaction. This left the clock unable to process the resulting due signal because its action was missing.
+
+**Fix:** `validate_action_reservations` now runs at the **atomic command boundary** before SQLite commit and at the **fully replayed world boundary** during load. It rejects reserved signals that do not map to matching running actions. The check is deliberately after full command application, because a valid action-start command creates its schedule first and its action record second.
+
+**Evidence:** The failure was reproduced in an isolated SQLite test world, fixed, and covered by two regression tests: a lone forged reserved schedule is refused and rolls back completely; an authentic two-event action start still commits and replays correctly. `python -m pytest -q`: **112 passed**. `python -m compileall -q src tests scenarios`: passed. Current GitHub source files `actions.py`, `store.py`, and `test_actions.py` were verified by matching exact Git blob SHAs to the locally tested files.
+
+**Limits:** trusted internal capabilities are not user authentication, and no automated hosted CI test has run. This is still a prototype and does not autonomously select the next action.
