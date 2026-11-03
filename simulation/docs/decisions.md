@@ -116,3 +116,13 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Limit repeated identical social acts from the same sender to the same recipient within one simulated tick. Different kinds can occur in the same tick; later repetition requires logical time progression.
 - Treat the guard as anti-duplication, not fully realistic social pacing; future phases should connect influence to attention, time, truth, reputation, promises and fulfilled actions.
 - Bump rules version 9→10 without changing schema version 8, to reject earlier replay semantics pending migration.
+
+## Phase 01-I design decisions
+
+- Make independent social initiative explicitly opt-in on the living-world coordinator, not an implicit change to the manual time engine.
+- Base motives on **speaker-owned** needs and directed relationship, never on hidden information belonging to the recipient. Select only idle, present NPC peers and never autonomously act as Carlos.
+- Maintain causal audit: record typed speech and receiver acknowledgement using existing domain events, under one atomic, bounded time command.
+- Respect previously recorded manual activity intentions, and do not allow conversation to interrupt active work or travel.
+- Prevent social influence farming: minimum 180 simulated seconds between outgoing initiatives per speaker, and 900 seconds between same-topic auto-initiatives to the same partner. Earlier Phase 01-H low-level anti-duplication rules remain intact.
+- Treat greetings, requests, offers and threats as *speech only*. Defer actual assistance, negotiation, deception, dialogue generation, reputation, obligations, partner consent and duration-based conversation costs.
+- Keep schema 8/rules 10 and story state unchanged. Verify each phase before progressing.
