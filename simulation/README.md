@@ -150,3 +150,9 @@ The demo uses synthetic Square / Bridge / Courtyard places, not Harthn or Carlos
 ### Phase 01-F review corrections
 
 While an NPC is traveling, its stored location remains the departure endpoint for deterministic persistence, **but it is absent for local observation and local messaging**. Both the sender and recipient of a local information delivery must not be in transit. New NPC activity decisions are also blocked during travel and become eligible after arrival. Seven regression tests added; **160 passed locally** after review. See `docs/phase_01f_report.md`.
+
+## Phase 01-G — NPC-local navigation (experimental)
+
+Navigation profiles remember each NPC's **known routes**, **visited places**, and an optional learned target. Surveying reveals roads incident to the current location only. A deterministic Dijkstra planner considers only those learned roads. With `LivingWorldEngine(store, clock, navigation_enabled=True)`, explorers with sufficient stamina and exploration interest independently select unvisited, reachable known road endpoints and travel while explicitly requested player time progresses. Other NPCs continue their regular activities. Previously recorded manual intentions take priority over exploration. Offline time remains frozen.
+
+`NPCNavigationService.survey(...)` performs a local survey; `NPCNavigationService.target(...)` selects a previously learned reachable destination. No automatic player-character travel or network authentication exists. From `simulation/` run `PYTHONPATH=src python scenarios/test_village/demo_navigation.py`. Test policy values are not Carlos story facts. World schema/rules: **7/8**; earlier experimental databases require deliberate migration/recreation. Details: `docs/phase_01g_report.md`.
