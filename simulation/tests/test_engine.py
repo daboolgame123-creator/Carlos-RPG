@@ -56,7 +56,7 @@ def test_idempotency_and_conflict(store):
 def test_snapshot_and_tail(store):
     store.append("test-world","init",0,[location(),npc(),resource(None,10)],bootstrap=True)
     store.snapshot("test-world")
-    store.append("test-world","update",3,[resource(10,7),ev("TimeAdvanced",{"from":0,"to":12},12)])
+    store.append("test-world","update",3,[resource(10,7),ev("TimeAdvanced",{"from":0,"to":12},12)],clock_authorized=True)
     assert store.load("test-world").to_dict()==store.load("test-world",use_snapshot=False).to_dict()
     assert store.verify("test-world").time==12
 
@@ -86,8 +86,8 @@ def test_no_time_passage_on_read_save(store):
 
 
 def test_time_advance_validation(store):
-    with pytest.raises(InvalidEvent):store.append("test-world","bad",0,[ev("TimeAdvanced",{"from":0,"to":5},4)])
-    assert store.append("test-world","good",0,[ev("TimeAdvanced",{"from":0,"to":5},5)]).time==5
+    with pytest.raises(InvalidEvent):store.append("test-world","bad",0,[ev("TimeAdvanced",{"from":0,"to":5},4)],clock_authorized=True)
+    assert store.append("test-world","good",0,[ev("TimeAdvanced",{"from":0,"to":5},5)],clock_authorized=True).time==5
     with pytest.raises(InvalidEvent):store.append("test-world","bad2",1,[location()])
 
 
@@ -157,7 +157,7 @@ def test_replay_is_deterministic_across_stores(tmp_path):
         with SQLiteEventStore(tmp_path / f"{i}.db") as store:
             store.create_world("sample")
             store.append("sample","init",0,[location(), npc(), resource(None,5)],bootstrap=True)
-            store.append("sample","time",3,[ev("TimeAdvanced",{"from":0,"to":120},120)])
+            store.append("sample","time",3,[ev("TimeAdvanced",{"from":0,"to":120},120)],clock_authorized=True)
             states.append(canonical_hash(store.verify("sample").to_dict()))
     assert states[0]==states[1]
 
@@ -210,7 +210,7 @@ def test_consume_other_entity_resources_rejected(store):
 
 def test_bootstrap_after_clock_advanced_rejected(store):
     store.append("test-world", "init", 0, [location(), npc()], bootstrap=True)
-    store.append("test-world", "time", 2, [ev("TimeAdvanced", {"from":0,"to":60},60)])
+    store.append("test-world", "time", 2, [ev("TimeAdvanced", {"from":0,"to":60},60)],clock_authorized=True)
     with pytest.raises(InvalidEvent):
         store.append("test-world", "late-init", 3, [DomainEvent("ResourceChanged", None, "test", 60, {"owner_id":"npc1", "resource":"gold", "previous":None, "current":5,"source":"initialization"})],bootstrap=True)
 
