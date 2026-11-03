@@ -139,7 +139,7 @@ class SQLiteEventStore:
             raise InvalidEvent("NPC action start requires trusted action capability")
         if any(e.event_type == "NPCActionStarted" for e in events) and world_id not in self._active_worlds:
             raise InvalidEvent("NPC actions cannot start outside an active play session")
-        movement_events = {"NPCTravelStarted", "NPCObserved"}
+        movement_events = {"NPCTravelStarted", "NPCObserved", "NPCNavigationSurveyed", "NPCNavigationTargetSet"}
         if any(e.event_type in movement_events for e in events):
             if not movement_authorized:
                 raise InvalidEvent("NPC travel/perception requires trusted movement capability")
