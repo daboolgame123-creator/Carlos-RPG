@@ -27,3 +27,12 @@ Deferred decisions: RNG algorithm/state; knowledge models; NPC utility-scoring; 
 - **Version bump:** schema 2, rules 3. No silent migration of experimental databases.
 
 Open questions for later phases: NPC decision cadence, resource production and transfers, multi-actor interrupts, semantic interpretation of signals, persistent user identity, and authenticated gameplay sessions.
+
+## Phase 01-C decisions
+
+- **NPC perspective:** the planner consults only the NPC's stored needs, goals and beliefs; a rumor can be wrong.
+- **Prototype policy:** integer scores, stable tie order, four possible intentions. No unseeded RNG.
+- **Separation of planning and execution:** a selected intention has no economic, combat or movement side effects.
+- **Event provenance:** decisions are validated against policy before committing and use trusted local planner capability.
+- **Time boundary:** decisions require an active local play session and are cooldown-limited; there is no wall-clock tick or autonomous background service.
+- **Migration:** schema 3/rules 4; no silent conversion of test databases.
