@@ -85,3 +85,7 @@ A traveling NPC retains `entity.location_id` as its original endpoint until sche
 ### Phase 01-G navigation integrity follow-up
 
 The shared movement reducer validates route knowledge for any NPC with an initialized navigation profile. This prevents bypassing per-NPC map knowledge with legacy movement services or lower-level trusted calls. Knowledge is checked before a travel event is committed; a rejected batch rolls back its reserved schedule. For compatibility, worlds without navigation profiles preserve previous explicit-route semantics.
+
+## Phase 01-H — Social projection and local receipt
+
+`WorldState.relations` stores **directed** trust (observer NPC → peer ID); `social_messages` holds event history. The reducer validates `SocialMessageSent` and `SocialMessageReceived`, including sender identity, distinct NPC recipient, both parties' physical co-location, bounded speech text, trusted local capability and correct receipt ownership. A pending message produces no trust change. Its recipient's receipt deterministically interprets the declared speech-act type and records before/after trust and reaction within the transaction. Strict validation and immutable snapshots ensure replay does not silently modify relationship histories. The current dedicated `NPCSocialService.interact` sends and receives in one atomic command. Trust does not transfer real goods or imply factual truth. The store logs the `social_authorized` capability for replay; it must not be exposed to untrusted callers. Schema 8/rules 9.
