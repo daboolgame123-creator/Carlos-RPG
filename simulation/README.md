@@ -178,3 +178,11 @@ Delayed local speech receipts must be confirmed at the **original message locati
 Each sender waits at least **180 simulated seconds** between automatic initiations and **900 simulated seconds** before repeating the same type of exchange with the same person. Choosing another conversation partner is still possible after the per-speaker cooldown. The original `NPCSocialService` stays available for authorized manual interactions. The social mode defaults to **off**, preserving earlier behavior. No messages or actions advance while the play session is closed.
 
 From `simulation/` run `python -m pytest -q` or `PYTHONPATH=src python scenarios/test_village/demo_social_autonomy.py`. The demonstration involves fictional test characters and fixed speech templates, not the actual Carlos narrative. **Speech does not execute help, transfer resources, settle debts or generate truthful knowledge.** See `docs/phase_01i_report.md`. Schema **8**, rules **10** unchanged; no database migration.
+
+## Phase 01-J — Promises and resource-backed help (opt-in API)
+
+`NPCAssistanceService` records actual NPC-to-NPC assistance as a **request → promise/refusal → delivery/cancellation** workflow. Only a successfully fulfilled promise transfers initialized **food** or **water**. One transfer reduces the provider's stock and adds the same quantity to the recipient's stock; the ledger records quantities before/after and adjusts only the recipient's directed trust (+5). A spoken `offer_help` does **not** automatically donate goods.
+
+The two NPCs must be present and idle; a request and reply occur face-to-face, with the reply at the original request site. Fulfillment requires co-location and available stock, but may occur later at another place. World time never advances when a session is closed. Duplicate transfers, insufficient stock, uninitialized inventories and unauthorized events are rejected atomically. Carlos remains player-controlled and is excluded from automatic assistance transactions.
+
+Run `PYTHONPATH=src python scenarios/test_village/demo_assistance.py` from `simulation/` for an isolated demonstration, and see `docs/phase_01j_report.md`. **Schema 9 / Rules 11** require an explicit migration or new experimental test database. This is a trusted **local prototype API**, not a public authenticated service or automatic autonomous social planner.
