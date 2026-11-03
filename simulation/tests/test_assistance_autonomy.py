@@ -247,3 +247,110 @@ def test_request_refractory_period_survives_refusal(village):
     assert intent is not None and intent.request_id=='auto-help:nora:900'
 
 
+def test_atomic_event_budget_failure(village):
+    db,clock=village
+    before=db.load('w').to_dict()
+    with pytest.raises(AdvanceLimitExceeded):
+        living(db,clock,300,'budget-too-small',max_events_per_advance=1)
+    assert db.load('w').to_dict()==before
+    assert db.db.execute("SELECT count(*) FROM commands WHERE command_id='budget-too-small'").fetchone()[0]==0
+
+
+def test_paused_game_cannot_autonomously_deliver(village):
+    db,clock=village
+    engine=LivingWorldEngine(db,clock,assistance_enabled=True)
+    result=engine.advance('w',seconds=1,command_id='first',expected_revision=db.load('w').revision)
+    clock.close_session('w')
+    before=db.load('w').to_dict()
+    with pytest.raises(PermissionError):
+        engine.advance('w',seconds=400,command_id='offline',expected_revision=result.state.revision)
+    assert db.load('w').to_dict()==before
+
+
+def test_same_world_replays_from_snapshot_after_autonomous_delivery(village):
+    db,clock=village
+    living(db,clock,400,'full')
+    db.snapshot('w')
+    assert db.verify('w').to_dict()==db.load('w').to_dict()
+    assert db.load('w').obligations['auto-help:nora:0']['status']=='fulfilled'
+
+
+def test_deterministic_across_two_isolated_worlds(tmp_path):
+    outcomes=[]
+    for i in range(2):
+        with SQLiteEventStore(tmp_path/f'{i}.db') as db:
+            clock=world_with_needy_person(db)
+            res=living(db,clock,400,'full')
+            outcomes.append((res.state.to_dict(),res.assistance_transitions))
+    assert outcomes[0]==outcomes[1]
+
+
+def test_invalid_opt_in_settings_rejected(village):
+    db,clock=village
+    for invalid in ('yes',None,1,0):
+        with pytest.raises(ValueError):
+            LivingWorldEngine(db,clock,assistance_enabled=invalid)
+    for invalid in ('unknown',None,123):
+        with pytest.raises(ValueError):
+            choose_assistance_intent(db.load('w'),'nora',invalid)
+
+
+def test_social_navigation_and_assistance_work_together(village):
+    db,clock=village
+    result=LivingWorldEngine(db,clock,assistance_enabled=True,
+                             social_enabled=True,navigation_enabled=True).advance(
+           'w',seconds=2,command_id='all-three',expected_revision=db.load('w').revision)
+    assert result.state.obligations['auto-help:nora:0']['status']=='promised'
+    assert db.verify('w').to_dict()==result.state.to_dict()
+
+
+def test_unknown_resource_registry_not_interpreted_as_zero(tmp_path):
+    with SQLiteEventStore(tmp_path/'unknown.db') as db:
+        setup(db,initialize=False)
+        clock=TimeEngine(db);clock.open_session('w')
+        db.append('w','needs',db.load('w').revision,[e('NPCNeedChanged',{
+            'npc_id':'nora','need':'hunger','previous':25,'current':90},actor='nora')])
+        assert choose_assistance_intent(db.load('w'),'nora','request') is None
+
+
+def test_two_needy_people_do_not_force_provider_to_accept_twice_at_same_tick(tmp_path):
+    with SQLiteEventStore(tmp_path/'three.db') as db:
+        clock=world_with_needy_person(db)
+        # Sara begins in the forest; she returns to the public market and then
+        # experiences hunger. There is no magical remote assistance request.
+        mover=NPCMovementService(db,clock)
+        started=mover.start('w','sara','road','sara-returns',expected_revision=db.load('w').revision)
+        clock.advance('w',seconds=20,command_id='sara-arrives',expected_revision=started.state.revision)
+        db.append('w','sara-hungry',db.load('w').revision,[e('NPCNeedChanged',{
+            'npc_id':'sara','need':'hunger','previous':25,'current':88},actor='sara',at=20)])
+        result=living(db,clock,1,'assist')
+        obligations=result.state.obligations
+        assert len(obligations)==2
+        assert sorted(x['status'] for x in obligations.values())==['promised','requested']
+        assert sum(x['status']=='promised' for x in obligations.values())==1
+        assert all(x['status']!='fulfilled' for x in obligations.values())
+        assert result.state.resources['basim']['food']==10
+        assert db.verify('w').to_dict()==result.state.to_dict()
+
+
+def test_provider_respects_existing_promises_when_evaluating_new_request(tmp_path):
+    with SQLiteEventStore(tmp_path/'overpromise.db') as db:
+        clock=world_with_needy_person(db)
+        svc=NPCAssistanceService(db,clock)
+        # Both parties are on-site at time zero: eight units promised and not
+        # yet taken from the provider's physical stock.
+        svc.request('w','nora','basim','food',8,'first',expected_revision=db.load('w').revision)
+        svc.respond('w','basim','first',accept=True,command_id='promise-eight',
+                    expected_revision=db.load('w').revision)
+        clock.advance('w',seconds=1,command_id='tick',expected_revision=db.load('w').revision)
+        # The same requester can ask for water separately, but a second food
+        # claimant must not be promised already-committed supplies. Move Sara
+        # from forest to the same local market to make her request legitimate.
+        trip=NPCMovementService(db,clock).start('w','sara','road','arrive',
+                                               expected_revision=db.load('w').revision)
+        arrived=clock.advance('w',seconds=20,command_id='sara-home',expected_revision=trip.state.revision)
+        svc.request('w','sara','basim','food',2,'second',expected_revision=arrived.state.revision)
+        intent=choose_assistance_intent(db.load('w'),'basim','respond')
+        assert intent is not None and intent.request_id=='second'
+        assert intent.fields=={'accept':False}
+        assert db.load('w').resources['basim']['food']==10
