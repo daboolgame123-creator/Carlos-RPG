@@ -11,7 +11,7 @@
 
 ## Test result
 
-`python -m pytest -q` — **21 passed**. Tests cover genesis, projection/replay, unknown != 0, invalid event rejection and atomic rollback, idempotency, revision collision, snapshots/tail replay, tamper detection, unsupported schema, event tampering, time freeze, validation, hidden-data view, immutable state, stable hashes, invalid resources, reopening database, duplicate world, cross-store deterministic replay, and fault-triggered transaction rollback.
+`python -m pytest -q` — **29 passed** in the local repair workspace; 21 original plus 8 regression tests for future-time ordinary events, unknown actors, unauthorized minting, valid bootstrap replay, disallowed increases, invalid consumption, late bootstrap and idempotency provenance. Tests cover genesis, projection/replay, unknown != 0, invalid event rejection and atomic rollback, idempotency, revision collision, snapshots/tail replay, tamper detection, unsupported schema, event tampering, time freeze, validation, hidden-data view, immutable state, stable hashes, invalid resources, reopening database, duplicate world, cross-store deterministic replay, and fault-triggered transaction rollback.
 
 ## Files created
 
@@ -29,7 +29,10 @@ NPC decisions, goals, perception, gameplay session controller, scheduling, real 
 - The store has an unprotected internal append API and must not be exposed over a network before an authorization layer exists.
 - Idempotent retry returns the current world state, which may contain later commits; it does not provide the historical command-result snapshot.
 - GitHub story files must remain source references until a separate approved migration is implemented.
+- Review corrections: disallow implicit clock advancement, require existing actor references, and restrict resource writes to bootstrap setup or actor-owned consumption. Bootstrap is a trusted caller flag, not an authentication boundary; never expose it to untrusted clients.
+- Rules version was raised to 2. Earlier experimental databases require re-creation or explicit migration before use.
+- Tests were run locally; GitHub CI has not been run.
 
 ## Git status
 
-This is a local deliverable, not a GitHub write. No branch, commit, push or merge was created by this task.
+Published to the isolated `simulation-engine-phase-01a` branch by direct GitHub file commits. `main` and the story files remain unchanged; no merge was performed.
