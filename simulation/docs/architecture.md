@@ -137,3 +137,7 @@ complete negotiation or promise-expiry model. No autonomous goods production,
 water demand, trading, transport of goods or remote notification exists.
 The system cannot act as player-controlled Carlos. The simulated clock remains
 frozen outside a player-authorized active session. Schema 9 / Rules 12.
+
+### Phase 01-K review: causal obligation priority
+
+The pure autonomous planner orders outstanding responses and accepted promises by `(created_at, request_id)`, **not merely by request_id**. This prevents a later, lexicographically earlier request from overtaking an older eligible obligation. On auto-generated obligation IDs exceeding 128 characters, a deterministic SHA-256-based ID is used; this preserves request capability for otherwise valid long NPC IDs without breaking event-store constraints. Three new regression tests cover both obligation queues and the long-ID world-advance case. Only the opt-in policy changes; replayed event types, schema 9 and rules 12 do not change.
