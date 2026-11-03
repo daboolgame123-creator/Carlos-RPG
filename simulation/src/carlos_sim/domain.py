@@ -190,11 +190,38 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         else:
             raise ValueError("unsupported resource source; transfers/production not yet implemented")
         balances[resource] = current
+    elif kind == "ScheduledEventCreated":
+        if set(p) != {"id", "due", "order", "kind", "payload", "interrupt"}:
+            raise ValueError("invalid schedule fields")
+        if not isinstance(p["id"], str) or not p["id"] or p["id"] in d["scheduled"]:
+            raise ValueError("duplicate or invalid schedule ID")
+        if type(p["due"]) is not int or p["due"] <= state.time or type(p["order"]) is not int or p["order"] != state.next_schedule_order:
+            raise ValueError("invalid due time or schedule order")
+        if p["kind"] != "signal" or not isinstance(p["payload"], Mapping) or type(p["interrupt"]) is not bool:
+            raise ValueError("unsupported scheduled action")
+        d["scheduled"][p["id"]] = {k: _thaw(p[k]) for k in ("due", "order", "kind", "payload", "interrupt")}
+        d["next_schedule_order"] += 1
+    elif kind == "ScheduledEventCancelled":
+        if set(p) != {"id"} or not isinstance(p["id"], str) or p["id"] not in d["scheduled"]:
+            raise ValueError("cannot cancel missing schedule")
+        del d["scheduled"][p["id"]]
+    elif kind == "ScheduledEventFired":
+        if set(p) != {"id"} or not isinstance(p["id"], str) or p["id"] not in d["scheduled"]:
+            raise ValueError("cannot fire missing schedule")
+        scheduled = d["scheduled"][p["id"]]
+        if scheduled["due"] != state.time:
+            raise ValueError("scheduled event cannot fire before or after due time")
+        earliest = min(d["scheduled"].items(), key=lambda x: (x[1]["due"], x[1]["order"], x[0]))[0]
+        if earliest != p["id"]:
+            raise ValueError("scheduled event fired out of order")
+        del d["scheduled"][p["id"]]
     elif kind == "TimeAdvanced":
         if set(p) != {"from", "to"} or type(p["from"]) is not int or type(p["to"]) is not int:
             raise ValueError("invalid time advance")
         if p["from"] != state.time or p["to"] <= state.time or p["to"] != e.time:
             raise ValueError("invalid time transition")
+        if d["scheduled"] and min(x["due"] for x in d["scheduled"].values()) < p["to"]:
+            raise ValueError("time advancement would skip due scheduled event")
     else:
         raise ValueError(f"unknown event type: {kind}")
     d["revision"] += 1
