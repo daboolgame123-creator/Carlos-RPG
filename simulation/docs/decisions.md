@@ -84,3 +84,13 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Preserve origin in stored entity state until arrival; derive physical presence from active travel status rather than introducing invented intermediate coordinates.
 - Enforce in-transit guards at both high-level planner and low-level event projection; reject impossible local message delivery whether the traveler is sender or recipient.
 - After arrival, restore ordinary observation, message and decision eligibility. Preserve stale historical observations as dated evidence rather than silently replacing them.
+
+## Phase 01-G decisions
+
+- Opt in to spatial autonomy; preserve earlier NPC activity semantics when disabled.
+- Survey only actual adjacent roads while the NPC is idle, not a global map.
+- Explore by minimum reachable known-road travel seconds, then deterministic destination ID.
+- Keep route memory per NPC; explicit targets must be learned and reachable.
+- Reuse durable arrival signals, atomic event batches, pause rules and existing local capability checks.
+- Prefer an already recorded activity intention over newly proposed autonomous travel.
+- Defer professional travel goals, road hazards, map changes, inter-NPC map sharing, traffic and richer motivations.
