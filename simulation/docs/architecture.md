@@ -81,3 +81,7 @@ A traveling NPC retains `entity.location_id` as its original endpoint until sche
 `WorldState.navigation` projects per-NPC `{known_routes, visited, target}` state. `NPCNavigationSurveyed` validates actor identity, trusted movement capability, active session, and absence of current travel/activity, then adds only incident roads and the current place to the NPC's learned map. `NPCNavigationTargetSet` validates that the selected destination is known and reachable through that individual's learned graph. Unknown remote edges cannot be included.
 
 `shortest_known_route` runs weighted deterministic Dijkstra using known edges only. `next_route` selects the first edge toward an already learned target or a reachable unexplored frontier when the NPC wants to explore. The opt-in `LivingWorldEngine` emits surveys and matching scheduled-travel events in one atomic time command and uses the existing arrival reducer. Previously recorded manual intentions take priority. Navigation knowledge persists through event replay/snapshots and is omitted from minimal player view. Schema v7, rules v8.
+
+### Phase 01-G navigation integrity follow-up
+
+The shared movement reducer validates route knowledge for any NPC with an initialized navigation profile. This prevents bypassing per-NPC map knowledge with legacy movement services or lower-level trusted calls. Knowledge is checked before a travel event is committed; a rejected batch rolls back its reserved schedule. For compatibility, worlds without navigation profiles preserve previous explicit-route semantics.
