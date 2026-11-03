@@ -75,3 +75,9 @@ If a character has a `last_decision` at the *current logical tick* but no runnin
 ### Phase 01-F review: simulated origin is not local presence
 
 A traveling NPC retains `entity.location_id` as its original endpoint until scheduled arrival for event-sourced state consistency, but this is **not** evidence of physical co-location. `_in_transit` centralizes active travel detection. Local observation excludes travelers; local `NPCInformationDelivered` refuses senders/receivers who are traveling, and `choose_action` / `NPCDecisionRecorded` refuse new activity decisions while traveling. Once the arrival event changes position and marks the journey completed, normal local observation, message delivery and decision operations resume. Historical sighting snapshots do not update retroactively.
+
+## Phase 01-G — Knowledge-limited route planning
+
+`WorldState.navigation` projects per-NPC `{known_routes, visited, target}` state. `NPCNavigationSurveyed` validates actor identity, trusted movement capability, active session, and absence of current travel/activity, then adds only incident roads and the current place to the NPC's learned map. `NPCNavigationTargetSet` validates that the selected destination is known and reachable through that individual's learned graph. Unknown remote edges cannot be included.
+
+`shortest_known_route` runs weighted deterministic Dijkstra using known edges only. `next_route` selects the first edge toward an already learned target or a reachable unexplored frontier when the NPC wants to explore. The opt-in `LivingWorldEngine` emits surveys and matching scheduled-travel events in one atomic time command and uses the existing arrival reducer. Previously recorded manual intentions take priority. Navigation knowledge persists through event replay/snapshots and is omitted from minimal player view. Schema v7, rules v8.
