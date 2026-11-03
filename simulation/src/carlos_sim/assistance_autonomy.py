@@ -10,6 +10,7 @@ conservation, identity, colocation, and legal transitions at the reducer.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any
 
 from .domain import WorldState
@@ -64,7 +65,8 @@ def choose_assistance_intent(state: WorldState, npc_id: str, phase: str) -> Assi
         return None
 
     if phase == 'settle':
-        for oid, item in sorted(state.obligations.items()):
+        for oid, item in sorted(state.obligations.items(),
+                                key=lambda pair: (pair[1]['created_at'], pair[0])):
             if item['provider'] != npc_id or item['status'] != 'promised':
                 continue
             if state.time <= item['responded_at'] or not _together(state, item['requester'], npc_id):
@@ -78,7 +80,8 @@ def choose_assistance_intent(state: WorldState, npc_id: str, phase: str) -> Assi
         return None
 
     if phase == 'respond':
-        for oid, item in sorted(state.obligations.items()):
+        for oid, item in sorted(state.obligations.items(),
+                                key=lambda pair: (pair[1]['created_at'], pair[0])):
             if item['provider'] != npc_id or item['status'] != 'requested':
                 continue
             requester = item['requester']
@@ -130,6 +133,10 @@ def choose_assistance_intent(state: WorldState, npc_id: str, phase: str) -> Assi
     _, recipient = min(peers)
     quantity = min(3, 4 - own_stock)
     oid = f'auto-help:{npc_id}:{state.time}'
+    # Valid NPC IDs may be longer than an obligation ID. Use a deterministic
+    # content-derived identifier instead of freezing the entire simulation.
+    if len(oid) > 128:
+        oid = 'auto-help:' + sha256(oid.encode('utf-8')).hexdigest()
     if oid in state.obligations:
         return None
     return AssistanceIntent(npc_id, 'AssistanceRequested', oid,
