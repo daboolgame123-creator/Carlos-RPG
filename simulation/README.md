@@ -84,3 +84,25 @@ The example values, goals and scoring weights are **test rules only**, not facts
 ### Phase 01-C review corrections
 
 NPC state writes require an open play session even when called through the lower-level event store. Decision events must obey a minimum 60-second simulation cooldown. Belief updates now require a recorded `NPCInformationDelivered` followed by matching `NPCBeliefReceived` acknowledgement; the delivery records its sender, location, time and channel. Delivery IDs cannot be reused. The system validates provenance claimed inside a trusted simulation call, not the factual truth of a rumor or external identity. Tests: 84 passed locally. The world uses schema v4 and rules v5; older prototype DBs require explicit migration/recreation.
+
+## Phase 01-D: action execution (test world only)
+
+`NPCActionService.start` starts a previously recorded NPC intention **at the current simulation tick**. It atomically records an `NPCActionStarted` event plus a durable, non-interrupting completion signal. `TimeEngine.advance` moves the shared world clock and applies deterministic action effects when the signal fires. Multiple NPC actions can overlap and finish in timestamp/order sequence without automatically interrupting the player's action. Other scheduled signals may still interrupt.
+
+| Test action | Duration (sim seconds) | Bounded deterministic effect |
+|---|---:|---|
+| rest | 120 | fatigue -20, hunger +5 |
+| work | 180 | fatigue +15, hunger +10, labor_units +1 |
+| investigate | 90 | fatigue +10, hunger +5, investigation_attempts +1 (no discoveries) |
+| wait | 60 | hunger +5 |
+
+Needs clamp to 0–100; `labor_units` and `investigation_attempts` are **test counters, not currency or items**. Both must be explicitly initialized as known 0 before a work/investigate action starts; missing/unknown values are never treated as zero. Completion effects are recorded in the immutable action history and derived from the scheduled `ScheduledEventFired` event, so replay reproduces exactly the same result. A running action's completion signal cannot be cancelled directly.
+
+Run from the `simulation` directory:
+
+```bash
+python -m pytest -q
+PYTHONPATH=src python scenarios/test_village/demo_actions.py
+```
+
+This remains a **trusted local** prototype without API authentication. It does not automatically decide another action after completion, generate NPC discoveries, simulate food production or payments, or modify Carlos's real story. Logical time and action effects cannot advance while the play session is closed. World schema/rules versions: **5 / 6**. Older experimental SQLite databases require explicit migration/recreation.
