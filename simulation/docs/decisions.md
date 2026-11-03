@@ -36,3 +36,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - **Event provenance:** decisions are validated against policy before committing and use trusted local planner capability.
 - **Time boundary:** decisions require an active local play session and are cooldown-limited; there is no wall-clock tick or autonomous background service.
 - **Migration:** schema 3/rules 4; no silent conversion of test databases.
+
+## Phase 01-C review resolutions
+
+- Store-level session checks prevent bypassing application-level pause for NPC mutations. Session activity is explicitly ephemeral and not wall-clock driven.
+- Fixed minimum 60 simulated seconds between NPC decision events, enforced by projection and service.
+- Claims and their delivery are distinct events with traceable identifiers. A belief is not populated before a matching delivered claim is acknowledged; delivery identity remains reserved after consumption.
+- Sender identity and co-location are validated against simulated entities; trusted callers remain responsible for the authenticity of outside inputs. No omniscience or automatic truth inference.
+- Schema v4 / rules v5; do not silently migrate old prototype databases.
