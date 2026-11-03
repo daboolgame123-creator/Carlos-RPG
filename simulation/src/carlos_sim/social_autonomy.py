@@ -1,6 +1,6 @@
 """Bounded, deterministic NPC-initiated social intents for explicit play time.
 
-Only the prospective speaker's own needs, goals, directed trust and recorded
+Only the prospective speaker's own needs, directed trust and recorded
 face-to-face encounters influence speech-act selection. The other NPC's private
 needs, beliefs and goals are never consulted. No language model or real-world clock.
 """
