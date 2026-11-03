@@ -160,3 +160,10 @@ Open questions for later phases: NPC decision cadence, resource production and t
   debt, automatic negotiation, player-directed charity and narrative canon.
 - Preserve Phase 01-J schema 9/rules 12 and keep changes in `simulation/`
   on a separate, unmerged branch.
+
+### Phase 01-K review decisions
+
+- Order autonomously serviced eligible requests and promises by creation time; use the request identifier only as a deterministic tie-break.
+- Normalize overlength automatically generated obligation IDs into stable SHA-256-derived identifiers instead of freezing an otherwise valid world.
+- Keep schema 9/rules 12 because no event acceptance contract changed; verify with 313 passing tests in four local groups.
+- Defer expiry or remote withdrawal of abandoned requests to a future phase that defines real communication/delivery semantics.
