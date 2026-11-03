@@ -129,3 +129,20 @@ The existing `TimeEngine.advance` remains manual and **does not** automatically 
 ### Phase 01-E reviewed behavior
 
 An NPC decision recorded by `NPCService.decide` at the current tick is now consumed by `LivingWorldEngine.advance` immediately if the NPC is idle. The original decision is not recorded again. This fixes the manual-to-autonomous handoff while preserving cooldowns, transaction boundaries and the pause semantics. Post-review tests: **134 passed locally**. See `docs/phase_01e_report.md`.
+
+## Phase 01-F — routes, travel and local perception
+
+NPCs may travel only along explicitly bootstrapped **bidirectional routes** between two named locations. Each route has a positive duration in simulated seconds. `NPCMovementService.start(...)` creates a durable, non-interrupting arrival appointment; the entity remains at its origin until that appointment fires. Routes are not automatically discovered and multi-hop navigation requires separate explicit travel commands. Player-controlled entities (including Carlos) are excluded.
+
+`NPCMovementService.observe(...)` explicitly records a **timestamped local snapshot** of co-located entity IDs. Arrival automatically records the same type of observation at the destination. `perceive_local(...)` reads only a previously recorded observation for the NPC's current location; it never queries unseen rooms, remote NPCs, or world secrets. Past observations may become stale and are **not a live truth feed**. These are geometric test-site snapshots, not visibility/line-of-sight, hearing, stealth or a fully implemented rumor system.
+
+Traveling NPCs cannot start a second journey, run a work/rest/investigate action, or record an on-site observation while in transit. `LivingWorldEngine` skips routine autonomous planning while an NPC is traveling; after a travel completes it may plan local actions again. Player interrupt signals can pause a journey in the middle, and offline/restart time is frozen.
+
+Try from the `simulation/` folder:
+
+```sh
+python -m pytest -q
+PYTHONPATH=src python scenarios/test_village/demo_movement.py
+```
+
+The demo uses synthetic Square / Bridge / Courtyard places, not Harthn or Carlos's real world. All travel and observation operations are trusted-local prototype APIs; **not authenticated HTTP operations**. World schema v6/rules v7: previous test databases require deliberate migration or recreation. No `main` merge or story-file modifications.
