@@ -16,7 +16,7 @@
 
 Local command: `cd simulation && python -m pytest -q`.
 
-**48 passed**, including the original 21 Phase 01-A tests, the 8 original Phase 01-A regression guards, and 19 Phase 01-B tests. Additional `compileall` check passed. Results are for local Python 3.13; GitHub CI was not executed.
+**50 passed**, including the original 21 Phase 01-A tests, the 8 original Phase 01-A regression guards, and 21 Phase 01-B tests. Additional `compileall` check passed. Results are for local Python 3.13; GitHub CI was not executed.
 
 ## Changed files
 
@@ -41,3 +41,12 @@ Local command: `cd simulation && python -m pytest -q`.
 ## Story protection
 
 No change to root narrative documents, Carlos XP, inventory, relationships or Harthn events. No branch merge into `main`.
+
+## Post-review corrective verification
+
+Two confirmed defects were fixed without changing the narrative files:
+
+1. `ScheduledEventFired` now must use the current logical time; it cannot set the world clock through the event envelope.
+2. `TimeEngine.advance` checks `max_events_per_advance` before breaking on an interrupting event.
+
+Two additional regression tests reproduce the original failures and check that rejected commands leave state and the commands table unchanged. Local command `python -m pytest -q` yielded **50 passed**; `python -m compileall -q src tests` also completed successfully. GitHub CI was not executed.
