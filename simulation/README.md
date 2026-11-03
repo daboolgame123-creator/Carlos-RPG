@@ -185,4 +185,10 @@ From `simulation/` run `python -m pytest -q` or `PYTHONPATH=src python scenarios
 
 The two NPCs must be present and idle; a request and reply occur face-to-face, with the reply at the original request site. Fulfillment requires co-location and available stock, but may occur later at another place. World time never advances when a session is closed. Duplicate transfers, insufficient stock, uninitialized inventories and unauthorized events are rejected atomically. Carlos remains player-controlled and is excluded from automatic assistance transactions.
 
-Run `PYTHONPATH=src python scenarios/test_village/demo_assistance.py` from `simulation/` for an isolated demonstration, and see `docs/phase_01j_report.md`. **Schema 9 / Rules 11** require an explicit migration or new experimental test database. This is a trusted **local prototype API**, not a public authenticated service or automatic autonomous social planner.
+Run `PYTHONPATH=src python scenarios/test_village/demo_assistance.py` from `simulation/` for an isolated demonstration, and see `docs/phase_01j_report.md`. **Schema 9 / Rules 12** require an explicit migration or new experimental test database. This is a trusted **local prototype API**, not a public authenticated service or automatic autonomous social planner.
+
+### Phase 01-J reviewed behavior
+
+The review closed two integrity holes: direct gameplay food/water **consumption requires an active play session** (only trusted bootstrap initialization is exempt), and cancelling an assistance request/promise is a **local communication event** requiring both NPCs to be present, idle, and in the same location. Remote silent withdrawal is rejected; cancellation remains possible after the characters reunite elsewhere. This is an explicitly local workflow, not a remote correspondence channel.
+
+**282 local tests passed in three batches, including six new review regressions.** Schema **9**, rules **12**; existing rules-11 test worlds need explicit migration or recreation.
