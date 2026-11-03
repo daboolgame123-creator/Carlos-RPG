@@ -130,7 +130,7 @@ def test_persists_after_reopening(tmp_path):
 
 
 def test_immutable_internal_state(store):
-    s=store.append("test-world","init",0,[location(),npc(),resource(None,2)])
+    s=store.append("test-world","init",0,[location(),npc(),resource(None,2)],bootstrap=True)
     with pytest.raises(TypeError):
         s.resources["npc1"]["grain"]=999
     e=ev("ResourceChanged", {"owner_id":"npc1","resource":"grain","previous":2,"current":3})
