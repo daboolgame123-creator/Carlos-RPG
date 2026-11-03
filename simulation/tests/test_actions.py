@@ -322,3 +322,30 @@ def test_paused_world_cannot_fire_action_even_with_clock_capability(app):
         db.append("world","forced",started.state.revision,[ev("ScheduledEventFired",
             {"id":"npc-action:first"})],clock_authorized=True)
     assert db.load("world").actions["first"]["status"]=="running"
+
+
+def test_reserved_action_schedule_cannot_be_orphaned(app):
+    db, clock, *_ = app
+    before = db.load('world')
+    orphan = ev('ScheduledEventCreated', {'id':'npc-action:orphan', 'due':10,
+        'order':before.next_schedule_order, 'kind':'signal',
+        'payload':{'__npc_action_id':'orphan'}, 'interrupt':False})
+    with pytest.raises(InvalidEvent, match='orphaned'):
+        db.append('world','orphan',before.revision,[orphan], action_authorized=True)
+    assert db.load('world').to_dict() == before.to_dict()
+    assert db.db.execute("SELECT count(*) FROM commands WHERE command_id='orphan'").fetchone()[0] == 0
+
+
+def test_reserved_signal_requires_matching_action_within_same_atomic_batch(app):
+    db, clock, npc, _ = app
+    npc.decide('world','nora',command_id='decide',expected_revision=db.load('world').revision)
+    before = db.load('world')
+    e = ev('ScheduledEventCreated', {'id':'npc-action:orphan2', 'due':180,
+        'order':before.next_schedule_order, 'kind':'signal',
+        'payload':{'__npc_action_id':'orphan2'}, 'interrupt':False})
+    with pytest.raises(InvalidEvent, match='orphaned'):
+        db.append('world','single',before.revision,[e],action_authorized=True)
+    from carlos_sim.actions import NPCActionService
+    started = NPCActionService(db, clock).start('world','nora','valid',expected_revision=before.revision)
+    assert started.state.actions['valid']['status'] == 'running'
+    assert db.verify('world').to_dict() == started.state.to_dict()
