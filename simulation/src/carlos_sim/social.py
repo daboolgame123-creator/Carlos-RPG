@@ -91,6 +91,12 @@ def project_social_event(state: dict[str, Any], event: DomainEvent, *, social_au
                 or recipient not in state['npcs'] or p['kind'] not in KINDS
                 or not isinstance(p['text'], str) or not 1 <= len(p['text']) <= 500):
             raise ValueError('invalid message identity or content')
+        # Repeating the same speech act between the same pair at one tick
+        # cannot fabricate unlimited trust without any simulated time passing.
+        if any(m['sender'] == sender and m['recipient'] == recipient
+               and m['kind'] == p['kind'] and m['sent_at'] == state['time']
+               for m in state['social_messages'].values()):
+            raise ValueError('duplicate social act in the same simulation tick')
         if not _co_located(state, sender, recipient):
             raise ValueError('social message requires both participants present locally')
         state['social_messages'][mid] = {
@@ -106,6 +112,8 @@ def project_social_event(state: dict[str, Any], event: DomainEvent, *, social_au
             raise ValueError('social receipt must belong to pending message recipient')
         if not _co_located(state, msg['sender'], msg['recipient']):
             raise ValueError('social exchange must still be locally deliverable')
+        if state['entities'][msg['recipient']]['location_id'] != msg['location_id']:
+            raise ValueError('social receipt must occur at the original message location')
         recipient, sender = msg['recipient'], msg['sender']
         trust = state['relations'].setdefault(recipient, {}).get(sender, 0)
         reaction, delta = decision(msg['kind'], trust)
