@@ -100,3 +100,12 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Enforce learned-road restrictions at the common movement reducer whenever a navigation profile exists, not only in the autonomous planner.
 - Maintain explicit-route compatibility for older test worlds without NPC navigation profiles.
 - Add both direct-service and low-level event regression tests, verifying rollback and the ability to travel after local surveying.
+
+## Phase 01-H design decisions
+
+- Social relationships are **asymmetric** and each NPC remembers its own trust; there is no automatic reciprocal relationship.
+- Use traceable typed speech acts and deterministic interpretation for the first version, rather than inferring social outcomes from generated text.
+- Message creation and acknowledgement are distinct events; only acknowledgement changes the recipient's trust.
+- Apply co-location plus in-transit checks at event-projection level; preserve replay and the explicit-player-time freeze.
+- Distinguish offered favors and requests from actual aid or debt. No resource transfer or reward is created by a sentence.
+- Defer fully autonomous social initiative, partner preferences, dynamic alliances, reputation, deception mechanics and LLM dialogue to later reviewed phases.
