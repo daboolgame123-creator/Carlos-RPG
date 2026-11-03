@@ -6,3 +6,4 @@ __all__ = ["WorldState", "DomainEvent", "apply_event", "canonical_hash", "SQLite
 
 from .time_engine import TimeEngine, AdvanceResult, SessionClosed, AdvanceLimitExceeded
 from .npc import NPCService, Decision, choose_action
+from .actions import NPCActionService, ActionStart, DURATIONS
