@@ -170,3 +170,11 @@ Run `PYTHONPATH=src python scenarios/test_village/demo_social.py` from `simulati
 ### Phase 01-H post-review corrections
 
 Delayed local speech receipts must be confirmed at the **original message location**, not merely wherever both participants happen to reunite. Repeating the same speech-act kind by the same sender to the same recipient in one simulated timestamp is rejected, preventing instant trust farming without time progression. This does **not** model full social effort or truthful help. The verified local suite has **216 passing tests**. Schema remains **8**, while rule version is now **10**; rules-v9 prototype worlds need explicit migration/recreation. See `docs/phase_01h_report.md`.
+
+## Phase 01-I — Autonomous NPC social initiative (opt-in)
+
+`LivingWorldEngine(store, clock, social_enabled=True)` now gives idle NPCs a **bounded local social initiative** during the player's explicitly requested simulated-time advance. The pure `choose_social_intent` policy uses only the speaker's needs, directed trust and recorded pairwise encounters; it excludes busy/traveling NPCs, distant actors and the player character. Manual action intentions take precedence. Social pairs of `SocialMessageSent` and `SocialMessageReceived` are appended atomically and reported through `LivingAdvanceResult.social_message_ids`.
+
+Each sender waits at least **180 simulated seconds** between automatic initiations and **900 simulated seconds** before repeating the same type of exchange with the same person. Choosing another conversation partner is still possible after the per-speaker cooldown. The original `NPCSocialService` stays available for authorized manual interactions. The social mode defaults to **off**, preserving earlier behavior. No messages or actions advance while the play session is closed.
+
+From `simulation/` run `python -m pytest -q` or `PYTHONPATH=src python scenarios/test_village/demo_social_autonomy.py`. The demonstration involves fictional test characters and fixed speech templates, not the actual Carlos narrative. **Speech does not execute help, transfer resources, settle debts or generate truthful knowledge.** See `docs/phase_01i_report.md`. Schema **8**, rules **10** unchanged; no database migration.
