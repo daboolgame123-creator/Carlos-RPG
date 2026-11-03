@@ -1,0 +1,159 @@
+"""Bounded, atomic autonomous NPC lifecycle during explicitly requested play time.
+
+This coordinator is opt-in: the ordinary TimeEngine remains a manual clock.
+No wall-clock tasks, hidden knowledge, arbitrary scripts or real Carlos story data.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .actions import DURATIONS
+from .domain import DomainEvent, WorldState, apply_event
+from .npc import MIN_DECISION_COOLDOWN, choose_action
+from .store import DuplicateCommand, InvalidEvent, SQLiteEventStore
+from .time_engine import AdvanceLimitExceeded, TimeEngine
+
+
+@dataclass(frozen=True)
+class LivingAdvanceResult:
+    state: WorldState
+    requested_seconds: int
+    elapsed_seconds: int
+    remaining_seconds: int
+    started_action_ids: tuple[str, ...]
+    completed_action_ids: tuple[str, ...]
+    fired_ids: tuple[str, ...]
+    interrupted: bool
+    event_count: int
+
+
+class LivingWorldEngine:
+    """Run NPC intentions/actions alongside an explicit in-world time command.
+
+    One clock request is simulated in memory, then persisted as a single atomic
+    event batch. An interruption commits *only* the portion through that signal.
+    An event limit failure commits nothing, including any NPC decisions.
+    """
+
+    def __init__(self, store: SQLiteEventStore, clock: TimeEngine, *,
+                 max_events_per_advance: int = 1000,
+                 decision_cooldown: int = MIN_DECISION_COOLDOWN):
+        if clock.store is not store:
+            raise ValueError('the clock and living-world coordinator must share a store')
+        if type(max_events_per_advance) is not int or max_events_per_advance < 1:
+            raise ValueError('max_events_per_advance must be a positive integer')
+        if type(decision_cooldown) is not int or decision_cooldown < MIN_DECISION_COOLDOWN:
+            raise ValueError('decision_cooldown must be at least 60 simulation seconds')
+        self.store = store
+        self.clock = clock
+        self.max_events_per_advance = max_events_per_advance
+        self.decision_cooldown = decision_cooldown
+
+    def advance(self, world_id: str, *, seconds: int, command_id: str,
+                expected_revision: int) -> LivingAdvanceResult:
+        self.clock._require_session(world_id)
+        if type(seconds) is not int or seconds <= 0:
+            raise ValueError('seconds must be a positive integer')
+        if not isinstance(command_id, str) or not command_id:
+            raise ValueError('command ID is required')
+        if type(expected_revision) is not int or expected_revision < 0:
+            raise ValueError('expected revision must be nonnegative')
+        if self.store.db.execute('SELECT 1 FROM commands WHERE world_id=? AND command_id=?',
+                                 (world_id, command_id)).fetchone():
+            raise DuplicateCommand('living-world command already executed')
+        original = self.store.load(world_id)
+        if original.revision != expected_revision:
+            from .store import RevisionConflict
+            raise RevisionConflict(f'expected {expected_revision}, current {original.revision}')
+        target = original.time + seconds
+        current = original
+        events: list[DomainEvent] = []
+        started: list[str] = []
+        completed: list[str] = []
+        fired: list[str] = []
+        interrupted = False
+
+        def append(event: DomainEvent, *, action_capability: bool = False) -> None:
+            nonlocal current
+            # Keep the entire high-level command fail-closed and bounded.
+            if len(events) >= self.max_events_per_advance:
+                raise AdvanceLimitExceeded('autonomous simulation event budget exhausted')
+            try:
+                current = apply_event(current, event, action_authorized=action_capability)
+            except (ValueError, TypeError) as exc:
+                raise InvalidEvent(str(exc)) from exc
+            events.append(event)
+
+        while True:
+            # Scheduled occurrences at the current tick always have priority
+            # over newly planned NPC decisions. Stable ordering is persisted.
+            due = sorted(((ident, item) for ident, item in current.scheduled.items()
+                          if item['due'] == current.time),
+                         key=lambda x: (x[1]['order'], x[0]))
+            if due:
+                ident, item = due[0]
+                append(DomainEvent('ScheduledEventFired', None,
+                                   'scheduled signal became due', current.time, {'id': ident}))
+                fired.append(ident)
+                if '__npc_action_id' in item['payload']:
+                    completed.append(item['payload']['__npc_action_id'])
+                if item['interrupt']:
+                    interrupted = True
+                    break
+                continue
+
+            busy = {a['npc_id'] for a in current.actions.values()
+                    if a['status'] == 'running'}
+            # Deterministic tie breaking between independently eligible NPCs.
+            for npc_id in sorted(current.npcs):
+                if npc_id in busy:
+                    continue
+                decision = choose_action(current, npc_id)
+                if decision is None:
+                    continue
+                # The deterministic ID may not be reused, even after completion.
+                action_id = f'auto:{npc_id}:{current.time}'
+                if action_id in current.actions:
+                    raise InvalidEvent('autonomous action identifier collision')
+                append(DomainEvent('NPCDecisionRecorded', npc_id,
+                                   'deterministic autonomous NPC policy', current.time,
+                                   {'npc_id': npc_id, 'action': decision.action,
+                                    'score': decision.score, 'reason': decision.reason,
+                                    'next_decision_at': current.time + self.decision_cooldown}))
+                schedule_id = 'npc-action:' + action_id
+                action_due = current.time + DURATIONS[decision.action]
+                append(DomainEvent('ScheduledEventCreated', None,
+                                   'autonomous NPC action completion appointment', current.time,
+                                   {'id': schedule_id, 'due': action_due,
+                                    'order': current.next_schedule_order, 'kind': 'signal',
+                                    'payload': {'__npc_action_id': action_id},
+                                    'interrupt': False}), action_capability=True)
+                append(DomainEvent('NPCActionStarted', npc_id,
+                                   'autonomous NPC action began', current.time,
+                                   {'action_id': action_id, 'npc_id': npc_id,
+                                    'action': decision.action, 'schedule_id': schedule_id,
+                                    'due': action_due}), action_capability=True)
+                started.append(action_id)
+                busy.add(npc_id)
+
+            if current.time >= target:
+                break
+            # Schedule both completed actions and re-evaluations of idle NPCs.
+            next_ticks = [target]
+            next_ticks.extend(item['due'] for item in current.scheduled.values())
+            next_ticks.extend(profile['next_decision_at'] for npc_id, profile
+                              in current.npcs.items()
+                              if npc_id not in busy
+                              and profile['next_decision_at'] > current.time)
+            next_tick = min(t for t in next_ticks if t > current.time)
+            append(DomainEvent('TimeAdvanced', None, 'authorized player time',
+                               next_tick, {'from': current.time, 'to': next_tick}))
+
+        # A complete unit of work: no partial SQLite commits for multiple NPCs.
+        committed = self.store.append(world_id, command_id, expected_revision, events,
+                                      clock_authorized=True, npc_authorized=True,
+                                      action_authorized=True)
+        elapsed = committed.time - original.time
+        return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
+                                   tuple(started), tuple(completed), tuple(fired),
+                                   interrupted, len(events))
