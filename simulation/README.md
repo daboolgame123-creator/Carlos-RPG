@@ -125,3 +125,7 @@ with SQLiteEventStore('test_world.sqlite') as store:
 ```
 
 The existing `TimeEngine.advance` remains manual and **does not** automatically make NPC decisions; applications must opt in to `LivingWorldEngine`. The five-person test demo runs using `PYTHONPATH=src python scenarios/test_village/demo_living_world.py`. All actions and policy weights remain experimental; no Harthn or Carlos story data is imported. The coordinator uses the existing schema 5/rules 6 event formats; it introduces no DB schema migration. No authenticated/public API is included. Explicit command IDs must be unique; duplicate high-level commands raise `DuplicateCommand` rather than replaying a historical result. A too-large advancement request fails atomically at the event cap; callers can explicitly advance in smaller steps.
+
+### Phase 01-E reviewed behavior
+
+An NPC decision recorded by `NPCService.decide` at the current tick is now consumed by `LivingWorldEngine.advance` immediately if the NPC is idle. The original decision is not recorded again. This fixes the manual-to-autonomous handoff while preserving cooldowns, transaction boundaries and the pause semantics. Post-review tests: **134 passed locally**. See `docs/phase_01e_report.md`.
