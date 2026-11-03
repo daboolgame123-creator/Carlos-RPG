@@ -80,6 +80,8 @@ def start_action(state: dict[str, Any], event: DomainEvent, *, action_authorized
     last = state["npcs"][npc_id]["last_decision"]
     if last is None or last["action"] != action or last["at"] != state["time"]:
         raise ValueError("action start requires a decision made this tick")
+    if any(t["npc_id"] == npc_id and t["status"] == "traveling" for t in state["travels"].values()):
+        raise ValueError("NPC cannot start an activity while traveling")
     if any(a["npc_id"] == npc_id and a["status"] == "running" for a in state["actions"].values()):
         raise ValueError("NPC is already busy")
     if any(a["npc_id"] == npc_id and a["start"] == state["time"] for a in state["actions"].values()):
