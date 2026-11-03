@@ -249,3 +249,44 @@ def test_busy_npc_cannot_survey(world):
     with pytest.raises(InvalidEvent,match='busy'):
         service.survey('village','nora',command_id='busy',expected_revision=before.revision)
     assert db.load('village').to_dict()==before.to_dict()
+
+
+def test_repeat_survey_creates_no_unnecessary_event(world):
+    db,clock,service=world
+    first=service.survey('village','nora',command_id='once',expected_revision=db.load('village').revision)
+    second=service.survey('village','nora',command_id='again',expected_revision=first.revision)
+    assert first.revision==second.revision
+
+
+def test_manual_survey_requires_active_session(world):
+    db,clock,service=world
+    clock.close_session('village')
+    with pytest.raises(PermissionError):
+        service.survey('village','nora',command_id='offline',expected_revision=db.load('village').revision)
+
+
+def test_actor_cannot_impersonate_another_npc_during_survey(world):
+    db,clock,_=world
+    state=db.load('village')
+    with pytest.raises(InvalidEvent):
+        db.append('village','impersonate',state.revision,[
+            event('NPCNavigationSurveyed',{'npc_id':'nora'},actor='basim')
+        ],movement_authorized=True)
+
+
+def test_target_cannot_be_set_without_road_knowledge(world):
+    db,clock,service=world
+    with pytest.raises(InvalidEvent):
+        service.target('village','nora','forest',command_id='unknown',
+                       expected_revision=db.load('village').revision)
+
+
+def test_paused_survey_does_not_consume_command_identifier(world):
+    db,clock,service=world
+    before=db.load('village')
+    clock.close_session('village')
+    with pytest.raises(PermissionError):
+        service.survey('village','nora',command_id='recover',expected_revision=before.revision)
+    clock.open_session('village')
+    result=service.survey('village','nora',command_id='recover',expected_revision=before.revision)
+    assert result.navigation['nora']['visited']==('market',)
