@@ -135,3 +135,10 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Enforce co-location, active play sessions, separate trusted assistance capability and optimistic concurrency at the event-store/reducer boundary.
 - Permit refusal, cancellation and insufficient-stock failures without silent material effects or partial commits.
 - No autonomous physical help, economic production, deadlines, multi-resource barter, debt or player-character actions in this phase. Maintain `main` and real story state unchanged.
+
+### Phase 01-J review decisions
+
+- Require the active play session for actor-owned resource consumption, even through direct event-store calls; preserve setup-only `bootstrap` inventory initialization.
+- Treat withdrawal of a local request or promise as an in-person communication. Do not grant instantaneous, unmodeled remote awareness; both parties must be physically co-located and idle.
+- Allow withdrawal after a meeting at another site, without changing inventory or trust. Future remote cancellation must add a real messaging/delivery protocol.
+- Increase rules version to 12 (schema stays 9), retain six new regression tests and 282 locally passing tests. No migration is performed automatically.
