@@ -232,3 +232,108 @@ def test_two_npcs_arrive_in_deterministic_order(village):
     assert done.state.entities['nora']['location_id']=='forest'
     assert done.state.entities['basim']['location_id']=='forest'
     assert db.verify('village').to_dict()==done.state.to_dict()
+
+
+def test_departed_traveler_not_locally_visible_to_other_people(village):
+    db, clock, movement = village
+    movement.start('village', 'nora', 'path', 'trip',
+                   expected_revision=db.load('village').revision)
+    during = movement.observe('village', 'basim', command_id='during',
+                              expected_revision=db.load('village').revision)
+    visible = perceive_local(during, 'basim')['occupants']
+    assert 'nora' not in visible
+    assert 'carlos' in visible and 'basim' in visible
+    assert during.entities['nora']['location_id'] == 'market'  # saved origin is not presence
+    arrived = clock.advance('village', seconds=120, command_id='arrive',
+                            expected_revision=during.revision)
+    assert 'nora' in perceive_local(arrived.state, 'nora')['occupants']
+    again = movement.observe('village', 'basim', command_id='after',
+                             expected_revision=arrived.state.revision)
+    assert 'nora' not in perceive_local(again, 'basim')['occupants']
+    assert db.verify('village').to_dict() == again.to_dict()
+
+
+def test_traveler_cannot_deliver_a_colocated_message_from_departure(village):
+    db, _, movement = village
+    movement.start('village','nora','path','trip',
+                   expected_revision=db.load('village').revision)
+    initial = db.load('village')
+    claim = {'text':'message from the road', 'source':'nora',
+             'received_at':0,'confidence':50}
+    fake_message = ev('NPCInformationDelivered', {
+        'npc_id':'basim', 'delivery_id':'ghost', 'key':'rumor',
+        'claim': claim, 'sender_id':'nora','location_id':'market','method':'message'},
+        actor='nora')
+    with pytest.raises(InvalidEvent, match='in transit'):
+        db.append('village', 'ghost-message', initial.revision, [fake_message],
+                  npc_authorized=True)
+    assert db.load('village').to_dict() == initial.to_dict()
+
+
+def test_traveler_cannot_receive_a_colocated_message_from_departure(village):
+    db, _, movement = village
+    movement.start('village','nora','path','trip',
+                   expected_revision=db.load('village').revision)
+    initial = db.load('village')
+    fake_message = ev('NPCInformationDelivered', {
+        'npc_id':'nora','delivery_id':'ghost', 'key':'rumor',
+        'claim': {'text':'message','source':'basim','received_at':0,'confidence':50},
+        'sender_id':'basim','location_id':'market','method':'message'},actor='basim')
+    with pytest.raises(InvalidEvent, match='in transit'):
+        db.append('village','ghost-receive',initial.revision,[fake_message],
+                  npc_authorized=True)
+    assert db.load('village').to_dict() == initial.to_dict()
+
+
+def test_local_delivery_after_arrival_still_works(village):
+    db, clock, movement = village
+    trip=movement.start('village','nora','path','trip',
+                        expected_revision=db.load('village').revision)
+    arrival=clock.advance('village', seconds=120,command_id='arrival',
+                          expected_revision=trip.state.revision)
+    delivered=ev('NPCInformationDelivered', {
+        'npc_id':'nora','delivery_id':'arrival-message', 'key':'rumor',
+        'claim': {'text':'welcome','source':'guard','received_at':120,'confidence':70},
+        'sender_id':'guard','location_id':'forest','method':'message'},actor='guard',time=120)
+    next_state=db.append('village','message-at-destination',arrival.state.revision,
+                         [delivered],npc_authorized=True)
+    assert 'arrival-message' in next_state.npcs['nora']['inbox']
+    assert db.verify('village').to_dict()==next_state.to_dict()
+
+
+def test_manual_npc_decision_suppressed_during_travel(village):
+    from carlos_sim import NPCService, choose_action
+    db, clock, movement = village
+    movement.start('village','nora','path','trip',
+                   expected_revision=db.load('village').revision)
+    during = db.load('village')
+    assert choose_action(during,'nora') is None
+    assert NPCService(db,clock).decide('village','nora', command_id='not-while-moving',
+                                      expected_revision=during.revision) is None
+    assert db.load('village').to_dict() == during.to_dict()
+    assert db.db.execute("SELECT count(*) FROM commands WHERE command_id='not-while-moving'").fetchone()[0] == 0
+
+
+def test_direct_planner_event_cannot_choose_action_while_traveling(village):
+    from carlos_sim.npc import _score_choice
+    db, _, movement = village
+    movement.start('village','nora','path','trip',
+                   expected_revision=db.load('village').revision)
+    during=db.load('village')
+    choice=_score_choice(during.npcs['nora'],'nora')
+    e=ev('NPCDecisionRecorded',{'npc_id':'nora','action':choice.action,
+             'score':choice.score, 'reason':choice.reason,'next_decision_at':60},actor='nora')
+    with pytest.raises(InvalidEvent, match='while traveling'):
+        db.append('village','fake-decision',during.revision,[e],npc_authorized=True)
+    assert db.load('village').to_dict()==during.to_dict()
+
+
+def test_manual_npc_decision_can_resume_after_arrival(village):
+    from carlos_sim import NPCService
+    db,clock,movement=village
+    trip=movement.start('village','nora','path','trip',expected_revision=db.load('village').revision)
+    arrived=clock.advance('village',seconds=120,command_id='travel',expected_revision=trip.state.revision)
+    choice=NPCService(db,clock).decide('village','nora',command_id='at-destination',
+                                      expected_revision=arrived.state.revision)
+    assert choice is not None
+    assert db.verify('village').time==120
