@@ -109,3 +109,31 @@ Existing deterministic social speech remains separate from physical help. Pendin
 ### Phase 01-J review: session and physical cancellation invariants
 
 `ResourceChanged` with `source='consumption'` is rejected at the event-store boundary when no play session is active; resource mutation must not bypass the frozen simulation. Trusted bootstrap initialization remains permitted. `AssistanceCancelled` requires both named NPC participants physically co-located, idle and not traveling, so an otherwise local promise cannot be silently revoked across the world. A valid cancellation after reunion does not transfer inventory or grant trust. This validation occurs in the reducer and applies to trusted low-level event batches as well as `NPCAssistanceService`. **Schema 9 / Rules 12**.
+
+## Phase 01-K — Autonomous assistance orchestration
+
+The pure `assistance_autonomy.choose_assistance_intent` policy has three
+phases: **settle** an already-promised obligation, **respond** to a local open
+request, or **request** food because of the speaker's own shortage. `settle`
+can only fulfill after the promise's original logical tick. Deterministic
+provider evaluation uses its own food, own hunger, directed trust and unfulfilled
+stock commitments; it refuses to overpromise goods already promised elsewhere.
+A potential requester does not inspect another NPC's hidden stock quantity or
+hunger (only the technical fact that food inventory is initialized).
+
+An opt-in `LivingWorldEngine` advances assistance before social initiative,
+navigation and routine NPC actions at each current logical tick. Fixed passes
+`settle → respond → request → respond` are evaluated in deterministic NPC ID
+order and permit at most one assistance action per NPC per tick. Events are
+projected in memory and committed as **one atomic SQLite command** with
+`assistance_authorized=True`, including time advancement and NPC actions.
+The existing 01-J event reducer enforces actor identity, co-location, correct
+obligation lifecycle, stock conservation, withdrawal restrictions, and replay
+validity. `assistance_transitions` exposes a stable test/audit sequence; no
+new WorldState schema or command-table fields are necessary.
+
+The 900-second retry interval is a prototype anti-spam safeguard, not a
+complete negotiation or promise-expiry model. No autonomous goods production,
+water demand, trading, transport of goods or remote notification exists.
+The system cannot act as player-controlled Carlos. The simulated clock remains
+frozen outside a player-authorized active session. Schema 9 / Rules 12.
