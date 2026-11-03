@@ -113,7 +113,7 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
         if delivery is None or delivery["key"] != p["key"]:
             raise ValueError("belief has no matching pending information delivery")
         npc["beliefs"][p["key"]] = delivery["claim"]
-        del npc["inbox"][p["delivery_id"]
+        del npc["inbox"][p["delivery_id"]]
     elif event.event_type == "NPCNeedChanged":
         if set(p) != {"npc_id", "need", "previous", "current"} or p["need"] not in NEEDS:
             raise ValueError("invalid need change")
