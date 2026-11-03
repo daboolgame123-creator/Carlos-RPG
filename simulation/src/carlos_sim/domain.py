@@ -10,7 +10,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 9
-RULES_VERSION = 11
+RULES_VERSION = 12
 
 
 def _thaw(value: Any) -> Any:
