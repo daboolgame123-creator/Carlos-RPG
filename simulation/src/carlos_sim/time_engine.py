@@ -108,6 +108,8 @@ class TimeEngine:
                 events.append(event)
                 current = apply_event(current, event)
                 fired.append(ident)
+                if len(events) > self.max_events_per_advance:
+                    raise AdvanceLimitExceeded("too many clock events in one command")
                 if detail["interrupt"]:
                     interrupted = True
                     break
