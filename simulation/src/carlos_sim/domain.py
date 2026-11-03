@@ -162,7 +162,7 @@ def apply_event(state: WorldState, event: DomainEvent) -> WorldState:
         if p["from"] != state.time or p["to"] <= state.time or p["to"] != e.time:
             raise ValueError("invalid time transition")
     else:
-        raise ValueError(`unknown event type: ${kind}`)
+        raise ValueError(f"unknown event type: {kind}")
     d["revision"] += 1
     d["time"] = e.time
     return WorldState.from_dict(d)
