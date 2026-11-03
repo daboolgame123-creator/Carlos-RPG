@@ -1,0 +1,12 @@
+{
+  "scenario": "test_village_only",
+  "notice": "Fictional test fixtures. These are not Carlos's world facts.",
+  "location": {"id": "village", "name": "Test Village"},
+  "npcs": [
+    {"id":"nora", "name":"Nora", "role":"farmer", "needs":{"fatigue":75,"hunger":20,"safety":0}, "goals":{"earn":35,"explore":5,"survive":60}},
+    {"id":"basim", "name":"Basim", "role":"baker", "needs":{"fatigue":15,"hunger":30,"safety":0}, "goals":{"earn":80,"explore":5,"survive":35}},
+    {"id":"salma", "name":"Salma", "role":"merchant", "needs":{"fatigue":20,"hunger":40,"safety":5}, "goals":{"earn":90,"explore":15,"survive":30}},
+    {"id":"adil", "name":"Adil", "role":"guard", "needs":{"fatigue":10,"hunger":10,"safety":20}, "goals":{"earn":20,"explore":65,"survive":60}},
+    {"id":"huda", "name":"Huda", "role":"courier", "needs":{"fatigue":40,"hunger":40,"safety":10}, "goals":{"earn":50,"explore":65,"survive":30}}
+  ]
+}
