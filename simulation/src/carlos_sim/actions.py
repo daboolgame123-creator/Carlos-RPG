@@ -177,3 +177,21 @@ class NPCActionService:
         result = self.store.append(world_id, "action-start:" + action_id, expected_revision, events,
                                    action_authorized=True)
         return ActionStart(action_id, npc_id, verb, due, result)
+
+
+def validate_action_reservations(state: WorldState) -> None:
+    """Reject orphaned reserved signals at transaction/replay boundaries.
+
+    During a valid action-start command, the reservation event temporarily
+    precedes the matching NPCActionStarted event; validate only after the full
+    atomic command has been applied, not after each intermediate event.
+    """
+    for schedule_id, scheduled in state.scheduled.items():
+        payload = scheduled["payload"]
+        if "__npc_action_id" not in payload:
+            continue
+        action_id = payload["__npc_action_id"]
+        action = state.actions.get(action_id) if isinstance(action_id, str) else None
+        if (action is None or action["status"] != "running"
+                or action["schedule_id"] != schedule_id):
+            raise ValueError("orphaned NPC action completion schedule")
