@@ -9,8 +9,8 @@ from typing import Any, Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 6
-RULES_VERSION = 7
+SCHEMA_VERSION = 7
+RULES_VERSION = 8
 
 
 def _thaw(value: Any) -> Any:
@@ -62,6 +62,7 @@ class WorldState:
     routes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     travels: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     observations: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    navigation: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -73,6 +74,7 @@ class WorldState:
         object.__setattr__(self, "routes", _freeze(_json_copy(self.routes)))
         object.__setattr__(self, "travels", _freeze(_json_copy(self.travels)))
         object.__setattr__(self, "observations", _freeze(_json_copy(self.observations)))
+        object.__setattr__(self, "navigation", _freeze(_json_copy(self.navigation)))
 
     def to_dict(self) -> dict[str, Any]:
         return _json_copy({"world_id": self.world_id, "time": self.time, "revision": self.revision,
@@ -80,11 +82,12 @@ class WorldState:
                            "entities": self.entities, "locations": self.locations, "resources": self.resources,
                            "scheduled": self.scheduled, "next_schedule_order": self.next_schedule_order,
                            "npcs": self.npcs, "actions": self.actions, "routes": self.routes,
-                           "travels": self.travels, "observations": self.observations})
+                           "travels": self.travels, "observations": self.observations,
+                           "navigation": self.navigation})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -92,7 +95,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -122,6 +125,8 @@ class WorldState:
         validate_actions(d)
         from .movement import validate_movement
         validate_movement(d)
+        from .navigation import validate_navigation
+        validate_navigation(d)
         return cls(**_json_copy(d))
 
 
@@ -192,6 +197,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("RouteCreated", "NPCTravelStarted", "NPCObserved"):
         from .movement import project_movement_event
         project_movement_event(d, e, bootstrap=bootstrap, movement_authorized=movement_authorized)
+    elif kind in ("NPCNavigationSurveyed", "NPCNavigationTargetSet"):
+        from .navigation import project_navigation_event
+        project_navigation_event(d, e, movement_authorized=movement_authorized)
     elif kind == "NPCActionStarted":
         from .actions import start_action
         start_action(d, e, action_authorized=action_authorized)
