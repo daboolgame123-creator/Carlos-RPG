@@ -9,8 +9,8 @@ from typing import Any, Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 2
-RULES_VERSION = 3
+SCHEMA_VERSION = 3
+RULES_VERSION = 4
 
 
 def _thaw(value: Any) -> Any:
@@ -57,22 +57,25 @@ class WorldState:
     resources: Mapping[str, Mapping[str, int | None]] = field(default_factory=dict)
     scheduled: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     next_schedule_order: int = 1
+    npcs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
         object.__setattr__(self, "locations", _freeze(_json_copy(self.locations)))
         object.__setattr__(self, "resources", _freeze(_json_copy(self.resources)))
         object.__setattr__(self, "scheduled", _freeze(_json_copy(self.scheduled)))
+        object.__setattr__(self, "npcs", _freeze(_json_copy(self.npcs)))
 
     def to_dict(self) -> dict[str, Any]:
         return _json_copy({"world_id": self.world_id, "time": self.time, "revision": self.revision,
                            "schema_version": self.schema_version, "rules_version": self.rules_version,
                            "entities": self.entities, "locations": self.locations, "resources": self.resources,
-                           "scheduled": self.scheduled, "next_schedule_order": self.next_schedule_order})
+                           "scheduled": self.scheduled, "next_schedule_order": self.next_schedule_order,
+                           "npcs": self.npcs})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -80,7 +83,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -101,6 +104,11 @@ class WorldState:
             orders.add(item["order"])
             if item["kind"] != "signal" or type(item["interrupt"]) is not bool or not isinstance(item["payload"], dict):
                 raise ValueError("invalid scheduled action")
+        from .npc import validate_npc_state
+        for ident, npc in d["npcs"].items():
+            if ident not in d["entities"] or d["entities"][ident]["controller"] != "npc":
+                raise ValueError("NPC profile must reference NPC-controlled entity")
+            validate_npc_state(npc)
         return cls(**_json_copy(d))
 
 
@@ -165,6 +173,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if p["id"] in d["entities"] or p["id"] in d["locations"]:
             raise ValueError("duplicate entity")
         d["entities"][p["id"]] = {k: p[k] for k in ("name", "location_id", "controller")}
+    elif kind in ("NPCConfigured", "NPCBeliefReceived", "NPCNeedChanged", "NPCDecisionRecorded"):
+        from .npc import project_npc_event
+        project_npc_event(d, e, bootstrap=bootstrap)
     elif kind == "ResourceChanged":
         if set(p) != {"owner_id", "resource", "previous", "current", "source"}:
             raise ValueError("invalid resource change fields")
