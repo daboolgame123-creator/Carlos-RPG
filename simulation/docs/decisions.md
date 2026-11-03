@@ -94,3 +94,9 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Reuse durable arrival signals, atomic event batches, pause rules and existing local capability checks.
 - Prefer an already recorded activity intention over newly proposed autonomous travel.
 - Defer professional travel goals, road hazards, map changes, inter-NPC map sharing, traffic and richer motivations.
+
+### Phase 01-G review resolution
+
+- Enforce learned-road restrictions at the common movement reducer whenever a navigation profile exists, not only in the autonomous planner.
+- Maintain explicit-route compatibility for older test worlds without NPC navigation profiles.
+- Add both direct-service and low-level event regression tests, verifying rollback and the ability to travel after local surveying.
