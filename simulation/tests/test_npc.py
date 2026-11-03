@@ -30,10 +30,23 @@ def active_service(store, *, decision_cooldown=60):
     return NPCService(store, clock, decision_cooldown=decision_cooldown)
 
 
+def delivery_event(delivery_id, text, confidence):
+    return event('NPCInformationDelivered', {'npc_id':'nora','delivery_id':delivery_id,
+        'key':'danger','claim':{'text':text,'source':'basil','received_at':0,'confidence':confidence},
+        'sender_id':'basil','location_id':'village','method':'message'}, actor='basil')
+
+
+def deliver(db, state, delivery_id, *, text, confidence):
+    receipt=event('NPCBeliefReceived',{'npc_id':'nora','key':'danger','delivery_id':delivery_id},actor='nora')
+    return db.append('test',delivery_id,state.revision,
+                     [delivery_event(delivery_id,text,confidence),receipt],npc_authorized=True)
+
+
 @pytest.fixture
 def db(tmp_path):
     with SQLiteEventStore(tmp_path/'village.sqlite') as s:
         s.create_world('test')
+        TimeEngine(s).open_session('test')
         yield s
 
 
@@ -52,9 +65,7 @@ def test_decision_differs_by_personality_and_needs(db):
 def test_private_knowledge_affects_only_receiver(db):
     state = setup(db)
     before = choose_action(state, 'nora')
-    received = event('NPCBeliefReceived', {'npc_id':'nora','key':'danger','claim':{
-        'text':'bridge is unsafe', 'source':'messenger', 'received_at':0, 'confidence':100}})
-    state = db.append('test','message',state.revision,[received])
+    state = deliver(db,state,'message',text='bridge is unsafe',confidence=100)
     after = choose_action(state,'nora')
     assert before.action == 'work' and after.action == 'wait'
     assert choose_action(state,'basil').action == 'rest'
@@ -63,9 +74,7 @@ def test_private_knowledge_affects_only_receiver(db):
 
 def test_belief_does_not_change_world_truth(db):
     state = setup(db)
-    e = event('NPCBeliefReceived', {'npc_id':'nora','key':'danger','claim':{
-        'text':'false alarm','source':'rumor','received_at':0,'confidence':100}})
-    state = db.append('test','rumor',state.revision,[e])
+    state = deliver(db,state,'rumor',text='false alarm',confidence=100)
     assert state.npcs['nora']['beliefs']['danger']['text'] == 'false alarm'
     assert 'danger' not in state.locations['village']
 
@@ -129,14 +138,14 @@ def test_unauthorized_cross_actor_need_change_rejected(db):
 
 def test_malformed_claim_fails_atomically(db):
     state=setup(db)
-    bad=event('NPCBeliefReceived',{'npc_id':'nora','key':'danger','claim':{'text':'rumor','source':'market','received_at':0,'confidence':101}})
+    bad=delivery_event('bad','rumor',101)
     with pytest.raises(InvalidEvent):db.append('test','bad',state.revision,[bad])
     assert db.load('test').revision==state.revision
 
 
 def test_replay_snapshot_carries_beliefs_decisions(db):
     state=setup(db)
-    state=db.append('test','message',state.revision,[event('NPCBeliefReceived',{'npc_id':'nora','key':'danger','claim':{'text':'rumor','source':'hunter','received_at':0,'confidence':80}})])
+    state=deliver(db,state,'message',text='rumor',confidence=80)
     db.snapshot('test')
     service=active_service(db)
     service.decide('test','nora',command_id='decision',expected_revision=state.revision)
@@ -180,6 +189,7 @@ def test_invalid_next_decision_rejected(db):
 def test_no_npc_decision_when_session_is_closed(db):
     state=setup(db)
     clock=TimeEngine(db)
+    clock.close_session('test')
     svc=NPCService(db,clock)
     from carlos_sim import SessionClosed
     with pytest.raises(SessionClosed):
