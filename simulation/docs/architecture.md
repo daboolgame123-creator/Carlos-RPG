@@ -32,3 +32,7 @@ The only supported future item type is `signal` with a JSON payload and an expli
 Events due at the same time are sorted by due time, monotonically increasing schedule order, and ID. An interrupting signal halts the current advance after recording the occurrence. The remaining requested duration is returned for an optional later action. Event batches are committed atomically by the store; a configured per-command event cap prevents runaway processing.
 
 `TimeAdvanced` and `ScheduledEventFired` require a trusted internal `clock_authorized=True` append flag; this is an application convention, **not user authentication**. Schemas change from 1/2 to 2/3; test DBs from Phase 01-A must be explicitly re-created or migrated. Real-world elapsed time is never used.
+
+## Phase 01-C: NPC prototype
+
+`WorldState.npcs` is an immutable, event-projected dictionary. `NPCConfigured` is bootstrap-only. `NPCBeliefReceived` adds a claim to the intended individual's private beliefs; `NPCNeedChanged` validates previous/current need values; `NPCDecisionRecorded` validates actor identity, action, policy score and decision cooldown. `NPCService.decide` checks active session and optimistic revision before recording a decision with `npc_authorized=True`. The flag is an internal convention only, never an API permission mechanism. No intention is automatically translated into an action or state change. Schema/rules versions are now 3/4.
