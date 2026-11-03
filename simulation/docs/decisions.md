@@ -44,3 +44,14 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Claims and their delivery are distinct events with traceable identifiers. A belief is not populated before a matching delivered claim is acknowledged; delivery identity remains reserved after consumption.
 - Sender identity and co-location are validated against simulated entities; trusted callers remain responsible for the authenticity of outside inputs. No omniscience or automatic truth inference.
 - Schema v4 / rules v5; do not silently migrate old prototype databases.
+
+## Phase 01-D decisions
+
+- Resolve action effects at a durable scheduled completion, not immediately on deciding or starting an action.
+- NPC routine completions proceed while simulated time advances without needlessly interrupting the player.
+- Apply effects through a deterministic, pure event projection to preserve full replay and atomicity.
+- Separate NPC intentions from executed actions, and refuse stale decisions, duplicate execution, per-NPC overlapping work or cancellations that would strand an action.
+- Record explicit test `labor_units`/`investigation_attempts`; they are neither money nor guaranteed goods/discoveries.
+- Unknown resource counters are never assumed to equal zero; bootstrap them explicitly and require known values before action start.
+- Local-session checks apply to direct clock writes too; no world time advances while app/session is closed.
+- Defer action cancellation, travel, combat, production, economic transfer, knowledge generation, continuous NPC decision scheduling and production DB migrations.
