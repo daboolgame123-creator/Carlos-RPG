@@ -13,6 +13,7 @@ from .npc import MIN_DECISION_COOLDOWN, choose_action
 from .store import DuplicateCommand, InvalidEvent, SQLiteEventStore
 from .time_engine import AdvanceLimitExceeded, TimeEngine
 from .navigation import next_route, needs_survey
+from .social_autonomy import MIN_SOCIAL_COOLDOWN, choose_social_intent
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class LivingAdvanceResult:
     fired_ids: tuple[str, ...]
     interrupted: bool
     event_count: int
+    social_message_ids: tuple[str, ...] = ()
 
 
 class LivingWorldEngine:
@@ -39,7 +41,8 @@ class LivingWorldEngine:
     def __init__(self, store: SQLiteEventStore, clock: TimeEngine, *,
                  max_events_per_advance: int = 1000,
                  decision_cooldown: int = MIN_DECISION_COOLDOWN,
-                 navigation_enabled: bool = False):
+                 navigation_enabled: bool = False, social_enabled: bool = False,
+                 social_cooldown: int = MIN_SOCIAL_COOLDOWN):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -53,6 +56,12 @@ class LivingWorldEngine:
             raise ValueError("navigation_enabled must be boolean")
         self.decision_cooldown = decision_cooldown
         self.navigation_enabled = navigation_enabled
+        if type(social_enabled) is not bool:
+            raise ValueError("social_enabled must be a boolean")
+        if type(social_cooldown) is not int or social_cooldown < MIN_SOCIAL_COOLDOWN:
+            raise ValueError("social_cooldown must be at least 180 simulated seconds")
+        self.social_enabled = social_enabled
+        self.social_cooldown = social_cooldown
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -77,16 +86,19 @@ class LivingWorldEngine:
         completed: list[str] = []
         fired: list[str] = []
         interrupted = False
+        social_messages: list[str] = []
 
         def append(event: DomainEvent, *, action_capability: bool = False,
-                   movement_capability: bool = False) -> None:
+                   movement_capability: bool = False,
+                   social_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
                 raise AdvanceLimitExceeded('autonomous simulation event budget exhausted')
             try:
                 current = apply_event(current, event, action_authorized=action_capability,
-                                      movement_authorized=movement_capability)
+                                      movement_authorized=movement_capability,
+                                      social_authorized=social_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -119,6 +131,23 @@ class LivingWorldEngine:
                     continue
                 existing = current.npcs[npc_id]['last_decision']
                 pending_action = existing is not None and existing['at'] == current.time
+                # A social exchange is an instantaneous *speech act*, not an
+                # executed favor. Both events share this one authorized command.
+                if self.social_enabled and not pending_action:
+                    intent = choose_social_intent(current, npc_id,
+                                                  cooldown=self.social_cooldown)
+                    if intent is not None:
+                        message_id = f'auto-social:{npc_id}:{current.time}'
+                        if message_id in current.social_messages:
+                            raise InvalidEvent('autonomous social message ID collision')
+                        append(DomainEvent('SocialMessageSent', npc_id,
+                            f'autonomous social initiative: {intent.reason}', current.time,
+                            {'id': message_id, 'recipient': intent.recipient_id,
+                             'kind': intent.kind, 'text': intent.text}), social_capability=True)
+                        append(DomainEvent('SocialMessageReceived', intent.recipient_id,
+                            'autonomous local recipient acknowledges the speech act',
+                            current.time, {'id': message_id}), social_capability=True)
+                        social_messages.append(message_id)
                 if self.navigation_enabled and not pending_action:
                     if needs_survey(current, npc_id):
                         append(DomainEvent('NPCNavigationSurveyed', npc_id,
@@ -201,8 +230,9 @@ class LivingWorldEngine:
         # A complete unit of work: no partial SQLite commits for multiple NPCs.
         committed = self.store.append(world_id, command_id, expected_revision, events,
                                       clock_authorized=True, npc_authorized=True,
-                                      action_authorized=True, movement_authorized=self.navigation_enabled)
+                                      action_authorized=True, movement_authorized=self.navigation_enabled,
+                                      social_authorized=self.social_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
-                                   interrupted, len(events))
+                                   interrupted, len(events), tuple(social_messages))
