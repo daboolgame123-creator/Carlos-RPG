@@ -142,3 +142,21 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Treat withdrawal of a local request or promise as an in-person communication. Do not grant instantaneous, unmodeled remote awareness; both parties must be physically co-located and idle.
 - Allow withdrawal after a meeting at another site, without changing inventory or trust. Future remote cancellation must add a real messaging/delivery protocol.
 - Increase rules version to 12 (schema stays 9), retain six new regression tests and 282 locally passing tests. No migration is performed automatically.
+
+## Phase 01-K decisions
+
+- Opt in to autonomous physical assistance; keep 01-J manual workflow and
+  all previous living-world defaults unchanged.
+- Need-driven requests use the requester's **own** hunger, inventory and trust;
+  provider response uses **provider-owned** resources, hunger, trust and promises.
+- Do not infer a food contract from a generic `request_help`/`offer_help`
+  speech act. A request is a separate typed obligation and is auditable.
+- Enforce a per-requester 900-second retry interval, a one-transition-per-NPC
+  per-tick bound, and a later tick for actual physical delivery.
+- A provider does not promise stock already committed to others; promise
+  acceptance still does not escrow goods. Broken promises can be withdrawn
+  only in person under the 01-J reducer rules.
+- Defer hunger relief by eating, thirst-driven requests, timed carrying,
+  debt, automatic negotiation, player-directed charity and narrative canon.
+- Preserve Phase 01-J schema 9/rules 12 and keep changes in `simulation/`
+  on a separate, unmerged branch.
