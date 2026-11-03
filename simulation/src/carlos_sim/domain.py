@@ -143,6 +143,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         # Both operations are system-driven; an NPC cannot impersonate the clock.
         if e.actor_id is not None:
             raise ValueError("system clock event must not impersonate an actor")
+        if e.event_type == "ScheduledEventFired" and e.time != state.time:
+            raise ValueError("scheduled firing cannot alter logical time")
     elif e.time != state.time:
         raise ValueError("ordinary event cannot advance or rewind simulation time")
     if e.actor_id is not None and e.actor_id not in state.entities:
