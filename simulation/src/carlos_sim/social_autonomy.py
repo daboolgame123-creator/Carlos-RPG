@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from .domain import WorldState
 
 MIN_SOCIAL_COOLDOWN = 180  # simulation seconds, not wall-clock time
+SAME_TOPIC_COOLDOWN = 900  # do not repeat an unchanged request to one peer every 3 minutes
 SOCIAL_TEXT = {
     'greeting': 'Hello.',
     'request_help': 'Could you help me?',
@@ -81,6 +82,12 @@ def choose_social_intent(state: WorldState, npc_id: str, *, cooldown: int = MIN_
         elif trust >= 40 and own['needs']['fatigue'] < 40 and own['needs']['hunger'] < 50:
             kind, reason = 'offer_help', 'personal_goodwill'
         if kind is not None:
+            # Without an actual fulfilled promise/need change model, repeated
+            # words alone must not mine unlimited trust from the same peer.
+            if any(m['sender'] == npc_id and m['recipient'] == peer_id
+                   and m['kind'] == kind and state.time - m['sent_at'] < SAME_TOPIC_COOLDOWN
+                   for m in history.values()):
+                continue
             candidates.append((_PRIORITY[kind], peer_id, kind, reason))
     if not candidates:
         return None
