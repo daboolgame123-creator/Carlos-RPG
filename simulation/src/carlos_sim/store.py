@@ -100,6 +100,11 @@ class SQLiteEventStore:
                 raise IntegrityError(f"corrupt event {seq}") from exc
         if state.revision != row[0] or state.time != row[1]:
             raise IntegrityError("world head mismatch")
+        from .actions import validate_action_reservations
+        try:
+            validate_action_reservations(state)
+        except ValueError as exc:
+            raise IntegrityError(str(exc)) from exc
         return state
 
     def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False, npc_authorized: bool = False, action_authorized: bool = False) -> WorldState:
@@ -147,6 +152,11 @@ class SQLiteEventStore:
                     state = apply_event(state,e,bootstrap=bootstrap,action_authorized=action_authorized)
                 except (ValueError,TypeError) as exc:
                     raise InvalidEvent(str(exc)) from exc
+            from .actions import validate_action_reservations
+            try:
+                validate_action_reservations(state)
+            except ValueError as exc:
+                raise InvalidEvent(str(exc)) from exc
             self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized),int(npc_authorized),int(action_authorized)))
             for idx, data in enumerate(serialized,start=first):
                 self.db.execute("INSERT INTO events VALUES(?,?,?,?,?)",(world_id,idx,command_id,canonical(data),canonical_hash(data)))
