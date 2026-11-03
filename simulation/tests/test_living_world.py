@@ -283,3 +283,38 @@ def test_snapshot_determinism_after_several_restarts(tmp_path):
     with SQLiteEventStore(path) as db:
         assert db.load('test').time==300
         assert db.verify('test').to_dict()==db.load('test').to_dict()
+
+
+def test_prior_npc_service_decision_is_started_on_same_tick(tmp_path):
+    from carlos_sim import NPCService
+    with SQLiteEventStore(tmp_path / 'handoff.db') as db:
+        build(db, npcs=('nora',))
+        clock = TimeEngine(db)
+        clock.open_session('test')
+        manual = NPCService(db, clock).decide('test', 'nora',
+            command_id='manual-decision', expected_revision=db.load('test').revision)
+        assert manual.action == 'work'
+        prior = db.load('test')
+        assert prior.npcs['nora']['next_decision_at'] == 60
+        result = LivingWorldEngine(db, clock).advance('test', seconds=10,
+            command_id='handoff', expected_revision=prior.revision)
+        assert result.started_action_ids == ('auto:nora:0',)
+        assert result.state.actions['auto:nora:0']['action'] == 'work'
+        assert result.state.npcs['nora']['last_decision']['at'] == 0
+        assert db.verify('test').to_dict() == result.state.to_dict()
+
+
+def test_preexisting_decision_is_not_recorded_twice(tmp_path):
+    from carlos_sim import NPCService
+    with SQLiteEventStore(tmp_path / 'handoff2.db') as db:
+        build(db, npcs=('nora',))
+        clock = TimeEngine(db)
+        clock.open_session('test')
+        NPCService(db, clock).decide('test', 'nora',
+            command_id='manual', expected_revision=db.load('test').revision)
+        result = LivingWorldEngine(db, clock).advance('test', seconds=180,
+            command_id='go', expected_revision=db.load('test').revision)
+        counts = [row[0] for row in db.db.execute('SELECT payload FROM events')
+                  if '"event_type":"NPCDecisionRecorded"' in row[0]]
+        assert len(counts) == 2  # manual at t=0; autonomous decision at t=180
+        assert result.completed_action_ids == ('auto:nora:0',)
