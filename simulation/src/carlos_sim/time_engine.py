@@ -42,7 +42,7 @@ class TimeEngine:
             raise ValueError("max_events_per_advance must be a positive integer")
         self.store = store
         self.max_events_per_advance = max_events_per_advance
-        self._active_worlds: set[str] = set()
+        self._active_worlds = store._active_worlds
 
     def open_session(self, world_id: str) -> None:
         self.store.load(world_id)  # fail if world is missing or corrupt
