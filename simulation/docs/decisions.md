@@ -77,3 +77,10 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Multiple arrivals at the same tick are resolved in persistent schedule order; each snapshot reflects the world as of that completion event.
 - No automatic route choice, sight/occlusion, stealth, encounters, combat, hearing, moving player characters or canonical Harthn geography yet.
 - Movement capability and session flags are trusted local controls, **not network authentication**. Schema/rules versions advance to 6/7.
+
+### Phase 01-F review resolution
+
+- In-transit NPCs are not present at their stored departure location for the purpose of local perception, message delivery or new activity planning.
+- Preserve origin in stored entity state until arrival; derive physical presence from active travel status rather than introducing invented intermediate coordinates.
+- Enforce in-transit guards at both high-level planner and low-level event projection; reject impossible local message delivery whether the traveler is sender or recipient.
+- After arrival, restore ordinary observation, message and decision eligibility. Preserve stale historical observations as dated evidence rather than silently replacing them.
