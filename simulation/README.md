@@ -192,3 +192,33 @@ Run `PYTHONPATH=src python scenarios/test_village/demo_assistance.py` from `simu
 The review closed two integrity holes: direct gameplay food/water **consumption requires an active play session** (only trusted bootstrap initialization is exempt), and cancelling an assistance request/promise is a **local communication event** requiring both NPCs to be present, idle, and in the same location. Remote silent withdrawal is rejected; cancellation remains possible after the characters reunite elsewhere. This is an explicitly local workflow, not a remote correspondence channel.
 
 **282 local tests passed in three batches, including six new review regressions.** Schema **9**, rules **12**; existing rules-11 test worlds need explicit migration or recreation.
+
+## Phase 01-K — Autonomous resource-backed assistance (opt-in)
+
+`LivingWorldEngine(store, clock, assistance_enabled=True)` lets idle NPCs
+**request, accept/decline, and later deliver food** during explicitly requested
+player time. A hungry NPC checks **its own hunger and food** and chooses a local,
+present NPC using **its own directed trust**. It never selects a provider based
+on the provider's hidden food quantity or private hunger. The provider alone
+checks **its own** food, hunger, trust in the requester, and previously promised
+quantities before accepting or declining. Unfulfilled promises may be cancelled
+in person if supplies are lost. Delivery is a separate, later event, not the
+same event as speech or acceptance.
+
+The policy uses the existing Phase 01-J validated obligation events; inventory
+transfer conserves actual goods and never occurs remotely, while traveling, or
+outside a play session. Default mode remains **off** for compatibility. Automatic
+food requests require hunger >= 75 and food <= 2, and the requester waits 900
+simulated seconds before another food request after any request. At most one
+autonomous assistance transition per NPC per tick is allowed; a promise cannot
+be fulfilled before a later simulated tick. Unknown/uninitialized inventory is
+never silently treated as zero. Water is deliverable under existing manual
+obligations but **no autonomous water requests**, because there is no thirst
+need mechanic yet.
+
+`LivingAdvanceResult.assistance_transitions` records `(obligation_id, status)`
+for each autonomous transition. From `simulation/`, run
+`PYTHONPATH=src python scenarios/test_village/demo_assistance_autonomy.py`.
+All demonstrations use separate fictional fixtures, never real Carlos story data.
+See `docs/phase_01k_report.md`. **Schema v9 / Rules v12 unchanged:** no new
+events or migrations, and no autonomous work occurs in background.
