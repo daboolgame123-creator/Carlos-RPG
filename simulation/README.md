@@ -160,3 +160,9 @@ Navigation profiles remember each NPC's **known routes**, **visited places**, an
 ### Phase 01-G post-review check
 
 Once an NPC has a navigation profile, **all** NPC travel starts (including direct `NPCMovementService` calls and trusted event batches) require the road to be present in that NPC’s learned-route list. Legacy 01-F worlds without navigation profiles retain explicit-route movement behavior. Post-review local tests: **188 passed**.
+
+## Phase 01-H — Asymmetric NPC relationships
+
+`NPCSocialService.interact` atomically records a local speech act and its recipient's interpretation. Only NPC recipients are automatically processed; the player character may be a sender but cannot be impersonated as an autonomously reacting NPC. Both parties must be co-located and neither may be traveling. Trust is asymmetric, bounded −100…100, and per-NPC. Each message and outcome is event-sourced for replay. `greeting`, `offer_help`, `request_help`, and `threat` are fixed **prototype categories**; the words of a message do not independently prove the claimed act, and an offer is not actual aid. No unsolicited NPC dialogue or social planning yet.
+
+Run `PYTHONPATH=src python scenarios/test_village/demo_social.py` from `simulation/`; read `docs/phase_01h_report.md`. Schema/rules versions are 8/9. Earlier experimental databases require migration or re-creation; no Carlos story state imported. Local capability flags are not network authorization.
