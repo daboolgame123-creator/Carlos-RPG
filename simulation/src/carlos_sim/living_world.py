@@ -104,6 +104,8 @@ class LivingWorldEngine:
 
             busy = {a['npc_id'] for a in current.actions.values()
                     if a['status'] == 'running'}
+            busy.update(t['npc_id'] for t in current.travels.values()
+                        if t['status'] == 'traveling')
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
