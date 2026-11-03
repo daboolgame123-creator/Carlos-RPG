@@ -68,3 +68,15 @@ with SQLiteEventStore("test_world.sqlite") as store:
 A scheduled item is a *signal*, not arbitrary Python execution, a quest, a payment or an NPC action. The schedule is durable; the session flag is intentionally **not** durable. `clock_authorized=True` on the low-level event store is a **trusted internal capability**, not a security boundary; do not expose the store directly to HTTP or untrusted callers. `advance` rejects reusing a high-level command ID (rather than returning its original timing receipt). Cancelling uses `clock.cancel` before an item fires.
 
 Phase 01-B increments the world schema version to 2 and rules version to 3. Existing experimental databases from the earlier phase require explicit migration or recreation. Details: `docs/phase_01b_report.md`.
+
+## Phase 01-C: isolated NPC intention planner
+
+`carlos_sim.npc` provides per-NPC needs, goals, received beliefs and deterministic, explainable intentions. NPC decisions are recorded as events and remain stable over snapshot/replay. They do **not** execute actions. An active local `TimeEngine` session is required for `NPCService.decide`.
+
+Try the five-person test fixture with:
+
+```sh
+PYTHONPATH=src python scenarios/test_village/demo.py
+```
+
+The example values, goals and scoring weights are **test rules only**, not facts of Carlos's world. Database format is now schema v3/rules v4 and experimental older databases require explicit migration/recreation. See `docs/phase_01c_report.md`.
