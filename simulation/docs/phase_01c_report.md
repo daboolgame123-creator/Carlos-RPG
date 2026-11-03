@@ -24,7 +24,7 @@ python -m pytest -q
 PYTHONPATH=src python scenarios/test_village/demo.py
 ```
 
-**72 passed** locally, including the original 50 tests and 22 NPC tests. The five-person demo produced: nora=rest, basim=work, salma=work, adil=investigate, huda=rest. These are **intentions**, not physically executed actions. No GitHub CI or cross-platform runtime verification was performed.
+**72 passed** before review and **84 passed** after corrections, including the original 50 tests and 22 NPC tests. The five-person demo produced: nora=rest, basim=work, salma=work, adil=investigate, huda=rest. These are **intentions**, not physically executed actions. No GitHub CI or cross-platform runtime verification was performed.
 
 ## Version and boundaries
 
@@ -33,3 +33,15 @@ Schema v3 / rules v4. Phase 01-B experimental SQLite files need an explicit migr
 ## Deferred
 
 Action resolver, activity durations, automatic needs decay, world perception, location movement, trade, broader goals, personality traits, dynamic memory, rumors, player-facing views and LLM narration are not implemented. Exact decision weights are test-only and must not be imported into Carlos's world without approval. Narrative documents and the real Carlos state remain unchanged.
+
+## Post-review corrections (2026-11-03)
+
+Three issues found in code review have been corrected in the isolated Phase 01-C branch:
+
+1. **World freeze:** SQLiteEventStore now rejects NPC needs, information deliveries, belief acknowledgements and decision writes unless a play session is open for that world. TimeEngine instances sharing the same store also share this session flag; simply creating a new TimeEngine cannot bypass a closed session. Bootstrap setup remains possible without gameplay.
+2. **Minimum decision cadence:** deterministic policy requires at least 60 simulated seconds between NPC decision events, enforced by both the reducer and NPCService. A trusted low-level write cannot shorten this minimum.
+3. **Information provenance:** added NPCInformationDelivered events with recorded sender, shared location, channel, receipt time and claim; NPCBeliefReceived must reference and consume a matching pending delivery. Unique delivery IDs are remembered to prevent reuse. Incorrect sender/source, missing delivery, duplicate receipt and offline delivery are rejected. The record proves **what was submitted to the simulation**, not the objective truth of the rumor or that a human really uttered it.
+
+**Verification:** `python -m pytest -q` locally: **84 passed** (72 pre-review + 12 new regression tests). `python -m compileall -q src tests`: passed. No public network or external AI service used in tests. GitHub CI not run. This report does not represent an independent hosted test run.
+
+**Schema/rules:** v4/v5. Existing local experimental SQLite databases from v3/v4 need explicit migration or recreation; no automatic migration and no Carlos story state import. Future network-facing application must authenticate and authorize session activation and trusted NPC capability; neither an event payload nor an in-process flag proves external identity.
