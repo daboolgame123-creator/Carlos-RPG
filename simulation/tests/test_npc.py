@@ -222,3 +222,108 @@ def test_five_person_demo_is_reproducible():
     first=module.run()
     assert len(first)==5 and len({x[0] for x in first})==5
     assert first==module.run()
+
+
+def test_offline_need_change_rejected_at_store(db):
+    state=setup(db)
+    TimeEngine(db).close_session('test')
+    e=event('NPCNeedChanged',{'npc_id':'nora','need':'fatigue','previous':5,'current':90},actor='nora')
+    with pytest.raises(InvalidEvent,match='active play session'):
+        db.append('test','offline-change',state.revision,[e])
+    assert db.load('test').revision==state.revision
+
+
+def test_offline_info_delivery_rejected_at_store(db):
+    state=setup(db)
+    TimeEngine(db).close_session('test')
+    with pytest.raises(InvalidEvent,match='active play session'):
+        db.append('test','offline-info',state.revision,[delivery_event('id','false danger',80)],npc_authorized=True)
+    assert db.load('test').revision==state.revision
+
+
+def test_clock_session_shared_across_services(db):
+    state=setup(db)
+    new_clock=TimeEngine(db)
+    new_clock.close_session('test')
+    from carlos_sim import SessionClosed
+    with pytest.raises(SessionClosed):
+        NPCService(db,TimeEngine(db)).decide('test','nora',command_id='closed',expected_revision=state.revision)
+    assert db.load('test').revision==state.revision
+
+
+def test_cooldown_cannot_be_shortened_through_store(db):
+    state=setup(db)
+    d=choose_action(state,'nora')
+    e=event('NPCDecisionRecorded',{'npc_id':'nora','action':d.action,'score':d.score,'reason':d.reason,'next_decision_at':1},actor='nora')
+    with pytest.raises(InvalidEvent,match='next decision'):
+        db.append('test','short',state.revision,[e],npc_authorized=True)
+
+
+def test_service_cooldown_must_be_at_least_minimum(db):
+    with pytest.raises(ValueError, match='at least 60'):
+        NPCService(db,TimeEngine(db),decision_cooldown=1)
+
+
+def test_belief_without_delivery_rejected(db):
+    state=setup(db)
+    e=event('NPCBeliefReceived',{'npc_id':'nora','key':'danger','delivery_id':'never'},actor='nora')
+    with pytest.raises(InvalidEvent,match='no matching pending'):
+        db.append('test','unproven',state.revision,[e])
+
+
+def test_delivery_requires_trusted_capability(db):
+    state=setup(db)
+    with pytest.raises(InvalidEvent,match='trusted NPC capability'):
+        db.append('test','fake',state.revision,[delivery_event('x','danger',40)])
+
+
+def test_delivery_requires_valid_source_location(db):
+    state=setup(db)
+    e=event('NPCInformationDelivered',{'npc_id':'nora','delivery_id':'x','key':'danger',
+         'claim':{'text':'danger','source':'other','received_at':0,'confidence':60},
+         'sender_id':'basil','location_id':'village','method':'message'},actor='basil')
+    with pytest.raises(InvalidEvent,match='source'):
+        db.append('test','fake-source',state.revision,[e],npc_authorized=True)
+
+
+def test_knowledge_acknowledgement_is_one_time(db):
+    state=setup(db)
+    state=deliver(db,state,'once',text='rumor',confidence=50)
+    e=event('NPCBeliefReceived',{'npc_id':'nora','key':'danger','delivery_id':'once'},actor='nora')
+    with pytest.raises(InvalidEvent,match='no matching pending'):
+        db.append('test','second-receipt',state.revision,[e])
+
+
+def test_unconsumed_delivery_persists_and_can_be_acknowledged_after_restart(tmp_path):
+    path=tmp_path/'delivery.db'
+    with SQLiteEventStore(path) as s:
+        s.create_world('test')
+        state=setup(s)
+        TimeEngine(s).open_session('test')
+        state=s.append('test','deliver',state.revision,[delivery_event('pending','warning',70)],npc_authorized=True)
+        s.snapshot('test')
+    with SQLiteEventStore(path) as s:
+        assert 'pending' in s.verify('test').npcs['nora']['inbox']
+        TimeEngine(s).open_session('test')
+        state=s.load('test')
+        state=s.append('test','receive',state.revision,[event('NPCBeliefReceived',{'npc_id':'nora','key':'danger','delivery_id':'pending'},actor='nora')])
+        assert state.npcs['nora']['beliefs']['danger']['text']=='warning'
+        assert s.verify('test').to_dict()==state.to_dict()
+
+
+def test_delivery_id_cannot_be_reused_after_acknowledgement(db):
+    state=setup(db)
+    state=deliver(db,state,'one',text='danger',confidence=60)
+    with pytest.raises(InvalidEvent,match='duplicate delivery ID'):
+        db.append('test','reuse',state.revision,[delivery_event('one','new lie',100)],npc_authorized=True)
+    assert db.verify('test').to_dict()==state.to_dict()
+
+
+def test_offline_decision_with_planner_capability_rejected(db):
+    state=setup(db)
+    TimeEngine(db).close_session('test')
+    d=choose_action(state,'nora')
+    e=event('NPCDecisionRecorded',{'npc_id':'nora','action':d.action,'score':d.score,
+        'reason':d.reason,'next_decision_at':60},actor='nora')
+    with pytest.raises(InvalidEvent,match='active play session'):
+        db.append('test','offline-decide',state.revision,[e],npc_authorized=True)
