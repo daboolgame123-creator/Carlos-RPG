@@ -34,10 +34,10 @@ Run the script with `PYTHONPATH=src python your_script.py` from the `simulation`
 
 - `LocationCreated`: `{id, name}`
 - `EntityCreated`: `{id, name, location_id, controller}` where controller is `npc` or `player`
-- `ResourceChanged`: `{owner_id, resource, previous, current}`; `null` means unknown
+- `ResourceChanged`: `{owner_id, resource, previous, current, source}`. `source="initialization"` requires a trusted `append(..., bootstrap=True)` operation at simulation time zero with `previous=null` and a non-null initial amount. `source="consumption"` requires the owning entity as `actor_id` and strictly decreases a known balance. Arbitrary creation, production and transfers are NOT supported.
 - `TimeAdvanced`: `{from, to}`; explicit logical time transition
 
-Every event requires a nonempty `cause`, optional `actor_id`, and nondecreasing integer `time`. Time progression is **not** automatic. The API does not yet have a session authorization layer; only trusted local callers should call `append`.
+Every event requires a nonempty `cause`, optional `actor_id`, and nondecreasing integer `time`. Ordinary events must have the current world time; only `TimeAdvanced` can change it. Actor references must resolve to an existing entity. Time progression is **not** automatic. The API does not yet have a session authorization layer; only trusted local callers should call `append` or set `bootstrap=True`. Bootstrap is a caller-supplied capability flag, **not authentication**. Do not expose it over an API. The changed resource rules use `rules_version=2`; old experimental databases are incompatible and need explicit migration or re-creation.
 
 ## Limitations
 
