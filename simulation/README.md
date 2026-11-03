@@ -146,3 +146,7 @@ PYTHONPATH=src python scenarios/test_village/demo_movement.py
 ```
 
 The demo uses synthetic Square / Bridge / Courtyard places, not Harthn or Carlos's real world. All travel and observation operations are trusted-local prototype APIs; **not authenticated HTTP operations**. World schema v6/rules v7: previous test databases require deliberate migration or recreation. No `main` merge or story-file modifications.
+
+### Phase 01-F review corrections
+
+While an NPC is traveling, its stored location remains the departure endpoint for deterministic persistence, **but it is absent for local observation and local messaging**. Both the sender and recipient of a local information delivery must not be in transit. New NPC activity decisions are also blocked during travel and become eligible after arrival. Seven regression tests added; **160 passed locally** after review. See `docs/phase_01f_report.md`.
