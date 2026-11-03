@@ -125,6 +125,12 @@ def project_movement_event(state: dict[str, Any], event: DomainEvent, *,
         route = state['routes'].get(data['route_id']) if isinstance(data['route_id'], str) else None
         if route is None or {data['origin'], data['destination']} != {route['a'], route['b']}:
             raise ValueError('traveler must use an existing adjacent route')
+        # Once NPC-local route knowledge is initialized, even trusted direct
+        # movement calls must honor it.  Legacy Phase 01-F worlds without a
+        # navigation profile retain explicit-route movement compatibility.
+        nav = state['navigation'].get(npc_id)
+        if nav is not None and data['route_id'] not in nav['known_routes']:
+            raise ValueError('NPC cannot traverse a route it has not learned')
         if (state['entities'][npc_id]['location_id'] != data['origin']
                 or type(data['due']) is not int or data['due'] != state['time'] + route['seconds']
                 or data['schedule_id'] != 'npc-travel:' + ident):
