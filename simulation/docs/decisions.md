@@ -109,3 +109,10 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Apply co-location plus in-transit checks at event-projection level; preserve replay and the explicit-player-time freeze.
 - Distinguish offered favors and requests from actual aid or debt. No resource transfer or reward is created by a sentence.
 - Defer fully autonomous social initiative, partner preferences, dynamic alliances, reputation, deception mechanics and LLM dialogue to later reviewed phases.
+
+### Phase 01-H review resolutions
+
+- Preserve the place of a locally delivered speech act: delayed acknowledgement cannot move to another location with the characters.
+- Limit repeated identical social acts from the same sender to the same recipient within one simulated tick. Different kinds can occur in the same tick; later repetition requires logical time progression.
+- Treat the guard as anti-duplication, not fully realistic social pacing; future phases should connect influence to attention, time, truth, reputation, promises and fulfilled actions.
+- Bump rules version 9→10 without changing schema version 8, to reject earlier replay semantics pending migration.
