@@ -12,6 +12,7 @@ from .domain import DomainEvent, WorldState, apply_event
 from .npc import MIN_DECISION_COOLDOWN, choose_action
 from .store import DuplicateCommand, InvalidEvent, SQLiteEventStore
 from .time_engine import AdvanceLimitExceeded, TimeEngine
+from .navigation import next_route, needs_survey
 
 
 @dataclass(frozen=True)
@@ -37,7 +38,8 @@ class LivingWorldEngine:
 
     def __init__(self, store: SQLiteEventStore, clock: TimeEngine, *,
                  max_events_per_advance: int = 1000,
-                 decision_cooldown: int = MIN_DECISION_COOLDOWN):
+                 decision_cooldown: int = MIN_DECISION_COOLDOWN,
+                 navigation_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -47,7 +49,10 @@ class LivingWorldEngine:
         self.store = store
         self.clock = clock
         self.max_events_per_advance = max_events_per_advance
+        if type(navigation_enabled) is not bool:
+            raise ValueError("navigation_enabled must be boolean")
         self.decision_cooldown = decision_cooldown
+        self.navigation_enabled = navigation_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -73,13 +78,15 @@ class LivingWorldEngine:
         fired: list[str] = []
         interrupted = False
 
-        def append(event: DomainEvent, *, action_capability: bool = False) -> None:
+        def append(event: DomainEvent, *, action_capability: bool = False,
+                   movement_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
                 raise AdvanceLimitExceeded('autonomous simulation event budget exhausted')
             try:
-                current = apply_event(current, event, action_authorized=action_capability)
+                current = apply_event(current, event, action_authorized=action_capability,
+                                      movement_authorized=movement_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -110,6 +117,36 @@ class LivingWorldEngine:
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
                     continue
+                existing = current.npcs[npc_id]['last_decision']
+                pending_action = existing is not None and existing['at'] == current.time
+                if self.navigation_enabled and not pending_action:
+                    if needs_survey(current, npc_id):
+                        append(DomainEvent('NPCNavigationSurveyed', npc_id,
+                            'NPC surveys locally observable roads', current.time,
+                            {'npc_id': npc_id}), movement_capability=True)
+                    route_id = next_route(current, npc_id)
+                    if route_id is not None:
+                        route = current.routes[route_id]
+                        here = current.entities[npc_id]['location_id']
+                        there = route['b'] if route['a'] == here else route['a']
+                        travel_id = f'auto-nav:{npc_id}:{current.time}'
+                        if travel_id in current.travels:
+                            raise InvalidEvent('autonomous journey identifier collision')
+                        due_at = current.time + route['seconds']
+                        schedule_id = 'npc-travel:' + travel_id
+                        append(DomainEvent('ScheduledEventCreated', None,
+                            'scheduled autonomous travel arrival', current.time,
+                            {'id': schedule_id, 'due': due_at,
+                             'order': current.next_schedule_order, 'kind': 'signal',
+                             'payload': {'__npc_travel_id': travel_id}, 'interrupt': False}),
+                             movement_capability=True)
+                        append(DomainEvent('NPCTravelStarted', npc_id,
+                            'autonomous movement over a learned road', current.time,
+                            {'id': travel_id, 'npc_id': npc_id, 'route_id': route_id,
+                             'origin': here, 'destination': there, 'due': due_at,
+                             'schedule_id': schedule_id}), movement_capability=True)
+                        busy.add(npc_id)
+                        continue
                 # A prior NPCService.decide call can leave a valid, unstarted
                 # intention at this exact tick. Execute it rather than waiting
                 # for its decision cooldown and silently leaving the NPC idle.
@@ -164,7 +201,7 @@ class LivingWorldEngine:
         # A complete unit of work: no partial SQLite commits for multiple NPCs.
         committed = self.store.append(world_id, command_id, expected_revision, events,
                                       clock_authorized=True, npc_authorized=True,
-                                      action_authorized=True)
+                                      action_authorized=True, movement_authorized=self.navigation_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
