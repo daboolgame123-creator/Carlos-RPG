@@ -9,8 +9,8 @@ from typing import Any, Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 4
-RULES_VERSION = 5
+SCHEMA_VERSION = 5
+RULES_VERSION = 6
 
 
 def _thaw(value: Any) -> Any:
@@ -58,6 +58,7 @@ class WorldState:
     scheduled: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     next_schedule_order: int = 1
     npcs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    actions: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -65,17 +66,18 @@ class WorldState:
         object.__setattr__(self, "resources", _freeze(_json_copy(self.resources)))
         object.__setattr__(self, "scheduled", _freeze(_json_copy(self.scheduled)))
         object.__setattr__(self, "npcs", _freeze(_json_copy(self.npcs)))
+        object.__setattr__(self, "actions", _freeze(_json_copy(self.actions)))
 
     def to_dict(self) -> dict[str, Any]:
         return _json_copy({"world_id": self.world_id, "time": self.time, "revision": self.revision,
                            "schema_version": self.schema_version, "rules_version": self.rules_version,
                            "entities": self.entities, "locations": self.locations, "resources": self.resources,
                            "scheduled": self.scheduled, "next_schedule_order": self.next_schedule_order,
-                           "npcs": self.npcs})
+                           "npcs": self.npcs, "actions": self.actions})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -83,7 +85,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -109,6 +111,8 @@ class WorldState:
             if ident not in d["entities"] or d["entities"][ident]["controller"] != "npc":
                 raise ValueError("NPC profile must reference NPC-controlled entity")
             validate_npc_state(npc)
+        from .actions import validate_actions
+        validate_actions(d)
         return cls(**_json_copy(d))
 
 
@@ -142,7 +146,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -176,6 +180,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("NPCConfigured", "NPCInformationDelivered", "NPCBeliefReceived", "NPCNeedChanged", "NPCDecisionRecorded"):
         from .npc import project_npc_event
         project_npc_event(d, e, bootstrap=bootstrap)
+    elif kind == "NPCActionStarted":
+        from .actions import start_action
+        start_action(d, e, action_authorized=action_authorized)
     elif kind == "ResourceChanged":
         if set(p) != {"owner_id", "resource", "previous", "current", "source"}:
             raise ValueError("invalid resource change fields")
@@ -192,6 +199,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if current == previous and type(current) is type(previous):
             raise ValueError("resource did not change")
         source = p["source"]
+        if resource in ("labor_units", "investigation_attempts") and source != "initialization":
+            raise ValueError("NPC action counters may only change through scheduled action completion")
         if source == "initialization":
             if not bootstrap or state.time != 0 or previous is not None or current is None or e.actor_id is not None:
                 raise ValueError("resource initialization requires authorized bootstrap at time zero")
@@ -212,11 +221,16 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("invalid due time or schedule order")
         if p["kind"] != "signal" or not isinstance(p["payload"], Mapping) or type(p["interrupt"]) is not bool:
             raise ValueError("unsupported scheduled action")
+        if "__npc_action_id" in p["payload"]:
+            if not action_authorized or set(p["payload"]) != {"__npc_action_id"} or p["interrupt"]:
+                raise ValueError("NPC action schedule requires trusted action capability")
         d["scheduled"][p["id"]] = {k: _thaw(p[k]) for k in ("due", "order", "kind", "payload", "interrupt")}
         d["next_schedule_order"] += 1
     elif kind == "ScheduledEventCancelled":
         if set(p) != {"id"} or not isinstance(p["id"], str) or p["id"] not in d["scheduled"]:
             raise ValueError("cannot cancel missing schedule")
+        if any(a["status"] == "running" and a["schedule_id"] == p["id"] for a in d["actions"].values()):
+            raise ValueError("cannot cancel an ongoing NPC action; explicit cancellation is not supported")
         del d["scheduled"][p["id"]]
     elif kind == "ScheduledEventFired":
         if set(p) != {"id"} or not isinstance(p["id"], str) or p["id"] not in d["scheduled"]:
@@ -227,6 +241,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         earliest = min(d["scheduled"].items(), key=lambda x: (x[1]["due"], x[1]["order"], x[0]))[0]
         if earliest != p["id"]:
             raise ValueError("scheduled event fired out of order")
+        if "__npc_action_id" in scheduled["payload"]:
+            from .actions import resolve_action
+            resolve_action(d, scheduled["payload"]["__npc_action_id"], p["id"], state.time)
         del d["scheduled"][p["id"]]
     elif kind == "TimeAdvanced":
         if set(p) != {"from", "to"} or type(p["from"]) is not int or type(p["to"]) is not int:
