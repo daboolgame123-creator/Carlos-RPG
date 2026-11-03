@@ -135,3 +135,115 @@ def test_autonomous_request_not_derived_from_other_npcs_private_hunger(tmp_path)
     assert choices[0] == choices[1]
 
 
+def test_no_remote_or_traveling_requester(village):
+    db, clock = village
+    moved = NPCMovementService(db, clock).start('w','nora','road','nora-away',
+                                               expected_revision=db.load('w').revision)
+    assert choose_assistance_intent(moved.state, 'nora', 'request') is None
+    result = living(db, clock, 1, 'during-trip')
+    assert result.state.obligations == {}
+
+
+def test_no_request_while_actively_working(village):
+    db, clock = village
+    NPCService(db, clock).decide('w', 'nora', command_id='nora-plan',
+                                 expected_revision=db.load('w').revision)
+    NPCActionService(db, clock).start('w', 'nora', 'work',
+                                     expected_revision=db.load('w').revision)
+    assert choose_assistance_intent(db.load('w'), 'nora', 'request') is None
+    result = living(db, clock, 1, 'nora-working')
+    assert result.state.obligations == {}
+
+
+def test_prior_private_intention_prevents_autonomous_aid(village):
+    db, clock = village
+    NPCService(db, clock).decide('w', 'nora', command_id='nora-decided',
+                                 expected_revision=db.load('w').revision)
+    assert choose_assistance_intent(db.load('w'), 'nora', 'request') is None
+    outcome = living(db, clock, 1, 'intent-honored')
+    assert not outcome.state.obligations
+    assert any(a['npc_id'] == 'nora' for a in outcome.state.actions.values())
+
+
+def test_provider_not_using_requesters_secret_needs_for_response(village):
+    db, clock = village
+    svc = NPCAssistanceService(db, clock)
+    svc.request('w', 'nora', 'basim', 'food', 2, 'manual-request',
+                expected_revision=db.load('w').revision)
+    first = choose_assistance_intent(db.load('w'), 'basim', 'respond')
+    # Change only Nora's own private need after making the request.
+    db.append('w', 'secret-change', db.load('w').revision, [e('NPCNeedChanged', {
+              'npc_id': 'nora', 'need': 'hunger', 'previous': 85, 'current': 99}, actor='nora')])
+    assert choose_assistance_intent(db.load('w'), 'basim', 'respond') == first
+
+
+def test_manual_request_is_auto_handled_by_provider(tmp_path):
+    with SQLiteEventStore(tmp_path/'manual.db') as db:
+        setup(db)
+        clock=TimeEngine(db);clock.open_session('w')
+        svc=NPCAssistanceService(db,clock)
+        svc.request('w','nora','basim','water',3,'manual',expected_revision=db.load('w').revision)
+        output=living(db,clock,1,'respond')
+        assert output.state.obligations['manual']['status']=='promised'
+        assert output.assistance_transitions == (('manual','promised'),)
+        assert output.state.resources['basim']['water']==8
+
+
+def test_auto_cancels_promise_if_stock_spent_before_delivery(village):
+    db,clock=village
+    svc=NPCAssistanceService(db,clock)
+    svc.request('w','nora','basim','food',9,'big',expected_revision=db.load('w').revision)
+    svc.respond('w','basim','big',accept=True,command_id='yes',
+                expected_revision=db.load('w').revision)
+    db.append('w','eat',db.load('w').revision,[e('ResourceChanged', {
+            'owner_id':'basim','resource':'food','previous':10,'current':1,'source':'consumption'},actor='basim')])
+    clock.advance('w',seconds=1,command_id='time',expected_revision=db.load('w').revision)
+    result=living(db,clock,1,'cancel')
+    assert result.assistance_transitions[0] == ('big','cancelled')
+    assert result.state.obligations['big']['status']=='cancelled'
+    assert result.state.resources['basim']['food']==1
+    assert result.state.relations=={}
+
+
+def test_no_remote_delivery_or_remote_cancellation(village):
+    db,clock=village
+    svc=NPCAssistanceService(db,clock)
+    svc.request('w','nora','basim','food',2,'promise',expected_revision=db.load('w').revision)
+    svc.respond('w','basim','promise',accept=True,command_id='yes',
+                expected_revision=db.load('w').revision)
+    travel=NPCMovementService(db,clock).start('w','basim','road','depart',
+                                            expected_revision=db.load('w').revision)
+    clock.advance('w',seconds=20,command_id='arrive',expected_revision=travel.state.revision)
+    result=living(db,clock,1,'while-separated')
+    assert result.state.obligations['promise']['status']=='promised'
+    assert all(i != 'promise' for i, status in result.assistance_transitions)
+    assert result.state.resources['basim']['food']==10
+
+
+def test_one_long_advance_matches_four_short_advances(tmp_path):
+    results=[]
+    for i, chunks in enumerate(((400,), (100, 100, 100, 100))):
+        with SQLiteEventStore(tmp_path / f'chunk{i}.db') as db:
+            clock = world_with_needy_person(db)
+            for j, seconds in enumerate(chunks):
+                living(db, clock, seconds, f'chunk{j}')
+            state = db.verify('w').to_dict()
+            state.pop('revision')  # number of TimeAdvanced boundaries differs
+            results.append(state)
+    assert results[0] == results[1]
+
+
+def test_request_refractory_period_survives_refusal(village):
+    db,clock=village
+    svc=NPCAssistanceService(db,clock)
+    svc.request('w','nora','basim','food',2,'first',expected_revision=db.load('w').revision)
+    svc.respond('w','basim','first',accept=False,command_id='decline',
+                expected_revision=db.load('w').revision)
+    assert choose_assistance_intent(db.load('w'),'nora','request') is None
+    clock.advance('w',seconds=899,command_id='wait',expected_revision=db.load('w').revision)
+    assert choose_assistance_intent(db.load('w'),'nora','request') is None
+    clock.advance('w',seconds=1,command_id='reconsider',expected_revision=db.load('w').revision)
+    intent=choose_assistance_intent(db.load('w'),'nora','request')
+    assert intent is not None and intent.request_id=='auto-help:nora:900'
+
+
