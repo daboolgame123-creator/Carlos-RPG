@@ -42,3 +42,29 @@ Every event requires a nonempty `cause`, optional `actor_id`, and nondecreasing 
 ## Limitations
 
 This is a foundation, not an RPG or narrative engine. No NPC decisions, knowledge propagation, tasks, combat, prices, ChatGPT connector, permissions, or automatic player-context perception. The player view is intentionally minimal to avoid disclosing secrets. Rebuild verification detects discrepancies between snapshots and the complete event log. It is not intended to prevent a privileged database operator from rewriting both events and stored hashes.
+
+## Phase 01-B: manual clock and scheduled signals
+
+`TimeEngine` is a local, trusted coordinator. Opening a session does **not** start an asynchronous clock; only `advance` moves logical time. Closing or restarting the process freezes the world.
+
+```python
+from carlos_sim import SQLiteEventStore, TimeEngine
+
+with SQLiteEventStore("test_world.sqlite") as store:
+    store.create_world("village")
+    clock = TimeEngine(store)
+    clock.open_session("village")
+    state = clock.schedule_signal("village", "alarm", due=30,
+                                  payload={"label": "bell"}, interrupt=True,
+                                  expected_revision=0)
+    result = clock.advance("village", seconds=100,
+                           command_id="wait-1", expected_revision=state.revision)
+    assert result.state.time == 30
+    assert result.remaining_seconds == 70
+    assert result.interrupted
+    clock.close_session("village")
+```
+
+A scheduled item is a *signal*, not arbitrary Python execution, a quest, a payment or an NPC action. The schedule is durable; the session flag is intentionally **not** durable. `clock_authorized=True` on the low-level event store is a **trusted internal capability**, not a security boundary; do not expose the store directly to HTTP or untrusted callers. `advance` rejects reusing a high-level command ID (rather than returning its original timing receipt). Cancelling uses `clock.cancel` before an item fires.
+
+Phase 01-B increments the world schema version to 2 and rules version to 3. Existing experimental databases from the earlier phase require explicit migration or recreation. Details: `docs/phase_01b_report.md`.
