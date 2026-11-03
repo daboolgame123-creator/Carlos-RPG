@@ -85,7 +85,7 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
     if event.event_type == "NPCInformationDelivered":
         if set(p) != {"npc_id", "delivery_id", "key", "claim", "sender_id", "location_id", "method"}:
             raise ValueError("invalid information delivery")
-        delivery_id = p["delivery_id"]]
+        delivery_id = p["delivery_id"]
         if not isinstance(delivery_id, str) or not delivery_id or delivery_id in npc["delivery_history"]:
             raise ValueError("invalid or duplicate delivery ID")
         if not isinstance(p["key"], str) or not p["key"] or p["method"] not in ("message", "observation"):
