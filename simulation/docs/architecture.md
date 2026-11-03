@@ -1,15 +1,15 @@
 # Implemented architecture (Phase 01-A)
 
-1. `DomainEvent` is a versioned, validated JSON-compatible envelope. Only four event types have reducers in this phase.
+1. `DomainEvent` is a versioned, validated JSON-compatible envelope. Four event types have reducers. Ordinary events cannot advance time; non-null actor references must exist.
 2. `apply_event(WorldState, DomainEvent)` is a pure deterministic projection. World state and nested mappings are immutable after construction. A rejected event does not mutate the previous state.
-3. `SQLiteEventStore.append` opens an `IMMEDIATE` transaction, validates the expected world revision, applies all requested events in memory, and stores a command idempotency record, ordered event envelopes, and world head metadata atomically. A failed batch rolls back.
+3. `SQLiteEventStore.append` uses a caller-supplied `bootstrap` flag, persisted with each command for deterministic replay. Initial resource allocation is permitted only in trusted bootstrap at time zero; consumption requires a matching owning actor and cannot increase a balance. This is not a network authorization boundary. It opens an `IMMEDIATE` transaction, validates the expected world revision, applies all requested events in memory, and stores a command idempotency record, ordered event envelopes, and world head metadata atomically. A failed batch rolls back.
 4. `load` can begin from the latest verified snapshot or genesis. It applies tail events in event sequence order. `verify` compares snapshot-based state against an independent genesis replay.
 5. `snapshot` stores a canonical JSON state and SHA-256 hash in one transaction. Snapshotting and reading never advance simulation time.
 6. `player_view` exposes only world ID, current logical time, and revision; no hidden NPC data is published until proper perception and visibility mechanisms exist.
 
 ## Schema
 
-SQLite tables: `worlds`, `commands`, `events`, `snapshots`. Event sequence is per world and equals post-event world revision. `worlds` stores immutable genesis JSON plus current head metadata. Event payloads and snapshots have stable, canonical SHA-256 hashes. SQLite foreign keys are enabled.
+SQLite tables: `worlds`, `commands`, `events`, `snapshots`. Commands also retain their bootstrap provenance. Rules version 2 rejects older experimental databases without migration. Event sequence is per world and equals post-event world revision. `worlds` stores immutable genesis JSON plus current head metadata. Event payloads and snapshots have stable, canonical SHA-256 hashes. SQLite foreign keys are enabled.
 
 ## Boundaries and deliberate exclusions
 
