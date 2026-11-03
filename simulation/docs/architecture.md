@@ -63,3 +63,11 @@ Each NPC's autonomous action ID is derived deterministically from `(npc_id, star
 ### Phase 01-E review guard: pre-recorded intentions
 
 If a character has a `last_decision` at the *current logical tick* but no running action, the living-world coordinator starts that existing intention instead of treating the decision cooldown as a reason to remain idle. This preserves handoff compatibility with `NPCService.decide`. No duplicate NPCDecisionRecorded event is written. Already running actions, absent decisions and expired decisions follow the original deterministic branch.
+
+## Phase 01-F: spatial topology and perception
+
+`WorldState.routes`, `WorldState.travels` and `WorldState.observations` are immutable event projections. `RouteCreated` is trusted-bootstrap-only (time zero) and connects two distinct existing locations with a positive integer cost. `NPCTravelStarted` requires an NPC at one endpoint, an active session, a trusted `movement_authorized` capability, no overlapping NPC activity/travel, and a matching reserved `ScheduledEventCreated` in the same atomic command. Due `ScheduledEventFired` updates the NPC's location and travel completion status atomically, then projects an observation snapshot. Reserved signals are checked at event-store command/load boundaries so orphan reservations cannot block logical time.
+
+`NPCObserved` is a trusted explicit observation of the NPC's *current* location, rejected while traveling. Both explicit observations and arrival perception store a sorted list of co-located entity IDs and a logical timestamp. No automatic read of remote locations occurs, and old snapshots remain historical rather than following entities around. The NPC belief/rumor subsystem remains separate; perception is not a claim of knowing hidden information or an actor's intentions. Arrival ordering is durable and deterministic for simultaneous arrivals.
+
+`TimeEngine` and `LivingWorldEngine` continue to drive clock advancement only through an explicit active-play command. Traveling NPCs are excluded from autonomous activity starts. `SQLiteEventStore` persists movement capability provenance with commands and replays it deterministically. **Schema v6 / rules v7**; no automatic migration of previous experimental worlds and no connection to current Carlos story state.
