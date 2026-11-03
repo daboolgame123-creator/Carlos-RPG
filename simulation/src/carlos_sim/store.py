@@ -158,6 +158,11 @@ class SQLiteEventStore:
                 raise InvalidEvent('resource-backed assistance requires trusted assistance capability')
             if world_id not in self._active_worlds:
                 raise InvalidEvent('assistance requires an active play session')
+        # Gameplay consumption is a state mutation, not a background administrative
+        # update. Initial inventory setup remains permitted only at bootstrap.
+        if any(e.event_type == "ResourceChanged" and e.data.get("source") != "initialization"
+               for e in events) and world_id not in self._active_worlds:
+            raise InvalidEvent("resource consumption requires an active play session")
         serialized = [e.to_dict() for e in events]
         request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized,"action_authorized":action_authorized,"movement_authorized":movement_authorized,"social_authorized":social_authorized,"assistance_authorized":assistance_authorized})
         self.db.execute("BEGIN IMMEDIATE")
