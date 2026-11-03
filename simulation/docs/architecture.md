@@ -36,3 +36,10 @@ Events due at the same time are sorted by due time, monotonically increasing sch
 ## Phase 01-C: NPC prototype
 
 `WorldState.npcs` is an immutable, event-projected dictionary. `NPCConfigured` is bootstrap-only. `NPCBeliefReceived` adds a claim to the intended individual's private beliefs; `NPCNeedChanged` validates previous/current need values; `NPCDecisionRecorded` validates actor identity, action, policy score and decision cooldown. `NPCService.decide` checks active session and optimistic revision before recording a decision with `npc_authorized=True`. The flag is an internal convention only, never an API permission mechanism. No intention is automatically translated into an action or state change. Schema/rules versions are now 3/4.
+
+## Phase 01-C post-review invariants
+
+- The SQLiteEventStore session set is shared by all TimeEngine instances attached to that store. Mutating NPC events are blocked while that world is paused; replay and snapshot recovery remain read-only and work without an active session.
+- NPCDecisionRecorded validates next_decision_at >= current_simulation_time + 60, as well as the deterministic score/actor checks. The service cannot configure a cooldown below 60 seconds.
+- NPCInformationDelivered stores an explicit, time- and location-checked delivery in the destination NPC inbox. BeliefReceived requires an existing delivery ID, matching key and recipient actor and consumes it once. Delivery history prevents reusing identifiers after acknowledgement. A trusted NPC capability is required to register information delivery. This is an audit of reported provenance, not external cryptographic authentication or guaranteed rumor truth.
+- Schema/rules versions are 4/5; earlier test database formats are rejected pending an explicit migration.
