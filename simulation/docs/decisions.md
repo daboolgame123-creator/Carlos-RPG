@@ -126,3 +126,12 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Prevent social influence farming: minimum 180 simulated seconds between outgoing initiatives per speaker, and 900 seconds between same-topic auto-initiatives to the same partner. Earlier Phase 01-H low-level anti-duplication rules remain intact.
 - Treat greetings, requests, offers and threats as *speech only*. Defer actual assistance, negotiation, deception, dialogue generation, reputation, obligations, partner consent and duration-based conversation costs.
 - Keep schema 8/rules 10 and story state unchanged. Verify each phase before progressing.
+
+## Phase 01-J decisions
+
+- Distinguish spoken intent, acknowledged promise and **actually transferred** goods. Words alone are not help.
+- Permit only explicitly initialized, conserved `food` and `water` balances in this prototype; do not invent missing supplies or allow negative inventory.
+- Track each request and authorized resolution through immutable event replay. An actual transfer earns the *recipient's* directed trust, not the provider's.
+- Enforce co-location, active play sessions, separate trusted assistance capability and optimistic concurrency at the event-store/reducer boundary.
+- Permit refusal, cancellation and insufficient-stock failures without silent material effects or partial commits.
+- No autonomous physical help, economic production, deadlines, multi-resource barter, debt or player-character actions in this phase. Maintain `main` and real story state unchanged.
