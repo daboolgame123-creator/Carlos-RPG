@@ -9,8 +9,8 @@ from typing import Any, Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 7
-RULES_VERSION = 8
+SCHEMA_VERSION = 8
+RULES_VERSION = 9
 
 
 def _thaw(value: Any) -> Any:
@@ -63,6 +63,8 @@ class WorldState:
     travels: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     observations: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     navigation: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    relations: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
+    social_messages: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -75,6 +77,8 @@ class WorldState:
         object.__setattr__(self, "travels", _freeze(_json_copy(self.travels)))
         object.__setattr__(self, "observations", _freeze(_json_copy(self.observations)))
         object.__setattr__(self, "navigation", _freeze(_json_copy(self.navigation)))
+        object.__setattr__(self, "relations", _freeze(_json_copy(self.relations)))
+        object.__setattr__(self, "social_messages", _freeze(_json_copy(self.social_messages)))
 
     def to_dict(self) -> dict[str, Any]:
         return _json_copy({"world_id": self.world_id, "time": self.time, "revision": self.revision,
@@ -83,11 +87,12 @@ class WorldState:
                            "scheduled": self.scheduled, "next_schedule_order": self.next_schedule_order,
                            "npcs": self.npcs, "actions": self.actions, "routes": self.routes,
                            "travels": self.travels, "observations": self.observations,
-                           "navigation": self.navigation})
+                           "navigation": self.navigation, "relations": self.relations,
+                           "social_messages": self.social_messages})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -95,7 +100,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -127,6 +132,8 @@ class WorldState:
         validate_movement(d)
         from .navigation import validate_navigation
         validate_navigation(d)
+        from .social import validate_social
+        validate_social(d)
         return cls(**_json_copy(d))
 
 
@@ -160,7 +167,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -200,6 +207,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("NPCNavigationSurveyed", "NPCNavigationTargetSet"):
         from .navigation import project_navigation_event
         project_navigation_event(d, e, movement_authorized=movement_authorized)
+    elif kind in ("SocialMessageSent", "SocialMessageReceived"):
+        from .social import project_social_event
+        project_social_event(d, e, social_authorized=social_authorized)
     elif kind == "NPCActionStarted":
         from .actions import start_action
         start_action(d, e, action_authorized=action_authorized)
