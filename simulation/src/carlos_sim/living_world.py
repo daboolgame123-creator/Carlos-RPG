@@ -108,20 +108,30 @@ class LivingWorldEngine:
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
                     continue
-                decision = choose_action(current, npc_id)
-                if decision is None:
-                    continue
+                # A prior NPCService.decide call can leave a valid, unstarted
+                # intention at this exact tick. Execute it rather than waiting
+                # for its decision cooldown and silently leaving the NPC idle.
+                profile = current.npcs[npc_id]
+                pending = profile['last_decision']
+                if pending is not None and pending['at'] == current.time:
+                    verb = pending['action']
+                else:
+                    decision = choose_action(current, npc_id)
+                    if decision is None:
+                        continue
+                    verb = decision.action
                 # The deterministic ID may not be reused, even after completion.
                 action_id = f'auto:{npc_id}:{current.time}'
                 if action_id in current.actions:
                     raise InvalidEvent('autonomous action identifier collision')
-                append(DomainEvent('NPCDecisionRecorded', npc_id,
-                                   'deterministic autonomous NPC policy', current.time,
-                                   {'npc_id': npc_id, 'action': decision.action,
-                                    'score': decision.score, 'reason': decision.reason,
-                                    'next_decision_at': current.time + self.decision_cooldown}))
+                if pending is None or pending['at'] != current.time:
+                    append(DomainEvent('NPCDecisionRecorded', npc_id,
+                                       'deterministic autonomous NPC policy', current.time,
+                                       {'npc_id': npc_id, 'action': decision.action,
+                                        'score': decision.score, 'reason': decision.reason,
+                                        'next_decision_at': current.time + self.decision_cooldown}))
                 schedule_id = 'npc-action:' + action_id
-                action_due = current.time + DURATIONS[decision.action]
+                action_due = current.time + DURATIONS[verb]
                 append(DomainEvent('ScheduledEventCreated', None,
                                    'autonomous NPC action completion appointment', current.time,
                                    {'id': schedule_id, 'due': action_due,
@@ -131,7 +141,7 @@ class LivingWorldEngine:
                 append(DomainEvent('NPCActionStarted', npc_id,
                                    'autonomous NPC action began', current.time,
                                    {'action_id': action_id, 'npc_id': npc_id,
-                                    'action': decision.action, 'schedule_id': schedule_id,
+                                    'action': verb, 'schedule_id': schedule_id,
                                     'due': action_due}), action_capability=True)
                 started.append(action_id)
                 busy.add(npc_id)
