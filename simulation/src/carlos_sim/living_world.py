@@ -14,6 +14,7 @@ from .store import DuplicateCommand, InvalidEvent, SQLiteEventStore
 from .time_engine import AdvanceLimitExceeded, TimeEngine
 from .navigation import next_route, needs_survey
 from .social_autonomy import MIN_SOCIAL_COOLDOWN, choose_social_intent
+from .assistance_autonomy import choose_assistance_intent
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class LivingAdvanceResult:
     interrupted: bool
     event_count: int
     social_message_ids: tuple[str, ...] = ()
+    assistance_transitions: tuple[tuple[str, str], ...] = ()
 
 
 class LivingWorldEngine:
@@ -42,7 +44,8 @@ class LivingWorldEngine:
                  max_events_per_advance: int = 1000,
                  decision_cooldown: int = MIN_DECISION_COOLDOWN,
                  navigation_enabled: bool = False, social_enabled: bool = False,
-                 social_cooldown: int = MIN_SOCIAL_COOLDOWN):
+                 social_cooldown: int = MIN_SOCIAL_COOLDOWN,
+                 assistance_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -62,6 +65,9 @@ class LivingWorldEngine:
             raise ValueError("social_cooldown must be at least 180 simulated seconds")
         self.social_enabled = social_enabled
         self.social_cooldown = social_cooldown
+        if type(assistance_enabled) is not bool:
+            raise ValueError("assistance_enabled must be boolean")
+        self.assistance_enabled = assistance_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -87,10 +93,12 @@ class LivingWorldEngine:
         fired: list[str] = []
         interrupted = False
         social_messages: list[str] = []
+        assistance_transitions: list[tuple[str, str]] = []
 
         def append(event: DomainEvent, *, action_capability: bool = False,
                    movement_capability: bool = False,
-                   social_capability: bool = False) -> None:
+                   social_capability: bool = False,
+                   assistance_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
@@ -98,7 +106,8 @@ class LivingWorldEngine:
             try:
                 current = apply_event(current, event, action_authorized=action_capability,
                                       movement_authorized=movement_capability,
-                                      social_authorized=social_capability)
+                                      social_authorized=social_capability,
+                                      assistance_authorized=assistance_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -125,6 +134,26 @@ class LivingWorldEngine:
                     if a['status'] == 'running'}
             busy.update(t['npc_id'] for t in current.travels.values()
                         if t['status'] == 'traveling')
+            if self.assistance_enabled:
+                # The fixed passes are independent of lexical NPC ID ordering:
+                # settle old promises, then respond, request, and respond to
+                # requests created in this tick. A provider can only make one
+                # choice per tick; physical delivery requires a later tick.
+                acted: set[str] = set()
+                for phase in ('settle', 'respond', 'request', 'respond'):
+                    for actor_id in sorted(current.npcs):
+                        if actor_id in acted:
+                            continue
+                        intent = choose_assistance_intent(current, actor_id, phase)
+                        if intent is None:
+                            continue
+                        append(DomainEvent(intent.event_type, actor_id,
+                            'autonomous assistance: ' + intent.reason, current.time,
+                            {'id': intent.request_id, **intent.fields}),
+                            assistance_capability=True)
+                        acted.add(actor_id)
+                        assistance_transitions.append((intent.request_id,
+                                                       current.obligations[intent.request_id]['status']))
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
@@ -231,8 +260,10 @@ class LivingWorldEngine:
         committed = self.store.append(world_id, command_id, expected_revision, events,
                                       clock_authorized=True, npc_authorized=True,
                                       action_authorized=True, movement_authorized=self.navigation_enabled,
-                                      social_authorized=self.social_enabled)
+                                      social_authorized=self.social_enabled,
+                                      assistance_authorized=self.assistance_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
-                                   interrupted, len(events), tuple(social_messages))
+                                   interrupted, len(events), tuple(social_messages),
+                                   tuple(assistance_transitions))
