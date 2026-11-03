@@ -12,6 +12,8 @@ def ev(kind, data, time=0, cause="test"):
 def store(tmp_path):
     with SQLiteEventStore(tmp_path / "world.sqlite") as db:
         db.create_world("test-world")
+        from carlos_sim import TimeEngine
+        TimeEngine(db).open_session("test-world")
         yield db
 
 
@@ -156,6 +158,8 @@ def test_replay_is_deterministic_across_stores(tmp_path):
     for i in range(2):
         with SQLiteEventStore(tmp_path / f"{i}.db") as store:
             store.create_world("sample")
+            from carlos_sim import TimeEngine
+            TimeEngine(store).open_session("sample")
             store.append("sample","init",0,[location(), npc(), resource(None,5)],bootstrap=True)
             store.append("sample","time",3,[ev("TimeAdvanced",{"from":0,"to":120},120)],clock_authorized=True)
             states.append(canonical_hash(store.verify("sample").to_dict()))
