@@ -222,3 +222,7 @@ for each autonomous transition. From `simulation/`, run
 All demonstrations use separate fictional fixtures, never real Carlos story data.
 See `docs/phase_01k_report.md`. **Schema v9 / Rules v12 unchanged:** no new
 events or migrations, and no autonomous work occurs in background.
+
+### Phase 01-K post-review safeguards
+
+Reviews now confirm that **earlier obligations take priority** over later ones in the autonomous response and delivery queues, regardless of the alphabetical order of request IDs (ties break by ID). NPCs with very long valid identifiers can still request help: the planner uses a deterministic hash-derived obligation ID when the human-readable form exceeds the event limit. The updated locally tested suite has **313 passing tests**, including three new regressions. The original Phase 01-J ledger and manual API remain unchanged; schema **9** and rules **12** remain compatible. See `docs/phase_01k_report.md` for open limitations, notably unexpired requests while parties remain separated.
