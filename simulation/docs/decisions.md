@@ -14,3 +14,16 @@
 - **Rules v2**: incompatible with the original Phase 01-A experimental schema/data. No database migration is included because there are no production saves.
 
 Deferred decisions: RNG algorithm/state; knowledge models; NPC utility-scoring; scheduled actions; sessions; identity and authorization; importing story facts; future DB event migration policy.
+
+## Phase 01-B decisions
+
+- **Clock is manual:** opening/closing a session never advances elapsed time. All time advances are explicit integer-second commands.
+- **Local session lifecycle:** in-process only; restarting requires opening a new session, and downtime is not simulated.
+- **Scheduled signals only:** deliberately no arbitrary code callbacks or automatic changes to RPG/commerce/quests.
+- **Deterministic ordering:** due time, then a durable monotonically increasing scheduling sequence.
+- **Interruption:** stop immediately after a triggering signal is recorded; return the unused requested duration, do not automatically continue.
+- **Trusted clock capability:** low-level writes have an explicit `clock_authorized` parameter persisted with commands. The future API must implement actual authentication and authorization.
+- **Strict replay:** queue and ordering state are projected from events and included in snapshots and hashes.
+- **Version bump:** schema 2, rules 3. No silent migration of experimental databases.
+
+Open questions for later phases: NPC decision cadence, resource production and transfers, multi-actor interrupts, semantic interpretation of signals, persistent user identity, and authenticated gameplay sessions.
