@@ -1,4 +1,4 @@
-"""Five NPCs complete their scheduled activities in the isolated test village."""
+"""Five test NPCs work concurrently; this does NOT change Carlos story."""
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
