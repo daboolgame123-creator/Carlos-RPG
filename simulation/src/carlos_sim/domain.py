@@ -10,7 +10,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 1
-RULES_VERSION = 1
+RULES_VERSION = 2
 
 
 def _thaw(value: Any) -> Any:
@@ -117,13 +117,18 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
     d = state.to_dict()
-    if e.time < state.time:
-        raise ValueError("event cannot move logical time backward")
+    if e.event_type == "TimeAdvanced":
+        if e.actor_id is not None:
+            raise ValueError("system clock event must not impersonate an actor")
+    elif e.time != state.time:
+        raise ValueError("ordinary event cannot advance or rewind simulation time")
+    if e.actor_id is not None and e.actor_id not in state.entities:
+        raise ValueError("event actor does not exist")
     p = e.data
     kind = e.event_type
     if kind == "LocationCreated":
@@ -141,7 +146,7 @@ def apply_event(state: WorldState, event: DomainEvent) -> WorldState:
             raise ValueError("duplicate entity")
         d["entities"][p["id"]] = {k: p[k] for k in ("name", "location_id", "controller")}
     elif kind == "ResourceChanged":
-        if set(p) != {"owner_id", "resource", "previous", "current"}:
+        if set(p) != {"owner_id", "resource", "previous", "current", "source"}:
             raise ValueError("invalid resource change fields")
         owner, resource = p["owner_id"], p["resource"]
         if not isinstance(owner, str) or not isinstance(resource, str) or not resource or owner not in d["entities"] and owner not in d["locations"]:
@@ -155,6 +160,17 @@ def apply_event(state: WorldState, event: DomainEvent) -> WorldState:
             raise ValueError("invalid resource amount")
         if current == previous and type(current) is type(previous):
             raise ValueError("resource did not change")
+        source = p["source"]
+        if source == "initialization":
+            if not bootstrap or state.time != 0 or previous is not None or current is None or e.actor_id is not None:
+                raise ValueError("resource initialization requires authorized bootstrap at time zero")
+        elif source == "consumption":
+            if bootstrap or owner != e.actor_id or owner not in state.entities:
+                raise ValueError("resource consumption requires the owning actor")
+            if type(previous) is not int or type(current) is not int or current >= previous:
+                raise ValueError("consumption must decrease a known balance")
+        else:
+            raise ValueError("unsupported resource source; transfers/production not yet implemented")
         balances[resource] = current
     elif kind == "TimeAdvanced":
         if set(p) != {"from", "to"} or type(p["from"]) is not int or type(p["to"]) is not int:
