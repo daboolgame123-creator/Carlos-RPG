@@ -8,3 +8,4 @@ from .time_engine import TimeEngine, AdvanceResult, SessionClosed, AdvanceLimitE
 from .npc import NPCService, Decision, choose_action
 from .actions import NPCActionService, ActionStart, DURATIONS
 from .living_world import LivingWorldEngine, LivingAdvanceResult
+from .movement import NPCMovementService, TravelStart, perceive_local
