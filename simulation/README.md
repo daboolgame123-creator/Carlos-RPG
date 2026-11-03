@@ -80,3 +80,7 @@ PYTHONPATH=src python scenarios/test_village/demo.py
 ```
 
 The example values, goals and scoring weights are **test rules only**, not facts of Carlos's world. Database format is now schema v3/rules v4 and experimental older databases require explicit migration/recreation. See `docs/phase_01c_report.md`.
+
+### Phase 01-C review corrections
+
+NPC state writes require an open play session even when called through the lower-level event store. Decision events must obey a minimum 60-second simulation cooldown. Belief updates now require a recorded `NPCInformationDelivered` followed by matching `NPCBeliefReceived` acknowledgement; the delivery records its sender, location, time and channel. Delivery IDs cannot be reused. The system validates provenance claimed inside a trusted simulation call, not the factual truth of a rumor or external identity. Tests: 84 passed locally. The world uses schema v4 and rules v5; older prototype DBs require explicit migration/recreation.
