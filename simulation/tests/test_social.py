@@ -49,6 +49,7 @@ def test_greeting_changes_only_recipients_trust(setup_world):
 def test_repeated_help_offers_are_not_recorded_as_actual_help(setup_world):
     db,_,service=setup_world
     first=interact(db,service,kind='offer_help',mid='offer1')
+    TimeEngine(db).advance('world', seconds=1, command_id='next-tick', expected_revision=first.state.revision)
     second=interact(db,service,kind='offer_help',mid='offer2')
     assert (first.trust_after,second.trust_after)==(3,6)
     assert second.state.resources=={}
@@ -214,6 +215,8 @@ def test_capped_trust_does_not_overflow(setup_world):
     db,_,service=setup_world
     for i in range(40):
         r=interact(db,service,kind='offer_help',mid=f'o{i}')
+        if i < 39:
+            TimeEngine(db).advance('world', seconds=1, command_id=f'tick-{i}', expected_revision=r.state.revision)
     assert r.trust_after==100
     assert db.verify('world').relations['basim']['nora']==100
 
