@@ -184,6 +184,10 @@ def project_assistance_event(state: dict[str, Any], event: DomainEvent, *,
     if kind == 'AssistanceCancelled':
         if set(data) != {'id', 'reason'}:
             raise ValueError('invalid assistance cancellation')
+        # Cancellation is a communicated, local withdrawal, not instant remote
+        # notification across the world. Both parties must be present and idle.
+        if not _together(state, requester, provider):
+            raise ValueError('assistance cancellation requires local co-location')
         if (item['status'] == 'requested' and event.actor_id == requester
                 and data['reason'] == 'request_withdrawn'):
             item.update(status='cancelled', resolved_at=state['time'], reason=data['reason'])
