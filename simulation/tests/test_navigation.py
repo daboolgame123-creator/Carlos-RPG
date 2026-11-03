@@ -290,3 +290,57 @@ def test_paused_survey_does_not_consume_command_identifier(world):
     clock.open_session('village')
     result=service.survey('village','nora',command_id='recover',expected_revision=before.revision)
     assert result.navigation['nora']['visited']==('market',)
+
+
+
+def test_manual_movement_rejects_unknown_adjacent_route_after_navigation_started(world):
+    from carlos_sim import NPCMovementService
+    db, clock, navigator = world
+    mover = NPCMovementService(db, clock)
+    navigator.survey('village', 'nora', command_id='see-market',
+                     expected_revision=db.load('village').revision)
+    first = mover.start('village', 'nora', 'market-forest', 'learned',
+                        expected_revision=db.load('village').revision)
+    arrived = clock.advance('village', seconds=50, command_id='reach-forest',
+                            expected_revision=first.state.revision)
+    assert arrived.state.entities['nora']['location_id'] == 'forest'
+    assert 'forest-castle' not in arrived.state.navigation['nora']['known_routes']
+    before = arrived.state.to_dict()
+    with pytest.raises(InvalidEvent, match='not learned'):
+        mover.start('village', 'nora', 'forest-castle', 'unknown-road',
+                    expected_revision=arrived.state.revision)
+    assert db.load('village').to_dict() == before
+    assert db.db.execute("SELECT count(*) FROM commands WHERE command_id='travel-start:unknown-road'").fetchone()[0] == 0
+    surveyed = navigator.survey('village', 'nora', command_id='see-forest',
+                                expected_revision=arrived.state.revision)
+    permitted = mover.start('village', 'nora', 'forest-castle', 'known-road',
+                            expected_revision=surveyed.revision)
+    assert permitted.state.travels['known-road']['status'] == 'traveling'
+    assert db.verify('village').to_dict() == permitted.state.to_dict()
+
+
+def test_direct_low_level_travel_start_cannot_bypass_known_roads(world):
+    db, clock, navigator = world
+    from carlos_sim import NPCMovementService
+    mover = NPCMovementService(db, clock)
+    navigator.survey('village', 'nora', command_id='survey-start',
+                     expected_revision=db.load('village').revision)
+    first = mover.start('village', 'nora', 'market-forest', 'allowed',
+                        expected_revision=db.load('village').revision)
+    reached = clock.advance('village', seconds=50, command_id='reach',
+                            expected_revision=first.state.revision)
+    state = reached.state
+    travel_id = 'forged'
+    schedule_id = 'npc-travel:' + travel_id
+    schedule = event('ScheduledEventCreated', {
+        'id': schedule_id, 'due': 120, 'order': state.next_schedule_order,
+        'kind': 'signal', 'payload': {'__npc_travel_id': travel_id},
+        'interrupt': False}, at=50)
+    forged = event('NPCTravelStarted', {
+        'id': travel_id, 'npc_id':'nora', 'route_id':'forest-castle',
+        'origin':'forest', 'destination':'castle', 'due':120,
+        'schedule_id':schedule_id}, actor='nora', at=50)
+    with pytest.raises(InvalidEvent, match='not learned'):
+        db.append('village', 'forged-route', state.revision,
+                  [schedule, forged], movement_authorized=True)
+    assert db.load('village').to_dict() == state.to_dict()
