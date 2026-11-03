@@ -22,3 +22,13 @@ SQLite tables: `worlds`, `commands`, `events`, `snapshots`. Commands also retain
 ## Integrity assumptions
 
 One SQLite writer is coordinated through `BEGIN IMMEDIATE`. Duplicate `command_id` and identical command content is idempotent; reusing an ID with different content is rejected. Revisions protect against stale updates. A valid SQLite transaction commits the event batch as a unit. A write-capable attacker who can edit database files and hashes is outside the current threat model.
+
+## Phase 01-B extension
+
+`WorldState` now projects `scheduled` (active scheduled signals) and `next_schedule_order` from domain events. The schedule is part of the event-sourced state and therefore persists through snapshots and deterministic replay.
+
+The only supported future item type is `signal` with a JSON payload and an explicit interruption flag. `TimeEngine` advances the logical clock during an open in-process session. At each earliest due time, the engine emits a `TimeAdvanced` event, then `ScheduledEventFired` in stable order. `ScheduledEventCancelled` removes pending signals. Firing a signal never itself changes resources or NPC intentions.
+
+Events due at the same time are sorted by due time, monotonically increasing schedule order, and ID. An interrupting signal halts the current advance after recording the occurrence. The remaining requested duration is returned for an optional later action. Event batches are committed atomically by the store; a configured per-command event cap prevents runaway processing.
+
+`TimeAdvanced` and `ScheduledEventFired` require a trusted internal `clock_authorized=True` append flag; this is an application convention, **not user authentication**. Schemas change from 1/2 to 2/3; test DBs from Phase 01-A must be explicitly re-created or migrated. Real-world elapsed time is never used.
