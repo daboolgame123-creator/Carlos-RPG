@@ -27,6 +27,7 @@ class SQLiteEventStore:
                 request_hash TEXT NOT NULL, first_revision INTEGER NOT NULL,
                 last_revision INTEGER NOT NULL, bootstrap INTEGER NOT NULL DEFAULT 0,
                 clock_authorized INTEGER NOT NULL DEFAULT 0,
+                npc_authorized INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY(world_id, command_id));
             CREATE TABLE IF NOT EXISTS events (
                 world_id TEXT NOT NULL REFERENCES worlds(id), seq INTEGER NOT NULL,
@@ -98,7 +99,7 @@ class SQLiteEventStore:
             raise IntegrityError("world head mismatch")
         return state
 
-    def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False) -> WorldState:
+    def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False, npc_authorized: bool = False) -> WorldState:
         """Commit events atomically. bootstrap is a trusted setup-only capability.
 
         Never expose this method or its bootstrap switch to untrusted callers.
@@ -106,12 +107,14 @@ class SQLiteEventStore:
         """
         if not isinstance(command_id,str) or not command_id or type(expected_revision) is not int or expected_revision < 0 or not events:
             raise ValueError("command ID, expected revision and nonempty event batch required")
-        if type(bootstrap) is not bool or type(clock_authorized) is not bool:
+        if type(bootstrap) is not bool or type(clock_authorized) is not bool or type(npc_authorized) is not bool:
             raise ValueError("capability flags must be boolean")
         if not clock_authorized and any(e.event_type in ("TimeAdvanced", "ScheduledEventFired") for e in events):
             raise InvalidEvent("clock advancement/firing requires a trusted clock capability")
+        if not npc_authorized and any(e.event_type == "NPCDecisionRecorded" for e in events):
+            raise InvalidEvent("NPC decisions require a trusted planner capability")
         serialized = [e.to_dict() for e in events]
-        request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized})
+        request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized})
         self.db.execute("BEGIN IMMEDIATE")
         try:
             existing = self.db.execute("SELECT request_hash FROM commands WHERE world_id=? AND command_id=?",(world_id,command_id)).fetchone()
@@ -129,7 +132,7 @@ class SQLiteEventStore:
                     state = apply_event(state,e,bootstrap=bootstrap)
                 except (ValueError,TypeError) as exc:
                     raise InvalidEvent(str(exc)) from exc
-            self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized)))
+            self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized),int(npc_authorized)))
             for idx, data in enumerate(serialized,start=first):
                 self.db.execute("INSERT INTO events VALUES(?,?,?,?,?)",(world_id,idx,command_id,canonical(data),canonical_hash(data)))
             self.db.execute("UPDATE worlds SET revision=?,sim_time=? WHERE id=? AND revision=?",(state.revision,state.time,world_id,expected_revision))
