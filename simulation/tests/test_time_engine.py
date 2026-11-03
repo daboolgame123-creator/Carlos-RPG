@@ -214,6 +214,7 @@ def test_scheduled_firing_cannot_change_logical_time(env):
     # valid pending event and advance the clock to its due time without firing it.
     with SQLiteEventStore(":memory:") as isolated:
         isolated.create_world("isolated")
+        TimeEngine(isolated).open_session("isolated")
         isolated.append("isolated", "schedule", 0, [DomainEvent(
             "ScheduledEventCreated", None, "fixture", 0,
             {"id": "signal", "due": 10, "order": 1, "kind": "signal", "payload": {}, "interrupt": False})])
