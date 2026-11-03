@@ -19,7 +19,7 @@ python -m compileall -q src tests scenarios
 PYTHONPATH=src python scenarios/test_village/demo_social_autonomy.py
 ```
 
-**238 tests passed locally** (216 baseline + 22 new). Compilation passed and the isolated three-NPC social demonstration completed. In 360 simulated seconds after a manually recorded initial greeting, Aaron initiated a request to Bella at time 0, greeted Zora at time 180, and requested help from Zora at time 360. The world recorded six completed routine actions. No resource transfer or physical assistance was fabricated. The exact composition can change if the test rules change; the test fixture is not Carlos story canon.
+**241 tests passed locally after review** (216 baseline + 22 Phase 01-I tests + 3 review regressions). Compilation passed and the isolated three-NPC social demonstration completed. In 360 simulated seconds after a manually recorded initial greeting, Aaron initiated a request to Bella at time 0, greeted Zora at time 180, and requested help from Zora at time 360. The world recorded six completed routine actions. No resource transfer or physical assistance was fabricated. The exact composition can change if the test rules change; the test fixture is not Carlos story canon.
 
 Regressions cover first contact, asymmetric receiver trust, opting out, 180-second sender cooldown, 900-second repeated-topic cooldown, alternate partners, manual intention priority, busy/traveling/non-co-located guards, player exclusion, hunger-based help request, trust-based goodwill and hostility, event-budget rollback, invalid options, empty worlds, navigation co-existence, snapshot/restart, deterministic replay, equivalent split-step outcomes and non-disclosure of recipient-private needs.
 
@@ -34,4 +34,14 @@ Regressions cover first contact, asymmetric receiver trust, opting out, 180-seco
 
 ## Status
 
-Implementation and local verification complete. Independent Phase 01-I review is still required before marking the phase fully closed.
+Implementation and post-implementation review completed for the Phase 01-I prototype scope. The next phase remains separate and requires authorization.
+
+## Post-implementation review — 2026-11-04
+
+**Confirmed finding: recipient-private intention leaked into social partner selection.** The original social planner used the same eligibility function for the speaker and all possible recipients. That function inspected `last_decision` at the current tick, although an unstarted decision belongs to the recipient's private state. A newly recorded private action intention could therefore make an otherwise visible, idle NPC disappear from the sender's potential conversation partners. This allowed the sender's choice to change based on information that character could not know.
+
+**Fix:** Distinguish physically observable unavailability (an active action or travel) from a pending private intention. The initiating NPC may use **its own** pending decision to prioritize it over social speech, but the initiator may not read another person's pending decision. A physically busy recipient remains ineligible. No schema, reducer or event format was changed.
+
+**Regression evidence:** Three new tests first failed on the previous implementation and now pass: a private recipient decision leaves partner selection unchanged; a physically busy recipient is still excluded; the integrated living-world coordinator can greet a recipient with a pending private decision without overriding that decision. The complete local suite passed **241/241**, Python compilation succeeded, and the test-village demo ran successfully. The corrected source and three regression tests were uploaded to GitHub and verified by exact Git blob SHA matches. Hosted GitHub CI has **not** run.
+
+**Disposition:** Ready to close Phase 01-I within its limited prototype scope. The 180-second and 900-second automated cooldowns remain. No autonomous resource-backed assistance, unrestricted dialogue generation, off-session world advancement, or Carlos narrative changes were introduced. The current branch remains unmerged into `main`.
