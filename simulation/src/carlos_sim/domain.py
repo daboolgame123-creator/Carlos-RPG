@@ -9,8 +9,8 @@ from typing import Any, Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 1
-RULES_VERSION = 2
+SCHEMA_VERSION = 2
+RULES_VERSION = 3
 
 
 def _thaw(value: Any) -> Any:
@@ -55,26 +55,32 @@ class WorldState:
     entities: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     locations: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     resources: Mapping[str, Mapping[str, int | None]] = field(default_factory=dict)
+    scheduled: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    next_schedule_order: int = 1
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
         object.__setattr__(self, "locations", _freeze(_json_copy(self.locations)))
         object.__setattr__(self, "resources", _freeze(_json_copy(self.resources)))
+        object.__setattr__(self, "scheduled", _freeze(_json_copy(self.scheduled)))
 
     def to_dict(self) -> dict[str, Any]:
         return _json_copy({"world_id": self.world_id, "time": self.time, "revision": self.revision,
                            "schema_version": self.schema_version, "rules_version": self.rules_version,
-                           "entities": self.entities, "locations": self.locations, "resources": self.resources})
+                           "entities": self.entities, "locations": self.locations, "resources": self.resources,
+                           "scheduled": self.scheduled, "next_schedule_order": self.next_schedule_order})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
         if not isinstance(d["world_id"], str) or not d["world_id"] or any(type(d[k]) is not int or d[k] < 0 for k in ("time", "revision")):
             raise ValueError("invalid world identity/time/revision")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources")):
+        if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
+            raise ValueError("invalid schedule order")
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -84,6 +90,17 @@ class WorldState:
             for amount in balances.values():
                 if amount is not None and (type(amount) is not int or amount < 0):
                     raise ValueError("invalid resource amount")
+        orders = set()
+        for ident, item in d["scheduled"].items():
+            if not isinstance(ident, str) or not ident or not isinstance(item, dict) or set(item) != {"due", "order", "kind", "payload", "interrupt"}:
+                raise ValueError("invalid scheduled item")
+            if type(item["due"]) is not int or item["due"] < d["time"] or type(item["order"]) is not int or not 0 < item["order"] < d["next_schedule_order"]:
+                raise ValueError("invalid scheduled timing")
+            if item["order"] in orders:
+                raise ValueError("duplicate schedule order")
+            orders.add(item["order"])
+            if item["kind"] != "signal" or type(item["interrupt"]) is not bool or not isinstance(item["payload"], dict):
+                raise ValueError("invalid scheduled action")
         return cls(**_json_copy(d))
 
 
@@ -122,7 +139,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
     d = state.to_dict()
-    if e.event_type == "TimeAdvanced":
+    if e.event_type in ("TimeAdvanced", "ScheduledEventFired"):
+        # Both operations are system-driven; an NPC cannot impersonate the clock.
         if e.actor_id is not None:
             raise ValueError("system clock event must not impersonate an actor")
     elif e.time != state.time:
