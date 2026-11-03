@@ -94,6 +94,11 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
         sender = p["sender_id"]
         if not isinstance(sender, str) or sender not in state["entities"] or event.actor_id != sender:
             raise ValueError("delivery must be attributed to a real sender")
+        # Entity location_id remains the departure endpoint during a trip for
+        # deterministic persistence; it does not mean the traveler is present.
+        from .movement import _in_transit
+        if _in_transit(state, ident) or _in_transit(state, sender):
+            raise ValueError("local information delivery cannot involve a traveler in transit")
         location = state["entities"][ident]["location_id"]
         if p["location_id"] != location or state["entities"][sender]["location_id"] != location:
             raise ValueError("sender and recipient must share the recorded location")
@@ -125,6 +130,10 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
     elif event.event_type == "NPCDecisionRecorded":
         if set(p) != {"npc_id", "action", "score", "reason", "next_decision_at"} or event.actor_id != ident:
             raise ValueError("invalid NPC decision event")
+        if any(t['npc_id'] == ident and t['status'] == 'traveling' for t in state['travels'].values()):
+            raise ValueError("NPC cannot decide a new activity while traveling")
+        if any(a['npc_id'] == ident and a['status'] == 'running' for a in state['actions'].values()):
+            raise ValueError("NPC cannot decide a new activity while busy")
         if event.time < npc["next_decision_at"]:
             raise ValueError("NPC decision attempted before next allowed time")
         if p["action"] not in ACTIONS or type(p["score"]) is not int or not isinstance(p["reason"], str) or not p["reason"]:
@@ -173,6 +182,10 @@ def choose_action(state: WorldState, npc_id: str) -> Decision | None:
     """
     npc = state.npcs.get(npc_id)
     if npc is None or state.entities[npc_id]["controller"] != "npc":
+        return None
+    if any(t['npc_id'] == npc_id and t['status'] == 'traveling' for t in state.travels.values()):
+        return None
+    if any(a['npc_id'] == npc_id and a['status'] == 'running' for a in state.actions.values()):
         return None
     if state.time < npc["next_decision_at"]:
         return None
