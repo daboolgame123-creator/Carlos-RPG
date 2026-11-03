@@ -13,9 +13,15 @@ from .store import SQLiteEventStore, RevisionConflict
 from .time_engine import TimeEngine
 
 
+def _in_transit(state: dict[str, Any], entity_id: str) -> bool:
+    """In-transit NPCs are not locally present at either endpoint."""
+    return any(t['npc_id'] == entity_id and t['status'] == 'traveling'
+               for t in state['travels'].values())
+
+
 def _visible(state: dict[str, Any], location: str) -> list[str]:
     return sorted(ident for ident, entity in state['entities'].items()
-                  if entity['location_id'] == location)
+                  if entity['location_id'] == location and not _in_transit(state, ident))
 
 
 def _observe(state: dict[str, Any], npc_id: str, time: int) -> None:
