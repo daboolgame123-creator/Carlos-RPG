@@ -294,7 +294,6 @@ def test_same_request_to_same_peer_needs_new_causal_interval(tmp_path):
         intent=choose_social_intent(db.load('village'),'aaron')
         assert intent is not None and intent.kind=='request_help'
 
-
 def test_peer_specific_topic_limit_does_not_block_new_contact(tmp_path):
     with SQLiteEventStore(tmp_path/'new-friend.db') as db:
         make_world(db,names=('aaron','bella','zora'),hunger=85)
