@@ -55,3 +55,14 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Unknown resource counters are never assumed to equal zero; bootstrap them explicitly and require known values before action start.
 - Local-session checks apply to direct clock writes too; no world time advances while app/session is closed.
 - Defer action cancellation, travel, combat, production, economic transfer, knowledge generation, continuous NPC decision scheduling and production DB migrations.
+
+## Phase 01-E — Autonomous life decisions
+
+- Opt-in `LivingWorldEngine` coordinates entire NPC cycles during an explicit in-game time request; no wall-clock ticking, background simulation or external API.
+- Commit the whole requested time step as one transaction, avoiding partial NPC cycles when event budgets/rule validation fail.
+- Process already due signals before making new decisions and prioritize explicit player-interrupt events over NPC continuations.
+- Choose NPCs in ID order and preserve durable signal ordering; preserve per-NPC knowledge separation and decision cooldowns.
+- Allow repeated actions as time passes, including multiple NPCs in parallel. Completing an action cannot itself create a new narrative scene or reveal hidden facts.
+- Fail closed on missing required resource counters or duplicate action IDs; do not invent resources, discoveries or results.
+- Keep `TimeEngine.advance` unchanged for backward compatibility; applications wishing for autonomy must explicitly use the new coordinator.
+- No change to schema 5/rules 6; original test databases can be opened with the same event formats.
