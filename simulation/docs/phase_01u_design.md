@@ -1,6 +1,6 @@
 # Phase 01-U — Provisional design: travel to remembered food by known roads
 
-**Status:** DESIGN RECORDED, **IN_PROGRESS**, subject to the conditional-transition governance in [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) §J. Phase 01-T is `TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING`, **not independently APPROVED**.
+**Status:** IMPLEMENTED AND TESTED — **TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING**, subject to the conditional-transition governance in [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) §J. Phase 01-T is `TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING`, **not independently APPROVED**.
 
 **Branch:** `simulation-engine-phase-01u` forked from green Phase 01-T documentation checkpoint `d2a397bde95d2596592818f348d68b030f78f48a`.
 **Baseline:** Schema 13 / Rules 18; 544 passing tests per Python 3.10 and 3.13, CI [41928668332](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41928668332).
@@ -42,3 +42,5 @@ The NPC must never peek into remote `resources`, the private beliefs of other NP
 - `docs/phase_01u_report.md`: tested results, compatibility assessment, pending independent review, and remaining gaps.
 
 **Acceptance:** only a passing implementation with immutable CI evidence may be called `TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING`. It must never be described as independently `APPROVED` without a separate reviewer. Reevaluate if Phase 01-T receives a blocking finding.
+
+**Implementation evidence:** [01-U report](phase_01u_report.md); code SHA 537c72dc3337265d287030cc7f2a9f95885793aa; [CI 41930579158](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41930579158), 564/564 on both interpreters. Independent approval not issued.
