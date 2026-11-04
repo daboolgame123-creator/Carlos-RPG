@@ -219,3 +219,14 @@ not a proof of all possible behaviors. See `phase_01n_report.md`.
 A future separately reviewed optimization may address full-state projection
 per event and repeated batch validation, but must preserve causal checks,
 immutable public state, and authoritative persistence.
+
+### Phase 01-N integrated fast-path performance validation
+
+The final candidate also fast-paths scalar/dict/mappingproxy/list/tuple nodes
+in `_thaw`, avoiding expensive generic `Mapping` ABC dispatch while retaining
+the fallback for custom mappings. Strict JSON normalization remains on incoming
+projections and direct user-constructed state. Final suite **403/403** and
+exact logged-event/final-state hash parity for 10/25 NPC fixtures. The 100-NPC
+60-second command dropped from **9.5122 to 3.4529 seconds** in one same-host
+measurement; per-event world-wide projection remains a scaling bottleneck.
+See `phase_01n_validation.md`. Schema 11 / Rules 15 unchanged.
