@@ -16,6 +16,7 @@ from .navigation import next_route, needs_survey
 from .social_autonomy import MIN_SOCIAL_COOLDOWN, choose_social_intent
 from .assistance_autonomy import choose_assistance_intent
 from .consumption import choose_food_consumption, _meal_id
+from .gathering import choose_gathering_intent
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,7 @@ class LivingAdvanceResult:
     social_message_ids: tuple[str, ...] = ()
     assistance_transitions: tuple[tuple[str, str], ...] = ()
     meals_consumed: tuple[str, ...] = ()
+    gathered_action_ids: tuple[str, ...] = ()
 
 
 class LivingWorldEngine:
@@ -48,7 +50,7 @@ class LivingWorldEngine:
                  navigation_enabled: bool = False, social_enabled: bool = False,
                  social_cooldown: int = MIN_SOCIAL_COOLDOWN,
                  assistance_enabled: bool = False, consumption_enabled: bool = False,
-                 survival_enabled: bool = False):
+                 survival_enabled: bool = False, gathering_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -77,6 +79,9 @@ class LivingWorldEngine:
         if type(survival_enabled) is not bool:
             raise ValueError("survival_enabled must be boolean")
         self.survival_enabled = survival_enabled
+        if type(gathering_enabled) is not bool:
+            raise ValueError("gathering_enabled must be boolean")
+        self.gathering_enabled = gathering_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -104,6 +109,7 @@ class LivingWorldEngine:
         social_messages: list[str] = []
         assistance_transitions: list[tuple[str, str]] = []
         meals_consumed: list[str] = []
+        gathered_actions: list[str] = []
 
         def append(event: DomainEvent, *, action_capability: bool = False,
                    movement_capability: bool = False,
@@ -138,7 +144,24 @@ class LivingWorldEngine:
                                    'scheduled signal became due', current.time, {'id': ident}))
                 fired.append(ident)
                 if '__npc_action_id' in item['payload']:
-                    completed.append(item['payload']['__npc_action_id'])
+                    finished_id = item['payload']['__npc_action_id']
+                    completed.append(finished_id)
+                    if self.gathering_enabled:
+                        # The scheduled investigate completion is authoritative:
+                        # its event has already projected effort and time cost.
+                        # Each contender now observes ONLY the remaining food
+                        # at its own site, in durable due-signal order.
+                        intent = choose_gathering_intent(current, finished_id)
+                        if intent is not None:
+                            append(DomainEvent(
+                                'NPCFoodGathered', intent.npc_id,
+                                'autonomous local recovery after completed investigation',
+                                current.time,
+                                {'npc_id': intent.npc_id,
+                                 'action_id': intent.action_id,
+                                 'site_id': intent.site_id}),
+                                action_capability=True)
+                            gathered_actions.append(intent.action_id)
                 if item['interrupt']:
                     interrupted = True
                     break
@@ -298,4 +321,5 @@ class LivingWorldEngine:
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
                                    interrupted, len(events), tuple(social_messages),
-                                   tuple(assistance_transitions), tuple(meals_consumed))
+                                   tuple(assistance_transitions), tuple(meals_consumed),
+                                   tuple(gathered_actions))

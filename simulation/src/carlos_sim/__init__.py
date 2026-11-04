@@ -18,3 +18,5 @@ from .consumption import NPCConsumptionService, ConsumptionResult, choose_food_c
 from .survival import HUNGER_SECONDS_PER_POINT, FATIGUE_SECONDS_PER_POINT, CRITICAL_HUNGER
 
 from .gathering import NPCGatheringService, GatheringResult
+
+from .gathering import choose_gathering_intent, GatheringIntent

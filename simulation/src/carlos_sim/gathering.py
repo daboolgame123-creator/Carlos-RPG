@@ -85,6 +85,52 @@ def project_food_gathered(state: dict[str, Any], event: DomainEvent, *, action_a
     }
 
 
+
+AUTONOMOUS_GATHER_HUNGER_THRESHOLD = 65
+# Only visibly local, finite site stock; never remote sites or peer inventories.
+
+
+@dataclass(frozen=True)
+class GatheringIntent:
+    npc_id: str
+    action_id: str
+    site_id: str
+
+
+def choose_gathering_intent(state: WorldState, action_id: str) -> GatheringIntent | None:
+    """Decide whether to pick up visible wild food after a completed search.
+
+    Reads only the actor's own hunger/inventory, physical location, the
+    completed investigation, and the natural stock at *that* location.
+    Local wild_food is an explicitly visible test-world deposit; we do not
+    infer remote abundance, learn hidden peer inventories, or conjure stock.
+    Does not choose a new investigation; prior NPC intentions stay intact.
+    """
+    action = state.actions.get(action_id)
+    if (action is None or action["action"] != "investigate"
+            or action["status"] != "completed"
+            or action["completed_at"] != state.time
+            or action_id in state.gatherings):
+        return None
+    npc_id = action["npc_id"]
+    if npc_id not in state.npcs:
+        return None
+    if state.npcs[npc_id]["needs"]["hunger"] < AUTONOMOUS_GATHER_HUNGER_THRESHOLD:
+        return None
+    own_stock = state.resources.get(npc_id, {}).get(OWNED_FOOD_RESOURCE)
+    if type(own_stock) is not int or own_stock != 0:
+        return None
+    if (any(t["npc_id"] == npc_id and t["status"] == "traveling"
+            for t in state.travels.values())
+            or any(a["npc_id"] == npc_id and a["status"] == "running"
+                   for a in state.actions.values())):
+        return None
+    site = state.entities[npc_id]["location_id"]
+    available = state.resources.get(site, {}).get(WILD_FOOD_RESOURCE)
+    if type(available) is not int or available < RECOVERY_QUANTITY:
+        return None
+    return GatheringIntent(npc_id, action_id, site)
+
 @dataclass(frozen=True)
 class GatheringResult:
     action_id: str
