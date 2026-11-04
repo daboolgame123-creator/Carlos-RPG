@@ -249,7 +249,7 @@ Open questions for later phases: NPC decision cadence, resource production and t
   original event order/decision counts; never trade correctness for speed.
 - Fast-path trusted built-in JSON nodes, but retain JSON validation for
   external/constructor input and a generic `Mapping` fallback.
-- Preserve all **403 passing tests** and exact event/state hash parity for
+- Preserve all **410 passing tests** and exact event/state hash parity for
   10/25 NPC worlds. Earlier 388-test figures refer to an intermediate build.
 - Measured at 100 NPCs: **9.5122 s → 3.4529 s** for the same 60-second
   full-engine workload, 301 events; more optimization needed for 1000+.
