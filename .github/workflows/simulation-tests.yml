@@ -43,6 +43,9 @@ jobs:
       - name: Smoke-test two-person finite food recovery and eating
         run: PYTHONPATH=src python scenarios/test_village/demo_gathering.py
 
+      - name: Demonstrate autonomous finite gathering with seven NPCs
+        run: PYTHONPATH=src python scenarios/test_village/demo_gathering_autonomy.py
+
       - name: Check existing seven-NPC scenario event and state parity against Phase 01-Q
         run: |
           PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01r-parity.json
