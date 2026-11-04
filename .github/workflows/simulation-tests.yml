@@ -24,8 +24,14 @@ jobs:
       run:
         working-directory: simulation
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - name: Check out reviewed Phase 01-M baseline
+        uses: actions/checkout@v5
+        with:
+          ref: simulation-engine-phase-01m
+          path: reviewed-baseline
+          persist-credentials: false
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install test dependency
@@ -34,3 +40,8 @@ jobs:
         run: |
           python -m compileall -q src tests scenarios
           python -m pytest -q
+      - name: Compare complete event and state hashes with reviewed baseline
+        run: |
+          PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 10 25 > /tmp/01n-parity.json
+          PYTHONPATH=../reviewed-baseline/simulation/src python scenarios/test_village/bench_event_parity.py --counts 10 25 > /tmp/01m-parity.json
+          diff -u /tmp/01m-parity.json /tmp/01n-parity.json
