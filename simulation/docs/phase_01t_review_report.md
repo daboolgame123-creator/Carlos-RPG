@@ -42,6 +42,10 @@ These repairs are limited to 01-T behavior. No new resource generation, remote o
 
 This correction does not allow the sender to alter another NPC's thoughts or state directly; all changes still require committed domain events.
 
+## 3a.2. Adversarial review: logical timestamp upper bound
+
+**Finding AR-04 — cross-version validation defect, repaired:** `parse_food_claim` previously accepted `observed_at > 2**63-1` even though the documented grammar and `encode_food_claim` require signed 64-bit time. Extremely long decimal strings could also trigger interpreter-specific digit-limit errors on Python 3.13. The parser now rejects these before integer conversion, returning `None`, and a boundary regression verifies `2**63-1`, `2**63`, and a 5,000-digit input. No schema change or migration is required.
+
 ## 3b. Final 01-T code regression checkpoint
 
 - Code commit: [`02dd03d`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/02dd03d75cac543eb4286161e945d221fcade90d).

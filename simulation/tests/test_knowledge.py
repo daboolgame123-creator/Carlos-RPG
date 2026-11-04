@@ -44,6 +44,19 @@ def test_grammar_rejects_malformed():
             validate_food_claim_text(text)
 
 
+def test_food_claim_time_is_bounded_and_extreme_input_rejected():
+    # Documented time domain is a signed SQLite-compatible 64-bit integer.
+    largest = 2**63 - 1
+    maximum = f"food-state:present; observed_at={largest}"
+    first_invalid = f"food-state:present; observed_at={2**63}"
+    very_long = "food-state:empty; observed_at=" + "9" * 5000
+    assert parse_food_claim(maximum) == ("present", largest)
+    for bad in (first_invalid, very_long):
+        assert parse_food_claim(bad) is None
+        with pytest.raises(ValueError, match="invalid food claim text"):
+            validate_food_claim_text(bad)
+
+
 def test_encode_roundtrip():
     text = encode_food_claim("present", 100)
     assert text == "food-state:present; observed_at=100"

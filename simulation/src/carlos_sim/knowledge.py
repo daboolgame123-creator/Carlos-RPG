@@ -69,7 +69,14 @@ def parse_food_claim(text: Any) -> tuple[str, int] | None:
     m = _FOOD_CLAIM_RE.match(text)
     if m is None:
         return None
-    return m.group(1), int(m.group(2))
+    # Parsed timestamps are persisted as signed 64-bit logical-clock values.
+    # Bound-check the decimal *before* int() to reject oversized or malicious
+    # strings identically on Python 3.10 and 3.13 (the latter has a digit cap).
+    digits = m.group(2)
+    limit = str(2**63 - 1)
+    if len(digits) > len(limit) or (len(digits) == len(limit) and digits > limit):
+        return None
+    return m.group(1), int(digits)
 
 
 def validate_food_claim_text(text: Any) -> None:
@@ -86,7 +93,7 @@ def validate_food_claim_timing(text: Any, received_at: int) -> tuple[str, int]:
     if type(received_at) is not int or received_at < 0:
         raise ValueError("invalid received_at")
     if observed_at > received_at:
-        raise ValueError("food observation cannot predate its delivery")
+        raise ValueError("food observation cannot occur after its delivery")
     return food_state, observed_at
 
 
