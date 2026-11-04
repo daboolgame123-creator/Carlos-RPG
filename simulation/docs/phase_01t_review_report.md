@@ -3,7 +3,7 @@
 **Status:** IMPLEMENTATION REGRESSIONS PASS; **FORMAL CLOSURE PENDING** separate independent adversarial sign-off. This report is not a closure approval.
 **Repository/branch:** [Carlos-RPG](https://github.com/daboolgame123-creator/Carlos-RPG/tree/simulation-engine-phase-01t), `simulation-engine-phase-01t`.
 **Baseline:** closed Phase 01-S `c35245d1904e7a6d779cafa92cbf556618247f38`, Schema 13 / Rules 17, 481 passing tests.
-**Current reviewed code:** `02dd03d75cac543eb4286161e945d221fcade90d`, Schema 13 / Rules 18. This documentation commit will have its own CI run.
+**Current reviewed code:** `0304baa975d6f7aaa495ddfcf435b28577600156`, Schema 13 / Rules 18. The final report update will have its own CI run.
 **Scope:** Food knowledge in per-NPC beliefs, verifiable direct observation, non-omniscient hearsay, deterministic sharing and replay; no 01-U navigation-to-known-food behavior.
 
 ## 1. Inspected requirements and implementation
@@ -52,14 +52,15 @@ This correction does not allow the sender to alter another NPC's thoughts or sta
 
 ## 3b. Final 01-T code regression checkpoint
 
-- Code commit: [`02dd03d`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/02dd03d75cac543eb4286161e945d221fcade90d).
-- CI: [41919258093](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41919258093), **success** on both Python 3.10 and Python 3.13 with **537/537 passed per interpreter**, including the new recipient-private-belief noninterference regression.
-- The 01-T branch is a strict descendant of the approved 01-S baseline; all changes remain limited to `simulation/` and its CI workflow. No `main` changes, story-file edits, migrations, or 01-U implementation.
-- This was a critical, adversarial review **conducted by the implementing assistant**, not a separate reviewer. The protocol's independent-approval gate is still open.
+- Latest code commit: [`0304baa`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/0304baa975d6f7aaa495ddfcf435b28577600156).
+- CI: [41921146414](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41921146414), **success** on Python 3.10 and Python 3.13; **538/538 passed per interpreter**, both seven-NPC scenario demonstrations, real 01-R/01-S version-compatibility checks, and both old-mode parity checks.
+- Direct flag-off comparison against **actual 01-S code** now asserts equal `events_digest`, `legacy_semantic_digest`, event count, revision, time, NPC count, and replay equality. The earlier 01-R comparison is retained.
+- The 01-T branch is a strict descendant of approved 01-S; all changes remain limited to `simulation/` and its CI workflow. No `main` changes, story-file edits, migrations, or 01-U implementation.
+- The adversarial reviews and repairs were **conducted by the implementing assistant**, not a separate reviewer. Protocol independent-approval gate remains open.
 
 ## 4. Evidence and remaining gate
 
-- Last code regression: **537 passed on Python 3.10 and 537 passed on Python 3.13**, CI [41919258093](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41919258093), code commit `02dd03d`.
+- Last code regression: **538 passed on Python 3.10 and 538 passed on Python 3.13**, CI [41921146414](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41921146414), code commit `0304baa`.
 - Coverage includes save/reopen, snapshot and event replay; reject incompatible 12/16 and genuine 13/17 worlds without rewriting; flag-off parity, direct-observation checks, hearsay contradiction handling, food exhaustion, autonomous sharing bounds and OBS-2 decision timing.
 - Testing is necessary but insufficient: perform a **separate independent read-only adversarial review of the latest documentation/code HEAD**, including the newly changed emission order, one-pair-per-tick strategy, fact-time/source bounds, historical compatibility, and rollback under event-budget pressure.
 - **P0 save/restore guarantee remains open**. No production migration, durable-world certification, or story import is claimed.
