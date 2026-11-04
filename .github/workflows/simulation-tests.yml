@@ -126,6 +126,22 @@ jobs:
       - name: Demonstrate 01-S hunger-driven foraging with seven characters
         run: PYTHONPATH=src python scenarios/test_village/demo_foraging.py
 
+      - name: Verify Phase 01-T flag-off parity against real Phase 01-S runtime
+        run: |
+          PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01t-flag-off.json
+          PYTHONPATH=../reviewed-01s/simulation/src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01s-baseline.json
+          python - <<'PY'
+          import json
+          baseline=json.load(open('/tmp/01s-baseline.json'))['results']
+          candidate=json.load(open('/tmp/01t-flag-off.json'))['results']
+          assert len(baseline) == len(candidate) == 1
+          for old, new in zip(baseline, candidate):
+              for key in ('npcs','time','revision','events_count','events_digest',
+                          'legacy_semantic_digest','replay_equal'):
+                  assert old[key] == new[key], (key, old[key], new[key])
+              assert old['replay_equal'] is True and new['replay_equal'] is True
+          PY
+
       - name: Check existing seven-NPC event and semantic state parity against Phase 01-R
         run: |
           PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01s-parity.json
