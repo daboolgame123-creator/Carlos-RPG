@@ -167,3 +167,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Normalize overlength automatically generated obligation IDs into stable SHA-256-derived identifiers instead of freezing an otherwise valid world.
 - Keep schema 9/rules 12 because no event acceptance contract changed; verify with 313 passing tests in four local groups.
 - Defer expiry or remote withdrawal of abandoned requests to a future phase that defines real communication/delivery semantics.
+
+## Phase 01-L — Eating versus owning food; loans versus gifts
+
+- A physical food transfer only changes inventory and a recipient's directed trust. Ownership is not consumption or satiation.
+- An NPC eating owned food must use a separate, trusted, locally replayable event that atomically reduces food and hunger, with a before/after ledger. Default autonomous eating is opt-in.
+- A character who takes a gift and leaves does **not** become a debtor merely because they traveled away. An exploitative borrower may deliberately flee, however, and the future **loan/debt contract** domain must preserve that obligation after separation and distinguish due date, consent, repayment/partial repayment, default, attempted contact, and independently sourced witness evidence. Do not erase such obligations with an automatic expiry, and do not infer dishonest intent merely from absence; history should support competing interpretations and enforce contract terms separately.
+- Future lenders should be able to refuse based on their own trust, resources and evidence of prior unpaid debts; future borrowers may choose self-interested or deceptive decisions. No omniscient accusation or protection from consequences.
+- No canonical Carlos narrative change and no `main` merge during Phase 01-L.
