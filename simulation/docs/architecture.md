@@ -230,3 +230,21 @@ exact logged-event/final-state hash parity for 10/25 NPC fixtures. The 100-NPC
 60-second command dropped from **9.5122 to 3.4529 seconds** in one same-host
 measurement; per-event world-wide projection remains a scaling bottleneck.
 See `phase_01n_validation.md`. Schema 11 / Rules 15 unchanged.
+
+## Phase 01-O — SQLite replay provenance in one ordered stream
+
+`SQLiteEventStore.load(use_snapshot=False)` originally fetched each event,
+then queried `commands` separately for that event's capability flags.
+The replay scan now selects the same command fields with the event rows using
+a single ordered `LEFT JOIN`. The LEFT side preserves corrupt orphaned
+events so their missing provenance triggers `IntegrityError`; an INNER JOIN
+would incorrectly hide such events. The reducer still checks one event at a
+time in revision order, with immutable snapshots, hash checks, final-head
+checks and reservation validation unchanged.
+
+The new fixture tests the SELECT bound, intact snapshot/full replay and
+corrupt command detection. On a 100-event full replay the observed SQL SELECT
+count is 102 in Phase 01-N and 2 in Phase 01-O. This is specifically a
+database-query optimization, not a removal of full state projection.
+**Schema 11 / Rules 15**, no migration and no changes to canonical story.
+See `phase_01o_report.md`.

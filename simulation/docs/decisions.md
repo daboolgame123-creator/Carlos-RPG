@@ -255,3 +255,19 @@ Open questions for later phases: NPC decision cadence, resource production and t
   full-engine workload, 301 events; more optimization needed for 1000+.
 - Schema 11 / Rules 15 unchanged; no automatic migrations or `main` merge.
   Independent phase review remains mandatory.
+
+## Phase 01-O — Bounded replay SQL queries (reviewed)
+
+- Remove the event-store N+1 SELECT pattern without changing event ordering,
+  provenance, hash verification, trust capabilities, transactional append
+  semantics, optimistic revision checks, or immutable state construction.
+- Use `LEFT JOIN` rather than `INNER JOIN` so orphaned/corrupt command
+  rows remain visible and fail closed instead of silently disappearing.
+- Guard the query count, snapshot/full replay consistency and missing-command
+  corruption explicitly with new tests. Avoid hardware-specific speed gates.
+- Independent GitHub Actions on Python 3.10/3.13: **413/413 tests passed**;
+  event/state parity with reviewed 01-N at 10 and 25 NPCs also passed.
+- Same-workload 100-event full replay: **102 to 2 SQL SELECTs**; observed time
+  gains are modest and are not a promise about large 1,000-NPC populations.
+- Remain at Schema 11 / Rules 15. Do not merge to `main` or alter Carlos
+  narrative. Future scaling work requires separate profiling and review.

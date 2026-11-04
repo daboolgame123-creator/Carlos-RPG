@@ -324,3 +324,22 @@ not proof that 1000 active NPCs are production-ready. See
 in earlier 01-N notes describes the intermediate revision only.
 
 Schema 11 / Rules 15 remain compatible. No `main` merge. Independent review completed with GitHub Actions (410/410 passing on Python 3.10 and 3.13, plus matching 01-M/01-N event and state digests). See `docs/phase_01n_independent_review.md`.
+
+## Phase 01-O — Bounded SQLite queries during event replay
+
+`SQLiteEventStore.load` now reads each event together with its command's
+replay capabilities using one ordered `LEFT JOIN` instead of issuing another
+SQLite query for every event. This preserves per-event reducers, payload hash
+checks, missing-command detection, immutable projections, snapshots, atomic
+writes and the explicit simulation-time model. **Schema 11 / Rules 15** are
+unchanged, and no story files or `main` branch were changed.
+
+**413/413 tests pass** on Python 3.10 and 3.13 in GitHub Actions, including
+three new replay/integrity regressions. The complete event-log and final-state
+digests still match the reviewed Phase 01-N fixture at 10 and 25 NPCs.
+
+The identical replay benchmark at 100 stored events recorded **102 SQL SELECTs**
+on 01-N versus **2 SELECTs** on 01-O. This was an isolated, single-run CI
+measurement (three timed repetitions per variant); full-world event projection
+and double simulation remain more substantial bottlenecks. See
+`docs/phase_01o_report.md` for evidence and caveats.
