@@ -13,7 +13,8 @@ from .survival import CRITICAL_HUNGER
 from .store import SQLiteEventStore
 from .time_engine import TimeEngine
 
-ACTIONS = ("rest", "work", "investigate", "wait", "forage")
+BASE_ACTIONS = ("rest", "work", "investigate", "wait")
+ACTIONS = BASE_ACTIONS + ("forage",)
 NEEDS = ("fatigue", "hunger", "safety")
 GOALS = ("earn", "explore", "survive")
 MIN_DECISION_COOLDOWN = 60
@@ -192,7 +193,7 @@ def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool 
         scores["work"] -= 300
         scores["investigate"] -= 300
     # No random draw or unordered iteration. Stable tie preference makes replay deterministic.
-    action = sorted(ACTIONS, key=lambda a: (-scores[a], ACTIONS.index(a)))[0]
+    action = sorted(BASE_ACTIONS, key=lambda a: (-scores[a], BASE_ACTIONS.index(a)))[0]
     reason = f"utility[{action}]={scores[action]}; belief_danger={perceived_risk}; npc={npc_id}"
     return Decision(npc_id, action, scores[action], reason)
 
