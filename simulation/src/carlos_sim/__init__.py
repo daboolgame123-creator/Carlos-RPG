@@ -14,3 +14,4 @@ from .social import NPCSocialService, SocialResult
 from .social_autonomy import choose_social_intent, SocialIntent, MIN_SOCIAL_COOLDOWN
 from .assistance import NPCAssistanceService, AssistanceResult, ASSISTANCE_RESOURCES
 from .assistance_autonomy import choose_assistance_intent, AssistanceIntent
+from .consumption import NPCConsumptionService, ConsumptionResult, choose_food_consumption
