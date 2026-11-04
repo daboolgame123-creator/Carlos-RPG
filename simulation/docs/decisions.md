@@ -225,3 +225,20 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Defer structural event-store optimization to a separate controlled phase with
   replay and deterministic equivalence tests; do not replace the stable ledger
   during Phase 01-M review.
+
+## Phase 01-N — Performance without altered world behavior
+
+- Optimize redundant state serialization/copying rather than remove NPC
+  decisions, simulate fewer interactions, or skip persisted events.
+- Preserve one complete `WorldState.from_dict` validation and JSON
+  normalization before the private fast path. Externally constructed states
+  retain their full validation behavior; `to_dict` remains a detached copy.
+- Keep event authorization, ordered per-event reducer validation, replay
+  integrity and SQLite atomicity unchanged.
+- Accept evidence from **388 local tests**, and identical complete event
+  ledger/final-state digests against 01-M in two independent fixture sizes.
+- Use like-for-like full-engine timings: approximately **2.14×** faster
+  at 100 NPCs (10.4821 s → 4.8872 s). This remains inadequate for
+  1000 active NPCs; address incremental projection separately.
+- Maintain schema **11**, rules **15**, no changes to `main` or Carlos
+  story files, and require independent review before 01-N closure.
