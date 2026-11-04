@@ -49,3 +49,14 @@ For the cross-version digest comparison, execute the **same** `scenarios/test_vi
 - GitHub-hosted CI was **not** run for this local baseline. Independent 01-N review is still pending.
 
 **Status: initial implementation complete, tested locally, not independently reviewed/closed.**
+
+## Final integration update
+
+The initial report's **388** tests and its baseline timing are valid for an
+intermediate candidate only. The subsequently integrated fast-path `_thaw`
+change adds 15 more regressions and passes **403/403 tests** across five
+completed batches. The event and final-world-state digests still match the
+reviewed 01-M baseline for 10 and 25 NPC scenarios. A separate same-host
+100-NPC run shows **9.5122 s → 3.4529 s** for 301 events, about **2.75× faster**
+(with single-sample limitations). The authoritative final integration evidence
+is recorded in `phase_01n_validation.md`. Independent review is pending.
