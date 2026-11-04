@@ -504,4 +504,30 @@ def test_review_local_danger_belief_changes_only_recipient_foraging_choice(villa
     # This warning does not magically become knowledge of other NPCs.
     assert choose_action(now, "basim", foraging_enabled=True).action == "forage"
     assert "danger" not in now.npcs["basim"]["beliefs"]
-    assert db.verify("r").to_dict() == now.to_dict()
+    out = advance(db, clock, seconds=1, command="honor-warning")
+    assert out.state.actions["auto:adel:0"]["action"] != "forage"
+    assert out.state.actions["auto:basim:0"]["action"] == "forage"
+    assert db.verify("r").to_dict() == out.state.to_dict()
+
+
+@pytest.mark.parametrize("confidence,should_forage", [
+    (0, True), (79, True), (80, False), (100, False),
+])
+def test_review_danger_threshold_is_explicit_and_replayable(village, confidence, should_forage):
+    db, clock = village
+    prior = db.load("r")
+    db.append("r", "warn:" + str(confidence), prior.revision, [
+        ev("NPCInformationDelivered", {
+            "npc_id": "adel", "delivery_id": "report",
+            "key": "danger",
+            "claim": {"text": "possibly unsafe grove", "source": "basim",
+                      "received_at": 0, "confidence": confidence},
+            "sender_id": "basim", "location_id": "grove", "method": "message"
+        }, actor="basim"),
+        ev("NPCBeliefReceived", {
+            "npc_id": "adel", "key": "danger", "delivery_id": "report"
+        }, actor="adel"),
+    ], npc_authorized=True)
+    choice = choose_action(db.load("r"), "adel", foraging_enabled=True)
+    assert (choice.action == "forage") is should_forage
+    assert db.verify("r").to_dict() == db.load("r").to_dict()
