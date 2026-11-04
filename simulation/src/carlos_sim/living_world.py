@@ -172,17 +172,6 @@ class LivingWorldEngine:
                                  'site_id': intent.site_id}),
                                 action_capability=True)
                             gathered_actions.append(intent.action_id)
-                    if '__npc_travel_id' in item['payload']:
-                        travel_id = item['payload']['__npc_travel_id']
-                        travel = current.travels.get(travel_id) if isinstance(travel_id, str) else None
-                        if (travel is not None and travel['status'] == 'arrived'
-                                and travel['arrived_at'] == current.time
-                                and self.knowledge_enabled):
-                            who = travel['npc_id']
-                            site = current.entities[who]['location_id']
-                            for event in make_observation_events(current, who, site, current.time, 'arrival'):
-                                append(event)
-                                knowledge_shares.append(event.data.get('delivery_id', ''))
                     if self.knowledge_enabled:
                         action_info = current.actions.get(finished_id) if isinstance(finished_id, str) else None
                         if (action_info is not None and action_info["action"] == "forage"
@@ -191,7 +180,22 @@ class LivingWorldEngine:
                             site = current.entities[who]["location_id"]
                             for event in make_observation_events(current, who, site, current.time, 'forage'):
                                 append(event)
-                                knowledge_shares.append(event.data.get('delivery_id', ''))
+                                if event.event_type == 'NPCInformationDelivered':
+                                    knowledge_shares.append(event.data['delivery_id'])
+                # A travel completion has a "__npc_travel_id" payload, never
+                # "__npc_action_id". Handle it as a sibling of action completion
+                # so arrival observations cannot be skipped.
+                if '__npc_travel_id' in item['payload'] and self.knowledge_enabled:
+                    travel_id = item['payload']['__npc_travel_id']
+                    travel = current.travels.get(travel_id) if isinstance(travel_id, str) else None
+                    if (travel is not None and travel['status'] == 'arrived'
+                            and travel['arrived_at'] == current.time):
+                        who = travel['npc_id']
+                        site = current.entities[who]['location_id']
+                        for event in make_observation_events(current, who, site, current.time, 'arrival'):
+                            append(event)
+                            if event.event_type == 'NPCInformationDelivered':
+                                knowledge_shares.append(event.data['delivery_id'])
                 if item['interrupt']:
                     interrupted = True
                     break
@@ -248,9 +252,10 @@ class LivingWorldEngine:
                         continue
                     for event in choose_food_sharing(current, sender_id):
                         append(event)
-                        share_id = event.data.get("delivery_id")
-                        if share_id is not None:
-                            knowledge_shares.append(share_id)
+                        # A delivery and its acknowledgement share one ID;
+                        # report it once, not once per domain event.
+                        if event.event_type == "NPCInformationDelivered":
+                            knowledge_shares.append(event.data["delivery_id"])
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:

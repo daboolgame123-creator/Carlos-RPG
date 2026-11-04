@@ -50,6 +50,12 @@ This correction does not allow the sender to alter another NPC's thoughts or sta
 
 **Finding AR-05 — test fixture bug, repaired:** the original `test_session_close_blocks_npc_state_changes` assembled `DomainEvent` with positional arguments in the wrong order. It passed with a closed session, but did not prove the proposed event was otherwise valid. Replaced the fixture with a well-formed direct-food observation, asserted no event/revision change while the session is closed, then proved the **exact same event** succeeds after reopening the session. This tests the session boundary rather than accidentally testing malformed input.
 
+## 3a.4. Arrival-observation hook unreachable (AR-06)
+
+**Finding — behavioral blocker, corrected:** `LivingWorldEngine.advance` placed the `__npc_travel_id` completion hook *inside* the `__npc_action_id` branch. Valid scheduled payloads contain one or the other, never both, so autonomous travel arrivals did not record local food observations. The arrival branch is now a sibling of the action-completion branch; forage observations remain in the action branch. Added end-to-end scheduled travel probes for an uninitialized site (remains unknown), a depleted site (empty), and a stocked site (present). Each uses an actual 50-second journey, asserts event replay, and verifies the recorded observation time/location.
+
+**Associated result-metadata fix:** `LivingAdvanceResult.knowledge_shares` no longer includes an identical delivery ID twice for delivery + acknowledgement. The event log still contains both domain events; only the public list of delivery IDs is deduplicated at emission, not by erasing events.
+
 ## 3b. Final 01-T code regression checkpoint
 
 - Latest code commit: [`0304baa`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/0304baa975d6f7aaa495ddfcf435b28577600156).

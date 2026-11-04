@@ -9,6 +9,7 @@ from carlos_sim import (DomainEvent, SQLiteEventStore, TimeEngine,
                         LivingWorldEngine, choose_action, canonical_hash)
 from carlos_sim.store import InvalidEvent
 from test_gathering_autonomy import make_world, NAMES
+from test_navigation import setup as setup_navigation_world
 
 
 def ev(kind, data, actor=None, time=0):
@@ -109,6 +110,50 @@ def test_verify_snapshot_reopen_and_rerun_preserve_hash(village, tmp_path):
         s2 = db2.load("r")
         assert canonical_hash(s2.to_dict()) == h1
         assert db2.verify("r").to_dict() == s2.to_dict()
+
+
+@pytest.mark.parametrize(
+    ("site_stock", "expected_food_state"),
+    [(None, None), (0, "empty"), (3, "present")],
+)
+def test_autonomous_navigation_arrival_observes_only_initialized_local_food(
+        tmp_path, site_stock, expected_food_state):
+    # Routes use a completely different scheduled payload from NPC actions.
+    # This exercises the actual end-to-end travel-completion hook.
+    with SQLiteEventStore(tmp_path / "01t-arrival.sqlite") as db:
+        setup_navigation_world(db)
+        if site_stock is not None:
+            before = db.load("village")
+            db.append("village", "initialize-forest-food", before.revision, [
+                DomainEvent("ResourceChanged", None, "initialize distant food", 0, {
+                    "owner_id": "forest", "resource": "wild_food",
+                    "previous": None, "current": site_stock,
+                    "source": "initialization",
+                })
+            ], bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        result = LivingWorldEngine(
+            db, clock, navigation_enabled=True, knowledge_enabled=True
+        ).advance("village", seconds=50, command_id="arrive-forest",
+                  expected_revision=db.load("village").revision)
+        state = result.state
+        assert state.entities["nora"]["location_id"] == "forest"
+        claim = state.npcs["nora"]["beliefs"].get("food:forest")
+        if expected_food_state is None:
+            assert claim is None  # unknown is not "empty"
+            assert result.knowledge_shares == ()
+        else:
+            assert claim is not None
+            assert claim["text"] == (
+                f"food-state:{expected_food_state}; observed_at=50"
+            )
+            assert claim["source"] == "observation:forest"
+            assert claim["received_at"] == 50
+            delivery_id = "food-obs:nora:forest:50:arrival"
+            assert state.npcs["nora"]["delivery_history"].count(delivery_id) == 1
+            assert result.knowledge_shares.count(delivery_id) == 1
+        assert db.verify("village").to_dict() == state.to_dict()
 
 
 def test_session_close_blocks_npc_state_changes(village):
