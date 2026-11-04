@@ -90,17 +90,41 @@ class SQLiteEventStore:
                 state = self._decode_state(snap[1], snap[2])
                 if state.world_id != world_id or state.revision != snap[0] or state.revision > row[0]:
                     raise IntegrityError("snapshot identity/revision mismatch")
-        for seq, raw, stored_hash in self.db.execute("SELECT seq,payload,hash FROM events WHERE world_id=? AND seq>? ORDER BY seq", (world_id,state.revision)):
+        # Join capability provenance once for the replay stream rather than
+        # issuing an additional command lookup for every individual event.
+        # LEFT JOIN is deliberate: a damaged/missing command must still fail
+        # integrity verification instead of silently dropping its events.
+        replay_query = (
+            "SELECT e.seq, e.payload, e.hash, c.request_hash, c.bootstrap, "
+            "c.action_authorized, c.movement_authorized, c.social_authorized, "
+            "c.assistance_authorized, c.consumption_authorized, c.survival_authorized "
+            "FROM events AS e LEFT JOIN commands AS c "
+            "ON e.world_id=c.world_id AND e.command_id=c.command_id "
+            "WHERE e.world_id=? AND e.seq>? ORDER BY e.seq"
+        )
+        for (seq, raw, stored_hash, command_hash, bootstrap,
+             action_authorized, movement_authorized, social_authorized,
+             assistance_authorized, consumption_authorized,
+             survival_authorized) in self.db.execute(
+                 replay_query, (world_id, state.revision)):
             if seq != state.revision + 1:
                 raise IntegrityError("event sequence gap")
             try:
                 raw_data = json.loads(raw)
                 if canonical_hash(raw_data) != stored_hash:
                     raise IntegrityError("event hash mismatch")
-                command = self.db.execute("SELECT c.request_hash, c.bootstrap, c.action_authorized, c.movement_authorized, c.social_authorized, c.assistance_authorized, c.consumption_authorized, c.survival_authorized FROM events e JOIN commands c ON e.world_id=c.world_id AND e.command_id=c.command_id WHERE e.world_id=? AND e.seq=?", (world_id, seq)).fetchone()
-                if command is None:
+                if command_hash is None:
                     raise IntegrityError("event command is missing")
-                state = apply_event(state,DomainEvent.from_dict(raw_data),bootstrap=bool(command[1]),action_authorized=bool(command[2]),movement_authorized=bool(command[3]),social_authorized=bool(command[4]),assistance_authorized=bool(command[5]),consumption_authorized=bool(command[6]),survival_authorized=bool(command[7]))
+                state = apply_event(
+                    state, DomainEvent.from_dict(raw_data),
+                    bootstrap=bool(bootstrap),
+                    action_authorized=bool(action_authorized),
+                    movement_authorized=bool(movement_authorized),
+                    social_authorized=bool(social_authorized),
+                    assistance_authorized=bool(assistance_authorized),
+                    consumption_authorized=bool(consumption_authorized),
+                    survival_authorized=bool(survival_authorized),
+                )
             except (ValueError, TypeError) as exc:
                 raise IntegrityError(f"corrupt event {seq}") from exc
         if state.revision != row[0] or state.time != row[1]:
