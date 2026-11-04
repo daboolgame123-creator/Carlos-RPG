@@ -37,10 +37,17 @@ jobs:
           ref: c35245d1904e7a6d779cafa92cbf556618247f38
           path: reviewed-01s
           persist-credentials: false
+      - name: Check out frozen Phase 01-T predecessor for 01-U parity
+        uses: actions/checkout@v5
+        with:
+          ref: d2a397bde95d2596592818f348d68b030f78f48a
+          path: reviewed-01t
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
           test "$(git -C ../reviewed-01s rev-parse HEAD)" = "c35245d1904e7a6d779cafa92cbf556618247f38"
+          test "$(git -C ../reviewed-01t rev-parse HEAD)" = "d2a397bde95d2596592818f348d68b030f78f48a"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -144,6 +151,18 @@ jobs:
                           'legacy_semantic_digest','replay_equal'):
                   assert old[key] == new[key], (key, old[key], new[key])
               assert old['replay_equal'] is True and new['replay_equal'] is True
+          PY
+
+      - name: Verify Phase 01-U opt-out parity against genuine Phase 01-T knowledge-enabled runtime
+        run: |
+          PYTHONPATH=src python scenarios/test_village/bench_food_knowledge_parity.py > /tmp/01u-default-off.json
+          PYTHONPATH=../reviewed-01t/simulation/src python scenarios/test_village/bench_food_knowledge_parity.py > /tmp/01t-with-knowledge.json
+          python - <<'PY'
+          import json
+          old = json.load(open('/tmp/01t-with-knowledge.json'))
+          new = json.load(open('/tmp/01u-default-off.json'))
+          assert old == new, (old, new)
+          assert old['replay_equal'] is True
           PY
 
       - name: Check existing seven-NPC event and semantic state parity against Phase 01-R

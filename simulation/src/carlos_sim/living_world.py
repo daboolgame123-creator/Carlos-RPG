@@ -18,6 +18,7 @@ from .assistance_autonomy import choose_assistance_intent
 from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
 from .knowledge import make_observation_events, choose_food_sharing, known_food_sites
+from .food_navigation import choose_food_route
 
 
 @dataclass(frozen=True)
@@ -53,7 +54,8 @@ class LivingWorldEngine:
                  social_cooldown: int = MIN_SOCIAL_COOLDOWN,
                  assistance_enabled: bool = False, consumption_enabled: bool = False,
                  survival_enabled: bool = False, gathering_enabled: bool = False,
-                 foraging_enabled: bool = False, knowledge_enabled: bool = False):
+                 foraging_enabled: bool = False, knowledge_enabled: bool = False,
+                 food_navigation_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -91,6 +93,16 @@ class LivingWorldEngine:
         if type(knowledge_enabled) is not bool:
             raise ValueError("knowledge_enabled must be boolean")
         self.knowledge_enabled = knowledge_enabled
+        if type(food_navigation_enabled) is not bool:
+            raise ValueError("food_navigation_enabled must be boolean")
+        if food_navigation_enabled and not (
+                self.navigation_enabled and self.knowledge_enabled
+                and self.foraging_enabled):
+            raise ValueError(
+                "food_navigation_enabled requires navigation_enabled, "
+                "knowledge_enabled and foraging_enabled"
+            )
+        self.food_navigation_enabled = food_navigation_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -296,7 +308,17 @@ class LivingWorldEngine:
                         append(DomainEvent('NPCNavigationSurveyed', npc_id,
                             'NPC surveys locally observable roads', current.time,
                             {'npc_id': npc_id}), movement_capability=True)
-                    route_id = next_route(current, npc_id)
+                    food_intent = (
+                        choose_food_route(current, npc_id)
+                        if self.food_navigation_enabled else None
+                    )
+                    if (food_intent is not None
+                            and current.time < current.npcs[npc_id]['next_decision_at']):
+                        # Wait until an existing decision cooldown elapses.
+                        # Do not let optional exploration distract the hungry
+                        # NPC while an eligible known food journey is pending.
+                        continue
+                    route_id = food_intent.route_id if food_intent is not None else next_route(current, npc_id)
                     if route_id is not None:
                         route = current.routes[route_id]
                         here = current.entities[npc_id]['location_id']
@@ -306,6 +328,14 @@ class LivingWorldEngine:
                             raise InvalidEvent('autonomous journey identifier collision')
                         due_at = current.time + route['seconds']
                         schedule_id = 'npc-travel:' + travel_id
+                        travel_reason = 'autonomous movement over a learned road'
+                        if food_intent is not None:
+                            travel_reason = (
+                                f'autonomous food journey; belief_site={food_intent.destination}; '
+                                f'source={food_intent.source}; observed_at={food_intent.observed_at}; '
+                                f'effective_confidence={food_intent.confidence}; '
+                                f'known_cost_seconds={food_intent.total_seconds}'
+                            )
                         append(DomainEvent('ScheduledEventCreated', None,
                             'scheduled autonomous travel arrival', current.time,
                             {'id': schedule_id, 'due': due_at,
@@ -313,7 +343,7 @@ class LivingWorldEngine:
                              'payload': {'__npc_travel_id': travel_id}, 'interrupt': False}),
                              movement_capability=True)
                         append(DomainEvent('NPCTravelStarted', npc_id,
-                            'autonomous movement over a learned road', current.time,
+                            travel_reason, current.time,
                             {'id': travel_id, 'npc_id': npc_id, 'route_id': route_id,
                              'origin': here, 'destination': there, 'due': due_at,
                              'schedule_id': schedule_id}), movement_capability=True)

@@ -22,3 +22,5 @@ from .gathering import NPCGatheringService, GatheringResult
 from .gathering import choose_gathering_intent, GatheringIntent
 
 from .foraging import choose_local_foraging, FORAGING_MIN_HUNGER, FORAGING_MAX_FATIGUE
+
+from .food_navigation import FoodRouteIntent, choose_food_route

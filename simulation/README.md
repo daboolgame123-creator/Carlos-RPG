@@ -6,7 +6,7 @@ Independent, offline Python core for *test worlds only*. **No actual Carlos stor
 
 The plan is explicitly **living and revisable**; see [Roadmap Change Log](docs/ROADMAP_CHANGELOG.md) for reasons behind future additions or priority changes. See [Save Compatibility & Safety Policy](docs/SAVE_COMPATIBILITY_POLICY.md) for the **P0 gate before first long-lived world**. These are policies, **not** a claim that a general backup/migration tool is already implemented.
 
-The authoritative forward-looking plan is **[خارطة الطريق الرسمية](docs/ROADMAP.md)**. It separates confirmed Phase 01-R behavior from planned Phase 01-S onward and defines milestones and dependencies. Every phase must follow the **[Development & Review Protocol](docs/DEVELOPMENT_PROTOCOL.md)**. These documents do not imply any feature is implemented; only tested phase reports and code establish that.
+The authoritative forward-looking plan is **[خارطة الطريق الرسمية](docs/ROADMAP.md)**. It distinguishes independently closed Phase 01-S from technically tested but externally unreviewed Phases 01-T/01-U, and defines later planned milestones and dependencies. Every phase must follow the **[Development & Review Protocol](docs/DEVELOPMENT_PROTOCOL.md)**. These documents do not imply any feature is implemented; only tested phase reports and code establish that.
 
 
 ## Requirements

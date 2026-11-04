@@ -389,3 +389,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Phase 01-U can begin on a **new branch** conditionally based on the most recent green 01-T checkpoint, with a separate design, tests and review handoff. Any substantive 01-T reviewer finding must be propagated/retested on dependent phases.
 - No bypass for failed CI, reproducible blockers, world state security, compatibility, or P0. No main/story edits or silent upgrades; P0 is still mandatory before long-lived worlds.
 - Refer to [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) §J and [ROADMAP_CHANGELOG.md](ROADMAP_CHANGELOG.md) G-006 for operational detail.
+
+## 2026-11-05 — Phase 01-U provisional known-food navigation
+
+- A new optional food_navigation_enabled flag requires navigation, knowledge and foraging flags. Disabled mode is byte/event and semantic-state equivalent to the genuine 01-T runtime under an active knowledge scenario.
+- An NPC may travel toward their OWN food:present belief only on learned roads; rank by known travel seconds and subjective confidence. Never inspect remote supplies, another NPC's private memory, or hidden roads.
+- Manual target, current action, decision cooldown, danger warning, local forage and hunger/fatigue/safety/owned-food eligibility remain binding. Hearsay is fallible and arrival never creates food.
+- Physical 120-second forage after actual arrival may collect one finite unit. No new event type or schema/rules change (13/18). CI 41930579158 passes 564 tests per Python interpreter.
+- Phase 01-U is TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING, not APPROVED/CLOSED; 01-T also pending, P0 OPEN. See [01-U report](phase_01u_report.md).
