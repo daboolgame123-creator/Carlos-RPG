@@ -175,3 +175,10 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - A character who takes a gift and leaves does **not** become a debtor merely because they traveled away. An exploitative borrower may deliberately flee, however, and the future **loan/debt contract** domain must preserve that obligation after separation and distinguish due date, consent, repayment/partial repayment, default, attempted contact, and independently sourced witness evidence. Do not erase such obligations with an automatic expiry, and do not infer dishonest intent merely from absence; history should support competing interpretations and enforce contract terms separately.
 - Future lenders should be able to refuse based on their own trust, resources and evidence of prior unpaid debts; future borrowers may choose self-interested or deceptive decisions. No omniscient accusation or protection from consequences.
 - No canonical Carlos narrative change and no `main` merge during Phase 01-L.
+
+### Phase 01-L review decisions
+
+- Close the legacy free-satiation route: an ordinary low-level `NPCNeedChanged(hunger ↓)` cannot bypass food conservation and the meal ledger.
+- Permit explicit trusted hunger decreases only with the established `npc_authorized` capability and an active play session; these are non-food scenario/admin adjustments and are not claimed as meals.
+- Keep natural hunger increases and explicit test fixtures working; six new regression tests cover refusal, rollback, replay and authorized behavior.
+- Bump rule version from 13 to **14** (schema remains 10), because event acceptance changed. **351 tests passed in five separate local groups.**
