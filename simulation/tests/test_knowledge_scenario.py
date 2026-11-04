@@ -113,22 +113,32 @@ def test_verify_snapshot_reopen_and_rerun_preserve_hash(village, tmp_path):
 
 def test_session_close_blocks_npc_state_changes(village):
     db, clock = village
-    clock.close_session("r")
     s = db.load("r")
     rev = s.revision
-    try:
-        db.append("r", "after-close", rev, [
-            ev("NPCInformationDelivered", "adel", 0,
-               {"npc_id": "adel", "delivery_id": "x", "key": "food:grove",
-                "claim": {"text": "food-state:present; observed_at=0",
-                          "source": "observation:grove", "received_at": 0,
-                          "confidence": 90},
-                "sender_id": "adel", "location_id": "grove", "method": "observation"}),
-        ], npc_authorized=True)
-        raise AssertionError("expected failure outside an active session")
-    except InvalidEvent:
-        pass
+    # A *valid* local direct observation: otherwise a malformed event could
+    # fail for reasons other than the intended closed-session gate.
+    delivery = ev("NPCInformationDelivered",
+                  {"npc_id": "adel", "delivery_id": "x", "key": "food:grove",
+                   "claim": {"text": "food-state:present; observed_at=0",
+                             "source": "observation:grove", "received_at": 0,
+                             "confidence": 90},
+                   "sender_id": "adel", "location_id": "grove", "method": "observation"},
+                  actor="adel", time=0)
+    clock.close_session("r")
+    with pytest.raises(InvalidEvent, match="active play session"):
+        db.append("r", "after-close", rev, [delivery], npc_authorized=True)
     assert db.load("r").to_dict() == s.to_dict()
+    assert db.db.execute(
+        "SELECT count(*) FROM events WHERE world_id='r'"
+    ).fetchone()[0] == rev
+
+    # Control: the identical event and command succeed once the session is
+    # reopened, proving only the play-session boundary blocked the write.
+    clock.open_session("r")
+    after = db.append("r", "after-close", rev, [delivery], npc_authorized=True)
+    assert after.revision == rev + 1
+    assert "x" in after.npcs["adel"]["inbox"]
+    db.verify("r")
 
 
 def test_per_npc_independence_only_listener_changes(village):

@@ -46,6 +46,10 @@ This correction does not allow the sender to alter another NPC's thoughts or sta
 
 **Finding AR-04 — cross-version validation defect, repaired:** `parse_food_claim` previously accepted `observed_at > 2**63-1` even though the documented grammar and `encode_food_claim` require signed 64-bit time. Extremely long decimal strings could also trigger interpreter-specific digit-limit errors on Python 3.13. The parser now rejects these before integer conversion, returning `None`, and a boundary regression verifies `2**63-1`, `2**63`, and a 5,000-digit input. No schema change or migration is required.
 
+## 3a.3. Test validity: closed-session negative probe
+
+**Finding AR-05 — test fixture bug, repaired:** the original `test_session_close_blocks_npc_state_changes` assembled `DomainEvent` with positional arguments in the wrong order. It passed with a closed session, but did not prove the proposed event was otherwise valid. Replaced the fixture with a well-formed direct-food observation, asserted no event/revision change while the session is closed, then proved the **exact same event** succeeds after reopening the session. This tests the session boundary rather than accidentally testing malformed input.
+
 ## 3b. Final 01-T code regression checkpoint
 
 - Code commit: [`02dd03d`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/02dd03d75cac543eb4286161e945d221fcade90d).
