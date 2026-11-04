@@ -337,3 +337,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
   real Carlos story files remain unchanged.
 - Final seven-NPC demo reports **52 events, 2 recoveries**,
   with **445 successful tests** under Python 3.10 and 3.13.
+
+## Roadmap and delivery governance — 2026-11-04 (planning-only)
+
+- Adopt [ROADMAP.md](ROADMAP.md) as the maintained planning baseline **from Phase 01-R onward**, and [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) for phase acceptance and independent review.
+- Prioritize causality, limited character knowledge, resource conservation and early playable interaction over routine 150-NPC benchmarking. Behavior phase default: 5–10 NPCs; integrated cases 10–25; scale testing when justified.
+- Future entries 01-S through 05-E are **proposed milestones**, not implemented or promised as fixed API/schema contracts. Recheck ordering at each milestone and record changes.
+- Require explicit schema/rules compatibility review for each phase, preserve the event log, offline logical time, atomicity, and separation of player input from narration.
+- The roadmap/protocol change is **documentation-only**; no engine code, schema version, Rules version, or Carlos story file is modified.

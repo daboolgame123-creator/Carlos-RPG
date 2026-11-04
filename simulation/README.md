@@ -2,6 +2,11 @@
 
 Independent, offline Python core for *test worlds only*. **No actual Carlos story data is imported or changed.**
 
+## Development roadmap / خارطة التطوير
+
+The authoritative forward-looking plan is **[خارطة الطريق الرسمية](docs/ROADMAP.md)**. It separates confirmed Phase 01-R behavior from planned Phase 01-S onward and defines milestones and dependencies. Every phase must follow the **[Development & Review Protocol](docs/DEVELOPMENT_PROTOCOL.md)**. These documents do not imply any feature is implemented; only tested phase reports and code establish that.
+
+
 ## Requirements
 
 Python 3.10+; SQLite from the standard library. For tests, install `pytest` (not required for the engine).
