@@ -232,7 +232,19 @@ class LivingWorldEngine:
                             'autonomous local recipient acknowledges the speech act',
                             current.time, {'id': message_id}), social_capability=True)
                         social_messages.append(message_id)
-                if self.navigation_enabled and not pending_action:
+                # New 01-S survival intent must be considered before starting
+                # optional autonomous exploration/travel. Otherwise a hungry
+                # NPC ignores visible food here whenever a road is available.
+                # The same pure predicate is used later by choose_action and
+                # event replay; it inspects this NPC plus this site only.
+                local_forage_wins = False
+                if self.foraging_enabled and not pending_action:
+                    from .foraging import choose_local_foraging
+                    local_site = current.entities[npc_id]['location_id']
+                    local_forage_wins = choose_local_foraging(
+                        npc_id, current.npcs[npc_id], local_site,
+                        current.resources) is not None
+                if self.navigation_enabled and not pending_action and not local_forage_wins:
                     if needs_survey(current, npc_id):
                         append(DomainEvent('NPCNavigationSurveyed', npc_id,
                             'NPC surveys locally observable roads', current.time,
