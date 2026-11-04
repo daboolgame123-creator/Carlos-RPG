@@ -16,3 +16,5 @@ from .assistance import NPCAssistanceService, AssistanceResult, ASSISTANCE_RESOU
 from .assistance_autonomy import choose_assistance_intent, AssistanceIntent
 from .consumption import NPCConsumptionService, ConsumptionResult, choose_food_consumption
 from .survival import HUNGER_SECONDS_PER_POINT, FATIGUE_SECONDS_PER_POINT, CRITICAL_HUNGER
+
+from .gathering import NPCGatheringService, GatheringResult

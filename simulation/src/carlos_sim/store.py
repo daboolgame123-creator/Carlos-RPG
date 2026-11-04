@@ -199,6 +199,11 @@ class SQLiteEventStore:
                and e.data["current"] < e.data["previous"]
                for e in events) and not npc_authorized:
             raise InvalidEvent("lowering hunger outside eating requires trusted NPC adjustment capability")
+        if any(e.event_type == "NPCFoodGathered" for e in events):
+            if not action_authorized:
+                raise InvalidEvent("food gathering requires trusted action capability")
+            if world_id not in self._active_worlds:
+                raise InvalidEvent("NPC cannot gather food outside an active play session")
         if any(e.event_type == "NPCFoodConsumed" for e in events):
             if not consumption_authorized:
                 raise InvalidEvent("eating requires trusted consumption capability")

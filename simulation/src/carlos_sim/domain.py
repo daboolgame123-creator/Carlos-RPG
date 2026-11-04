@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 11
-RULES_VERSION = 15
+SCHEMA_VERSION = 12
+RULES_VERSION = 16
 
 
 def _thaw(value: Any) -> Any:
@@ -81,6 +81,7 @@ class WorldState:
     social_messages: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     obligations: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     consumptions: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    gatherings: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     survival_progress: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -98,6 +99,7 @@ class WorldState:
         object.__setattr__(self, "social_messages", _freeze(_json_copy(self.social_messages)))
         object.__setattr__(self, "obligations", _freeze(_json_copy(self.obligations)))
         object.__setattr__(self, "consumptions", _freeze(_json_copy(self.consumptions)))
+        object.__setattr__(self, "gatherings", _freeze(_json_copy(self.gatherings)))
         object.__setattr__(self, "survival_progress", _freeze(_json_copy(self.survival_progress)))
 
     def to_dict(self) -> dict[str, Any]:
@@ -115,7 +117,7 @@ class WorldState:
                            "travels": self.travels, "observations": self.observations,
                            "navigation": self.navigation, "relations": self.relations,
                            "social_messages": self.social_messages, "obligations": self.obligations,
-                           "consumptions": self.consumptions,
+                           "consumptions": self.consumptions, "gatherings": self.gatherings,
                            "survival_progress": self.survival_progress})
 
     @classmethod
@@ -136,7 +138,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "survival_progress"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "survival_progress"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -144,7 +146,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "survival_progress")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "survival_progress")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -184,6 +186,8 @@ class WorldState:
         validate_consumptions(d)
         from .survival import validate_survival_progress
         validate_survival_progress(d)
+        from .gathering import validate_gatherings
+        validate_gatherings(d)
         # Public snapshots need full portable JSON normalization. Internal
         # projections have already been sourced from a detached, verified
         # WorldState and a portable DomainEvent. Both paths run the SAME
@@ -275,6 +279,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "NPCFoodConsumed":
         from .consumption import project_food_consumed
         project_food_consumed(d, e, consumption_authorized=consumption_authorized)
+    elif kind == "NPCFoodGathered":
+        from .gathering import project_food_gathered
+        project_food_gathered(d, e, action_authorized=action_authorized)
     elif kind == "NPCActionStarted":
         from .actions import start_action
         start_action(d, e, action_authorized=action_authorized)
