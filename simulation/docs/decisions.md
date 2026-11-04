@@ -208,3 +208,20 @@ Open questions for later phases: NPC decision cadence, resource production and t
   merely because the borrower disappears.
 - New persisted progress and replay capability require schema 11/rules 15,
   explicit migration/recreation, independent review, and no `main` merge.
+
+### Phase 01-M review conclusions
+
+- Explicit NPC planner service must be able to opt into the same critical-hunger
+  policy as the autonomous coordinator; it must not silently override an earlier
+  intention or advance world time.
+- Persist the exact selected policy capability for event replay without changing
+  the schema or rules versions.
+- Preserve the **379-test** passing regression baseline and document the six
+  additional tests.
+- Record reproducible **full living-world** timing separately from isolated
+  survival reducer timing. On the local review host, 100 NPCs required roughly
+  **9.4 seconds** for a 60-second world command with 301 events. This is a
+  scaling warning, not an end-user gameplay performance guarantee.
+- Defer structural event-store optimization to a separate controlled phase with
+  replay and deterministic equivalence tests; do not replace the stable ledger
+  during Phase 01-M review.
