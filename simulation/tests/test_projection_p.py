@@ -83,3 +83,21 @@ def test_rejected_event_keeps_original_world_unchanged():
     with pytest.raises(ValueError, match="duplicate location"):
         apply_event(s, event("LocationCreated", {"id": "market", "name": "Other"}))
     assert canonical_hash(s.to_dict()) == before
+
+
+def test_projection_preserves_canonical_key_iteration_in_nested_collections():
+    world = WorldState("test-world")
+    world = apply_event(world, event(
+        "LocationCreated", {"id": "z-place", "name": "Z Place"}))
+    world = apply_event(world, event(
+        "LocationCreated", {"id": "a-place", "name": "A Place"}))
+    assert list(world.locations) == ["a-place", "z-place"]
+
+    raw = world.to_dict()
+    raw["locations"]["z-place"]["z_field"] = {"z": 1, "a": 2}
+    expected = WorldState.from_dict(raw)
+    actual = WorldState._from_internal_projection(raw)
+    assert list(actual.locations) == list(expected.locations)
+    assert list(actual.locations["z-place"]) == list(expected.locations["z-place"])
+    assert list(actual.locations["z-place"]["z_field"]) == ["a", "z"]
+    assert canonical_hash(actual.to_dict()) == canonical_hash(expected.to_dict())
