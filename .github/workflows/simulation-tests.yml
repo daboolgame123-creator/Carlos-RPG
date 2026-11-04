@@ -25,10 +25,10 @@ jobs:
         working-directory: simulation
     steps:
       - uses: actions/checkout@v5
-      - name: Check out reviewed Phase 01-P baseline
+      - name: Check out reviewed Phase 01-Q baseline
         uses: actions/checkout@v5
         with:
-          ref: simulation-engine-phase-01p
+          ref: simulation-engine-phase-01q
           path: reviewed-baseline
           persist-credentials: false
       - uses: actions/setup-python@v6
@@ -43,17 +43,16 @@ jobs:
       - name: Smoke-test two-person finite food recovery and eating
         run: PYTHONPATH=src python scenarios/test_village/demo_gathering.py
 
-      - name: Check existing scenario event parity against Phase 01-P
+      - name: Check existing seven-NPC scenario event and state parity against Phase 01-Q
         run: |
-          PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 10 25 > /tmp/01q-parity.json
-          PYTHONPATH=../reviewed-baseline/simulation/src python scenarios/test_village/bench_event_parity.py --counts 10 25 > /tmp/01p-parity.json
+          PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01r-parity.json
+          PYTHONPATH=../reviewed-baseline/simulation/src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01q-parity.json
           python - <<'PY'
           import json
-          baseline=json.load(open('/tmp/01p-parity.json'))['results']
-          candidate=json.load(open('/tmp/01q-parity.json'))['results']
+          baseline=json.load(open('/tmp/01q-parity.json'))['results']
+          candidate=json.load(open('/tmp/01r-parity.json'))['results']
           for old,new in zip(baseline,candidate):
-              for key in ('npcs','time','revision','events_count','events_digest','replay_equal'):
+              for key in ('npcs','time','revision','events_count','events_digest','state_digest','replay_equal'):
                   assert old[key] == new[key], (key,old[key],new[key])
-          # Schema 12 adds a gathering history collection and new version
-          # identifiers: raw full-state hashes are NOT expected to match.
+          # Same schema/rules as Q: all prior event/state digests MUST match.
           PY
