@@ -225,7 +225,7 @@ immutable public state, and authoritative persistence.
 The final candidate also fast-paths scalar/dict/mappingproxy/list/tuple nodes
 in `_thaw`, avoiding expensive generic `Mapping` ABC dispatch while retaining
 the fallback for custom mappings. Strict JSON normalization remains on incoming
-projections and direct user-constructed state. Final suite **403/403** and
+projections and direct user-constructed state. Final suite **410/410** and
 exact logged-event/final-state hash parity for 10/25 NPC fixtures. The 100-NPC
 60-second command dropped from **9.5122 to 3.4529 seconds** in one same-host
 measurement; per-event world-wide projection remains a scaling bottleneck.
