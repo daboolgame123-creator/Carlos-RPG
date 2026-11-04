@@ -78,7 +78,7 @@ def test_no_food_and_unknown_food_are_different_but_both_cannot_feed(tmp_path):
 def test_hunger_zero_cannot_waste_food(village):
     db,clock,svc=village
     db.append('w','no-hunger',db.load('w').revision,[e('NPCNeedChanged',{
-       'npc_id':'nora','need':'hunger','previous':85,'current':0},actor='nora')])
+       'npc_id':'nora','need':'hunger','previous':85,'current':0},actor='nora')], npc_authorized=True)
     with pytest.raises(InvalidEvent,match='hunger'):
         eat(db,svc)
 
@@ -93,7 +93,7 @@ def test_quantity_must_be_positive_real_integer_and_bounded(village):
 def test_eating_cannot_exceed_remaining_hunger_even_with_food(village):
     db,clock,svc=village
     db.append('w','mild',db.load('w').revision,[e('NPCNeedChanged',{
-        'npc_id':'nora','need':'hunger','previous':85,'current':10},actor='nora')])
+        'npc_id':'nora','need':'hunger','previous':85,'current':10},actor='nora')], npc_authorized=True)
     with pytest.raises(InvalidEvent,match='hunger'):
         eat(db,svc,qty=2)
     assert eat(db,svc,qty=1).new_hunger==0
