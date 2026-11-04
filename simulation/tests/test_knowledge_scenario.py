@@ -156,6 +156,41 @@ def test_autonomous_navigation_arrival_observes_only_initialized_local_food(
         assert db.verify("village").to_dict() == state.to_dict()
 
 
+def test_autonomous_arrival_event_budget_rolls_back_entire_command(tmp_path):
+    # A newly reached site has food and would produce delivery+ack after the
+    # scheduled travel signal. Exhaust the event budget mid-lifecycle: none of
+    # the already simulated in-memory events may reach SQLite.
+    from carlos_sim.time_engine import AdvanceLimitExceeded
+
+    with SQLiteEventStore(tmp_path / "01t-arrival-budget.sqlite") as db:
+        setup_navigation_world(db)
+        s = db.load("village")
+        db.append("village", "stock-for-budget", s.revision, [
+            DomainEvent("ResourceChanged", None, "seed forest stock", 0, {
+                "owner_id": "forest", "resource": "wild_food",
+                "previous": None, "current": 2,
+                "source": "initialization",
+            })
+        ], bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        initial = db.load("village").to_dict()
+        prior_events = db.db.execute(
+            "SELECT count(*) FROM events WHERE world_id='village'"
+        ).fetchone()[0]
+        with pytest.raises(AdvanceLimitExceeded, match="event budget"):
+            LivingWorldEngine(
+                db, clock, navigation_enabled=True, knowledge_enabled=True,
+                max_events_per_advance=6,
+            ).advance("village", seconds=50, command_id="arrive-with-low-budget",
+                      expected_revision=db.load("village").revision)
+        assert db.load("village").to_dict() == initial
+        assert db.db.execute(
+            "SELECT count(*) FROM events WHERE world_id='village'"
+        ).fetchone()[0] == prior_events
+        assert db.verify("village").to_dict() == initial
+
+
 def test_session_close_blocks_npc_state_changes(village):
     db, clock = village
     s = db.load("r")

@@ -112,6 +112,10 @@ def test_real_living_world_shares_before_npcs_become_busy(world):
         expected_revision=db.load("r").revision)
     assert result.state.npcs["basim"]["beliefs"]["food:grove"]["source"] == "adel"
     assert "food:grove" not in result.state.npcs["omar"]["beliefs"]
+    # Public result IDs describe deliveries, not the separate acknowledgement
+    # events that consume them; every delivery is reported only once.
+    assert result.knowledge_shares
+    assert len(result.knowledge_shares) == len(set(result.knowledge_shares))
     db.verify("r")
 
 
