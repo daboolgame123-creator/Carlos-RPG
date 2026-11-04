@@ -4,7 +4,7 @@
 
 This phase optimizes **how event-sourced `WorldState` is copied and reconstructed**, not NPC behavior, action schedules, inventories, relationships, event validation policy, or SQLite transaction rules.
 
-- Uses `collections.abc.Mapping` for frequent immutable-tree checks rather than the slower typing alias.
+- Uses `collections.abc.Mapping` rather than the slower typing alias, and fast type branches for ordinary JSON scalars and native mapping/list/tuple nodes in `_thaw` (with a generic Mapping fallback).
 - The existing public `WorldState.from_dict` **still validates its complete input** and performs **one JSON portability normalization**. It then freezes the normalized tree directly, rather than calling the ordinary dataclass constructor and serializing all 17 state collections again.
 - Only states normalized through this fully checked `from_dict` path use the fast `WorldState.to_dict` operation, which deeply thaws immutable collections into detached, mutable Python JSON-compatible structures. Directly constructed states retain the original strict JSON serialize/validate path, including scalar checking.
 - Events are still projected one by one, with reducer validation, immutable snapshots, authorization checks and optimistic concurrency control. Invalid multi-event commands still roll back atomically; hash-verified snapshots and full replay remain enabled.
@@ -14,8 +14,9 @@ This phase optimizes **how event-sourced `WorldState` is copied and reconstructe
 ## Tests and cross-version equivalence
 
 - The **379 original tests** passed on the optimized source.
-- **9 additional Phase 01-N tests** passed: nested immutability, defensive deep-copy, direct construction, invalid JSON scalars, corrupt snapshots, strict schema/collection checks, invalid-event immutability, batch rollback and tuple/list round-trip.
-- **388/388 tests passed** in four completed groups: `143 + 107 + 41 + 97`. `python -m compileall -q src tests scenarios` passed.
+- **9 first-pass Phase 01-N tests** passed: nested immutability, defensive deep-copy, direct construction, invalid JSON scalars, corrupt snapshots, strict schema/collection checks, invalid-event immutability, batch rollback and tuple/list round-trip.
+- **15 additional integrity/equivalence regressions** passed, including old JSON-roundtrip equivalence, nested collection behavior, dual-store replay and full-engine event counts.
+- **403/403 tests passed** in four completed groups: `158 + 107 + 41 + 97`. `python -m compileall -q src tests scenarios` passed.
 - The `bench_event_parity.py` script was run with the exact same fixture against both original reviewed 01-M and optimized 01-N source. Both the **complete event-ledger digest** and **final-world-state digest** matched for 10 and 25 NPCs, with full replay verification in both cases. The 10-NPC fixture yielded 72 identical events; the 25-NPC fixture yielded 177 identical events.
 
 ## Reproducible full-engine performance comparison
@@ -24,12 +25,12 @@ The same `scenarios/test_village/bench_living_world.py` was run on the same loca
 
 | NPCs | Events in advance | 01-M baseline | 01-N candidate | Speed-up |
 |---:|---:|---:|---:|---:|
-| 10 | 31 | 0.1716 s | 0.0792 s | 2.17× |
-| 25 | 76 | 0.8089 s | 0.3701 s | 2.19× |
-| 50 | 151 | 2.6970 s | 1.2557 s | 2.15× |
-| 100 | 301 | 10.4821 s | 4.8872 s | 2.14× |
+| 10 | 31 | 0.1716 s | 0.0901 s | 1.90× |
+| 25 | 76 | 0.8089 s | 0.3784 s | 2.14× |
+| 50 | 151 | 2.6970 s | 1.0523 s | 2.56× |
+| 100 | 301 | 10.4821 s | 3.5655 s | 2.94× |
 
-The optimization reduces overhead by roughly **53%** in these samples, but **is not sufficient to support 1,000 fully simulated NPCs**. Full-world copying and validation still scale expensively with world size/event count. Measurements are environment- and scenario-dependent and do not test long multi-day simulations, real player input, thousands of interactive NPCs or concurrency. Do not extrapolate the old isolated survival-reducer benchmark to full simulation.
+At 100 NPCs, the fully optimized version reduces measured advance time by roughly **66%** in this sample, but **is not sufficient to support 1,000 fully simulated NPCs**. Full-world copying and validation still scale expensively with world size/event count. Measurements are environment- and scenario-dependent and do not test long multi-day simulations, real player input, thousands of interactive NPCs or concurrency. Do not extrapolate the old isolated survival-reducer benchmark to full simulation.
 
 ### Reproduce
 
