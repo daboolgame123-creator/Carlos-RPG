@@ -34,7 +34,10 @@ def _thaw(value: Any) -> Any:
 
 def _freeze(value: Any) -> Any:
     if isinstance(value, dict):
-        return MappingProxyType({k: _freeze(v) for k, v in value.items()})
+        # Match the deterministic key order produced by the previous
+        # json.dumps(sort_keys=True) + json.loads snapshot normalization,
+        # including in the fast internal event-projection path.
+        return MappingProxyType({k: _freeze(value[k]) for k in sorted(value)})
     if isinstance(value, list):
         return tuple(_freeze(v) for v in value)
     return value
