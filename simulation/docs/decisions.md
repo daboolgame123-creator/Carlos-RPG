@@ -345,3 +345,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Future entries 01-S through 05-E are **proposed milestones**, not implemented or promised as fixed API/schema contracts. Recheck ordering at each milestone and record changes.
 - Require explicit schema/rules compatibility review for each phase, preserve the event log, offline logical time, atomicity, and separation of player input from narration.
 - The roadmap/protocol change is **documentation-only**; no engine code, schema version, Rules version, or Carlos story file is modified.
+
+## 2026-11-04 — Living roadmap, save compatibility, and P0 gate (documentation only)
+
+- The user explicitly approved **adapting the roadmap as needed**. Plan changes require a reason, dependency/risk impact analysis and a durable entry in ROADMAP_CHANGELOG.md. A plan change is not evidence of executed features.
+- Adopt SAVE_COMPATIBILITY_POLICY.md: each phase assesses whether it changes event semantics or Schema/Rules; reject incompatible worlds fail-closed instead of guessing missing fields.
+- Require **P0** (verified coherent backup, restored replay, compatibility checks and rollback rehearsal) before the first long-lived game world, including if requested earlier than 01-Z. Scope is policy now, not implementation.
+- Existing SQLite append atomicity, snapshots and hashes are not an off-file backup or general migration solution. Trusted capability flags are not network authentication.
+- Do not alter main, the original Carlos story, or saved user world data without explicit authorization. This governance commit changes documentation only.
