@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from .domain import DomainEvent, WorldState, _json_copy
+from .survival import CRITICAL_HUNGER
 from .store import SQLiteEventStore
 from .time_engine import TimeEngine
 
@@ -64,7 +65,8 @@ def validate_npc_state(npc: Any) -> None:
             raise ValueError("invalid recorded decision")
 
 
-def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: bool) -> None:
+def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: bool,
+                      survival_authorized: bool = False) -> None:
     p = _json_copy(event.data)
     ident = p.get("npc_id")
     if not isinstance(ident, str) or not ident or ident not in state["entities"] or state["entities"][ident]["controller"] != "npc":
@@ -140,7 +142,7 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
             raise ValueError("invalid decision contents")
         if not _integer(p["next_decision_at"], maximum=2**63-1) or p["next_decision_at"] < state["time"] + MIN_DECISION_COOLDOWN:
             raise ValueError("next decision must be in future")
-        expected = _score_choice(npc, ident)
+        expected = _score_choice(npc, ident, survival_active=survival_authorized)
         if (p["action"], p["score"], p["reason"]) != (expected.action, expected.score, expected.reason):
             raise ValueError("NPC decision does not match deterministic utility policy")
         # Event records an intention, never silently changes HP, resources or position.
@@ -158,7 +160,7 @@ class Decision:
     reason: str
 
 
-def _score_choice(npc: Mapping[str, Any], npc_id: str) -> Decision:
+def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool = False) -> Decision:
     """Pure utility scoring based only on a single NPC profile."""
     needs, goals, beliefs = npc["needs"], npc["goals"], npc["beliefs"]
     danger = beliefs.get("danger")
@@ -169,13 +171,19 @@ def _score_choice(npc: Mapping[str, Any], npc_id: str) -> Decision:
         "investigate": goals["explore"] + perceived_risk // 2 - needs["fatigue"] - needs["safety"],
         "wait": 10 + needs["safety"] + perceived_risk,
     }
+    # A character in the explicit survival mode must not continue seeking work
+    # at the cost of critical hunger. Conserving energy is not a magic rescue:
+    # it does not conjure food, remove debt or cure starvation.
+    if survival_active and needs["hunger"] >= CRITICAL_HUNGER:
+        scores["work"] -= 300
+        scores["investigate"] -= 300
     # No random draw or unordered iteration. Stable tie preference makes replay deterministic.
     action = sorted(ACTIONS, key=lambda a: (-scores[a], ACTIONS.index(a)))[0]
     reason = f"utility[{action}]={scores[action]}; belief_danger={perceived_risk}; npc={npc_id}"
     return Decision(npc_id, action, scores[action], reason)
 
 
-def choose_action(state: WorldState, npc_id: str) -> Decision | None:
+def choose_action(state: WorldState, npc_id: str, *, survival_enabled: bool = False) -> Decision | None:
     """Return an explainable recommendation based ONLY on one NPC's knowledge.
 
     Beliefs are not asserted as facts; a false report may still change a decision.
@@ -189,7 +197,7 @@ def choose_action(state: WorldState, npc_id: str) -> Decision | None:
         return None
     if state.time < npc["next_decision_at"]:
         return None
-    return _score_choice(npc, npc_id)
+    return _score_choice(npc, npc_id, survival_active=survival_enabled)
 
 
 class NPCService:
