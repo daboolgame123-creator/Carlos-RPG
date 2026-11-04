@@ -33,6 +33,7 @@ class SQLiteEventStore:
                 movement_authorized INTEGER NOT NULL DEFAULT 0,
                 social_authorized INTEGER NOT NULL DEFAULT 0,
                 assistance_authorized INTEGER NOT NULL DEFAULT 0,
+                consumption_authorized INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY(world_id, command_id));
             CREATE TABLE IF NOT EXISTS events (
                 world_id TEXT NOT NULL REFERENCES worlds(id), seq INTEGER NOT NULL,
@@ -95,10 +96,10 @@ class SQLiteEventStore:
                 raw_data = json.loads(raw)
                 if canonical_hash(raw_data) != stored_hash:
                     raise IntegrityError("event hash mismatch")
-                command = self.db.execute("SELECT c.request_hash, c.bootstrap, c.action_authorized, c.movement_authorized, c.social_authorized, c.assistance_authorized FROM events e JOIN commands c ON e.world_id=c.world_id AND e.command_id=c.command_id WHERE e.world_id=? AND e.seq=?", (world_id, seq)).fetchone()
+                command = self.db.execute("SELECT c.request_hash, c.bootstrap, c.action_authorized, c.movement_authorized, c.social_authorized, c.assistance_authorized, c.consumption_authorized FROM events e JOIN commands c ON e.world_id=c.world_id AND e.command_id=c.command_id WHERE e.world_id=? AND e.seq=?", (world_id, seq)).fetchone()
                 if command is None:
                     raise IntegrityError("event command is missing")
-                state = apply_event(state,DomainEvent.from_dict(raw_data),bootstrap=bool(command[1]),action_authorized=bool(command[2]),movement_authorized=bool(command[3]),social_authorized=bool(command[4]),assistance_authorized=bool(command[5]))
+                state = apply_event(state,DomainEvent.from_dict(raw_data),bootstrap=bool(command[1]),action_authorized=bool(command[2]),movement_authorized=bool(command[3]),social_authorized=bool(command[4]),assistance_authorized=bool(command[5]),consumption_authorized=bool(command[6]))
             except (ValueError, TypeError) as exc:
                 raise IntegrityError(f"corrupt event {seq}") from exc
         if state.revision != row[0] or state.time != row[1]:
@@ -115,7 +116,7 @@ class SQLiteEventStore:
             raise IntegrityError(str(exc)) from exc
         return state
 
-    def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False, npc_authorized: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False) -> WorldState:
+    def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False, npc_authorized: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False) -> WorldState:
         """Commit events atomically. bootstrap is a trusted setup-only capability.
 
         Never expose this method or its bootstrap switch to untrusted callers.
@@ -123,7 +124,7 @@ class SQLiteEventStore:
         """
         if not isinstance(command_id,str) or not command_id or type(expected_revision) is not int or expected_revision < 0 or not events:
             raise ValueError("command ID, expected revision and nonempty event batch required")
-        if type(bootstrap) is not bool or type(clock_authorized) is not bool or type(npc_authorized) is not bool or type(action_authorized) is not bool or type(movement_authorized) is not bool or type(social_authorized) is not bool or type(assistance_authorized) is not bool:
+        if type(bootstrap) is not bool or type(clock_authorized) is not bool or type(npc_authorized) is not bool or type(action_authorized) is not bool or type(movement_authorized) is not bool or type(social_authorized) is not bool or type(assistance_authorized) is not bool or type(consumption_authorized) is not bool:
             raise ValueError("capability flags must be boolean")
         if any(e.event_type in ("TimeAdvanced", "ScheduledEventFired") for e in events):
             if not clock_authorized:
@@ -158,13 +159,18 @@ class SQLiteEventStore:
                 raise InvalidEvent('resource-backed assistance requires trusted assistance capability')
             if world_id not in self._active_worlds:
                 raise InvalidEvent('assistance requires an active play session')
+        if any(e.event_type == "NPCFoodConsumed" for e in events):
+            if not consumption_authorized:
+                raise InvalidEvent("eating requires trusted consumption capability")
+            if world_id not in self._active_worlds:
+                raise InvalidEvent("NPC cannot eat outside an active play session")
         # Gameplay consumption is a state mutation, not a background administrative
         # update. Initial inventory setup remains permitted only at bootstrap.
         if any(e.event_type == "ResourceChanged" and e.data.get("source") != "initialization"
                for e in events) and world_id not in self._active_worlds:
             raise InvalidEvent("resource consumption requires an active play session")
         serialized = [e.to_dict() for e in events]
-        request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized,"action_authorized":action_authorized,"movement_authorized":movement_authorized,"social_authorized":social_authorized,"assistance_authorized":assistance_authorized})
+        request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized,"action_authorized":action_authorized,"movement_authorized":movement_authorized,"social_authorized":social_authorized,"assistance_authorized":assistance_authorized,"consumption_authorized":consumption_authorized})
         self.db.execute("BEGIN IMMEDIATE")
         try:
             existing = self.db.execute("SELECT request_hash FROM commands WHERE world_id=? AND command_id=?",(world_id,command_id)).fetchone()
@@ -179,7 +185,7 @@ class SQLiteEventStore:
             first = state.revision + 1
             for e in events:
                 try:
-                    state = apply_event(state,e,bootstrap=bootstrap,action_authorized=action_authorized,movement_authorized=movement_authorized,social_authorized=social_authorized,assistance_authorized=assistance_authorized)
+                    state = apply_event(state,e,bootstrap=bootstrap,action_authorized=action_authorized,movement_authorized=movement_authorized,social_authorized=social_authorized,assistance_authorized=assistance_authorized,consumption_authorized=consumption_authorized)
                 except (ValueError,TypeError) as exc:
                     raise InvalidEvent(str(exc)) from exc
             from .actions import validate_action_reservations
@@ -192,7 +198,7 @@ class SQLiteEventStore:
                 validate_travel_reservations(state)
             except ValueError as exc:
                 raise InvalidEvent(str(exc)) from exc
-            self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized),int(npc_authorized),int(action_authorized),int(movement_authorized),int(social_authorized),int(assistance_authorized)))
+            self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized),int(npc_authorized),int(action_authorized),int(movement_authorized),int(social_authorized),int(assistance_authorized),int(consumption_authorized)))
             for idx, data in enumerate(serialized,start=first):
                 self.db.execute("INSERT INTO events VALUES(?,?,?,?,?)",(world_id,idx,command_id,canonical(data),canonical_hash(data)))
             self.db.execute("UPDATE worlds SET revision=?,sim_time=? WHERE id=? AND revision=?",(state.revision,state.time,world_id,expected_revision))
