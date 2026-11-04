@@ -343,3 +343,22 @@ on 01-N versus **2 SELECTs** on 01-O. This was an isolated, single-run CI
 measurement (three timed repetitions per variant); full-world event projection
 and double simulation remain more substantial bottlenecks. See
 `docs/phase_01o_report.md` for evidence and caveats.
+
+## Phase 01-P — Faster full-world event projection (reviewed)
+
+The internal domain reducer still validates **every event and every world
+invariant** before producing a frozen state. It now avoids an extra full-world
+JSON encode/decode after verifying a reducer-owned JSON-native projection.
+Public snapshots and direct constructor calls continue to enforce portable
+JSON normalization. Canonical sorted nested mapping order remains identical
+to earlier phases. No rules, event schema, or database migration change:
+**Schema 11 / Rules 15**.
+
+Final independent GitHub CI passed **419/419 tests on both Python 3.10
+and 3.13**, with matching full event-ledger and world-state digests
+against Phase 01-O at 10, 25 and 50 NPCs. In a single full-engine 60-second
+advance with **150 NPCs and 451 events**, measured execution fell from
+11.2778 s to 6.5542 s (Python 3.13) and from 12.1070 s to 7.7901 s
+(Python 3.10), excluding fixture setup. These are environment-specific
+samples, not production capacity guarantees; 1,000 active NPCs are not
+yet benchmarked. See `docs/phase_01p_report.md`.

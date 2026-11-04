@@ -248,3 +248,21 @@ count is 102 in Phase 01-N and 2 in Phase 01-O. This is specifically a
 database-query optimization, not a removal of full state projection.
 **Schema 11 / Rules 15**, no migration and no changes to canonical story.
 See `phase_01o_report.md`.
+
+## Phase 01-P — Shared validation, distinct public/internal normalization
+
+`WorldState._decode_checked(d, normalize_json=...)` contains all world
+invariant validators. Public `from_dict` calls it with normalization
+enabled, retaining strict portable JSON checking. Internal
+`_from_internal_projection` is called only by `apply_event` after
+`WorldState.to_dict` and strict `DomainEvent` serialization: the
+state and event payload have already been normalized, so an additional
+whole-world JSON encode/decode was redundant.
+
+Both paths then freeze nested collections, and recursive `_freeze`
+sorts dictionary keys to retain the old canonical insertion/iteration
+order. There is **no omission of full state validators**. The event store
+continues to repeat authoritative event validation during SQLite commit.
+This remains a trusted-local-only engine, not a public API authorization
+shortcut. Schema 11 / Rules 15 are unchanged. Final CI evidence and the
+150-NPC/451-event benchmark are in `phase_01p_report.md`.

@@ -271,3 +271,23 @@ Open questions for later phases: NPC decision cadence, resource production and t
   gains are modest and are not a promise about large 1,000-NPC populations.
 - Remain at Schema 11 / Rules 15. Do not merge to `main` or alter Carlos
   narrative. Future scaling work requires separate profiling and review.
+
+## Phase 01-P — Reviewed performance invariants
+
+- Eliminate only the duplicate JSON normalization of reducer-owned
+  projected world data; **never skip** per-event or all-domain validation.
+- Public `WorldState.from_dict` stays strict. Direct constructors, invalid
+  input rejection, detached returned dictionaries and immutable nested state
+  must behave as before.
+- Keep nested mapping iteration canonical and sorted, not merely hashes
+  equivalent. An independent review caught and resolved this ordering issue.
+- Preserve atomic SQLite commits, authorization/capability provenance,
+  snapshot/full-replay parity, event counts and world-time behavior.
+- Independent CI: **419 tests** on Python 3.10 and 3.13, with exact
+  event/state parity against Phase 01-O for 10/25/50 NPCs.
+- Full-engine 60s step at 150 NPCs: **451 events**, measured **11.2778→6.5542s**
+  (Python 3.13) and **12.1070→7.7901s** (Python 3.10). No setup time in
+  timings; these are single samples, not capacity promises.
+- Schema 11 / Rules 15; `main` and Carlos's narrative remain unchanged.
+  Future structural reductions in double batch projection require
+  a separate design/review.
