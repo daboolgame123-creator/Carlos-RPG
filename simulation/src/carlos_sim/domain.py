@@ -117,6 +117,22 @@ class WorldState:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
+        """Validate and normalize caller-owned snapshots at the public boundary."""
+        return cls._decode_checked(d, normalize_json=True)
+
+    @classmethod
+    def _from_internal_projection(cls, d: dict[str, Any]) -> WorldState:
+        """Project a domain-reducer output assembled from normalized JSON values.
+
+        This private path is ONLY for apply_event after WorldState.to_dict and
+        strict DomainEvent round-tripping. It still runs EVERY world validator,
+        but avoids re-encoding/re-decoding the same JSON-native data. External
+        snapshots must use from_dict; never trust arbitrary data here.
+        """
+        return cls._decode_checked(d, normalize_json=False)
+
+    @classmethod
+    def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
         if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "survival_progress"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
@@ -165,10 +181,11 @@ class WorldState:
         validate_consumptions(d)
         from .survival import validate_survival_progress
         validate_survival_progress(d)
-        # Validate JSON portability once, then freeze the trusted projection.
-        # Calling the public dataclass initializer would serialize each of the
-        # 17 collections a second time inside __post_init__.
-        normalized = _json_copy(d)
+        # Public snapshots need full portable JSON normalization. Internal
+        # projections have already been sourced from a detached, verified
+        # WorldState and a portable DomainEvent. Both paths run the SAME
+        # complete collection/domain validators above; never shortcut those.
+        normalized = _json_copy(d) if normalize_json else d
         restored = object.__new__(cls)
         for name, value in normalized.items():
             object.__setattr__(restored, name, _freeze(value) if isinstance(value, dict) else value)
@@ -342,4 +359,4 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         raise ValueError(f"unknown event type: {kind}")
     d["revision"] += 1
     d["time"] = e.time
-    return WorldState.from_dict(d)
+    return WorldState._from_internal_projection(d)
