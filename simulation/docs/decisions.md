@@ -380,3 +380,12 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - **OBS-4:** a pending manual forage decision survives a later flag-off (opt-in is at decision time; disabled-mode parity proven by digests). **Target: doc note; optional hardening in 01-W.**
 - **OBS-5:** no explicit decision-site == completion-site test (deterministically enforced by `movement.py`). **Target: optional test in 01-U.**
 - **Closure:** report, ROADMAP (01-S → «مكتملة ومختبرة ومراجعة»), decisions.md and ROADMAP_CHANGELOG.md updated; pushed only to `simulation-engine-phase-01s`; CI re-verified on the closure commit. Next step: create `simulation-engine-phase-01t` from the approved commit and produce a **preliminary design for 01-T first — no 01-T coding until the design is reviewed**.
+
+## 2026-11-05 — Conditional transition without independent sign-off
+
+- User approved continuing Carlos-RPG development **here rather than OpenCode**, marking phases requiring an external review.
+- `TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING` means code and regression CI pass, **not** an independent `APPROVED / CLOSED` outcome. External independent review remains mandatory for formal closure; the implementing assistant must not attest to it.
+- Phase 01-T is in that status on `14c672912a656cbb357647f63e6e2de91aef24e8`, with **544 tests passing** on Python 3.10 and 3.13, and [PR #1](https://github.com/daboolgame123-creator/Carlos-RPG/pull/1) opened only for a reviewer (no merge).
+- Phase 01-U can begin on a **new branch** conditionally based on the most recent green 01-T checkpoint, with a separate design, tests and review handoff. Any substantive 01-T reviewer finding must be propagated/retested on dependent phases.
+- No bypass for failed CI, reproducible blockers, world state security, compatibility, or P0. No main/story edits or silent upgrades; P0 is still mandatory before long-lived worlds.
+- Refer to [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) §J and [ROADMAP_CHANGELOG.md](ROADMAP_CHANGELOG.md) G-006 for operational detail.
