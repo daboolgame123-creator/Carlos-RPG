@@ -218,3 +218,116 @@ def test_event_budget_rolls_back_survival_updates(single):
     assert db.db.execute("SELECT count(*) FROM commands WHERE command_id='over-budget'").fetchone()[0] == 0
 
 
+def test_interrupt_charges_only_elapsed_time(single):
+    db, clock = single
+    clock.schedule_signal('test', 'interrupt', due=90, interrupt=True,
+                          expected_revision=db.load('test').revision)
+    out = LivingWorldEngine(db, clock, survival_enabled=True).advance(
+        'test', seconds=600, command_id='until-interrupt', expected_revision=db.load('test').revision)
+    assert out.interrupted and out.state.time == 90
+    assert out.state.survival_progress['nora']['hunger_seconds'] == 90
+    resumed = LivingWorldEngine(db, clock, survival_enabled=True).advance(
+        'test', seconds=510, command_id='resume', expected_revision=out.state.revision)
+    assert resumed.state.time == 600
+    assert resumed.state.survival_progress['nora']['hunger_seconds'] == 0
+    assert db.verify('test').to_dict() == resumed.state.to_dict()
+
+
+def test_separate_survival_mode_does_not_modify_player(single):
+    db, clock = single
+    before = db.load('test')
+    assert 'carlos' not in before.npcs
+    out = tick(db, 3600)
+    assert set(out.survival_progress) == {'nora'}
+    assert out.resources == before.resources
+    assert out.entities == before.entities
+    assert 'survival_progress' not in db.player_view('test')
+
+
+def test_elapsed_time_changes_only_own_needs_not_relationships(tmp_path):
+    with SQLiteEventStore(tmp_path/'private.db') as db:
+        make(db, names=('nora', 'basim'))
+        before = db.load('test')
+        after = tick(db, 600)
+        assert after.relations == before.relations == {}
+        assert after.obligations == before.obligations == {}
+        assert after.npcs['nora']['needs'] == after.npcs['basim']['needs']
+        assert len(after.survival_progress) == 2
+
+
+def test_no_time_retroactivity_when_mode_enabled_later(single):
+    db, clock = single
+    clock.advance('test', seconds=2000, command_id='off',
+                  expected_revision=db.load('test').revision)
+    after = tick(db, 100, 'on')
+    assert after.npcs['nora']['needs']['hunger'] == 20
+    assert after.survival_progress['nora']['hunger_seconds'] == 100
+
+
+def test_instantaneous_consumption_does_not_add_baseline_elapsed_time(single):
+    db, clock = single
+    state = tick(db, 299)
+    assert state.survival_progress['nora']['hunger_seconds'] == 299
+    # An instantaneous trusted hunger adjustment at exactly the same tick
+    # does not silently cause a second baseline update.
+    current = db.append('test', 'hunger-neutral', state.revision, [
+        ev('NPCNeedChanged', {'npc_id':'nora','need':'hunger', 'previous':20,'current':21},
+            actor='nora', at=299)])
+    assert current.survival_progress['nora']['hunger_seconds'] == 299
+    after = tick(db, 1, 'next-second')
+    assert after.npcs['nora']['needs']['hunger'] == 22
+
+
+def test_disabling_survival_after_progress_restores_ordinary_decisions(tmp_path):
+    with SQLiteEventStore(tmp_path/'toggle.db') as db:
+        clock = make(db, hunger=90)
+        tick(db, 1, 'survival-on')
+        # Residual survival history is retained for replay, but the policy
+        # itself must not leak into a subsequently disabled mode.
+        from carlos_sim import choose_action
+        normal = choose_action(db.load('test'), 'nora')
+        survival = choose_action(db.load('test'), 'nora', survival_enabled=True)
+        assert normal.action == 'work'
+        assert survival.action in ('rest', 'wait')
+        ordinary = LivingWorldEngine(db, clock, survival_enabled=False).advance(
+            'test', seconds=1, command_id='off', expected_revision=db.load('test').revision)
+        assert ordinary.state.actions['auto:nora:1']['action'] == 'work'
+        assert ordinary.state.survival_progress['nora']['hunger_seconds'] == 1
+        assert db.verify('test').to_dict() == ordinary.state.to_dict()
+
+
+def test_survival_assistance_consumption_together_preserve_food_conservation(tmp_path):
+    from test_assistance_autonomy import world_with_needy_person
+    with SQLiteEventStore(tmp_path/'all-modes.sqlite') as db:
+        clock=world_with_needy_person(db, provider_food=10, requester_food=0,
+                                      requester_hunger=90)
+        initial = db.load('w')
+        engine=LivingWorldEngine(db,clock,survival_enabled=True,
+                                 assistance_enabled=True,consumption_enabled=True)
+        out=engine.advance('w',seconds=600,command_id='all-modes',
+                           expected_revision=initial.revision)
+        assert out.state.time==600
+        aid = out.state.obligations['auto-help:nora:0']
+        assert aid['status']=='fulfilled'
+        assert out.state.consumptions
+        # Food may be eaten (destroyed) but it must never be created by aid.
+        assert out.state.resources['nora']['food'] + out.state.resources['basim']['food'] <= 10
+        assert out.state.resources['nora']['food'] >= 0
+        assert out.state.resources['basim']['food'] >= 0
+        assert out.state.npcs['nora']['needs']['hunger'] < 100
+        assert db.verify('w').to_dict()==out.state.to_dict()
+
+
+def test_full_living_world_split_steps_match_with_metabolism(tmp_path):
+    states=[]
+    for i,chunks in enumerate(((600,), (100, 100, 100, 100, 100, 100))):
+        with SQLiteEventStore(tmp_path/f'{i}.db') as db:
+            clock=make(db)
+            engine=LivingWorldEngine(db, clock, survival_enabled=True)
+            for j,seconds in enumerate(chunks):
+                engine.advance('test',seconds=seconds,command_id=f'chunk{j}',
+                               expected_revision=db.load('test').revision)
+            state=db.verify('test').to_dict()
+            state.pop('revision')
+            states.append(state)
+    assert states[0]==states[1]
