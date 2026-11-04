@@ -15,6 +15,16 @@ RULES_VERSION = 15
 
 
 def _thaw(value: Any) -> Any:
+    # Most nodes in a world state are JSON scalars. Avoid an expensive
+    # Mapping ABC check for every such leaf while retaining Mapping support.
+    typ = type(value)
+    if typ in (str, int, float, bool) or value is None:
+        return value
+    if typ is dict or typ is MappingProxyType:
+        return {k: _thaw(v) for k, v in value.items()}
+    if typ is tuple or typ is list:
+        return [_thaw(v) for v in value]
+    # Support arbitrary Mapping implementations in public-facing inputs.
     if isinstance(value, Mapping):
         return {k: _thaw(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
