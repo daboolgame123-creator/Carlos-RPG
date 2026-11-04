@@ -356,3 +356,34 @@ def test_explicit_interruption_stops_before_forage_completion(village):
     assert not resumed.interrupted and resumed.state.time == 120
     assert len(resumed.state.foraging_attempts) == 4
     assert db.verify("r").to_dict() == resumed.state.to_dict()
+
+
+def test_completed_forage_history_cannot_be_silently_erased(village):
+    db, clock = village
+    finished = advance(db, clock)
+    bad = finished.state.to_dict()
+    del bad["foraging_attempts"]["auto:nora:0"]  # A real failed attempt.
+    with pytest.raises(ValueError, match="missing recorded outcome"):
+        WorldState.from_dict(bad)
+    assert db.verify("r").to_dict() == finished.state.to_dict()
+
+
+def test_forged_forage_completion_cannot_skip_past_due_time(village):
+    db, clock = village
+    first = advance(db, clock, seconds=1, command="first")
+    original = db.load("r")
+    appointment = "npc-action:auto:adel:0"
+    with pytest.raises(InvalidEvent, match="before or after due"):
+        db.append("r", "early-fire", first.state.revision, [
+            ev("ScheduledEventFired", {"id": appointment}, time=original.time)
+        ], clock_authorized=True)
+    assert db.load("r").to_dict() == original.to_dict()
+
+
+def test_foraging_and_legacy_gathering_remain_separate_paths(village):
+    db, clock = village
+    result = advance(db, clock, forage=True, gather=True)
+    assert len(result.state.foraging_attempts) == 4
+    assert result.state.gatherings == {}
+    assert sum(a["quantity"] for a in result.state.foraging_attempts.values()) == 2
+    assert db.verify("r").to_dict() == result.state.to_dict()
