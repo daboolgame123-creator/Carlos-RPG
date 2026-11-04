@@ -24,7 +24,9 @@ def test_internal_reducer_avoids_reencoding_whole_world(monkeypatch):
             captured_world_copies.append(value["world_id"])
         return original_copy(value)
 
-    s = WorldState("test-world")
+    # The internal hot path receives a checked/replayed state, not a
+    # directly constructed state that still needs strict public normalization.
+    s = WorldState.from_dict(WorldState("test-world").to_dict())
     e = event("LocationCreated", {"id": "square", "name": "Square"})
     monkeypatch.setattr(domain, "_json_copy", inspecting_copy)
     projected = apply_event(s, e)
