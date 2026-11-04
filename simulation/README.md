@@ -235,4 +235,8 @@ Reviews now confirm that **earlier obligations take priority** over later ones i
 
 Run `PYTHONPATH=src python scenarios/test_village/demo_consumption.py` from `simulation/`. Food acquired by `Phase 01-K` gift assistance is not eaten until `NPCFoodConsumed` actually occurs. Do not interpret fleeing after a **gift** as unpaid debt: documented loans and their repayment terms require a future distinct contract system. See `docs/phase_01l_report.md`.
 
-**Schema 10 / Rules 13** — this phase changes WorldState and the command replay capability ledger. Old experimental DBs require deliberate migration/recreation; no automatic migration occurs.
+**Schema 10 / Rules 14** — this phase changes WorldState and the command replay capability ledger. Old experimental DBs require deliberate migration/recreation; no automatic migration occurs.
+
+### Phase 01-L review — closing the foodless hunger bypass
+
+The generic `NPCNeedChanged` event may **increase hunger** as before, but decreasing hunger without consuming food now requires the separate, trusted `npc_authorized=True` adjustment capability while the play session is active. This preserves a documented administrative/scripted need override without treating it as a meal; actual eating must use `NPCFoodConsumed`, which atomically debits real food and records hunger relief. The normal low-level event path can no longer provide free satiation. Six new review regressions pass; the complete local suite has **351 passing tests in five separate groups**. Schema remains **10**, while **Rules 14** replace rules 13. Older experimental DBs require migration or recreation.
