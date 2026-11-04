@@ -478,3 +478,30 @@ def test_review_navigation_and_forage_compete_then_honor_duration(village):
     assert sum(x["quantity"] for x in final.state.foraging_attempts.values()) == 2
     assert sum(x["outcome"] == "depleted" for x in final.state.foraging_attempts.values()) == 2
     assert db.verify("r").to_dict() == final.state.to_dict()
+
+
+def test_review_local_danger_belief_changes_only_recipient_foraging_choice(village):
+    """Known danger must not be ignored simply because food is visible."""
+    db, clock = village
+    original = db.load("r")
+    assert choose_action(original, "adel", foraging_enabled=True).action == "forage"
+    assert choose_action(original, "basim", foraging_enabled=True).action == "forage"
+    received = {
+        "npc_id": "adel", "delivery_id": "warning-about-grove",
+        "key": "danger",
+        "claim": {"text": "predator seen near the food", "source": "basim",
+                  "received_at": 0, "confidence": 95},
+        "sender_id": "basim", "location_id": "grove", "method": "message"
+    }
+    db.append("r", "warn-grove", original.revision, [
+        ev("NPCInformationDelivered", received, actor="basim"),
+        ev("NPCBeliefReceived", {
+            "npc_id": "adel", "key": "danger",
+            "delivery_id": "warning-about-grove"}, actor="adel"),
+    ], npc_authorized=True)
+    now = db.load("r")
+    assert choose_action(now, "adel", foraging_enabled=True).action != "forage"
+    # This warning does not magically become knowledge of other NPCs.
+    assert choose_action(now, "basim", foraging_enabled=True).action == "forage"
+    assert "danger" not in now.npcs["basim"]["beliefs"]
+    assert db.verify("r").to_dict() == now.to_dict()
