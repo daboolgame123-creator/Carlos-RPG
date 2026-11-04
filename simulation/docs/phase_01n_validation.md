@@ -1,6 +1,6 @@
 # Phase 01-N — Final integration verification (supersedes preliminary totals)
 
-This document records the **combined Phase 01-N candidate** after both immutable-state normalization and the additional fast-path for built-in JSON types, plus 15 further integrity tests. Any earlier 388-test or 2.14× figures in the initial report describe an **intermediate** version; these final checks apply to the integrated code.
+This document records the **combined Phase 01-N candidate** after both immutable-state normalization and the additional fast-path for built-in JSON types, plus 22 further integrity tests. Any earlier 388-test or 2.14× figures in the initial report describe an **intermediate** version; these final checks apply to the integrated code.
 
 ## Verified code behavior
 
@@ -12,7 +12,7 @@ This document records the **combined Phase 01-N candidate** after both immutable
 
 ## Final local tests
 
-**403/403 passed** in five complete batches:
+**410/410 passed** in five complete batches:
 
 | Test group | Passed |
 |---|---:|
@@ -20,7 +20,7 @@ This document records the **combined Phase 01-N candidate** after both immutable
 | Movement, navigation and social | 107 |
 | Assistance, promises and autonomy | 72 |
 | Consumption and survival | 66 |
-| Projection performance/integrity, including 15 more tests | 24 |
+| Projection performance/integrity (9 + 15 + 7 new tests) | 31 |
 
 `python -m compileall -q src tests scenarios` passed. An all-in-one multi-group shell command hit its execution timeout after three complete passing groups; the remaining two groups were independently rerun and passed. No GitHub-hosted CI ran for these results.
 
