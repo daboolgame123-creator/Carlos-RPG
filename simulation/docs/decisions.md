@@ -362,3 +362,10 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - `foraging_attempts` is the new immutable audit history, preserving outcomes and conservation. Standalone TimeEngine and LivingWorld share authoritative scheduled resolution. Old action `NPCFoodGathered` remains for completed `investigate` only.
 - **Schema 13 / Rules 17** breaks 01-R saved files; explicit rejection, no implicit migration, P0 still open. Local-only knowledge is limited and intentionally defers remote memory/pathing to 01-T/U.
 - Seven NPC demo: 51 events/120s, 2 successes, 2 failures; initial 472/472 tests passing on Python 3.10/3.13. Independent code review not yet approved. No `main` or story changes.
+
+### Phase 01-S internal adversarial review follow-up (2026-11-04)
+
+- **Fixed navigation priority:** optional automatic travel/route target must not preempt an eligible hunger-driven forage action at the NPC's physical site; must not disable travel for NPCs without local forage eligibility. Four new tests cover the interaction and 120-second completion.
+- **Fixed private danger belief:** a `danger` claim received by this NPC with `confidence >= 80` suppresses foraging in the synthetic policy. Low-confidence claims do not block. This is a subjective known risk, not world truth. Tests cover recipient isolation and cutoff 0/79/80/100.
+- New tests **481/481** on Python 3.10 and 3.13, run `41855607762`; no new schema/rules bump beyond 13/17. Two problems were reproduced on failing interim CI before repairs.
+- Review performed by the implementing assistant, **not an independent separate reviewer**. Formal Phase 01-S closure must await a distinct review, with OpenCode as the intended next environment. Do not start 01-T before sign-off.

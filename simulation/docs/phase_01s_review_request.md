@@ -19,3 +19,11 @@
 ## Deliverable
 
 For each finding: severity/blocker or follow-up, reproducible scenario, affected function, proposed correction and regression test. Record verdict **approved / blocked**, then rerun complete CI on last commit after any fixes. If approved, change 01-S status to *مكتملة ومراجعة* in ROADMAP.md and update phase_01s_report.md. Do not modify main or Carlos narrative files.
+
+## Internal findings already addressed — do not confuse with independent approval
+
+- `AR-01`: forage was overridden by automatic navigation; two failing integration tests demonstrated it (run `41854606709`); fix `a7641df...` and regression tests.
+- `AR-02`: known danger reports were ignored by the new forage policy; a failing test demonstrated it (run `41855205489`); fix `1f5685bd...` and low/high-confidence tests.
+- See [phase_01s_internal_review.md](phase_01s_internal_review.md) for reviewed evidence. **Independent reviewer must re-examine these changes**, not simply trust the implementing assistant.
+- Baseline after fixes: run `41855607762` succeeded **481/481 tests on each supported Python version**. Final documentation commit CI should also pass before sign-off.
+- Outcome required from OpenCode reviewer: `APPROVED` or `BLOCKED`, with exact source locations, independently reproduced tests, and a review report. If approved, record its distinct reviewer identity/process, update phase report/ROADMAP and rerun CI on final branch HEAD. Keep 01-T paused until the review gate is actually complete.

@@ -316,3 +316,11 @@ intent and strict replay provenance. Schema 12 / Rules 16.
 `forage` schedules 120 seconds with no immediate food transfer. `ScheduledEventFired` resolves it identically in `LivingWorldEngine` and standalone `TimeEngine`: fatigue +12, hunger +5, then at most one natural unit conserved from the local site to NPC. If a competing actor has emptied the site, record `depleted` and zero reward. `WorldState.foraging_attempts` stores actor/site/time/quantity/outcome and before/after balances; validators require every completed forge to have a matching conserved outcome. The scheduled completion event is the durable causal event, **not** a separate untrusted food-transfer command.
 
 Breaking Schema 13/Rules 17, no automatic 12/16 migration. Seven-NPC legacy scenario event/semantic state parity is checked against independently checked-out 01-R, while current-schema full snapshots/replay are verified. Review pending; P0 open.
+
+### Phase 01-S review corrections — orchestration and private danger beliefs
+
+The `LivingWorldEngine` is an ordered policy coordinator: even if `navigation_enabled=True`, it must evaluate local `choose_local_foraging` eligibility **before optional route initiation**, including when a target was set. This prevents an actively hungry character from walking away from physically visible food while preserving travel if local food is unavailable. It remains a synthetic example, not a universal behavior/planning fairness claim.
+
+`choose_local_foraging` also inspects **only the NPC's own** `beliefs["danger"].confidence` from already delivered/acknowledged reports. At confidence >=80 forage is withheld; threshold is deterministic, the perceived risk is included in the recorded decision reason, and other NPCs without that report remain unaffected. The report is a belief, not a proven external fact. This consumes no new global-state knowledge.
+
+Both defects were reproduced before repair by new tests. The internal review suite now passes 481/481 on Python 3.10/3.13; independent sign-off still pending. See [phase_01s_internal_review.md](phase_01s_internal_review.md).

@@ -428,3 +428,9 @@ The `NPCDecisionRecorded` event includes a strictly checked `local-forage-v1` po
 Seven-person demo: `PYTHONPATH=src python scenarios/test_village/demo_foraging.py` — 120 simulated seconds, 51 advance events, 2 successful and 2 depleted attempts. Behavior suite initially **472/472 passed on Python 3.10/3.13**. See [01-S report](docs/phase_01s_report.md) and [independent review request](docs/phase_01s_review_request.md).
 
 **Breaking change:** Schema **13** / Rules **17**, no old-world migration; P0 save-safety gate remains open. `main` and Carlos story files untouched. **External independent review pending before phase closure.**
+
+### Phase 01-S internal adversarial review update
+
+The initial 472 tests were extended to **481**, all passing on Python **3.10 and 3.13** in [GitHub Actions run 41855607762](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41855607762). Two functional defects were first demonstrated by failing tests, then corrected: optional navigation could preempt visible local forage; and forage ignored a high-confidence private danger warning. Regressions now cover both, including preserving route travel when no food is available and filtering danger beliefs by recipient and confidence threshold.
+
+**Review status:** internal adversarial author-review complete; a **distinct independent reviewer** still needs to approve Phase 01-S under [the protocol](docs/DEVELOPMENT_PROTOCOL.md). For transfer to OpenCode read [OPENCODE_HANDOFF.md](docs/OPENCODE_HANDOFF.md) before touching code, and see [the review report](docs/phase_01s_internal_review.md). Do not start Phase 01-T until the separate review gate is satisfied.

@@ -1,6 +1,6 @@
 # Phase 01-S — Hunger-driven, finite autonomous local forage
 
-**Status:** implemented, behavior tested; **independent reviewer sign-off pending** (see [phase_01s_review_request.md](phase_01s_review_request.md)). 01-T must not begin before review gate is cleared.
+**Status:** implemented; internal adversarial review completed with two confirmed fixes; **separate independent reviewer sign-off pending** (see [phase_01s_review_request.md](phase_01s_review_request.md)). 01-T must not begin before review gate is cleared.
 
 ## Base and scope
 
@@ -37,3 +37,15 @@ A character can now begin a **reasoned forage action** because it is hungry and 
 Independent review has **not yet** approved this change. Requested adversarial scrutiny: provenance authorization, event replay, stale/unknown inventory, physical outcomes on both clocks, fail-safe rules-version mismatch and whether deterministic competition ordering is an acceptable Stage 01-S simplification.
 
 **Out of scope:** knowledge of distant food, rumor memory, path planning, production/growth, skill effects, combat, fair or random resource allocation, importing Carlos story. After review, update this report and ROADMAP.md to close the stage, then plan 01-T.
+
+## Internal adversarial review (author-review, not independent sign-off) — 2026-11-04
+
+Evidence: [phase_01s_internal_review.md](phase_01s_internal_review.md). The original implementer performed this audit; it **does not** satisfy the separate independent reviewer gate in DEVELOPMENT_PROTOCOL.md. It does prove that the vulnerabilities below were detected through new failing regression tests, repaired and re-tested.
+
+- **AR-01 HIGH — Nav overrides survival intent.** With both `navigation_enabled=True` and `foraging_enabled=True`, hungry NPCs could start an automatic trip even with visible natural food at the current site. Reproduced by two failing tests in run `41854606709`. Fixed in `living_world.py` by evaluating the pure local forage predicate before optional travel. Added four integration checks covering automatic routes, explicit target, fallback navigation without local food, and scheduled completion while navigation is enabled.
+- **AR-02 MEDIUM — Trusted danger information ignored.** A 95-confidence danger report delivered solely to one NPC did not affect its forage choice; this broke the intended NPC-specific knowledge behavior. Reproduced by failing run `41855205489`. Fixed `foraging.py` to suppress local forage when that NPC's own `danger` belief confidence >=80. Decision reason now includes `belief_danger`; low-confidence warnings preserve forage eligibility. Added one integration and four boundary tests.
+- **Final tested code before this report:** `7471938aae09197bcea1ab27dd9290b528ad5294`; run [41855607762](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41855607762) completed **481/481 tests on Python 3.10 and Python 3.13**, with old Phase 01-R semantic parity and real old-database rejection checks.
+- **No new Schema/Rules bump beyond 13/17** within this unclosed experimental phase; the 01-S event decision reason changed before a supported long-lived save contract was published. 01-R→01-S still has no approved migration.
+- **Remaining design debts:** local food visibility remains a synthetic world assumption; no remote food-memory yet (01-T); deterministic competition order can favor fixed IDs (01-V); no long-lived-world P0 clearance.
+
+**Review verdict:** the two reproduced functional defects are repaired, and all **known CI regressions are cleared**. However, approval by a *separate reviewer* remains **PENDING**, so the phase is not formally closed. Next OpenCode session should perform a read-only independent audit and write an approval or actionable blocking issues **before** beginning 01-T.
