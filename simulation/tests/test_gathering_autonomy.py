@@ -140,7 +140,7 @@ def test_no_autonomous_food_creation_when_deposit_unknown(tmp_path):
         result = advance(db, clock)
         assert result.gathered_action_ids == ()
         assert result.state.gatherings == {}
-        assert result.state.resources["grove"].get("wild_food") is None
+        assert result.state.resources.get("grove", {}).get("wild_food") is None
 
 
 def test_no_autonomous_gathering_into_unknown_owned_inventory(tmp_path):
@@ -247,7 +247,10 @@ def test_gathering_and_autonomous_eating_can_chain_without_conjuring_food(villag
     # Collection happens just after investigation ends; the eating pass
     # later in the same tick may consume exactly the food just gathered.
     meals = result.state.consumptions
-    assert len(meals) == 2
+    # Layla was already carrying food at t=0, so autonomous eating also
+    # creates her own independent meals. The two newly gathered portions
+    # must be traceable to their own collectors, not to a fixed total.
+    assert len(meals) == 4
     for npc in ("adel", "basim"):
         assert result.state.resources[npc]["food"] == 0
         assert any(m["npc_id"] == npc for m in meals.values())
