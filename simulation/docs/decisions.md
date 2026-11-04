@@ -242,3 +242,16 @@ Open questions for later phases: NPC decision cadence, resource production and t
   1000 active NPCs; address incremental projection separately.
 - Maintain schema **11**, rules **15**, no changes to `main` or Carlos
   story files, and require independent review before 01-N closure.
+
+### Phase 01-N final integration decisions
+
+- Retain validated immutable projections, authorization, atomic rollback and
+  original event order/decision counts; never trade correctness for speed.
+- Fast-path trusted built-in JSON nodes, but retain JSON validation for
+  external/constructor input and a generic `Mapping` fallback.
+- Preserve all **403 passing tests** and exact event/state hash parity for
+  10/25 NPC worlds. Earlier 388-test figures refer to an intermediate build.
+- Measured at 100 NPCs: **9.5122 s → 3.4529 s** for the same 60-second
+  full-engine workload, 301 events; more optimization needed for 1000+.
+- Schema 11 / Rules 15 unchanged; no automatic migrations or `main` merge.
+  Independent phase review remains mandatory.
