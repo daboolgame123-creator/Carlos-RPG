@@ -62,6 +62,29 @@ def village(tmp_path):
 from carlos_sim import SQLiteEventStore, TimeEngine  # noqa: E402
 
 
+def test_trailing_newline_food_observation_fails_closed(village):
+    db, _clock = village
+    old_state = snap(db)
+    old_events = events_count(db)
+    for index, trailing in enumerate(("\\n", "\\r\\n")):
+        s = db.load("r")
+        event = DomainEvent("NPCInformationDelivered", "adel", "forged food text",
+                            s.time, {
+            "npc_id": "adel",
+            "delivery_id": f"bad-trailing-newline-{index}",
+            "key": "food:grove",
+            "claim": claim("food-state:present; observed_at=0" + trailing,
+                           "observation:grove", s.time, 90),
+            "sender_id": "adel", "location_id": "grove",
+            "method": "observation",
+        })
+        with pytest.raises(InvalidEvent, match="invalid food claim text"):
+            db.append("r", f"reject-trailing-newline-{index}", s.revision,
+                      [event], npc_authorized=True)
+        assert snap(db) == old_state
+        assert events_count(db) == old_events
+
+
 def test_direct_observation_sets_belief_verified_against_stock(village):
     db, clock = village
     before = snap(db); n_before = events_count(db)
