@@ -13,7 +13,7 @@ from .survival import CRITICAL_HUNGER
 from .store import SQLiteEventStore
 from .time_engine import TimeEngine
 
-ACTIONS = ("rest", "work", "investigate", "wait")
+ACTIONS = ("rest", "work", "investigate", "wait", "forage")
 NEEDS = ("fatigue", "hunger", "safety")
 GOALS = ("earn", "explore", "survive")
 MIN_DECISION_COOLDOWN = 60
@@ -66,7 +66,8 @@ def validate_npc_state(npc: Any) -> None:
 
 
 def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: bool,
-                      survival_authorized: bool = False) -> None:
+                      survival_authorized: bool = False,
+                      action_authorized: bool = False) -> None:
     p = _json_copy(event.data)
     ident = p.get("npc_id")
     if not isinstance(ident, str) or not ident or ident not in state["entities"] or state["entities"][ident]["controller"] != "npc":
@@ -130,8 +131,13 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
             raise ValueError("invalid need transition")
         npc["needs"][p["need"]] = p["current"]
     elif event.event_type == "NPCDecisionRecorded":
-        if set(p) != {"npc_id", "action", "score", "reason", "next_decision_at"} or event.actor_id != ident:
+        legacy_fields = {"npc_id", "action", "score", "reason", "next_decision_at"}
+        forage_policy = p.get("action") == "forage"
+        if (set(p) != (legacy_fields | {"policy"} if forage_policy else legacy_fields)
+                or event.actor_id != ident):
             raise ValueError("invalid NPC decision event")
+        if forage_policy and (p["policy"] != "local-forage-v1" or not action_authorized):
+            raise ValueError("foraging decisions require a trusted, recorded policy")
         if any(t['npc_id'] == ident and t['status'] == 'traveling' for t in state['travels'].values()):
             raise ValueError("NPC cannot decide a new activity while traveling")
         if any(a['npc_id'] == ident and a['status'] == 'running' for a in state['actions'].values()):
@@ -142,7 +148,15 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
             raise ValueError("invalid decision contents")
         if not _integer(p["next_decision_at"], maximum=2**63-1) or p["next_decision_at"] < state["time"] + MIN_DECISION_COOLDOWN:
             raise ValueError("next decision must be in future")
-        expected = _score_choice(npc, ident, survival_active=survival_authorized)
+        if forage_policy:
+            from .foraging import choose_local_foraging
+            site = state["entities"][ident]["location_id"]
+            choice = choose_local_foraging(ident, npc, site, state["resources"])
+            if choice is None:
+                raise ValueError("foraging decision lacks known local food or personal need")
+            expected = Decision(ident, "forage", choice[0], choice[1])
+        else:
+            expected = _score_choice(npc, ident, survival_active=survival_authorized)
         if (p["action"], p["score"], p["reason"]) != (expected.action, expected.score, expected.reason):
             raise ValueError("NPC decision does not match deterministic utility policy")
         # Event records an intention, never silently changes HP, resources or position.
@@ -183,7 +197,8 @@ def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool 
     return Decision(npc_id, action, scores[action], reason)
 
 
-def choose_action(state: WorldState, npc_id: str, *, survival_enabled: bool = False) -> Decision | None:
+def choose_action(state: WorldState, npc_id: str, *, survival_enabled: bool = False,
+                  foraging_enabled: bool = False) -> Decision | None:
     """Return an explainable recommendation based ONLY on one NPC's knowledge.
 
     Beliefs are not asserted as facts; a false report may still change a decision.
@@ -197,6 +212,12 @@ def choose_action(state: WorldState, npc_id: str, *, survival_enabled: bool = Fa
         return None
     if state.time < npc["next_decision_at"]:
         return None
+    if foraging_enabled:
+        from .foraging import choose_local_foraging
+        site = state.entities[npc_id]["location_id"]
+        choice = choose_local_foraging(npc_id, npc, site, state.resources)
+        if choice is not None:
+            return Decision(npc_id, "forage", choice[0], choice[1])
     return _score_choice(npc, npc_id, survival_active=survival_enabled)
 
 
@@ -207,7 +228,8 @@ class NPCService:
     This stage does not yet execute actions; that requires action resolvers.
     """
     def __init__(self, store: SQLiteEventStore, clock: "TimeEngine", *,
-                 decision_cooldown: int = 60, survival_enabled: bool = False):
+                 decision_cooldown: int = 60, survival_enabled: bool = False,
+                 foraging_enabled: bool = False):
         if type(decision_cooldown) is not int or decision_cooldown < MIN_DECISION_COOLDOWN:
             raise ValueError("decision cooldown must be at least 60 simulation seconds")
         if type(survival_enabled) is not bool:
@@ -218,6 +240,9 @@ class NPCService:
             raise ValueError("NPC service and clock must use the same store")
         self.cooldown = decision_cooldown
         self.survival_enabled = survival_enabled
+        if type(foraging_enabled) is not bool:
+            raise ValueError("foraging_enabled must be boolean")
+        self.foraging_enabled = foraging_enabled
 
     def decide(self, world_id: str, npc_id: str, *, command_id: str, expected_revision: int) -> Decision | None:
         self.clock._require_session(world_id)
@@ -225,18 +250,21 @@ class NPCService:
         if state.revision != expected_revision:
             from .store import RevisionConflict
             raise RevisionConflict("stale NPC decision request")
-        candidate = choose_action(state, npc_id, survival_enabled=self.survival_enabled)
+        candidate = choose_action(state, npc_id, survival_enabled=self.survival_enabled,
+                                  foraging_enabled=self.foraging_enabled)
         if candidate is None:
             return None
         event = DomainEvent("NPCDecisionRecorded", npc_id, "local utility policy", state.time,
                             {"npc_id": npc_id, "action": candidate.action, "score": candidate.score,
-                             "reason": candidate.reason, "next_decision_at": state.time + self.cooldown})
+                             "reason": candidate.reason, "next_decision_at": state.time + self.cooldown,
+                             **({"policy": "local-forage-v1"} if candidate.action == "forage" else {})})
         # The survival policy is evaluated using the same explicit mode as
         # LivingWorldEngine. Persist that capability for deterministic replay.
         # No TimeAdvanced event is emitted: the clock flag only authorizes the
         # survival-mode decision projection in the trusted local store.
         self.store.append(world_id, command_id, expected_revision, [event],
                           npc_authorized=True,
+                          action_authorized=candidate.action == "forage",
                           clock_authorized=self.survival_enabled,
                           survival_authorized=self.survival_enabled)
         return candidate

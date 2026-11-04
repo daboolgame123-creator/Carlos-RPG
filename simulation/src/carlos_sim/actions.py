@@ -13,7 +13,7 @@ from .store import SQLiteEventStore, RevisionConflict
 from .time_engine import TimeEngine
 
 # Fixed prototype durations in *simulated seconds*. Not Carlos story canon.
-DURATIONS = {"rest": 120, "work": 180, "investigate": 90, "wait": 60}
+DURATIONS = {"rest": 120, "work": 180, "investigate": 90, "wait": 60, "forage": 120}
 LABOR_RESOURCE = "labor_units"  # Non-money test metric; not transferable goods.
 INVESTIGATION_RESOURCE = "investigation_attempts"  # Attempts, not discoveries.
 
@@ -108,6 +108,7 @@ def resolve_action(state: dict[str, Any], action_id: str, schedule_id: str, time
         "work": {"fatigue": 15, "hunger": 10},
         "investigate": {"fatigue": 10, "hunger": 5},
         "wait": {"hunger": 5},
+        "forage": {"fatigue": 12, "hunger": 5},
     }[verb]
     result: dict[str, Any] = {"needs": {}, "counters": {}}
     for need, delta in deltas.items():
@@ -130,6 +131,13 @@ def resolve_action(state: dict[str, Any], action_id: str, schedule_id: str, time
     action["status"] = "completed"
     action["completed_at"] = time
     action["result"] = result
+    if verb == "forage":
+        # ScheduledEventFired is the durable authoritative completion event.
+        # Both manual TimeEngine and autonomous LivingWorld use the same
+        # projection, so changing modes or advancing via either clock cannot
+        # silently skip or duplicate this physical result.
+        from .foraging import resolve_foraging
+        resolve_foraging(state, action_id, time)
 
 
 @dataclass(frozen=True)

@@ -158,6 +158,9 @@ class SQLiteEventStore:
                 raise InvalidEvent("clock advancement/firing requires a trusted clock capability")
             if world_id not in self._active_worlds:
                 raise InvalidEvent("clock cannot advance outside an active play session")
+        if any(e.event_type == "NPCDecisionRecorded" and e.data.get("action") == "forage"
+               for e in events) and not action_authorized:
+            raise InvalidEvent("foraging decisions require trusted action capability")
         if not npc_authorized and any(e.event_type == "NPCDecisionRecorded" for e in events):
             raise InvalidEvent("NPC decisions require a trusted planner capability")
         npc_mutations = {"NPCInformationDelivered", "NPCBeliefReceived", "NPCNeedChanged", "NPCDecisionRecorded"}

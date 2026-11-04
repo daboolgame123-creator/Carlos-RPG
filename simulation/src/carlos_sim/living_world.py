@@ -50,7 +50,8 @@ class LivingWorldEngine:
                  navigation_enabled: bool = False, social_enabled: bool = False,
                  social_cooldown: int = MIN_SOCIAL_COOLDOWN,
                  assistance_enabled: bool = False, consumption_enabled: bool = False,
-                 survival_enabled: bool = False, gathering_enabled: bool = False):
+                 survival_enabled: bool = False, gathering_enabled: bool = False,
+                 foraging_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -82,6 +83,9 @@ class LivingWorldEngine:
         if type(gathering_enabled) is not bool:
             raise ValueError("gathering_enabled must be boolean")
         self.gathering_enabled = gathering_enabled
+        if type(foraging_enabled) is not bool:
+            raise ValueError("foraging_enabled must be boolean")
+        self.foraging_enabled = foraging_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -264,7 +268,8 @@ class LivingWorldEngine:
                 if pending is not None and pending['at'] == current.time:
                     verb = pending['action']
                 else:
-                    decision = choose_action(current, npc_id, survival_enabled=self.survival_enabled)
+                    decision = choose_action(current, npc_id, survival_enabled=self.survival_enabled,
+                                             foraging_enabled=self.foraging_enabled)
                     if decision is None:
                         continue
                     verb = decision.action
@@ -277,8 +282,11 @@ class LivingWorldEngine:
                                        'deterministic autonomous NPC policy', current.time,
                                        {'npc_id': npc_id, 'action': decision.action,
                                         'score': decision.score, 'reason': decision.reason,
-                                        'next_decision_at': current.time + self.decision_cooldown}),
-                           survival_capability=self.survival_enabled)
+                                        'next_decision_at': current.time + self.decision_cooldown,
+                                        **({'policy': 'local-forage-v1'}
+                                           if decision.action == 'forage' else {})}),
+                           survival_capability=self.survival_enabled,
+                           action_capability=decision.action == 'forage')
                 schedule_id = 'npc-action:' + action_id
                 action_due = current.time + DURATIONS[verb]
                 append(DomainEvent('ScheduledEventCreated', None,

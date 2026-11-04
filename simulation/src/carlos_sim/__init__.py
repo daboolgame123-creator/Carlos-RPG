@@ -20,3 +20,5 @@ from .survival import HUNGER_SECONDS_PER_POINT, FATIGUE_SECONDS_PER_POINT, CRITI
 from .gathering import NPCGatheringService, GatheringResult
 
 from .gathering import choose_gathering_intent, GatheringIntent
+
+from .foraging import choose_local_foraging, FORAGING_MIN_HUNGER, FORAGING_MAX_FATIGUE
