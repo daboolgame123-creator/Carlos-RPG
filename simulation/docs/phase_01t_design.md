@@ -76,7 +76,7 @@ No 01-T decision consumes food knowledge for action choice (§7); `known_food_si
 
 ## 6. Revision 2 — contradiction and memory-update rules
 
-Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The reducer applies the **same pure policy** the emitter consults: `should_adopt(existing, incoming, now) -> bool`.
+Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The receiving reducer applies the pure policy `should_adopt(existing, incoming, now) -> bool`. **The sending NPC does not inspect the recipient's private beliefs.** It may consult only its own belief and sender-specific, observable delivery history for rate-limiting; the recipient alone resolves whether to replace an existing belief.
 
 | # | Existing | Incoming | Rule | Rationale |
 |---|---|---|---|---|
@@ -88,7 +88,7 @@ Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The re
 | R6 | hearsay `empty`, recent | hearsay `present` | covered by R5 (age tiers decide) | regeneration via rumor only after the old direct `empty` loses effectiveness |
 | R7 | any | observation | `incoming.observed_at >= existing.observed_at` required (holds by event ordering; mismatch ⇒ reject) | a direct sighting never moves knowledge backward |
 
-- **Ack semantics:** an ack always **consumes the delivery** (removes it from the inbox). The belief is replaced **only if** `should_adopt` returns true; otherwise the existing belief is kept and no rollback occurs. Rollback (whole-batch rejection) is reserved for malformed or forged data that fails delivery validation. A rejected ack therefore never leaves a "pending" delivery — the delivery is consumed, the belief is unchanged. The emitter mirrors `should_adopt` before emitting, so autonomous flows never generate acks that the reducer would reject.
+- **Ack semantics:** an ack always **consumes the delivery** (removes it from the inbox). The belief is replaced **only if** `should_adopt` returns true; otherwise the existing belief is kept and no rollback occurs. Rollback (whole-batch rejection) is reserved for malformed or forged data that fails delivery validation. A rejected ack therefore never leaves a "pending" delivery — the delivery is consumed, the belief is unchanged. The sender does **not** predict adoption by inspecting the recipient's beliefs; a delivered but non-adopted message is a legitimate exchange.
 - **What is never done:** silent in-place mutation of beliefs outside an event, deletion of a claim without a superseding claim (history lives in the event log), or reinterpreting old `text` under new rules — the grammar is part of Rules 18 semantics.
 - All rules are pure functions of `(claim, now)` ⇒ identical under snapshot/replay; OBS-1 provenance unchanged (event log + `verify()` remain the source of truth; `from_dict` stays consistency-only until P0).
 
@@ -127,7 +127,7 @@ Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The re
 ## 10. Test plan (~48–55 tests)
 
 ### 10.1 Unit — `test_knowledge.py` (~14)
-Grammar accept/reject matrix (missing/extra tokens, bad enums, out-of-range `observed_at`, `observed_at > received_at`); `effective_confidence` tiers (0/600/601/1800/1801, base 0/90/100, integer rounding); `should_adopt` full matrix (R1–R7) asserting **emitter decision == reducer acceptance** for every (existing × incoming) pair; `known_food_sites` reads only the named NPC's beliefs; sharing determinism (order, IDs, cooldowns); unknown ≠ empty.
+Grammar accept/reject matrix (missing/extra tokens, bad enums, out-of-range `observed_at`, `observed_at > received_at`); `effective_confidence` tiers (0/600/601/1800/1801, base 0/90/100, integer rounding); `should_adopt` full matrix (R1–R7) asserting **receiving reducer acceptance** for every (existing × incoming) pair; the sending policy must remain invariant to changes in recipient-private beliefs; `known_food_sites` reads only the named NPC's beliefs; sharing determinism (order, IDs, cooldowns); unknown ≠ empty.
 
 ### 10.2 Adversarial — `test_knowledge_adversarial.py` (~17, incl. the requested new cases)
 Common pattern: `before = db.load(w).to_dict()` → attempt → expected exception → `after == before` + events-row count unchanged.

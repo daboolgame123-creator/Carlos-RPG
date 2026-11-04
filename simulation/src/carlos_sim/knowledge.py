@@ -258,9 +258,9 @@ def choose_food_sharing(state: dict[str, Any], sender_id: str) -> list[DomainEve
                             break
             if recent:
                 continue
-            existing = recipient["beliefs"].get(key)
-            if not should_adopt(existing, claim, now):
-                continue
+            # Never inspect a recipient's private beliefs when deciding to
+            # speak. The recipient's reducer alone applies should_adopt during
+            # acknowledgement; a rejected update still consumes the message.
             delivery = DomainEvent(
                 "NPCInformationDelivered", sender_id,
                 "autonomous food knowledge sharing", now,

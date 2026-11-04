@@ -34,6 +34,14 @@
 
 These repairs are limited to 01-T behavior. No new resource generation, remote omniscient planner read, world-clock activity, schema migration, or 01-U route selection was introduced.
 
+## 3a. Adversarial review: recipient-private knowledge leak (follow-up)
+
+**Finding AR-03 — blocker, repaired on 01-T branch:** The autonomous sender's `choose_food_sharing` was consulting `recipient["beliefs"]` and running `should_adopt` before deciding whether to speak. This reveals the recipient's unspoken knowledge to the sender's policy, violating the no-omniscience invariant.
+
+**Remedy:** autonomous sharing now depends on sender-owned beliefs, physical co-location/availability and the sender-to-recipient communication history for cooldowns. It does **not** inspect the recipient's private belief state. The recipient's reducer independently calls `should_adopt` on acknowledgement; delivery is consumed even when the belief is not replaced. Existing reducer/adversarial acknowledgement tests remain intact. Added a regression that changes only the recipient's private belief state and asserts byte-equal sender-generated delivery+ack events.
+
+This correction does not allow the sender to alter another NPC's thoughts or state directly; all changes still require committed domain events.
+
 ## 4. Evidence and remaining gate
 
 - Last code regression: **537 passed on Python 3.10 and 537 passed on Python 3.13**, CI [41917217353](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41917217353).

@@ -234,7 +234,7 @@ def test_choose_food_sharing_preserves_observed_at_and_lowers_confidence():
     assert delivery.data["claim"]["confidence"] == 45
 
 
-def test_choose_food_sharing_respects_should_adopt_newer_existing_wins():
+def test_choose_food_sharing_sender_cannot_inspect_recipient_private_beliefs():
     state = {
         "entities": {"adel": {"location_id": "grove"}, "basim": {"location_id": "grove"}},
         "travels": {}, "actions": {},
@@ -243,13 +243,23 @@ def test_choose_food_sharing_respects_should_adopt_newer_existing_wins():
             "adel": {"beliefs": {"food:grove": claim("food-state:present; observed_at=100",
                                                     "observation:grove", 100, 90)},
                      "delivery_history": []},
-            "basim": {"beliefs": {"food:grove": claim("food-state:present; observed_at=200",
-                                                     "observation:grove", 200, 90)},
-                      "delivery_history": []},
+            "basim": {"beliefs": {}, "delivery_history": []},
         },
     }
-    # basim already has a newer direct observation; adel's stale hearsay must not be shared
-    assert choose_food_sharing(state, "adel") == []
+    # The decision to tell someone depends on Adel's knowledge and documented
+    # communications, NOT on Basim's unspoken/private knowledge.
+    baseline = [event.to_dict() for event in choose_food_sharing(state, "adel")]
+    assert len(baseline) == 2
+
+    state["npcs"]["basim"]["beliefs"] = {
+        "food:grove": claim("food-state:empty; observed_at=100",
+                            "observation:grove", 100, 90)}
+    protected = [event.to_dict() for event in choose_food_sharing(state, "adel")]
+    assert protected == baseline
+
+    # Belief acceptance is a separate receiving/reducer decision; an old
+    # message cannot overwrite a recent direct observation (see adversarial
+    # ACK test), even though the sender still physically tells the listener.
 
 
 def test_choose_food_sharing_pair_cooldown_survives_redelivery_same_tick():
