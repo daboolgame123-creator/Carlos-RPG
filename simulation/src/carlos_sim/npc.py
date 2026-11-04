@@ -206,14 +206,18 @@ class NPCService:
     A TimeEngine session must be active before any decision can be recorded.
     This stage does not yet execute actions; that requires action resolvers.
     """
-    def __init__(self, store: SQLiteEventStore, clock: "TimeEngine", *, decision_cooldown: int = 60):
+    def __init__(self, store: SQLiteEventStore, clock: "TimeEngine", *,
+                 decision_cooldown: int = 60, survival_enabled: bool = False):
         if type(decision_cooldown) is not int or decision_cooldown < MIN_DECISION_COOLDOWN:
             raise ValueError("decision cooldown must be at least 60 simulation seconds")
+        if type(survival_enabled) is not bool:
+            raise ValueError("survival_enabled must be boolean")
         self.store = store
         self.clock = clock
         if clock.store is not store:
             raise ValueError("NPC service and clock must use the same store")
         self.cooldown = decision_cooldown
+        self.survival_enabled = survival_enabled
 
     def decide(self, world_id: str, npc_id: str, *, command_id: str, expected_revision: int) -> Decision | None:
         self.clock._require_session(world_id)
@@ -221,11 +225,18 @@ class NPCService:
         if state.revision != expected_revision:
             from .store import RevisionConflict
             raise RevisionConflict("stale NPC decision request")
-        candidate = choose_action(state, npc_id)
+        candidate = choose_action(state, npc_id, survival_enabled=self.survival_enabled)
         if candidate is None:
             return None
         event = DomainEvent("NPCDecisionRecorded", npc_id, "local utility policy", state.time,
                             {"npc_id": npc_id, "action": candidate.action, "score": candidate.score,
                              "reason": candidate.reason, "next_decision_at": state.time + self.cooldown})
-        self.store.append(world_id, command_id, expected_revision, [event], npc_authorized=True)
+        # The survival policy is evaluated using the same explicit mode as
+        # LivingWorldEngine. Persist that capability for deterministic replay.
+        # No TimeAdvanced event is emitted: the clock flag only authorizes the
+        # survival-mode decision projection in the trusted local store.
+        self.store.append(world_id, command_id, expected_revision, [event],
+                          npc_authorized=True,
+                          clock_authorized=self.survival_enabled,
+                          survival_authorized=self.survival_enabled)
         return candidate
