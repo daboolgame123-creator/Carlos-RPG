@@ -1,6 +1,6 @@
 # Phase 01-S — Hunger-driven, finite autonomous local forage
 
-**Status:** implemented; internal adversarial review completed with two confirmed fixes; **separate independent reviewer sign-off pending** (see [phase_01s_review_request.md](phase_01s_review_request.md)). 01-T must not begin before review gate is cleared.
+**Status:** **closed — implemented, tested, and independently reviewed; verdict APPROVED (2026-11-04)** (methodology, test evidence and observations OBS-1…OBS-5 in [Independent review and closure](#independent-review-and-closure--2026-11-04)). The review gate requested in [phase_01s_review_request.md](phase_01s_review_request.md) is cleared; Phase 01-T may start from this reviewed commit.
 
 ## Base and scope
 
@@ -34,9 +34,9 @@ A character can now begin a **reasoned forage action** because it is hungry and 
 
 ## Review and remaining limitations
 
-Independent review has **not yet** approved this change. Requested adversarial scrutiny: provenance authorization, event replay, stale/unknown inventory, physical outcomes on both clocks, fail-safe rules-version mismatch and whether deterministic competition ordering is an acceptable Stage 01-S simplification.
+Independent review was requested on provenance authorization, event replay, stale/unknown inventory, physical outcomes on both clocks, fail-safe rules-version mismatch and whether deterministic competition ordering is an acceptable Stage 01-S simplification. That review has now been performed and **APPROVED** this change (see the closure section below); no blocking issues were found.
 
-**Out of scope:** knowledge of distant food, rumor memory, path planning, production/growth, skill effects, combat, fair or random resource allocation, importing Carlos story. After review, update this report and ROADMAP.md to close the stage, then plan 01-T.
+**Out of scope:** knowledge of distant food, rumor memory, path planning, production/growth, skill effects, combat, fair or random resource allocation, importing Carlos story. This report and ROADMAP.md now close the stage; 01-T is next.
 
 ## Internal adversarial review (author-review, not independent sign-off) — 2026-11-04
 
@@ -48,4 +48,29 @@ Evidence: [phase_01s_internal_review.md](phase_01s_internal_review.md). The orig
 - **No new Schema/Rules bump beyond 13/17** within this unclosed experimental phase; the 01-S event decision reason changed before a supported long-lived save contract was published. 01-R→01-S still has no approved migration.
 - **Remaining design debts:** local food visibility remains a synthetic world assumption; no remote food-memory yet (01-T); deterministic competition order can favor fixed IDs (01-V); no long-lived-world P0 clearance.
 
-**Review verdict:** the two reproduced functional defects are repaired, and all **known CI regressions are cleared**. However, approval by a *separate reviewer* remains **PENDING**, so the phase is not formally closed. Next OpenCode session should perform a read-only independent audit and write an approval or actionable blocking issues **before** beginning 01-T.
+**Review verdict (internal, author):** the two reproduced functional defects are repaired, and all **known CI regressions are cleared**. At the time of writing, approval by a *separate reviewer* remained **PENDING**, so the phase was not yet formally closed. That independent review has since been completed with verdict **APPROVED** — see the next section, which supersedes the pending status above.
+
+## Independent review and closure — 2026-11-04
+
+**Verdict: APPROVED.** A separate reviewer (OpenCode session, distinct from the original implementer) performed a read-only adversarial audit of the final reviewed commit `785c3499e91cef307e4e6861bec262267816b5fe` on `simulation-engine-phase-01s`. No blocking issues were found; five non-blocking observations (OBS-1…OBS-5) are recorded below with their target phases. No source file was modified during the review; the only changes made afterwards are documentation closure edits in this file, ROADMAP.md, decisions.md and ROADMAP_CHANGELOG.md.
+
+**Methodology:**
+1. **Baseline integrity** — verified the working snapshot is content-identical to remote HEAD `785c349` (all `simulation/` files and story files, modulo CRLF/LF line endings) via a fresh clone in a temp directory; `main` and original story files untouched.
+2. **Diff inspection** — line-by-line read of the full `01r..01s` diff (`foraging.py`, `living_world.py`, `npc.py`, `actions.py`, `domain.py`, `store.py`, `time_engine.py`, `movement.py`, `gathering.py`, tests, CI workflow, docs).
+3. **Local test run** — full suite **481/481 passed** (Python 3.12.14, 122 s); `compileall src tests scenarios` exit 0; `demo_foraging.py` reproduced exactly (7 NPCs, 51 advance events, 4 attempts = 2 collected + 2 depleted, `wild_food` 2→0, replay-equal).
+4. **Independent probe suite** — 11 adversarial probes written from the review checklist *outside* the repository (not the shipped tests), all **PASS**: P1 forged completion while session closed, P2 out-of-order signal firing, P3 double firing, P4 action/decision mismatch, P5 decision outside session, P6 forage-vs-navigation cooldown behavior (reproduced OBS-2), P7 forged attempt history (chain forgery accepted by consistency-only `from_dict`, detected by `verify()`: "snapshot and full replay disagree"; forged `quantity=2` rejected by conservation), P8 forged site in decision reason rejected by deterministic re-derivation, P9 consumed schedule cannot re-fire.
+5. **Genuine old-world rejection** — a real Phase 01-R SQLite world was created *with 01-R code* (worktree at `0770498`), then loaded with 01-S code: rejected with `UnsupportedVersion`, rows unchanged `(schema=12, rules=16, revision=1)`, 1 event and 1 snapshot intact — fail-closed, no rewrite.
+6. **Cross-version parity** — `bench_event_parity --counts 7` run under both 01-R and 01-S code: `events_digest` identical (`e4414d12…`) and `legacy_semantic_digest` identical (`7d2be0d6…`); only the full `state_digest` differs (intentional: version fields + new `foraging_attempts` collection).
+7. **CI** — GitHub Actions run `41856382834` on commit `785c349`: **test (3.10) = success** and **test (3.13) = success** (the single annotation is a GitHub runner notice only).
+
+**Observations (non-blocking) and target phases:**
+
+| ID | Severity | Finding | Target |
+|---|---|---|---|
+| OBS-1 | Low — save integrity | `WorldState.from_dict` accepts an internally consistent but historically forged `foraging_attempts` history (it does not cross-validate attempts against resource conservation or the event chain); provenance is guaranteed by the event log plus `verify()`, which detected a hash-consistent tampered snapshot. Same pre-existing property for all resource ledgers, not specific to 01-S. | **P0 save gate** (before first long-lived world, ROADMAP §15) and **05-D** (external snapshot import): document `from_dict` as consistency-only and add cross-validation at import boundaries. |
+| OBS-2 | Low — design | With `foraging_enabled=True` + `navigation_enabled=True`, a hungry NPC inside the 60 s decision cooldown defers optional travel *and* cannot start a forage until the cooldown expires (reproduced: at t=30 neither travel nor action; forage starts at t=60; flag-off travels immediately). Consistent with AR-01 intent, but the idle gap deserves a regression test and explicit handling. | **01-U** (navigation-to-known-source) and considered now in **01-T** design: memory/navigation interaction must not strand a hungry NPC; add regression test. |
+| OBS-3 | Known | Deterministic competition ordering is lexicographic: fixed IDs (adel/basim) always win the site, (nora/salma) always fail. | **01-V** fairness/competition policy (already deferred there). |
+| OBS-4 | Doc note | A manual `forage` decision recorded while the flag was on can still execute through `LivingWorldEngine` after the flag is turned off (the pending decision is not re-checked against the flag). Opt-in happens at decision time; disabled-mode parity is preserved and digests prove it. | Documented here; optional hardening in **01-W** (player-gate phase). |
+| OBS-5 | Optional coverage | No explicit test asserts decision-site == completion-site under navigation (deterministically enforced by `movement.py`: an NPC busy with an action cannot start travel). | Optional regression test in **01-U**. |
+
+**Closure actions:** `phase_01s_report.md` (this file), `ROADMAP.md` (01-S → «مكتملة ومختبرة ومراجعة»), `decisions.md` and `ROADMAP_CHANGELOG.md` updated; committed and pushed **only** to `simulation-engine-phase-01s`; CI re-verified on the closure commit. **01-S is closed.** Next: branch `simulation-engine-phase-01t` from this approved commit, design review of 01-T (knowledge of food-source locations) **before** any 01-T coding.
