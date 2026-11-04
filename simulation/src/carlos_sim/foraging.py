@@ -81,7 +81,15 @@ def resolve_foraging(state: dict[str, Any], action_id: str, time: int) -> None:
 
 
 def validate_foraging_attempts(state: dict[str, Any]) -> None:
-    """Reject forged outcome, non-conservation and unrelated action history."""
+    """Reject absent outcomes, forged results and unrelated action history."""
+    # Forage is an action with a mandatory physical outcome. In a normal
+    # ScheduledEventFired reducer, resolve_action writes this record before
+    # validation. A fabricated snapshot must not silently erase a failure.
+    for action_id, action in state["actions"].items():
+        if (action["action"] == "forage"
+                and action["status"] == "completed"
+                and action_id not in state["foraging_attempts"]):
+            raise ValueError("completed forage action missing recorded outcome")
     for action_id, record in state["foraging_attempts"].items():
         if (not isinstance(action_id, str) or not action_id
                 or not isinstance(record, dict)
