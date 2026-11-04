@@ -15,6 +15,7 @@ from .time_engine import AdvanceLimitExceeded, TimeEngine
 from .navigation import next_route, needs_survey
 from .social_autonomy import MIN_SOCIAL_COOLDOWN, choose_social_intent
 from .assistance_autonomy import choose_assistance_intent
+from .consumption import choose_food_consumption, _meal_id
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class LivingAdvanceResult:
     event_count: int
     social_message_ids: tuple[str, ...] = ()
     assistance_transitions: tuple[tuple[str, str], ...] = ()
+    meals_consumed: tuple[str, ...] = ()
 
 
 class LivingWorldEngine:
@@ -45,7 +47,7 @@ class LivingWorldEngine:
                  decision_cooldown: int = MIN_DECISION_COOLDOWN,
                  navigation_enabled: bool = False, social_enabled: bool = False,
                  social_cooldown: int = MIN_SOCIAL_COOLDOWN,
-                 assistance_enabled: bool = False):
+                 assistance_enabled: bool = False, consumption_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -68,6 +70,9 @@ class LivingWorldEngine:
         if type(assistance_enabled) is not bool:
             raise ValueError("assistance_enabled must be boolean")
         self.assistance_enabled = assistance_enabled
+        if type(consumption_enabled) is not bool:
+            raise ValueError("consumption_enabled must be boolean")
+        self.consumption_enabled = consumption_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -94,11 +99,13 @@ class LivingWorldEngine:
         interrupted = False
         social_messages: list[str] = []
         assistance_transitions: list[tuple[str, str]] = []
+        meals_consumed: list[str] = []
 
         def append(event: DomainEvent, *, action_capability: bool = False,
                    movement_capability: bool = False,
                    social_capability: bool = False,
-                   assistance_capability: bool = False) -> None:
+                   assistance_capability: bool = False,
+                   consumption_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
@@ -107,7 +114,8 @@ class LivingWorldEngine:
                 current = apply_event(current, event, action_authorized=action_capability,
                                       movement_authorized=movement_capability,
                                       social_authorized=social_capability,
-                                      assistance_authorized=assistance_capability)
+                                      assistance_authorized=assistance_capability,
+                                      consumption_authorized=consumption_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -154,6 +162,20 @@ class LivingWorldEngine:
                         acted.add(actor_id)
                         assistance_transitions.append((intent.request_id,
                                                        current.obligations[intent.request_id]['status']))
+            if self.consumption_enabled:
+                # An actual meal debits food and relieves that NPC's hunger in
+                # one event. Do not mistake inventory ownership for eating.
+                for npc_id in sorted(current.npcs):
+                    quantity = choose_food_consumption(current, npc_id)
+                    if quantity is None:
+                        continue
+                    meal_id = _meal_id(npc_id, current.time)
+                    append(DomainEvent('NPCFoodConsumed', npc_id,
+                                       'NPC ate owned food to relieve personal hunger',
+                                       current.time,
+                                       {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
+                           consumption_capability=True)
+                    meals_consumed.append(meal_id)
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
@@ -261,9 +283,10 @@ class LivingWorldEngine:
                                       clock_authorized=True, npc_authorized=True,
                                       action_authorized=True, movement_authorized=self.navigation_enabled,
                                       social_authorized=self.social_enabled,
-                                      assistance_authorized=self.assistance_enabled)
+                                      assistance_authorized=self.assistance_enabled,
+                                      consumption_authorized=self.consumption_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
                                    interrupted, len(events), tuple(social_messages),
-                                   tuple(assistance_transitions))
+                                   tuple(assistance_transitions), tuple(meals_consumed))
