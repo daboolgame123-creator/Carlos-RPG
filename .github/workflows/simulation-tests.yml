@@ -46,6 +46,32 @@ jobs:
       - name: Demonstrate autonomous finite gathering with seven NPCs
         run: PYTHONPATH=src python scenarios/test_village/demo_gathering_autonomy.py
 
+      - name: Reject actual Phase 01-R saved world without rewriting it
+        run: |
+          PYTHONPATH=../reviewed-baseline/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/01r-world.sqlite') as db:
+              db.create_world('old')
+              db.append('old', 'loc', 0, [
+                  DomainEvent('LocationCreated', None, 'legacy test', 0,
+                              {'id':'village','name':'Village'})])
+              db.snapshot('old')
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/01r-world.sqlite') as db:
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('old rules/schema unexpectedly accepted')
+              before=db.db.execute('SELECT schema_version,rules_version,revision FROM worlds WHERE id="old"').fetchone()
+              assert before==(12,16,1)
+              assert db.db.execute('SELECT count(*) FROM events WHERE world_id="old"').fetchone()[0] == 1
+              assert db.db.execute('SELECT count(*) FROM snapshots WHERE world_id="old"').fetchone()[0] == 1
+          PY
+
       - name: Demonstrate 01-S hunger-driven foraging with seven characters
         run: PYTHONPATH=src python scenarios/test_village/demo_foraging.py
 
