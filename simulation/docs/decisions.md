@@ -353,3 +353,12 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Require **P0** (verified coherent backup, restored replay, compatibility checks and rollback rehearsal) before the first long-lived game world, including if requested earlier than 01-Z. Scope is policy now, not implementation.
 - Existing SQLite append atomicity, snapshots and hashes are not an off-file backup or general migration solution. Trusted capability flags are not network authentication.
 - Do not alter main, the original Carlos story, or saved user world data without explicit authorization. This governance commit changes documentation only.
+
+## Phase 01-S — Verified implementation, independent review pending
+
+- New `forage` intent is distinct from `investigate`; on-demand eligibility: hunger >=65, fatigue <=75, safety <=70, personal known food exactly zero, visible finite natural food at the **same location**.
+- `foraging_enabled=False` by default. A forage decision carries `policy=local-forage-v1` and is deterministically validated with trusted planner/action capability; legacy decision shape/scoring unchanged.
+- Physical `forage` lasts 120 simulated seconds; scheduled completion charges fatigue +12 and hunger +5 and records one success/depletion attempt. No guarantee of reward at start.
+- `foraging_attempts` is the new immutable audit history, preserving outcomes and conservation. Standalone TimeEngine and LivingWorld share authoritative scheduled resolution. Old action `NPCFoodGathered` remains for completed `investigate` only.
+- **Schema 13 / Rules 17** breaks 01-R saved files; explicit rejection, no implicit migration, P0 still open. Local-only knowledge is limited and intentionally defers remote memory/pathing to 01-T/U.
+- Seven NPC demo: 51 events/120s, 2 successes, 2 failures; initial 472/472 tests passing on Python 3.10/3.13. Independent code review not yet approved. No `main` or story changes.

@@ -418,3 +418,13 @@ gatherings** from a natural stock of 2. New tests: **13**;
 all **445** tests passed on Python 3.10 and 3.13. See
 `docs/phase_01r_report.md` and run
 `PYTHONPATH=src python scenarios/test_village/demo_gathering_autonomy.py`.
+
+## Phase 01-S — Hunger-driven local foraging (opt-in)
+
+`LivingWorldEngine(..., foraging_enabled=True)` or `NPCService(..., foraging_enabled=True)` now allows an NPC to choose `forage` as a deliberate 120-simulated-second action, instead of recovering food only after unrelated `investigate`. Conditions in the test world: hunger >=65, fatigue <=75, safety <=70, own initialized food =0, and visible `wild_food` >=1 **at the current site**. This does not read remote stock or other NPC inventory.
+
+The `NPCDecisionRecorded` event includes a strictly checked `local-forage-v1` policy. Completion adds 12 fatigue and 5 hunger and conserves exactly 0 or 1 food unit depending on actual remaining site stock. Each success/failure is recorded in `WorldState.foraging_attempts` and replays deterministically, including standalone clock and mid-action mode changes.
+
+Seven-person demo: `PYTHONPATH=src python scenarios/test_village/demo_foraging.py` — 120 simulated seconds, 51 advance events, 2 successful and 2 depleted attempts. Behavior suite initially **472/472 passed on Python 3.10/3.13**. See [01-S report](docs/phase_01s_report.md) and [independent review request](docs/phase_01s_review_request.md).
+
+**Breaking change:** Schema **13** / Rules **17**, no old-world migration; P0 save-safety gate remains open. `main` and Carlos story files untouched. **External independent review pending before phase closure.**

@@ -308,3 +308,11 @@ rolls back all actions and clock effects together. Existing
 It is **opportunistic collection**, not a hunger-driven new
 action choice; that future feature requires explicit scored
 intent and strict replay provenance. Schema 12 / Rules 16.
+
+## Phase 01-S — Event-sourced intentional local foraging
+
+`foraging.py` has a pure `choose_local_foraging` predicate over **own** hunger/fatigue/safety, known own inventory and `wild_food` visibly present at the actor's physical site only. A `forage` decision is recorded in `NPCDecisionRecorded` using a special `policy=local-forage-v1` field and a strictly validated score/reason, requiring the trusted planner and action capabilities (not network authentication). Legacy decisions retain their exact original shape.
+
+`forage` schedules 120 seconds with no immediate food transfer. `ScheduledEventFired` resolves it identically in `LivingWorldEngine` and standalone `TimeEngine`: fatigue +12, hunger +5, then at most one natural unit conserved from the local site to NPC. If a competing actor has emptied the site, record `depleted` and zero reward. `WorldState.foraging_attempts` stores actor/site/time/quantity/outcome and before/after balances; validators require every completed forge to have a matching conserved outcome. The scheduled completion event is the durable causal event, **not** a separate untrusted food-transfer command.
+
+Breaking Schema 13/Rules 17, no automatic 12/16 migration. Seven-NPC legacy scenario event/semantic state parity is checked against independently checked-out 01-R, while current-schema full snapshots/replay are verified. Review pending; P0 open.
