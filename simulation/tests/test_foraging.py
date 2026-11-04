@@ -433,3 +433,48 @@ def test_review_local_foraging_priority_over_explicit_route_target(village):
     assert not any(t["npc_id"] == "adel" and t["status"] == "traveling"
                    for t in result.state.travels.values())
     assert db.verify("r").to_dict() == result.state.to_dict()
+
+
+def test_review_navigation_remains_active_without_local_food(tmp_path):
+    """Fix must not disable navigation just because forage mode is enabled."""
+    with SQLiteEventStore(tmp_path / "empty-grove-road.sqlite") as db:
+        make_world(db, grove_stock=0, square_stock=2)
+        clock = TimeEngine(db)
+        clock.open_session("r")
+        state = db.load("r")
+        db.append("r", "put-road", state.revision, [
+            ev("RouteCreated", {"id": "grove-square", "a": "grove",
+                                "b": "square", "seconds": 30})
+        ], bootstrap=True)
+        result = LivingWorldEngine(
+            db, clock, navigation_enabled=True, foraging_enabled=True
+        ).advance("r", seconds=1, command_id="travel-without-food",
+                  expected_revision=db.load("r").revision)
+        assert any(t["npc_id"] == "adel" and t["status"] == "traveling"
+                   for t in result.state.travels.values())
+        assert "auto:adel:0" not in result.state.actions
+        assert db.verify("r").to_dict() == result.state.to_dict()
+
+
+def test_review_navigation_and_forage_compete_then_honor_duration(village):
+    db, clock = village
+    state = db.load("r")
+    db.append("r", "put-road-120", state.revision, [
+        ev("RouteCreated", {"id": "grove-square", "a": "grove",
+                            "b": "square", "seconds": 30})
+    ], bootstrap=True)
+    first = LivingWorldEngine(
+        db, clock, navigation_enabled=True, foraging_enabled=True
+    ).advance("r", seconds=30, command_id="start-both",
+              expected_revision=db.load("r").revision)
+    for actor in ("adel", "basim", "nora", "salma"):
+        assert first.state.actions[f"auto:{actor}:0"]["status"] == "running"
+    assert first.state.foraging_attempts == {}
+    final = LivingWorldEngine(
+        db, clock, navigation_enabled=True, foraging_enabled=True
+    ).advance("r", seconds=90, command_id="resolve-both",
+              expected_revision=db.load("r").revision)
+    assert len(final.state.foraging_attempts) == 4
+    assert sum(x["quantity"] for x in final.state.foraging_attempts.values()) == 2
+    assert sum(x["outcome"] == "depleted" for x in final.state.foraging_attempts.values()) == 2
+    assert db.verify("r").to_dict() == final.state.to_dict()
