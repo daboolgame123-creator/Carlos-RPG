@@ -92,8 +92,10 @@ jobs:
               ])
               db.snapshot('old')
           import sqlite3
-          sqlite3.connect('/tmp/01s-world.sqlite').execute(
-              'UPDATE worlds SET schema_version=13, rules_version=17 WHERE id="old"')
+          conn = sqlite3.connect('/tmp/01s-world.sqlite')
+          conn.execute('UPDATE worlds SET schema_version=13, rules_version=17 WHERE id="old"')
+          conn.commit()
+          conn.close()
           PY
           PYTHONPATH=src python - <<'PY'
           from carlos_sim import SQLiteEventStore, UnsupportedVersion
