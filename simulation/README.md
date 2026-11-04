@@ -269,3 +269,21 @@ completed groups**, including 22 new phase tests. See
 `docs/phase_01m_report.md` for measurements, constraints and caveats.
 **Schema 11 / Rules 15** require explicit migration or fresh experimental
 databases. Main and canonical Carlos narrative remain untouched.
+
+### Phase 01-M independent review
+
+`NPCService(store, clock, survival_enabled=True).decide(...)` uses the same
+critical-hunger policy as the survival-enabled living-world coordinator for a
+**pre-recorded intention**, without advancing simulated time. The default remains
+`False` and an existing recorded manual intention is not silently overridden.
+The opt-in capability is stored with the command for deterministic replay.
+Six additional regressions passed; total **379/379 local tests**.
+
+`PYTHONPATH=src python scenarios/test_village/bench_living_world.py` performs
+a separate **full engine** sample including NPC decision/action events and SQLite
+writes. In the local review environment, one 60-second advance took ~0.14 s for
+10 NPCs, ~2.53 s for 50, and ~9.42 s for 100. These are not production
+throughput figures. The full event projection/replay pipeline is the current
+scaling concern; the isolated 1000-NPC metabolism benchmark is **not** evidence
+that 1000 complete NPCs run in 0.05 s. Larger-scale engine profiling and
+optimization remain separate follow-up work.
