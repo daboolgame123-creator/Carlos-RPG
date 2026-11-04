@@ -287,3 +287,26 @@ throughput figures. The full event projection/replay pipeline is the current
 scaling concern; the isolated 1000-NPC metabolism benchmark is **not** evidence
 that 1000 complete NPCs run in 0.05 s. Larger-scale engine profiling and
 optimization remain separate follow-up work.
+
+## Phase 01-N — Event projection performance (initial implementation)
+
+The event-sourced world still validates **every event** and retains full
+snapshot/replay checks, authorization, atomic rollback, and existing decisions.
+The optimized `WorldState.from_dict` normalizes JSON **once** and freezes the
+checked data directly. `WorldState.to_dict` returns an independent deep copy
+without re-serializing an already-normalized projection. Direct constructors
+still use strict JSON checking, and no state or event schema was changed.
+
+The complete local regression suite passed **388/388**, including nine new
+defensive-copy, invalid-input, snapshot and atomicity regressions. Running the
+same 60-second full-engine benchmark for **100 NPCs** took **10.4821 s**
+on reviewed 01-M versus **4.8872 s** here (one sample per version, about
+2.14× faster). That is still too slow for a large living world.
+
+Reproduce via `PYTHONPATH=src python scenarios/test_village/bench_living_world.py
+--counts 10 25 50 100`. To check the **full event-log and state digest** across
+branches, use the identical `scenarios/test_village/bench_event_parity.py`
+script with the respective branch's `PYTHONPATH=src`. Schema **11**, rules
+**15**, and existing experimental DB formats remain unchanged. See
+`docs/phase_01n_report.md` for data and limitations. Await independent review
+before closing 01-N.
