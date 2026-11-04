@@ -1,6 +1,6 @@
 # Phase 01-T — Preliminary design: per-NPC knowledge of food-source locations
 
-**Status:** design reviewed and **conditionally approved by the user (2026-11-04)**; three required revisions incorporated below. **No 01-T code has been written.** Coding must not start until this design is re-confirmed.
+**Status:** preliminary design conditionally approved by the user on 2026-11-04; the three required revisions below are retained. **Implementation is now in progress and regression-tested, not formally closed**. For audited implementation findings and CI see [phase_01t_review_report.md](phase_01t_review_report.md).
 **Branch:** `simulation-engine-phase-01t`, based on `c35245d` (last approved, closed Phase 01-S; Schema 13 / Rules 17, 481/481 tests, CI success).
 **Scope source:** [ROADMAP.md](ROADMAP.md) row 01-T, [DEVELOPMENT_PROTOCOL.md](DEVELOPMENT_PROTOCOL.md) §B/§C/§E, [architecture.md](architecture.md), [SAVE_COMPATIBILITY_POLICY.md](SAVE_COMPATIBILITY_POLICY.md), [phase_01s_report.md](phase_01s_report.md) OBS-1…OBS-5.
 
@@ -22,7 +22,7 @@
 
 - `NPCInformationDelivered` / `NPCBeliefReceived` (01-C) already enforce: sender/recipient real actors, **shared recorded location**, no traveler on either side, `claim.received_at == state.time`, `method=message` ⇒ `claim.source == sender`, `method=observation` ⇒ sender == recipient and `claim.source == "observation:"+location`, one-shot ack consuming the inbox entry, unique `delivery_id` against `delivery_history` (`npc.py:89-125`).
 - Claim shape is locked: exactly `{text, source, received_at, confidence}`; `text`/`source` non-empty strings; `confidence` integer 0–100; `received_at` integer (`npc.py:27-33`).
-- **No production emitter exists**: in `src/`, the delivery events appear only in reducer/gate code; all emitters are in tests. 01-T must add emission logic.
+- **Baseline at closure of 01-S:** no production food-knowledge emitter existed. 01-T introduced opt-in observation and bounded sharing in `knowledge.py`, the living-world coordinator, and explicit observation service. See review report for implementation evidence.
 - `_observe` (01-F) stores occupants only, never resources. `choose_local_foraging` (01-S) reads `wild_food` at the actor's current site only; `foraging_attempts` records verified direct outcomes. Neither changes in 01-T.
 - All mutating NPC events require an open session and `npc_authorized`; flags are trusted local conventions, not AuthN.
 
@@ -96,7 +96,7 @@ Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The re
 
 1. Acquisition triggers (arrival, forage outcome, explicit observe) and the sharing pass **never** emit `NPCDecisionRecorded`, never touch `next_decision_at`, never add to `busy`.
 2. The sharing pass mirrors social gating (not busy, not traveling) and never `continue`-skips the NPC's forage/navigation evaluation; `local_forage_wins` ordering is untouched.
-3. Sharing rate limits (`FOOD_SHARE_PAIR_COOLDOWN = 600` s per sender/recipient/site, at most one food delivery per pair per tick) are **sharing** limits, not decision delays — they cannot postpone a forage start.
+3. Sharing rate limits (`SHARE_PAIR_COOLDOWN = 600` s per sender/recipient/site, at most one food delivery per pair per tick) are **sharing** limits, not decision delays — they cannot postpone a forage start.
 4. There is no "wait until information expires" behavior in 01-T.
 5. **Regression:** the OBS-2 scenario with `knowledge_enabled=True` reproduces 01-S timing exactly (forage starts at the scenario's decision cooldown), and a hungry NPC never spends more than the scenario's configured `decision_cooldown` (minimum 60 s) with no running action, no travel, and no due decision. The bound is the scenario's configured decision cooldown, **not a hardcoded 60 seconds**. Any fix beyond this bound and any memory-targeted travel belong to 01-U.
 
@@ -170,7 +170,7 @@ Flag-off digest parity vs 01-S (all three digest keys); real `13/17` and `12/16`
 ## 11. Risks and remaining open items (with defaults)
 
 1. **Constants are experimental** (90/60, 600/1800 tiers, 600 share-cooldown) — named, unit-tested, adjustable without re-baselining behavior.
-2. **Rejected-ack pending deliveries** linger until adoptable — bounded by inbox/history and re-evaluated under the event budget; if review dislikes lingering, alternative is adopt-without-overwrite, which needs a payload change (Rules-visible) — default: keep rejection.
+2. **Rejected-ack behavior (resolved contract):** acknowledgements always consume pending deliveries, even when `should_adopt` rejects belief replacement. The original belief remains; later information needs a new delivery. This matches §6 and avoids permanently pending deliveries.
 3. **Sharing volume vs event budget** — one delivery per pair per tick + per-site cooldown keeps advance batches small; rollback-on-budget is existing semantics.
 4. **Grammar-in-`text`** trades a structured field for zero Schema churn — strict anchored parsing mitigates ambiguity; upgrading to Option B (Schema 14 projection) stays available for 01-U/01-V if quantity/history needs appear.
 5. **Hearsay can inject false `present`** about a site — accepted by design (belief, low confidence, no decision impact in 01-T); rumor *truth-testing* belongs to 02-G.
