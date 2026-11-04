@@ -43,4 +43,4 @@ At 100 NPCs, this measured roughly **64% lower wall-clock execution time**. Samp
 
 ## Status
 
-**Implementation and local tests complete; independent Phase 01-N review is still required before closure.** Branch changes remain in `simulation/`; `main` and Carlos narrative are unchanged.
+**Phase 01-N independently reviewed and closed for test-world scope.** GitHub Actions passed 410/410 tests on both Python 3.10 and 3.13, and cross-branch event/state parity at 10/25 NPCs. See `phase_01n_independent_review.md`. `main` and Carlos narrative remain unchanged.
