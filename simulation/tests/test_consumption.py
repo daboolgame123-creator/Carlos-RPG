@@ -283,3 +283,81 @@ def test_obligations_remain_recorded_after_requester_eats_and_leaves(village):
     assert db.verify('w').to_dict()==moved.state.to_dict()
 
 
+def test_autonomous_consumption_after_gift_fulfills_is_independent_event(tmp_path):
+    with SQLiteEventStore(tmp_path/'integration.db') as db:
+        setup(db,food_a=0,food_b=10)
+        clock=TimeEngine(db);clock.open_session('w')
+        db.append('w','hunger',db.load('w').revision,[e('NPCNeedChanged',{
+            'npc_id':'nora','need':'hunger','previous':25,'current':95},actor='nora')])
+        engine=LivingWorldEngine(db,clock,assistance_enabled=True,consumption_enabled=True)
+        first=engine.advance('w',seconds=1,command_id='request',expected_revision=db.load('w').revision)
+        assert first.state.obligations['auto-help:nora:0']['status']=='promised'
+        assert first.state.resources['nora']['food']==0
+        assert first.state.npcs['nora']['needs']['hunger']==95
+        second=engine.advance('w',seconds=400,command_id='advance',expected_revision=first.state.revision)
+        assert second.state.obligations['auto-help:nora:0']['status']=='fulfilled'
+        assert len([m for m in second.state.consumptions.values() if m['npc_id']=='nora'])>=1
+        assert second.state.npcs['nora']['needs']['hunger']<95
+        assert second.state.resources['nora']['food'] < 3
+        assert second.state.obligations['auto-help:nora:0']['transfer']['requester_after']==3
+        assert db.verify('w').to_dict()==second.state.to_dict()
+
+
+def test_meal_on_long_valid_npc_id_uses_short_deterministic_key(tmp_path):
+    with SQLiteEventStore(tmp_path/'long-id.sqlite') as db:
+        setup(db)
+        ident='some-long-npc-'+'x'*110
+        setup_events=[e('EntityCreated',{'id':ident,'name':'Test','controller':'npc','location_id':'market'}),
+              e('NPCConfigured',{'npc_id':ident,'role':'eater',
+                 'needs':{'hunger':90,'fatigue':0,'safety':0},
+                 'goals':{'earn':0,'explore':0,'survive':0}}),
+              e('ResourceChanged',{'owner_id':ident,'resource':'food',
+                 'previous':None,'current':1,'source':'initialization'})]
+        db.append('w','long-actor',db.load('w').revision,setup_events,bootstrap=True)
+        clock=TimeEngine(db);clock.open_session('w')
+        result=NPCConsumptionService(db,clock).eat('w',ident,1,command_id='meal-long',expected_revision=db.load('w').revision)
+        assert len(result.id)<=128
+        assert result.state.consumptions[result.id]['npc_id']==ident
+        assert result.state.npcs[ident]['needs']['hunger']==65
+
+
+def test_split_steps_match_single_advance_with_eating(tmp_path):
+    output=[]
+    for i,chunks in enumerate(((400,),(100,100,100,100))):
+        with SQLiteEventStore(tmp_path/f'{i}.sqlite') as db:
+            setup(db,food_a=2,food_b=10)
+            clock=TimeEngine(db);clock.open_session('w')
+            db.append('w','set',db.load('w').revision,[e('NPCNeedChanged',{
+                'npc_id':'nora','need':'hunger','previous':25,'current':90},actor='nora')])
+            engine=LivingWorldEngine(db,clock,consumption_enabled=True)
+            for j,seconds in enumerate(chunks):
+                engine.advance('w',seconds=seconds,command_id=f'tick-{j}',expected_revision=db.load('w').revision)
+            state=db.verify('w').to_dict()
+            state.pop('revision')
+            output.append(state)
+    assert output[0]==output[1]
+
+
+def test_full_replay_after_database_reopen(tmp_path):
+    filename=tmp_path/'reopen.db'
+    with SQLiteEventStore(filename) as db:
+        setup(db,food_a=2)
+        c=TimeEngine(db);c.open_session('w')
+        before=db.load('w')
+        db.append('w','need',before.revision,[e('NPCNeedChanged',{
+            'npc_id':'nora','need':'hunger','previous':25,'current':70},actor='nora')])
+        eaten=NPCConsumptionService(db,c).eat('w','nora',1,command_id='first-meal',expected_revision=db.load('w').revision)
+        db.snapshot('w')
+    with SQLiteEventStore(filename) as db:
+        assert db.verify('w').to_dict()==eaten.state.to_dict()
+        assert db.load('w').consumptions[eaten.id]['food_after']==1
+
+
+def test_regular_consumption_or_spoilage_does_not_grant_hunger_relief(village):
+    db,clock,svc=village
+    original=db.load('w')
+    wasted=db.append('w','lost',original.revision,[e('ResourceChanged',{
+       'owner_id':'nora','resource':'food','previous':3,'current':2,'source':'consumption'},actor='nora')])
+    assert wasted.resources['nora']['food']==2
+    assert wasted.npcs['nora']['needs']['hunger']==85
+    assert wasted.consumptions=={}
