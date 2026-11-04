@@ -16,7 +16,7 @@ This phase optimizes **how event-sourced `WorldState` is copied and reconstructe
 - The **379 original tests** passed on the optimized source.
 - **9 first-pass Phase 01-N tests** passed: nested immutability, defensive deep-copy, direct construction, invalid JSON scalars, corrupt snapshots, strict schema/collection checks, invalid-event immutability, batch rollback and tuple/list round-trip.
 - **15 additional integrity/equivalence regressions** passed, including old JSON-roundtrip equivalence, nested collection behavior, dual-store replay and full-engine event counts.
-- **403/403 tests passed** in four completed groups: `158 + 107 + 41 + 97`. `python -m compileall -q src tests scenarios` passed.
+- **410/410 tests passed** in four completed groups: `165 + 107 + 41 + 97`. `python -m compileall -q src tests scenarios` passed.
 - The `bench_event_parity.py` script was run with the exact same fixture against both original reviewed 01-M and optimized 01-N source. Both the **complete event-ledger digest** and **final-world-state digest** matched for 10 and 25 NPCs, with full replay verification in both cases. The 10-NPC fixture yielded 72 identical events; the 25-NPC fixture yielded 177 identical events.
 
 ## Reproducible full-engine performance comparison
@@ -55,7 +55,7 @@ For the cross-version digest comparison, execute the **same** `scenarios/test_vi
 
 The initial report's **388** tests and its baseline timing are valid for an
 intermediate candidate only. The subsequently integrated fast-path `_thaw`
-change adds 15 more regressions and passes **403/403 tests** across five
+change plus its integrity tests adds 22 more regressions and passes **410/410 tests** across five
 completed batches. The event and final-world-state digests still match the
 reviewed 01-M baseline for 10 and 25 NPC scenarios. A separate same-host
 100-NPC run shows **9.5122 s → 3.4529 s** for 301 events, about **2.75× faster**
