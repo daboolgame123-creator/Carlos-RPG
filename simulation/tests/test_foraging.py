@@ -67,8 +67,22 @@ def test_seven_people_choose_reasoned_forage_and_compete_for_two_units(village):
     assert s.actions["auto:adel:0"]["due"] == 120
     assert s.actions["auto:adel:0"]["result"]["needs"]["fatigue"] == (5, 17)
     assert s.actions["auto:adel:0"]["result"]["needs"]["hunger"] == (70, 75)
-    assert s.npcs["adel"]["last_decision"]["action"] == "forage"
-    assert "local-forage-v1" in s.npcs["adel"]["last_decision"]["reason"]
+    # At the exact completion tick the actor may choose its *next*
+    # action, so inspect the durable intention event, not last_decision.
+    import json
+    recorded = [
+        json.loads(row[0]) for row in db.db.execute(
+            "SELECT payload FROM events WHERE world_id='r' ORDER BY seq"
+        ).fetchall()
+    ]
+    assert any(
+        x["event_type"] == "NPCDecisionRecorded"
+        and x["actor_id"] == "adel"
+        and x["data"]["action"] == "forage"
+        and x["data"]["policy"] == "local-forage-v1"
+        and "site=grove" in x["data"]["reason"]
+        for x in recorded
+    )
     assert db.verify("r").to_dict() == s.to_dict()
 
 
