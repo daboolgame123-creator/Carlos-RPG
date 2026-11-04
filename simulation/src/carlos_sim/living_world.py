@@ -235,6 +235,22 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
+            if self.knowledge_enabled:
+                # Bounded, deterministic food-knowledge sharing pass. Never
+                # touches next_decision_at, never adds to busy, never emits a
+                # decision; it is a pure sharing limit, not a decision delay.
+                busy_now = {a['npc_id'] for a in current.actions.values()
+                            if a['status'] == 'running'}
+                busy_now.update(t['npc_id'] for t in current.travels.values()
+                                if t['status'] == 'traveling')
+                for sender_id in sorted(current.npcs):
+                    if sender_id in busy_now:
+                        continue
+                    for event in choose_food_sharing(current, sender_id):
+                        append(event)
+                        share_id = event.data.get("delivery_id")
+                        if share_id is not None:
+                            knowledge_shares.append(share_id)
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
@@ -341,22 +357,6 @@ class LivingWorldEngine:
                 started.append(action_id)
                 busy.add(npc_id)
 
-            if self.knowledge_enabled:
-                # Bounded, deterministic food-knowledge sharing pass. Never
-                # touches next_decision_at, never adds to busy, never emits a
-                # decision; it is a pure sharing limit, not a decision delay.
-                busy_now = {a['npc_id'] for a in current.actions.values()
-                            if a['status'] == 'running'}
-                busy_now.update(t['npc_id'] for t in current.travels.values()
-                                if t['status'] == 'traveling')
-                for sender_id in sorted(current.npcs):
-                    if sender_id in busy_now:
-                        continue
-                    for event in choose_food_sharing(current, sender_id):
-                        append(event)
-                        share_id = event.data.get("delivery_id")
-                        if share_id is not None:
-                            knowledge_shares.append(share_id)
             if current.time >= target:
                 break
             # Schedule both completed actions and re-evaluations of idle NPCs.

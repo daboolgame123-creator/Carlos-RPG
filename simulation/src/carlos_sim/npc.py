@@ -122,10 +122,14 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
             validate_food_claim_text(p["claim"]["text"])
             validate_food_claim_timing(p["claim"]["text"], p["claim"]["received_at"])
             food_state, _observed_at = parse_food_claim(p["claim"]["text"])
+            site = food_site_from_key(p["key"])
+            if site not in state["locations"]:
+                raise ValueError("food claim must refer to an existing site")
             if p["method"] == "observation":
+                if _observed_at != state["time"]:
+                    raise ValueError("direct observation must be made at current world time")
                 # You can only observe food where you stand; the claim must match
                 # the real initialized stock at the actor's location.
-                site = food_site_from_key(p["key"])
                 if site != location:
                     raise ValueError("food observation site must equal the actor's location")
                 actual = state["resources"].get(site, {}).get("wild_food")

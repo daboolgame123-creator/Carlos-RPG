@@ -219,28 +219,45 @@ def choose_food_sharing(state: dict[str, Any], sender_id: str) -> list[DomainEve
     state = _mapping(state)
     events: list[DomainEvent] = []
     sender = state["npcs"].get(sender_id)
-    if sender is None:
+    if sender is None or _physically_unavailable(state, sender_id):
         return events
     location = state["entities"][sender_id]["location_id"]
     now = state["time"]
-    for site in known_food_sites(state, sender_id):
-        belief = sender["beliefs"].get("food:" + site)
-        if belief is None:
+    shared_pairs: set[str] = set()
+    # Share both positive and negative local memories: an empty site is
+    # information, not an unknown site. Never consult remote food balances.
+    for key in sorted(sender["beliefs"]):
+        if not is_food_key(key):
+            continue
+        site = food_site_from_key(key)
+        belief = sender["beliefs"][key]
+        if parse_food_claim(belief["text"]) is None:
             continue
         claim = _share_claim(belief, now)
         claim["source"] = sender_id
-        key = "food:" + site
         for recipient_id in sorted(state["npcs"]):
-            if recipient_id == sender_id:
+            if recipient_id == sender_id or recipient_id in shared_pairs:
                 continue
             if state["entities"][recipient_id]["location_id"] != location:
                 continue
             if _physically_unavailable(state, recipient_id):
                 continue
             delivery_id = f"food-share:{sender_id}:{recipient_id}:{site}:{now}"
-            if delivery_id in sender["delivery_history"]:
-                continue
             recipient = state["npcs"][recipient_id]
+            # Delivery IDs are recorded on the RECIPIENT, never the sender.
+            # Respect the documented per-sender/recipient/site cooldown.
+            prefix = f"food-share:{sender_id}:{recipient_id}:{site}:"
+            recent = False
+            for old_id in recipient["delivery_history"]:
+                if old_id.startswith(prefix):
+                    old_tick = old_id[len(prefix):]
+                    if old_tick.isascii() and old_tick.isdecimal():
+                        delta = now - int(old_tick)
+                        if 0 <= delta < SHARE_PAIR_COOLDOWN:
+                            recent = True
+                            break
+            if recent:
+                continue
             existing = recipient["beliefs"].get(key)
             if not should_adopt(existing, claim, now):
                 continue
@@ -258,6 +275,7 @@ def choose_food_sharing(state: dict[str, Any], sender_id: str) -> list[DomainEve
             )
             events.append(delivery)
             events.append(ack)
+            shared_pairs.add(recipient_id)
     return events
 
 
