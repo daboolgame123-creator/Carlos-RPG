@@ -151,3 +151,30 @@ The pure autonomous planner orders outstanding responses and accepted promises b
 ### Phase 01-L review: authorized hunger adjustments
 
 At the `SQLiteEventStore.append` trust boundary, any `NPCNeedChanged` lowering `hunger` requires `npc_authorized=True` and an active play session. The existing pure projection remains replayable because the command stores this capability flag; direct food-backed `NPCFoodConsumed` instead uses `consumption_authorized=True`. Hunger increases, action-derived hunger changes and trusted scenario adjustments retain their distinct meanings. A batch containing a forbidden hunger reduction is rejected without partial writes. **Schema 10 / Rules 14.**
+
+## Phase 01-M — Survival projection and reproducible time accounting
+
+Opt-in `survival_authorized` is recorded on the SQLite `commands` row and
+supplied to the reducer for every event on replay. During the existing
+`TimeAdvanced` event, `survival.apply_survival_elapsed` integrates the
+positive elapsed seconds for each NPC and keeps `hunger_seconds` modulo 300
+and `fatigue_seconds` modulo 600 in the new immutable projection
+`WorldState.survival_progress`. These integer remainders prevent fractional
+time loss and split-step rounding drift. Rest suspends baseline fatigue
+accrual during its actual running period; its completion retains the
+pre-existing −20 fatigue result. Fixed per-action hunger/fatigue deltas
+remain *additional effort surcharges*, not a second time integration.
+
+The NPC decision policy receives the explicitly selected
+`survival_enabled` mode. For hunger >=90 it suppresses routine work and
+investigate scores, allowing rest/wait. This mode flag is persisted with
+the command so `NPCDecisionRecorded` is validated identically on replay,
+including decisions made at simulated time zero. Disabling the option
+restores the ordinary decision policy regardless of old progress records.
+The existing clock's due-time/interruption rules still apply. This is a
+trusted local API, not external authorization. **Schema 11 / Rules 15**,
+no automatic prior-DB migration.
+
+Performance monitoring must distinguish pure single-event reducer time
+from costly full event replay, command validation, NPC decisions and
+world-scale simulation. See `phase_01m_report.md`.
