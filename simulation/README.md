@@ -226,3 +226,13 @@ events or migrations, and no autonomous work occurs in background.
 ### Phase 01-K post-review safeguards
 
 Reviews now confirm that **earlier obligations take priority** over later ones in the autonomous response and delivery queues, regardless of the alphabetical order of request IDs (ties break by ID). NPCs with very long valid identifiers can still request help: the planner uses a deterministic hash-derived obligation ID when the human-readable form exceeds the event limit. The updated locally tested suite has **313 passing tests**, including three new regressions. The original Phase 01-J ledger and manual API remain unchanged; schema **9** and rules **12** remain compatible. See `docs/phase_01k_report.md` for open limitations, notably unexpired requests while parties remain separated.
+
+## Phase 01-L — Owned food consumption and hunger relief (experimental)
+
+`NPCConsumptionService.eat(world_id, npc_id, quantity, command_id=..., expected_revision=...)` records a strictly authorized `NPCFoodConsumed` event. That event decreases **already-owned, explicitly initialized food** and lowers the **same NPC's hunger** by 25 per food unit (clamped to zero), atomically. A meal is limited to 1–3 units and at most once per NPC per simulated tick. The event ledger retains where, when, food before/after, and hunger before/after. A generic `ResourceChanged` consumption event continues to represent other resource expenditure; it does not count as eating or provide satiety.
+
+`LivingWorldEngine(store, clock, consumption_enabled=True)` enables a deterministic self-need policy: an available NPC with hunger ≥50 and owned food consumes **one unit** before starting another routine activity, without knowing other NPC inventories. Disabled by default to preserve previous stages. No food eating while traveling or working, no off-session eating, no player-controlled Carlos actions. The eating event is instantaneous in this prototype; time spent eating, nutrition and food types need separate rules.
+
+Run `PYTHONPATH=src python scenarios/test_village/demo_consumption.py` from `simulation/`. Food acquired by `Phase 01-K` gift assistance is not eaten until `NPCFoodConsumed` actually occurs. Do not interpret fleeing after a **gift** as unpaid debt: documented loans and their repayment terms require a future distinct contract system. See `docs/phase_01l_report.md`.
+
+**Schema 10 / Rules 13** — this phase changes WorldState and the command replay capability ledger. Old experimental DBs require deliberate migration/recreation; no automatic migration occurs.
