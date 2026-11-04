@@ -182,3 +182,29 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Permit explicit trusted hunger decreases only with the established `npc_authorized` capability and an active play session; these are non-food scenario/admin adjustments and are not claimed as meals.
 - Keep natural hunger increases and explicit test fixtures working; six new regression tests cover refusal, rollback, replay and authorized behavior.
 - Bump rule version from 13 to **14** (schema remains 10), because event acceptance changed. **351 tests passed in five separate local groups.**
+
+## Phase 01-M — Survival timing decisions
+
+- Keep survival progression opt-in and tied exclusively to explicit player
+  time advances. No real-world clock, background need drift or off-session
+  catch-up is permitted.
+- Use integer remainder accounting (300s hunger, 600s fatigue) to ensure
+  deterministic split-step invariants. Charge only actual elapsed seconds;
+  interruptions and action completion boundaries remain causal.
+- Treat baseline metabolism and the pre-existing action completion deltas as
+  *separate causes*. Do not derive activity deltas again from elapsed time;
+  revisit those provisional values in a balancing phase.
+- Suspend baseline fatigue while the NPC is truly resting, but continue
+  hunger progression. Critical hunger (>=90) conserves energy by deprioritizing
+  ordinary work/investigation, not by inventing aid or bypassing food.
+- Keep all survival logic free of knowledge about other characters' hidden
+  resources. Only the NPC's own needs affect its survival decision.
+- Preserve baseline behavior when the option is disabled, even after a
+  previous enabled interval. Replaying a command uses its original
+  `survival_authorized` flag.
+- Distinguish gifts from repayment-bearing loans and carry forward the
+  future need for evidence-based lending, default and potential deliberate
+  evasion; do **not** infer a debt from food aid or erase an actual loan
+  merely because the borrower disappears.
+- New persisted progress and replay capability require schema 11/rules 15,
+  explicit migration/recreation, independent review, and no `main` merge.
