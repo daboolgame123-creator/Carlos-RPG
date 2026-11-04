@@ -387,3 +387,49 @@ def test_foraging_and_legacy_gathering_remain_separate_paths(village):
     assert result.state.gatherings == {}
     assert sum(a["quantity"] for a in result.state.foraging_attempts.values()) == 2
     assert db.verify("r").to_dict() == result.state.to_dict()
+
+
+def test_review_local_food_not_overridden_by_autonomous_navigation(village):
+    """Review regression: a road must not make hungry NPC ignore food here."""
+    db, clock = village
+    before = db.load("r")
+    db.append("r", "add-adjacent-road", before.revision, [
+        ev("RouteCreated", {"id": "grove-square", "a": "grove",
+                            "b": "square", "seconds": 30})
+    ], bootstrap=True)
+    result = LivingWorldEngine(
+        db, clock, navigation_enabled=True, foraging_enabled=True
+    ).advance("r", seconds=30, command_id="nav-and-forage",
+              expected_revision=db.load("r").revision)
+    for actor in ("adel", "basim", "nora", "salma"):
+        action = result.state.actions.get(f"auto:{actor}:0")
+        assert action is not None and action["action"] == "forage", actor
+        assert action["due"] == 120
+        assert not any(t["npc_id"] == actor for t in result.state.travels.values())
+    assert result.state.resources["grove"]["wild_food"] == 2
+    assert result.state.foraging_attempts == {}
+    assert db.verify("r").to_dict() == result.state.to_dict()
+
+
+def test_review_local_foraging_priority_over_explicit_route_target(village):
+    """A preselected route does not suppress a newly urgent local survival need."""
+    from carlos_sim import NPCNavigationService
+    db, clock = village
+    before = db.load("r")
+    db.append("r", "add-goal-road", before.revision, [
+        ev("RouteCreated", {"id": "grove-square", "a": "grove",
+                            "b": "square", "seconds": 30})
+    ], bootstrap=True)
+    nav = NPCNavigationService(db, clock)
+    nav.survey("r", "adel", command_id="survey-route",
+               expected_revision=db.load("r").revision)
+    nav.target("r", "adel", "square", command_id="target-square",
+               expected_revision=db.load("r").revision)
+    result = LivingWorldEngine(
+        db, clock, navigation_enabled=True, foraging_enabled=True
+    ).advance("r", seconds=1, command_id="forage-instead-of-route",
+              expected_revision=db.load("r").revision)
+    assert result.state.actions["auto:adel:0"]["action"] == "forage"
+    assert not any(t["npc_id"] == "adel" and t["status"] == "traveling"
+                   for t in result.state.travels.values())
+    assert db.verify("r").to_dict() == result.state.to_dict()
