@@ -3,7 +3,7 @@
 **Status:** IMPLEMENTATION REGRESSIONS PASS; **FORMAL CLOSURE PENDING** separate independent adversarial sign-off. This report is not a closure approval.
 **Repository/branch:** [Carlos-RPG](https://github.com/daboolgame123-creator/Carlos-RPG/tree/simulation-engine-phase-01t), `simulation-engine-phase-01t`.
 **Baseline:** closed Phase 01-S `c35245d1904e7a6d779cafa92cbf556618247f38`, Schema 13 / Rules 17, 481 passing tests.
-**Current reviewed code:** `e02ec888051ad4c847feb37199c9ff845cd1ca6a`, Schema 13 / Rules 18. The final report update will have its own CI run.
+**Current reviewed code:** `c186fa5883cfc568e2c70ecd2c3035edfd10ed73`, Schema 13 / Rules 18. The documentation checkpoint will have its own CI run.
 **Scope:** Food knowledge in per-NPC beliefs, verifiable direct observation, non-omniscient hearsay, deterministic sharing and replay; no 01-U navigation-to-known-food behavior.
 
 ## 1. Inspected requirements and implementation
@@ -68,17 +68,25 @@ This correction does not allow the sender to alter another NPC's thoughts or sta
 
 Two interim code commits (`fc95519` and `578a40d`) failed the compilation stage, not the logical simulation tests. A source-generation replacement token had duplicated suffixes in two Python files. The code in `e02ec88` rebuilds those two files from last successful `06f91c6` and safely reapplies the narrow strict-grammar fix. Verified [CI 41924609974](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41924609974): 543 tests passed on each supported Python interpreter. Failed CI history is preserved.
 
+## 3a.8. Immutable compatibility baselines and durable sharing throttle
+
+**Improvement — CI provenance:** The previous workflow fetched `simulation-engine-phase-01r` and `simulation-engine-phase-01s` by floating branch refs, which could silently change after a later push. The two checkouts now pin the exact approved commits: 01-R `0770498a1f257a252a82fde5ade1c43d3a791e3f` and 01-S `c35245d1904e7a6d779cafa92cbf556618247f38`. A new CI step asserts that the checkouts' actual HEADs match those frozen hashes. The tests still cover genuine old-world creation, fail-closed reopening, and flag-off digests.
+
+**New end-to-end regression:** `test_sender_recipient_site_cooldown_survives_snapshot_reopen` commits an actual source observation and message delivery, records the delivery on the **recipient**, snapshots and closes SQLite, reopens, verifies the event log, asserts no same-pair/site sharing at 0 and 599 seconds, and asserts sharing is permitted exactly at the 600-second boundary. No source/resource facts are duplicated and the old observation timestamp remains 0.
+
+**Review note, not an approved policy change:** Same-tick multihop rumor forwarding among co-located NPCs is not prohibited by the current D2 one-message-per-pair design, but may merit an explicit future timing rule. A separate reviewer should classify it as a requirement clarification or evidence-backed blocker without silently changing the approved sharing policy.
+
 ## 3b. Final 01-T code regression checkpoint
 
-- Latest code commit: [`e02ec88`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/e02ec888051ad4c847feb37199c9ff845cd1ca6a).
-- CI: [41924609974](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41924609974), **success** on Python 3.10 and Python 3.13; **543/543 passed per interpreter**, both seven-NPC scenario demonstrations, real 01-R/01-S version-compatibility checks, and both old-mode parity checks.
+- Latest code commit: [`c186fa5`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/c186fa5883cfc568e2c70ecd2c3035edfd10ed73).
+- CI: [41925967667](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41925967667), **success** on Python 3.10 and Python 3.13; **544/544 passed per interpreter**, both seven-NPC scenario demonstrations, real 01-R/01-S version-compatibility checks, and both old-mode parity checks.
 - Direct flag-off comparison against **actual 01-S code** now asserts equal `events_digest`, `legacy_semantic_digest`, event count, revision, time, NPC count, and replay equality. The earlier 01-R comparison is retained.
 - The 01-T branch is a strict descendant of approved 01-S; all changes remain limited to `simulation/` and its CI workflow. No `main` changes, story-file edits, migrations, or 01-U implementation.
 - The adversarial reviews and repairs were **conducted by the implementing assistant**, not a separate reviewer. Protocol independent-approval gate remains open.
 
 ## 4. Evidence and remaining gate
 
-- Last code regression: **543 passed on Python 3.10 and 543 passed on Python 3.13**, CI [41924609974](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41924609974), code commit `e02ec88`.
+- Last code regression: **544 passed on Python 3.10 and 544 passed on Python 3.13**, CI [41925967667](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41925967667), code commit `c186fa5`.
 - Coverage includes save/reopen, snapshot and event replay; reject incompatible 12/16 and genuine 13/17 worlds without rewriting; flag-off parity, direct-observation checks, hearsay contradiction handling, food exhaustion, autonomous sharing bounds and OBS-2 decision timing.
 - Testing is necessary but insufficient: perform a **separate independent read-only adversarial review of the latest documentation/code HEAD**, including the newly changed emission order, one-pair-per-tick strategy, fact-time/source bounds, historical compatibility, and rollback under event-budget pressure.
 - **P0 save/restore guarantee remains open**. No production migration, durable-world certification, or story import is claimed.
