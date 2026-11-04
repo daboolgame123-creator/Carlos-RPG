@@ -260,11 +260,11 @@ def test_choose_food_sharing_pair_cooldown_survives_redelivery_same_tick():
         "npcs": {
             "adel": {"beliefs": {"food:grove": claim("food-state:present; observed_at=100",
                                                     "observation:grove", 100, 90)},
-                     "delivery_history": ["food-share:adel:basim:grove:100"]},
-            "basim": {"beliefs": {}, "delivery_history": []},
+                     "delivery_history": []},
+            "basim": {"beliefs": {}, "delivery_history": ["food-share:adel:basim:grove:100"]},
         },
     }
-    # Same tick 100, same pair -> already in delivery history -> skipped
+    # The RECIPIENT records each delivery. A same-tick repeat is suppressed.
     assert choose_food_sharing(state, "adel") == []
 
 
