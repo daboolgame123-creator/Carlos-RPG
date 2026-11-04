@@ -191,6 +191,58 @@ def test_autonomous_arrival_event_budget_rolls_back_entire_command(tmp_path):
         assert db.verify("village").to_dict() == initial
 
 
+def test_sender_recipient_site_cooldown_survives_snapshot_reopen(tmp_path):
+    # Persist an actual delivery to Basim; do not emulate history on the
+    # sender. Verify exact 600-second expiry after SQLite reopen and replay.
+    from carlos_sim.knowledge import choose_food_sharing
+    from carlos_sim.movement import NPCMovementService
+
+    path = tmp_path / "01t-cooldown-reopen.sqlite"
+    with SQLiteEventStore(path) as db:
+        make_world(db)
+        clock = TimeEngine(db)
+        clock.open_session("r")
+        state = db.load("r")
+        state = NPCMovementService(db, clock).observe(
+            "r", "adel", command_id="observe-first",
+            expected_revision=state.revision, knowledge_enabled=True
+        )
+        pair = [ev for ev in choose_food_sharing(state, "adel")
+                if ev.data["npc_id"] == "basim"]
+        assert len(pair) == 2
+        first_delivery_id = "food-share:adel:basim:grove:0"
+        state = db.append("r", "send-to-basim", state.revision, pair,
+                          npc_authorized=True)
+        assert first_delivery_id in state.npcs["basim"]["delivery_history"]
+        assert first_delivery_id not in state.npcs["adel"]["delivery_history"]
+        db.snapshot("r")
+        assert db.verify("r").to_dict() == state.to_dict()
+
+    with SQLiteEventStore(path) as db:
+        clock = TimeEngine(db)
+        clock.open_session("r")
+        state = db.load("r")
+        assert db.verify("r").to_dict() == state.to_dict()
+        assert not any(ev.data["npc_id"] == "basim"
+                       for ev in choose_food_sharing(state, "adel"))
+        clock.advance("r", seconds=599, command_id="before-cooldown",
+                      expected_revision=state.revision)
+        state = db.load("r")
+        assert not any(ev.data["npc_id"] == "basim"
+                       for ev in choose_food_sharing(state, "adel"))
+        clock.advance("r", seconds=1, command_id="cooldown-expired",
+                      expected_revision=state.revision)
+        state = db.load("r")
+        pair = [ev for ev in choose_food_sharing(state, "adel")
+                if ev.data["npc_id"] == "basim"]
+        assert len(pair) == 2
+        assert pair[0].data["delivery_id"] == "food-share:adel:basim:grove:600"
+        assert pair[0].data["claim"]["text"] == (
+            "food-state:present; observed_at=0"
+        )
+        assert db.verify("r").to_dict() == state.to_dict()
+
+
 def test_session_close_blocks_npc_state_changes(village):
     db, clock = village
     s = db.load("r")

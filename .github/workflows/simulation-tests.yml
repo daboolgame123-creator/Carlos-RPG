@@ -28,15 +28,19 @@ jobs:
       - name: Check out reviewed Phase 01-R baseline
         uses: actions/checkout@v5
         with:
-          ref: simulation-engine-phase-01r
+          ref: 0770498a1f257a252a82fde5ade1c43d3a791e3f
           path: reviewed-baseline
           persist-credentials: false
       - name: Check out genuine Phase 01-S rules 13/17 baseline
         uses: actions/checkout@v5
         with:
-          ref: simulation-engine-phase-01s
+          ref: c35245d1904e7a6d779cafa92cbf556618247f38
           path: reviewed-01s
           persist-credentials: false
+      - name: Verify frozen 01-R and 01-S compatibility baselines
+        run: |
+          test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
+          test "$(git -C ../reviewed-01s rev-parse HEAD)" = "c35245d1904e7a6d779cafa92cbf556618247f38"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
