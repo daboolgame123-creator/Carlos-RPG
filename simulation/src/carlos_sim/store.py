@@ -159,6 +159,19 @@ class SQLiteEventStore:
                 raise InvalidEvent('resource-backed assistance requires trusted assistance capability')
             if world_id not in self._active_worlds:
                 raise InvalidEvent('assistance requires an active play session')
+        # A generic NPCNeedChanged event remains useful for scenario setup,
+        # illness and other trusted interventions. However, lowering hunger
+        # without consuming food must not be accessible through the ordinary
+        # NPC event path: that would bypass the new meal/inventory ledger.
+        # The existing npc_authorized capability explicitly marks such an
+        # administrative adjustment (and is recorded for deterministic replay).
+        if any(e.event_type == "NPCNeedChanged"
+               and e.data.get("need") == "hunger"
+               and type(e.data.get("previous")) is int
+               and type(e.data.get("current")) is int
+               and e.data["current"] < e.data["previous"]
+               for e in events) and not npc_authorized:
+            raise InvalidEvent("lowering hunger outside eating requires trusted NPC adjustment capability")
         if any(e.event_type == "NPCFoodConsumed" for e in events):
             if not consumption_authorized:
                 raise InvalidEvent("eating requires trusted consumption capability")
