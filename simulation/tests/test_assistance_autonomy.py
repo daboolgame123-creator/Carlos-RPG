@@ -19,7 +19,7 @@ def world_with_needy_person(db, *, provider_food=10, requester_food=1,
             changes.append(e('NPCNeedChanged', {'npc_id': name, 'need': 'hunger',
                   'previous': 25, 'current': hunger}, actor=name))
     if changes:
-        db.append('w', 'set-private-needs', db.load('w').revision, changes)
+        db.append('w', 'set-private-needs', db.load('w').revision, changes, npc_authorized=True)
     return clock
 
 
