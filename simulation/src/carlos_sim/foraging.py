@@ -12,6 +12,7 @@ from typing import Any
 FORAGING_MIN_HUNGER = 65
 FORAGING_MAX_FATIGUE = 75
 FORAGING_MAX_SAFETY_NEED = 70
+FORAGING_DANGER_BELIEF_CUTOFF = 80  # NPC-local report confidence, not world truth
 WILD_FOOD = "wild_food"
 OWNED_FOOD = "food"
 
@@ -27,11 +28,18 @@ def choose_local_foraging(
     of remote deposits, incorrect rumors and navigation are Phase 01-T/U.
     """
     needs = npc["needs"]
+    # Existing NPC utility scoring considers a danger belief. New foraging
+    # must honor the SAME private NPC knowledge rather than ignore an
+    # urgent warning simply because the physical food deposit is visible.
+    # Claim confidence is subjective, not proof the reported danger is real.
+    report = npc["beliefs"].get("danger")
+    risk = report["confidence"] if report is not None else 0
     own = resources.get(npc_id, {}).get(OWNED_FOOD)
     wild = resources.get(site, {}).get(WILD_FOOD)
     if (needs["hunger"] < FORAGING_MIN_HUNGER
             or needs["fatigue"] > FORAGING_MAX_FATIGUE
             or needs["safety"] > FORAGING_MAX_SAFETY_NEED
+            or risk >= FORAGING_DANGER_BELIEF_CUTOFF
             or type(own) is not int or own != 0
             or type(wild) is not int or wild < 1):
         return None
@@ -40,7 +48,8 @@ def choose_local_foraging(
     # character may take the remaining food before this actor completes.
     return (1000 + needs["hunger"],
             f"local-forage-v1; npc={npc_id}; site={site}; hunger={needs['hunger']}; "
-            f"fatigue={needs['fatigue']}; safety={needs['safety']}; food=0; deposit-visible")
+            f"fatigue={needs['fatigue']}; safety={needs['safety']}; "
+            f"belief_danger={risk}; food=0; deposit-visible")
 
 
 def resolve_foraging(state: dict[str, Any], action_id: str, time: int) -> None:
