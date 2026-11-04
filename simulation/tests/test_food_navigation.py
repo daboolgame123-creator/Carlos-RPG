@@ -334,3 +334,109 @@ def test_default_off_mode_is_identical_to_explicit_false(tmp_path):
                 )],
             ))
     assert final[0] == final[1]
+
+
+def test_uninitialized_remote_stock_remains_unknown_after_arrival(tmp_path):
+    # A rumor is not evidence that the site actually has finite stock.
+    with SQLiteEventStore(tmp_path / "unknown-destination.sqlite") as db:
+        make_world(db, grove_stock=None)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        tell(db)
+        result = advance(db, clock, 50, "reach-unknown-source")
+        s = result.state
+        assert s.entities["adel"]["location_id"] == "grove"
+        assert s.npcs["adel"]["beliefs"]["food:grove"]["text"] == (
+            "food-state:present; observed_at=0"
+        )  # Only unverified hearsay; no fabricated direct 'empty' claim.
+        assert s.npcs["adel"]["beliefs"]["food:grove"]["source"] == "basim"
+        assert "wild_food" not in s.resources.get("grove", {})
+        assert not any(v["npc_id"] == "adel" for v in s.foraging_attempts.values())
+        assert db.verify("village").to_dict() == s.to_dict()
+
+
+def test_private_danger_warning_blocks_food_journey(village):
+    db, clock = village
+    tell(db)
+    s = db.load("village")
+    danger_id = "danger-from-basim"
+    db.append("village", "warn-risk", s.revision, [
+        event("NPCInformationDelivered", {
+            "npc_id": "adel", "delivery_id": danger_id,
+            "key": "danger",
+            "claim": {
+                "text": "road danger", "source": "basim",
+                "received_at": s.time, "confidence": 80,
+            },
+            "sender_id": "basim", "location_id": "market",
+            "method": "message",
+        }, actor="basim"),
+        event("NPCBeliefReceived", {
+            "npc_id": "adel", "key": "danger",
+            "delivery_id": danger_id,
+        }, actor="adel"),
+    ], npc_authorized=True)
+    learn_local_roads(db, clock)
+    assert choose_food_route(db.load("village"), "adel") is None
+    result = advance(db, clock, 1, "risk-prevents-food-travel")
+    assert not any(t["npc_id"] == "adel" for t in result.state.travels.values())
+
+
+def test_learned_two_hop_route_is_followed_without_hidden_map(tmp_path):
+    from carlos_sim import NPCMovementService
+
+    with SQLiteEventStore(tmp_path / "two-hop.sqlite") as db:
+        make_world(db, grove_stock=0)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        learn_local_roads(db, clock)
+        move = NPCMovementService(db, clock)
+        move.start("village", "adel", "market-grove", "learn-outward",
+                   expected_revision=db.load("village").revision)
+        clock.advance("village", seconds=50, command_id="reach-grove-manual",
+                      expected_revision=db.load("village").revision)
+        NPCNavigationService(db, clock).survey(
+            "village", "adel", command_id="learn-grove-roads",
+            expected_revision=db.load("village").revision)
+        move.start("village", "adel", "market-grove", "learn-return",
+                   expected_revision=db.load("village").revision)
+        clock.advance("village", seconds=50, command_id="return-market-manual",
+                      expected_revision=db.load("village").revision)
+        state = db.load("village")
+        assert state.entities["adel"]["location_id"] == "market"
+        assert "grove-secret" in state.navigation["adel"]["known_routes"]
+
+        tell(db, site="secret")
+        plan = choose_food_route(db.load("village"), "adel")
+        assert (plan.destination, plan.route_id, plan.total_seconds) == (
+            "secret", "market-grove", 75
+        )
+        out = advance(db, clock, 75, "travel-two-hops")
+        s = out.state
+        assert s.entities["adel"]["location_id"] == "secret"
+        assert s.travels["auto-nav:adel:100"]["route_id"] == "market-grove"
+        assert s.travels["auto-nav:adel:150"]["route_id"] == "grove-secret"
+        assert s.npcs["adel"]["beliefs"]["food:secret"]["text"] == (
+            "food-state:empty; observed_at=175"
+        )
+        assert db.verify("village").to_dict() == s.to_dict()
+
+
+def test_split_time_advance_preserves_physical_outcome(tmp_path):
+    def scenario(path, split):
+        with SQLiteEventStore(path) as db:
+            make_world(db)
+            clock = TimeEngine(db)
+            clock.open_session("village")
+            tell(db)
+            if split:
+                advance(db, clock, 50, "first-fifty")
+                result = advance(db, clock, 120, "then-one-twenty")
+            else:
+                result = advance(db, clock, 170, "one-seventy")
+            assert db.verify("village").to_dict() == result.state.to_dict()
+            return result.state.to_dict()
+
+    assert scenario(tmp_path / "split.sqlite", True) == scenario(
+        tmp_path / "single.sqlite", False
+    )
