@@ -2,8 +2,8 @@
 
 **Status:** PENDING separate reviewer. **DO NOT CLOSE 01-T OR START 01-U.**
 **Target branch:** `simulation-engine-phase-01t`
-**Code baseline:** `0304baa975d6f7aaa495ddfcf435b28577600156`
-**Last documented code CI:** [41921146414](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41921146414) — 538/538 tests passed on Python 3.10 and 3.13. This automated suite is not a separate human/agent reviewer approval.
+**Code baseline:** `04237a6c08c4af489c46061c1adf6a4c1d5d57a8`
+**Last documented code CI:** [41923020544](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41923020544) — 542/542 tests passed on Python 3.10 and 3.13. This automated suite is not a separate human/agent reviewer approval.
 **Original approved 01-S baseline:** `c35245d1904e7a6d779cafa92cbf556618247f38`
 **Status of P0 backup/migration gate:** OPEN.
 
@@ -19,7 +19,7 @@ Perform a **read-only review by a reviewer other than the implementation assista
 6. `SQLiteEventStore`: command idempotency, rollback on partial batch failure, duplicate delivery ID, pause/closed-session prohibition, snapshot/reopen/`verify()` semantic replay equality.
 7. **Save compatibility:** actual 01-S (`13/17`) database built with 01-S runtime and 01-R (`12/16`) must both be rejected by 01-T (`13/18`) without any row/event/snapshot rewrite. Do not migrate them.
 8. Run `python -m compileall -q src tests scenarios` and `python -m pytest -q` on supported Python versions 3.10 and 3.13; run existing seven-NPC demonstrations and **direct 01-S flag-off parity**. Test boundary timestamps (`2**63-1` accepted; `2**63` and 5,000-digit timestamps rejected), and verify the closed-session probe uses a valid event with a matching open-session control.
-9. Audit ambiguous implementation corners: per-pair rate-limit across close/reopen, memory poisoning via message, sender-to-recipient location identities, per-tick sharing cap, edge cases at staleness thresholds, and one-command event budget.
+9. Audit ambiguous implementation corners: per-pair rate-limit across close/reopen, memory poisoning via message, sender-to-recipient location identities, per-tick sharing cap, edge cases at staleness thresholds, and one-command event budget. Independently confirm the scheduled travel-arrival hook executes for real `__npc_travel_id` payloads (including unknown/empty/present food), that `knowledge_shares` contains each delivery ID once, and that an exhausted budget **between delivery and ack** rolls the whole command back.
 
 ## Report format and gates
 
