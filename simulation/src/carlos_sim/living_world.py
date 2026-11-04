@@ -47,7 +47,8 @@ class LivingWorldEngine:
                  decision_cooldown: int = MIN_DECISION_COOLDOWN,
                  navigation_enabled: bool = False, social_enabled: bool = False,
                  social_cooldown: int = MIN_SOCIAL_COOLDOWN,
-                 assistance_enabled: bool = False, consumption_enabled: bool = False):
+                 assistance_enabled: bool = False, consumption_enabled: bool = False,
+                 survival_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -73,6 +74,9 @@ class LivingWorldEngine:
         if type(consumption_enabled) is not bool:
             raise ValueError("consumption_enabled must be boolean")
         self.consumption_enabled = consumption_enabled
+        if type(survival_enabled) is not bool:
+            raise ValueError("survival_enabled must be boolean")
+        self.survival_enabled = survival_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -105,7 +109,8 @@ class LivingWorldEngine:
                    movement_capability: bool = False,
                    social_capability: bool = False,
                    assistance_capability: bool = False,
-                   consumption_capability: bool = False) -> None:
+                   consumption_capability: bool = False,
+                   survival_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
@@ -115,7 +120,8 @@ class LivingWorldEngine:
                                       movement_authorized=movement_capability,
                                       social_authorized=social_capability,
                                       assistance_authorized=assistance_capability,
-                                      consumption_authorized=consumption_capability)
+                                      consumption_authorized=consumption_capability,
+                                      survival_authorized=survival_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -235,7 +241,7 @@ class LivingWorldEngine:
                 if pending is not None and pending['at'] == current.time:
                     verb = pending['action']
                 else:
-                    decision = choose_action(current, npc_id)
+                    decision = choose_action(current, npc_id, survival_enabled=self.survival_enabled)
                     if decision is None:
                         continue
                     verb = decision.action
@@ -248,7 +254,8 @@ class LivingWorldEngine:
                                        'deterministic autonomous NPC policy', current.time,
                                        {'npc_id': npc_id, 'action': decision.action,
                                         'score': decision.score, 'reason': decision.reason,
-                                        'next_decision_at': current.time + self.decision_cooldown}))
+                                        'next_decision_at': current.time + self.decision_cooldown}),
+                           survival_capability=self.survival_enabled)
                 schedule_id = 'npc-action:' + action_id
                 action_due = current.time + DURATIONS[verb]
                 append(DomainEvent('ScheduledEventCreated', None,
@@ -276,7 +283,8 @@ class LivingWorldEngine:
                               and profile['next_decision_at'] > current.time)
             next_tick = min(t for t in next_ticks if t > current.time)
             append(DomainEvent('TimeAdvanced', None, 'authorized player time',
-                               next_tick, {'from': current.time, 'to': next_tick}))
+                               next_tick, {'from': current.time, 'to': next_tick}),
+                   survival_capability=self.survival_enabled)
 
         # A complete unit of work: no partial SQLite commits for multiple NPCs.
         committed = self.store.append(world_id, command_id, expected_revision, events,
@@ -284,7 +292,8 @@ class LivingWorldEngine:
                                       action_authorized=True, movement_authorized=self.navigation_enabled,
                                       social_authorized=self.social_enabled,
                                       assistance_authorized=self.assistance_enabled,
-                                      consumption_authorized=self.consumption_enabled)
+                                      consumption_authorized=self.consumption_enabled,
+                                      survival_authorized=self.survival_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
