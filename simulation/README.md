@@ -314,7 +314,7 @@ before closing 01-N.
 ## Phase 01-N final integrated verification (replaces interim figures)
 
 The combined optimized implementation adds fast-path JSON leaf/container copying
-and 15 further integrity tests to the first 01-N candidate. **403/403 tests
+and 15 further integrity tests to the first 01-N candidate. **410/410 tests
 passed locally**; event-log and final-state digests matched reviewed 01-M
 byte-for-byte for 10 and 25 NPC fixtures. A separate same-host 100-NPC
 full-engine run took **9.5122 s (01-M) versus 3.4529 s (01-N)**, about
@@ -323,4 +323,4 @@ not proof that 1000 active NPCs are production-ready. See
 `docs/phase_01n_validation.md` for the final measurements; any 388-test count
 in earlier 01-N notes describes the intermediate revision only.
 
-Schema 11 / Rules 15 remain compatible. No `main` merge; independent review pending.
+Schema 11 / Rules 15 remain compatible. No `main` merge. Independent review completed with GitHub Actions (410/410 passing on Python 3.10 and 3.13, plus matching 01-M/01-N event and state digests). See `docs/phase_01n_independent_review.md`.
