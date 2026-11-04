@@ -221,16 +221,26 @@ class NPCMovementService:
         return TravelStart(travel_id, npc_id, due, committed)
 
     def observe(self, world_id: str, npc_id: str, *, command_id: str,
-                expected_revision: int) -> WorldState:
+                expected_revision: int, knowledge_enabled: bool = False) -> WorldState:
         self.clock._require_session(world_id)
         state = self.store.load(world_id)
         if state.revision != expected_revision:
             raise RevisionConflict('stale perception request')
         if npc_id not in state.npcs:
             raise ValueError('only NPCs can observe')
-        return self.store.append(world_id, command_id, expected_revision, [
+        if type(knowledge_enabled) is not bool:
+            raise ValueError('knowledge_enabled must be boolean')
+        events = [
             DomainEvent('NPCObserved', npc_id, 'NPC observes only co-located entities',
-                        state.time, {'npc_id': npc_id})], movement_authorized=True)
+                        state.time, {'npc_id': npc_id})]
+        if knowledge_enabled:
+            from .knowledge import make_observation_events
+            site = state.entities[npc_id]['location_id']
+            events.extend(make_observation_events(
+                state, npc_id, site, state.time, 'explicit:' + command_id))
+        return self.store.append(world_id, command_id, expected_revision, events,
+                                 movement_authorized=True,
+                                 npc_authorized=knowledge_enabled)
 
 
 def perceive_local(state: WorldState, npc_id: str) -> dict[str, Any] | None:

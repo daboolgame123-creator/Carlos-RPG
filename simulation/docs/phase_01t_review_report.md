@@ -1,0 +1,95 @@
+# Phase 01-T — Engineering review before formal closure
+
+**Status:** IMPLEMENTATION REGRESSIONS PASS; **FORMAL CLOSURE PENDING** separate independent adversarial sign-off. This report is not a closure approval.
+**Repository/branch:** [Carlos-RPG](https://github.com/daboolgame123-creator/Carlos-RPG/tree/simulation-engine-phase-01t), `simulation-engine-phase-01t`.
+**Baseline:** closed Phase 01-S `c35245d1904e7a6d779cafa92cbf556618247f38`, Schema 13 / Rules 17, 481 passing tests.
+**Current reviewed code:** `c186fa5883cfc568e2c70ecd2c3035edfd10ed73`, Schema 13 / Rules 18. The documentation checkpoint will have its own CI run.
+**Scope:** Food knowledge in per-NPC beliefs, verifiable direct observation, non-omniscient hearsay, deterministic sharing and replay; no 01-U navigation-to-known-food behavior.
+
+## 1. Inspected requirements and implementation
+
+- Read `ROADMAP.md`, `DEVELOPMENT_PROTOCOL.md`, `phase_01t_design.md`, `SAVE_COMPATIBILITY_POLICY.md`, and the Phase 01-S closure report.
+- Compared the 01-T branch to the closed 01-S commit. Changes cover `domain.py` (Rules 18), new `knowledge.py`, `npc.py`, `living_world.py`, explicit `movement.py` observation, tests and CI. Original Carlos story files, main, and 01-U are untouched.
+- Retained four-field claim contract, event-reducer provenance validation, fact-time `observed_at` separate from delivery `received_at`, opt-in knowledge flag, no remote resource reads in the sender's sharing policy, and use of `delivery_history` on the receiving NPC.
+- A food claim is a belief, not a resource ledger update; a direct observation checks site, time and initialized actual stock. Hearsay does not bypass this verification or get upgraded to world truth.
+
+## 2. Diagnosed CI failures (verified, not guessed)
+
+| Commit/run | Evidence and root cause | Disposition |
+|---|---|---|
+| `0d5b24f` / [41913842445](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41913842445) | Both Python jobs passed 530 unit tests but the 13/17 compatibility CI fixture failed with `InvalidEvent: NPC setup requires trusted bootstrap`. It also fabricated a 13/17 DB by rewriting version columns in a new-runtime DB, contrary to the approved test contract. | Replaced with a genuine 01-S binary checkout creating a 13/17 SQLite DB; verifies old DB before the rejection, then checks rows/events/snapshots unchanged. |
+| `f2630a9` / [41916511877](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41916511877) | CI passed on 3.10 and 3.13 after the genuine old-world compatibility fix (530 tests). | Verified. |
+| `e187dde` / [41917042045](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41917042045) | One original unit test inserted a prior delivery ID in the **sender's** delivery_history, although actual delivery events record IDs in the **recipient's** history. After correcting the production code this invalid fixture asserted the wrong contract. | Fixture corrected; production rule preserved. |
+| `65c6c4a` / [41917217353](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41917217353) | Both Python versions passed **537/537** tests, scenario smoke tests and old-world compatibility/parity checks. | PASS for these code regressions; not independent closure. |
+
+## 3. Proven behavior defects corrected
+
+1. **Forged fact age:** A `method=observation` food claim previously accepted `observed_at < current time`, while checking only current stock, allowing false historical provenance. Now requires `observed_at == state.time`. New reducer rejection/rollback probe.
+2. **Nonexistent food site:** A food hearsay key for a nonexistent location could enter beliefs. Site existence is now checked for all food claims. New rollback probe.
+3. **Negative observations not shared:** The sharing selector iterated only positive `known_food_sites`; `food:empty` never propagated. It now iterates valid food beliefs, including empty, without inspecting remote resource stock.
+4. **Cooldown owner/error:** Sharing checked the sender's delivery history, which is not where the event reducer records deliveries. It now checks recipient history and implements the per-sender/recipient/site 600-second rate limit.
+5. **One message per pair per tick:** Multiple known food sites could create multiple same-tick deliveries to the same recipient; now bounded to one pair delivery per tick.
+6. **Autonomous sharing starved:** The coordinator started all idle NPC actions before attempting the sharing pass, so newly busy NPCs had no opportunity to speak. Moved the pass before actions; knowledge does not change `next_decision_at` or foraging decisions.
+7. **Explicit observation gap:** `NPCMovementService.observe` recorded occupants but omitted food-memory events. New opt-in `knowledge_enabled` keeps old behavior by default and atomically emits the observation, food delivery and acknowledgement.
+
+These repairs are limited to 01-T behavior. No new resource generation, remote omniscient planner read, world-clock activity, schema migration, or 01-U route selection was introduced.
+
+## 3a. Adversarial review: recipient-private knowledge leak (follow-up)
+
+**Finding AR-03 — blocker, repaired on 01-T branch:** The autonomous sender's `choose_food_sharing` was consulting `recipient["beliefs"]` and running `should_adopt` before deciding whether to speak. This reveals the recipient's unspoken knowledge to the sender's policy, violating the no-omniscience invariant.
+
+**Remedy:** autonomous sharing now depends on sender-owned beliefs, physical co-location/availability and the sender-to-recipient communication history for cooldowns. It does **not** inspect the recipient's private belief state. The recipient's reducer independently calls `should_adopt` on acknowledgement; delivery is consumed even when the belief is not replaced. Existing reducer/adversarial acknowledgement tests remain intact. Added a regression that changes only the recipient's private belief state and asserts byte-equal sender-generated delivery+ack events.
+
+This correction does not allow the sender to alter another NPC's thoughts or state directly; all changes still require committed domain events.
+
+## 3a.2. Adversarial review: logical timestamp upper bound
+
+**Finding AR-04 — cross-version validation defect, repaired:** `parse_food_claim` previously accepted `observed_at > 2**63-1` even though the documented grammar and `encode_food_claim` require signed 64-bit time. Extremely long decimal strings could also trigger interpreter-specific digit-limit errors on Python 3.13. The parser now rejects these before integer conversion, returning `None`, and a boundary regression verifies `2**63-1`, `2**63`, and a 5,000-digit input. No schema change or migration is required.
+
+## 3a.3. Test validity: closed-session negative probe
+
+**Finding AR-05 — test fixture bug, repaired:** the original `test_session_close_blocks_npc_state_changes` assembled `DomainEvent` with positional arguments in the wrong order. It passed with a closed session, but did not prove the proposed event was otherwise valid. Replaced the fixture with a well-formed direct-food observation, asserted no event/revision change while the session is closed, then proved the **exact same event** succeeds after reopening the session. This tests the session boundary rather than accidentally testing malformed input.
+
+## 3a.4. Arrival-observation hook unreachable (AR-06)
+
+**Finding — behavioral blocker, corrected:** `LivingWorldEngine.advance` placed the `__npc_travel_id` completion hook *inside* the `__npc_action_id` branch. Valid scheduled payloads contain one or the other, never both, so autonomous travel arrivals did not record local food observations. The arrival branch is now a sibling of the action-completion branch; forage observations remain in the action branch. Added end-to-end scheduled travel probes for an uninitialized site (remains unknown), a depleted site (empty), and a stocked site (present). Each uses an actual 50-second journey, asserts event replay, and verifies the recorded observation time/location.
+
+**Associated result-metadata fix:** `LivingAdvanceResult.knowledge_shares` no longer includes an identical delivery ID twice for delivery + acknowledgement. The event log still contains both domain events; only the public list of delivery IDs is deduplicated at emission, not by erasing events.
+
+## 3a.5. Event-budget partial-pair regression
+
+**Added proof:** A real navigation arrival to a stocked site is simulated with an event cap reached after knowledge delivery but before acknowledgement. The command raises `AdvanceLimitExceeded`, and the persisted world/event count/`verify()` state are unchanged. A separate autonomous-sharing assertion verifies that delivery IDs appear **once** in `LivingAdvanceResult.knowledge_shares` even though the durable event log records both delivery and acknowledgement.
+
+## 3a.6. Strict grammar trailing-newline bypass (AR-07)
+
+**Verified defect:** Python's regular-expression `match()` can treat the terminal dollar-sign anchor as a position just before a final newline. A newline-suffixed food observation was therefore accepted despite the documented exact format. Changed the parser to `fullmatch()`, with parser and event-reducer rejection tests for final LF and CRLF, including unchanged state and event rows after a rejected batch.
+
+## 3a.7. CI authoring fault and transparent resolution
+
+Two interim code commits (`fc95519` and `578a40d`) failed the compilation stage, not the logical simulation tests. A source-generation replacement token had duplicated suffixes in two Python files. The code in `e02ec88` rebuilds those two files from last successful `06f91c6` and safely reapplies the narrow strict-grammar fix. Verified [CI 41924609974](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41924609974): 543 tests passed on each supported Python interpreter. Failed CI history is preserved.
+
+## 3a.8. Immutable compatibility baselines and durable sharing throttle
+
+**Improvement — CI provenance:** The previous workflow fetched `simulation-engine-phase-01r` and `simulation-engine-phase-01s` by floating branch refs, which could silently change after a later push. The two checkouts now pin the exact approved commits: 01-R `0770498a1f257a252a82fde5ade1c43d3a791e3f` and 01-S `c35245d1904e7a6d779cafa92cbf556618247f38`. A new CI step asserts that the checkouts' actual HEADs match those frozen hashes. The tests still cover genuine old-world creation, fail-closed reopening, and flag-off digests.
+
+**New end-to-end regression:** `test_sender_recipient_site_cooldown_survives_snapshot_reopen` commits an actual source observation and message delivery, records the delivery on the **recipient**, snapshots and closes SQLite, reopens, verifies the event log, asserts no same-pair/site sharing at 0 and 599 seconds, and asserts sharing is permitted exactly at the 600-second boundary. No source/resource facts are duplicated and the old observation timestamp remains 0.
+
+**Review note, not an approved policy change:** Same-tick multihop rumor forwarding among co-located NPCs is not prohibited by the current D2 one-message-per-pair design, but may merit an explicit future timing rule. A separate reviewer should classify it as a requirement clarification or evidence-backed blocker without silently changing the approved sharing policy.
+
+## 3b. Final 01-T code regression checkpoint
+
+- Latest code commit: [`c186fa5`](https://github.com/daboolgame123-creator/Carlos-RPG/commit/c186fa5883cfc568e2c70ecd2c3035edfd10ed73).
+- CI: [41925967667](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41925967667), **success** on Python 3.10 and Python 3.13; **544/544 passed per interpreter**, both seven-NPC scenario demonstrations, real 01-R/01-S version-compatibility checks, and both old-mode parity checks.
+- Direct flag-off comparison against **actual 01-S code** now asserts equal `events_digest`, `legacy_semantic_digest`, event count, revision, time, NPC count, and replay equality. The earlier 01-R comparison is retained.
+- The 01-T branch is a strict descendant of approved 01-S; all changes remain limited to `simulation/` and its CI workflow. No `main` changes, story-file edits, migrations, or 01-U implementation.
+- The adversarial reviews and repairs were **conducted by the implementing assistant**, not a separate reviewer. Protocol independent-approval gate remains open.
+
+## 4. Evidence and remaining gate
+
+- Last code regression: **544 passed on Python 3.10 and 544 passed on Python 3.13**, CI [41925967667](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41925967667), code commit `c186fa5`.
+- Coverage includes save/reopen, snapshot and event replay; reject incompatible 12/16 and genuine 13/17 worlds without rewriting; flag-off parity, direct-observation checks, hearsay contradiction handling, food exhaustion, autonomous sharing bounds and OBS-2 decision timing.
+- Testing is necessary but insufficient: perform a **separate independent read-only adversarial review of the latest documentation/code HEAD**, including the newly changed emission order, one-pair-per-tick strategy, fact-time/source bounds, historical compatibility, and rollback under event-budget pressure.
+- **P0 save/restore guarantee remains open**. No production migration, durable-world certification, or story import is claimed.
+- Keep `main` and original story records unchanged. Do **not** start 01-U. Update ROADMAP to *closed* only after separate approval and last-commit CI success.
+
+**Verdict:** Ready to request final independent review; **01-T remains OPEN**.

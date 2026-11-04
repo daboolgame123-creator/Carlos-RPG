@@ -113,6 +113,36 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
                 raise ValueError("message must identify another character as source")
         elif sender != ident or p["claim"]["source"] != "observation:" + location:
             raise ValueError("observation must belong to the perceiving NPC and location")
+        # --- 01-T: namespaced food-key verification (reducer is the boundary) ---
+        if p["key"].startswith("food:"):
+            from .knowledge import (
+                validate_food_claim_text, validate_food_claim_timing,
+                parse_food_claim, food_site_from_key,
+            )
+            validate_food_claim_text(p["claim"]["text"])
+            validate_food_claim_timing(p["claim"]["text"], p["claim"]["received_at"])
+            food_state, _observed_at = parse_food_claim(p["claim"]["text"])
+            site = food_site_from_key(p["key"])
+            if site not in state["locations"]:
+                raise ValueError("food claim must refer to an existing site")
+            if p["method"] == "observation":
+                if _observed_at != state["time"]:
+                    raise ValueError("direct observation must be made at current world time")
+                # You can only observe food where you stand; the claim must match
+                # the real initialized stock at the actor's location.
+                if site != location:
+                    raise ValueError("food observation site must equal the actor's location")
+                actual = state["resources"].get(site, {}).get("wild_food")
+                if type(actual) is not int:
+                    raise ValueError("cannot observe food at an uninitialized site")
+                if food_state == "present" and actual < 1:
+                    raise ValueError("cannot report present food when stock is zero")
+                if food_state == "empty" and actual != 0:
+                    raise ValueError("cannot report empty food when stock is positive")
+            else:  # method == "message"
+                # Hearsay can never masquerade as a direct sighting.
+                if p["claim"]["source"].startswith("observation:"):
+                    raise ValueError("hearsay cannot masquerade as an observation")
         npc["inbox"][delivery_id] = {k: _json_copy(p[k]) for k in ("key", "claim", "sender_id", "location_id", "method")}
         npc["delivery_history"].append(delivery_id)
     elif event.event_type == "NPCBeliefReceived":
@@ -121,6 +151,18 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
         delivery = npc["inbox"].get(p["delivery_id"])
         if delivery is None or delivery["key"] != p["key"]:
             raise ValueError("belief has no matching pending information delivery")
+        key = p["key"]
+        claim = delivery["claim"]
+        now = state["time"]
+        if key.startswith("food:"):
+            from .knowledge import should_adopt
+            existing = npc["beliefs"].get(key)
+            if not should_adopt(existing, claim, now):
+                # Ack always consumes the delivery; the belief is replaced only
+                # when should_adopt accepts. Otherwise keep the existing belief
+                # and do not roll back (rollback is for malformed/forged data).
+                del npc["inbox"][p["delivery_id"]]
+                return
         npc["beliefs"][p["key"]] = delivery["claim"]
         del npc["inbox"][p["delivery_id"]]
     elif event.event_type == "NPCNeedChanged":

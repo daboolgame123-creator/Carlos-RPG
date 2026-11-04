@@ -17,6 +17,7 @@ from .social_autonomy import MIN_SOCIAL_COOLDOWN, choose_social_intent
 from .assistance_autonomy import choose_assistance_intent
 from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
+from .knowledge import make_observation_events, choose_food_sharing, known_food_sites
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class LivingAdvanceResult:
     assistance_transitions: tuple[tuple[str, str], ...] = ()
     meals_consumed: tuple[str, ...] = ()
     gathered_action_ids: tuple[str, ...] = ()
+    knowledge_shares: tuple[str, ...] = ()
 
 
 class LivingWorldEngine:
@@ -51,7 +53,7 @@ class LivingWorldEngine:
                  social_cooldown: int = MIN_SOCIAL_COOLDOWN,
                  assistance_enabled: bool = False, consumption_enabled: bool = False,
                  survival_enabled: bool = False, gathering_enabled: bool = False,
-                 foraging_enabled: bool = False):
+                 foraging_enabled: bool = False, knowledge_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -86,6 +88,9 @@ class LivingWorldEngine:
         if type(foraging_enabled) is not bool:
             raise ValueError("foraging_enabled must be boolean")
         self.foraging_enabled = foraging_enabled
+        if type(knowledge_enabled) is not bool:
+            raise ValueError("knowledge_enabled must be boolean")
+        self.knowledge_enabled = knowledge_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -114,6 +119,7 @@ class LivingWorldEngine:
         assistance_transitions: list[tuple[str, str]] = []
         meals_consumed: list[str] = []
         gathered_actions: list[str] = []
+        knowledge_shares: list[str] = []
 
         def append(event: DomainEvent, *, action_capability: bool = False,
                    movement_capability: bool = False,
@@ -166,6 +172,30 @@ class LivingWorldEngine:
                                  'site_id': intent.site_id}),
                                 action_capability=True)
                             gathered_actions.append(intent.action_id)
+                    if self.knowledge_enabled:
+                        action_info = current.actions.get(finished_id) if isinstance(finished_id, str) else None
+                        if (action_info is not None and action_info["action"] == "forage"
+                                and action_info["status"] == "completed"):
+                            who = action_info["npc_id"]
+                            site = current.entities[who]["location_id"]
+                            for event in make_observation_events(current, who, site, current.time, 'forage'):
+                                append(event)
+                                if event.event_type == 'NPCInformationDelivered':
+                                    knowledge_shares.append(event.data['delivery_id'])
+                # A travel completion has a "__npc_travel_id" payload, never
+                # "__npc_action_id". Handle it as a sibling of action completion
+                # so arrival observations cannot be skipped.
+                if '__npc_travel_id' in item['payload'] and self.knowledge_enabled:
+                    travel_id = item['payload']['__npc_travel_id']
+                    travel = current.travels.get(travel_id) if isinstance(travel_id, str) else None
+                    if (travel is not None and travel['status'] == 'arrived'
+                            and travel['arrived_at'] == current.time):
+                        who = travel['npc_id']
+                        site = current.entities[who]['location_id']
+                        for event in make_observation_events(current, who, site, current.time, 'arrival'):
+                            append(event)
+                            if event.event_type == 'NPCInformationDelivered':
+                                knowledge_shares.append(event.data['delivery_id'])
                 if item['interrupt']:
                     interrupted = True
                     break
@@ -209,6 +239,23 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
+            if self.knowledge_enabled:
+                # Bounded, deterministic food-knowledge sharing pass. Never
+                # touches next_decision_at, never adds to busy, never emits a
+                # decision; it is a pure sharing limit, not a decision delay.
+                busy_now = {a['npc_id'] for a in current.actions.values()
+                            if a['status'] == 'running'}
+                busy_now.update(t['npc_id'] for t in current.travels.values()
+                                if t['status'] == 'traveling')
+                for sender_id in sorted(current.npcs):
+                    if sender_id in busy_now:
+                        continue
+                    for event in choose_food_sharing(current, sender_id):
+                        append(event)
+                        # A delivery and its acknowledgement share one ID;
+                        # report it once, not once per domain event.
+                        if event.event_type == "NPCInformationDelivered":
+                            knowledge_shares.append(event.data["delivery_id"])
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
@@ -342,4 +389,4 @@ class LivingWorldEngine:
                                    tuple(started), tuple(completed), tuple(fired),
                                    interrupted, len(events), tuple(social_messages),
                                    tuple(assistance_transitions), tuple(meals_consumed),
-                                   tuple(gathered_actions))
+                                   tuple(gathered_actions), tuple(knowledge_shares))

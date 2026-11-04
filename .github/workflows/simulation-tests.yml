@@ -28,9 +28,19 @@ jobs:
       - name: Check out reviewed Phase 01-R baseline
         uses: actions/checkout@v5
         with:
-          ref: simulation-engine-phase-01r
+          ref: 0770498a1f257a252a82fde5ade1c43d3a791e3f
           path: reviewed-baseline
           persist-credentials: false
+      - name: Check out genuine Phase 01-S rules 13/17 baseline
+        uses: actions/checkout@v5
+        with:
+          ref: c35245d1904e7a6d779cafa92cbf556618247f38
+          path: reviewed-01s
+          persist-credentials: false
+      - name: Verify frozen 01-R and 01-S compatibility baselines
+        run: |
+          test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
+          test "$(git -C ../reviewed-01s rev-parse HEAD)" = "c35245d1904e7a6d779cafa92cbf556618247f38"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -72,8 +82,69 @@ jobs:
               assert db.db.execute('SELECT count(*) FROM snapshots WHERE world_id="old"').fetchone()[0] == 1
           PY
 
+      - name: Reject genuine Phase 01-S rules 13/17 saved world under Phase 01-T
+        run: |
+          PYTHONPATH=../reviewed-01s/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/01s-world.sqlite') as db:
+              db.create_world('old')
+              db.append('old', 'loc', 0, [
+                  DomainEvent('LocationCreated', None, 'legacy 01-S test', 0,
+                              {'id':'grove','name':'Grove'})])
+              db.snapshot('old')
+              assert db.db.execute(
+                  'SELECT schema_version,rules_version,revision FROM worlds WHERE id="old"'
+              ).fetchone() == (13,17,1)
+              assert db.verify('old').revision == 1
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/01s-world.sqlite') as db:
+              before = db.db.execute(
+                  'SELECT schema_version,rules_version,revision FROM worlds WHERE id="old"'
+              ).fetchone()
+              events_before = db.db.execute(
+                  'SELECT count(*) FROM events WHERE world_id="old"'
+              ).fetchone()[0]
+              snapshots_before = db.db.execute(
+                  'SELECT count(*) FROM snapshots WHERE world_id="old"'
+              ).fetchone()[0]
+              assert (before, events_before, snapshots_before) == ((13,17,1),1,1)
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('13/17 world unexpectedly accepted')
+              assert db.db.execute(
+                  'SELECT schema_version,rules_version,revision FROM worlds WHERE id="old"'
+              ).fetchone() == before
+              assert db.db.execute(
+                  'SELECT count(*) FROM events WHERE world_id="old"'
+              ).fetchone()[0] == events_before
+              assert db.db.execute(
+                  'SELECT count(*) FROM snapshots WHERE world_id="old"'
+              ).fetchone()[0] == snapshots_before
+          PY
+
       - name: Demonstrate 01-S hunger-driven foraging with seven characters
         run: PYTHONPATH=src python scenarios/test_village/demo_foraging.py
+
+      - name: Verify Phase 01-T flag-off parity against real Phase 01-S runtime
+        run: |
+          PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01t-flag-off.json
+          PYTHONPATH=../reviewed-01s/simulation/src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01s-baseline.json
+          python - <<'PY'
+          import json
+          baseline=json.load(open('/tmp/01s-baseline.json'))['results']
+          candidate=json.load(open('/tmp/01t-flag-off.json'))['results']
+          assert len(baseline) == len(candidate) == 1
+          for old, new in zip(baseline, candidate):
+              for key in ('npcs','time','revision','events_count','events_digest',
+                          'legacy_semantic_digest','replay_equal'):
+                  assert old[key] == new[key], (key, old[key], new[key])
+              assert old['replay_equal'] is True and new['replay_equal'] is True
+          PY
 
       - name: Check existing seven-NPC event and semantic state parity against Phase 01-R
         run: |
