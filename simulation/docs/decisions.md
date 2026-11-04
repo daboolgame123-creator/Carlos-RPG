@@ -311,3 +311,29 @@ Open questions for later phases: NPC decision cadence, resource production and t
   and explicit migration/recreation of older experimental saves.
 - Regression test 10/25 NPC scenarios rather than running an
   unnecessary 150-NPC benchmark for this small behavioral feature.
+
+## Phase 01-R — Local, hunger-limited automatic pickup
+
+- Use **seven** synthetic characters for causal integration
+  testing and a small 7-NPC parity fixture, not 150 characters
+  by default. Keep the large-scale benchmarks for future
+  architecture/performance changes.
+- Collection mode defaults to off. The local site deposit is
+  modeled as physically visible after an investigation has
+  completed. The planner must never read an unknown distant
+  site, peer's hidden inventory or any background wall-clock.
+- Hunger >=65 and owned food **exactly zero** are the
+  conditions for opportunistic pickup. Unknown owned food is
+  not zero; natural stock must be known and positive.
+- One completed local investigation permits at most one
+  same-tick unit recovery. Use the previously authorized
+  `NPCFoodGathered` event, preserving atomic resource
+  conservation and stable due-event order.
+- Do not tamper with `NPCDecisionRecorded` to fake a new
+  food-seeking intention. Hunger-driven initiation, location
+  knowledge and travel toward food require separate audited
+  event provenance.
+- Schema 12 / Rules 16 stay unchanged; `main` and all
+  real Carlos story files remain unchanged.
+- Final seven-NPC demo reports **52 events, 2 recoveries**,
+  with **445 successful tests** under Python 3.10 and 3.13.

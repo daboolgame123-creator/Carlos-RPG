@@ -285,3 +285,26 @@ full replay. This is not an API authentication claim. The new
 state collection requires schema 12/rules 16. No legacy saves
 are implicitly modified. It is not wired into autonomous planning
 until a future phase explicitly implements that policy.
+
+## Phase 01-R — Deterministic recovery in the live-world loop
+
+The coordinator adds an optional `gathering_enabled` switch
+(default false) and a pure `choose_gathering_intent` policy.
+Immediately after applying a trusted `ScheduledEventFired`
+for an NPC investigation, and prior to handling the next
+scheduled occurrence, the coordinator checks the *completed*
+action, own hunger and food stock, actual physical location
+and the explicitly initialized natural deposit **at the same
+location only**. If eligible, it emits the existing
+`NPCFoodGathered` event with the current logical time,
+`action_authorized=True`, and a matching action/site pair.
+
+This is not a new source of truth. It uses the 01-Q reducer,
+immutable gathering ledger and authoritative SQLite append
+capability. Same-tick ordering ensures competing NPCs see
+depleted natural stock sequentially; a failed event budget
+rolls back all actions and clock effects together. Existing
+`NPCDecisionRecorded` scoring and persistence stay unchanged.
+It is **opportunistic collection**, not a hunger-driven new
+action choice; that future feature requires explicit scored
+intent and strict replay provenance. Schema 12 / Rules 16.

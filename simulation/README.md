@@ -386,3 +386,28 @@ Initial CI: **432 passing tests** on Python 3.10 and 3.13.
 See `docs/phase_01q_report.md`, or run
 `PYTHONPATH=src python scenarios/test_village/demo_gathering.py`
 from `simulation/`.
+
+## Phase 01-R — Opportunistic autonomous food collection (opt-in)
+
+`LivingWorldEngine(..., gathering_enabled=True)` can now
+independently collect one unit of **visible, finite local**
+`wild_food` **immediately after** an NPC's completed
+`investigate` action, if their own hunger is >=65, their
+known owned food stock is exactly zero, and they are
+physically present and idle. The natural deposit is depleted
+in durable action-completion order; the existing
+`NPCFoodGathered` event and `WorldState.gatherings` ledger
+record physical conservation. This policy cannot read remote
+location stock or another NPC's inventory. It is disabled by default.
+
+**This does not yet make hunger initiate a search action**:
+the existing NPC planner still chooses whether to investigate,
+and foraging currently happens opportunistically after that
+investigation. Future work will add an explicitly recorded
+food-seeking intent. Schema 12 / Rules 16 are unchanged; no
+migration is introduced. A seven-person test village produces
+**52 events** during 90 simulated seconds and exactly **2
+gatherings** from a natural stock of 2. New tests: **13**;
+all **445** tests passed on Python 3.10 and 3.13. See
+`docs/phase_01r_report.md` and run
+`PYTHONPATH=src python scenarios/test_village/demo_gathering_autonomy.py`.
