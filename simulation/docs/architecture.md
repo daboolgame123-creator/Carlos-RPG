@@ -195,3 +195,27 @@ nonlinear growth when hundreds of full-world immutable event projections are
 generated/validated per command. This should be profiled independently of the
 linear per-NPC survival arithmetic and addressed before a large population is
 deployed.
+
+## Phase 01-N — Avoid redundant immutable-state normalization
+
+Before this phase, `WorldState.from_dict` validated a supplied snapshot,
+re-serialized the entire JSON tree, and then the dataclass constructor
+serialized its 17 collections once more. `WorldState.to_dict` also performed
+another JSON round-trip for every already-valid event projection. The
+optimization preserves full `from_dict` validation and a single JSON
+portability normalization, then deep-freezes directly. Only projections from
+this verified path are marked `_projection_normalized`; their `to_dict`
+performs recursive, detached thawing. Direct constructors retain canonical
+JSON validation, including scalar fields.
+
+No event reducer rules or transactional trust boundaries were relaxed.
+Every event is still individually validated, and SQLite replay checks event
+hashes and full-world invariants. The change is internal: **schema 11 / rules
+15** and event formats remain compatible. A same-script comparison against
+reviewed 01-M matched complete event and final-state hashes for 10/25 NPC
+worlds, plus **388 passing tests**. These examples are evidence of parity,
+not a proof of all possible behaviors. See `phase_01n_report.md`.
+
+A future separately reviewed optimization may address full-state projection
+per event and repeated batch validation, but must preserve causal checks,
+immutable public state, and authoritative persistence.
