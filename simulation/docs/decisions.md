@@ -291,3 +291,23 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Schema 11 / Rules 15; `main` and Carlos's narrative remain unchanged.
   Future structural reductions in double batch projection require
   a separate design/review.
+
+## Phase 01-Q — Scarcity and explicit physical effort
+
+- Return development focus from throughput optimization to NPC-world
+  causal mechanics; small-world tests remain the standard for behavior.
+- A location's natural deposit is **finite and explicitly initialized**.
+  Existing `investigate` action duration is the required physical
+  effort. Recovery is an explicit command immediately upon completion.
+- One recovery per completed action, at the same site and simulation
+  tick, credited only to the actor. The ledger records source/recipient
+  before and after balances; no missing stock becomes zero.
+- Do not auto-spawn, regrow or synthesize food. Actual eating remains
+  separate. Agricultural growth and autonomous collection are deferred.
+- Reuse the persisted trusted `action_authorized` provenance, checked
+  again at the store boundary with the open play session. No new
+  untrusted endpoint or implied permissions were created.
+- A new immutable `gatherings` collection needs Schema 12 / Rules 16
+  and explicit migration/recreation of older experimental saves.
+- Regression test 10/25 NPC scenarios rather than running an
+  unnecessary 150-NPC benchmark for this small behavioral feature.

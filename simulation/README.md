@@ -362,3 +362,27 @@ advance with **150 NPCs and 451 events**, measured execution fell from
 (Python 3.10), excluding fixture setup. These are environment-specific
 samples, not production capacity guarantees; 1,000 active NPCs are not
 yet benchmarked. See `docs/phase_01p_report.md`.
+
+## Phase 01-Q — Gathering real food from a finite site
+
+A known environmental location resource `wild_food` is now
+recoverable as real, owned `food` after one NPC finishes its own
+90-second `investigate` action at the same site. A trusted-local
+`NPCGatheringService.collect` transfers **one** unit atomically
+from the site to the NPC, without duplication or negative inventory.
+Unknown stock remains unknown. A completed investigation can be used
+for gathering only once and **at the exact completion tick**;
+gathering requires an active play session. `WorldState.gatherings`
+records the transaction with provenance and before/after balances.
+
+This is a **manual, opt-in** recovery mechanism, not yet autonomous
+NPC farming/hunting. Eating the gathered food still needs a separate
+`NPCConsumptionService.eat` command. It does not alter the Carlos
+narrative, market mechanics or hunger policy.
+
+**Schema 12 / Rules 16**: old experimental worlds need an explicit
+migration or recreation, never an automatic reinterpretation.
+Initial CI: **432 passing tests** on Python 3.10 and 3.13.
+See `docs/phase_01q_report.md`, or run
+`PYTHONPATH=src python scenarios/test_village/demo_gathering.py`
+from `simulation/`.

@@ -40,6 +40,9 @@ jobs:
         run: |
           python -m compileall -q src tests scenarios
           python -m pytest -q
+      - name: Smoke-test two-person finite food recovery and eating
+        run: PYTHONPATH=src python scenarios/test_village/demo_gathering.py
+
       - name: Check existing scenario event parity against Phase 01-P
         run: |
           PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 10 25 > /tmp/01q-parity.json

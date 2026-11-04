@@ -266,3 +266,22 @@ continues to repeat authoritative event validation during SQLite commit.
 This remains a trusted-local-only engine, not a public API authorization
 shortcut. Schema 11 / Rules 15 are unchanged. Final CI evidence and the
 150-NPC/451-event benchmark are in `phase_01p_report.md`.
+
+## Phase 01-Q — Atomic finite local gathering
+
+`NPCFoodGathered` is a strictly trusted, logged domain event
+with a durable associated `WorldState.gatherings` ledger keyed
+by completed `investigate` action ID. The action is an existing
+90-second scheduled activity. Its completion and the collection
+are distinct events at the **same** simulation tick. Collection
+transfers 1 from initialized site `wild_food` to initialized
+owner `food`, with a checked record of conservation and identity.
+
+The event reducer checks co-location, travel/busy state, action
+identity/timestamp, amount and duplicate recovery. The SQLite
+append gate enforces `action_authorized` and active session;
+the existing command-row capability provenance is reused for
+full replay. This is not an API authentication claim. The new
+state collection requires schema 12/rules 16. No legacy saves
+are implicitly modified. It is not wired into autonomous planning
+until a future phase explicitly implements that policy.
