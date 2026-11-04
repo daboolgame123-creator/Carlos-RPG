@@ -45,3 +45,9 @@ jobs:
           PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 10 25 > /tmp/01o-parity.json
           PYTHONPATH=../reviewed-baseline/simulation/src python scenarios/test_village/bench_event_parity.py --counts 10 25 > /tmp/01n-parity.json
           diff -u /tmp/01n-parity.json /tmp/01o-parity.json
+      - name: Measure candidate and baseline replay queries without timing gates
+        run: |
+          PYTHONPATH=../reviewed-baseline/simulation/src python scenarios/test_village/bench_replay_store.py --counts 10 50 100 > /tmp/replay-baseline.json
+          PYTHONPATH=src python scenarios/test_village/bench_replay_store.py --counts 10 50 100 > /tmp/replay-candidate.json
+          echo "Reviewed 01-N baseline:" && cat /tmp/replay-baseline.json
+          echo "01-O candidate:" && cat /tmp/replay-candidate.json
