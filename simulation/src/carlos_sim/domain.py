@@ -5,7 +5,8 @@ No game story or Carlos character state is imported by this module.
 from __future__ import annotations
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any
+from collections.abc import Mapping
 from hashlib import sha256
 import json
 
@@ -87,7 +88,13 @@ class WorldState:
         object.__setattr__(self, "survival_progress", _freeze(_json_copy(self.survival_progress)))
 
     def to_dict(self) -> dict[str, Any]:
-        return _json_copy({"world_id": self.world_id, "time": self.time, "revision": self.revision,
+        # Replay/projection states already passed full JSON normalization in
+        # from_dict. Thawing their immutable payload is sufficient to hand
+        # out a detached mutable copy without another JSON encode/decode.
+        # Directly constructed WorldState instances retain the original strict
+        # JSON validation, including the scalar fields.
+        clone = _thaw if getattr(self, "_projection_normalized", False) else _json_copy
+        return clone({"world_id": self.world_id, "time": self.time, "revision": self.revision,
                            "schema_version": self.schema_version, "rules_version": self.rules_version,
                            "entities": self.entities, "locations": self.locations, "resources": self.resources,
                            "scheduled": self.scheduled, "next_schedule_order": self.next_schedule_order,
@@ -148,7 +155,15 @@ class WorldState:
         validate_consumptions(d)
         from .survival import validate_survival_progress
         validate_survival_progress(d)
-        return cls(**_json_copy(d))
+        # Validate JSON portability once, then freeze the trusted projection.
+        # Calling the public dataclass initializer would serialize each of the
+        # 17 collections a second time inside __post_init__.
+        normalized = _json_copy(d)
+        restored = object.__new__(cls)
+        for name, value in normalized.items():
+            object.__setattr__(restored, name, _freeze(value) if isinstance(value, dict) else value)
+        object.__setattr__(restored, "_projection_normalized", True)
+        return restored
 
 
 @dataclass(frozen=True)
