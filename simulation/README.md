@@ -240,3 +240,32 @@ Run `PYTHONPATH=src python scenarios/test_village/demo_consumption.py` from `sim
 ### Phase 01-L review — closing the foodless hunger bypass
 
 The generic `NPCNeedChanged` event may **increase hunger** as before, but decreasing hunger without consuming food now requires the separate, trusted `npc_authorized=True` adjustment capability while the play session is active. This preserves a documented administrative/scripted need override without treating it as a meal; actual eating must use `NPCFoodConsumed`, which atomically debits real food and records hunger relief. The normal low-level event path can no longer provide free satiation. Six new review regressions pass; the complete local suite has **351 passing tests in five separate groups**. Schema remains **10**, while **Rules 14** replace rules 13. Older experimental DBs require migration or recreation.
+
+## Phase 01-M — Opt-in survival needs over play time
+
+`LivingWorldEngine(store, clock, survival_enabled=True)` advances background
+hunger at **1 point / 300 simulated seconds** and fatigue at **1 point / 600
+simulated seconds outside an active rest action**. Fractional elapsed seconds
+are saved in `WorldState.survival_progress` so the same total simulation time
+produces the same needs across single or split steps. At hunger **90+**, the
+survival-mode NPC policy favors energy conservation over routine work or
+investigation, starting at the first decision. Other completed action costs
+remain **separate activity surcharges** rather than another baseline elapsed
+time calculation. Neither food nor HP is conjured by this policy.
+
+The mode is **disabled by default**. A manually advanced `TimeEngine`
+without this option still advances only the clock; no offline or wall-clock
+time passes. `survival_authorized` is a trusted **internal capability**, not
+authentication; it is recorded with commands for event replay. There is no
+retroactive charge for periods deliberately advanced while the feature was
+disabled.
+
+Run `PYTHONPATH=src python scenarios/test_village/demo_survival.py` to see
+the precise 300/600-second boundaries and
+`PYTHONPATH=src python scenarios/test_village/bench_survival.py` for a
+**pure reducer only** measurement on 10, 100, and 1000 NPCs. The latter is
+*not* end-to-end engine throughput. **373 tests passed locally in five
+completed groups**, including 22 new phase tests. See
+`docs/phase_01m_report.md` for measurements, constraints and caveats.
+**Schema 11 / Rules 15** require explicit migration or fresh experimental
+databases. Main and canonical Carlos narrative remain untouched.
