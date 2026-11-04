@@ -178,3 +178,20 @@ no automatic prior-DB migration.
 Performance monitoring must distinguish pure single-event reducer time
 from costly full event replay, command validation, NPC decisions and
 world-scale simulation. See `phase_01m_report.md`.
+
+### Phase 01-M review: manually recorded survival intentions and throughput
+
+`NPCService` accepts an optional `survival_enabled` constructor flag. When
+true, it calls `choose_action(..., survival_enabled=True)` and appends the
+`NPCDecisionRecorded` event with `survival_authorized=True` and trusted
+`clock_authorized=True` as required by the existing store contract. This
+does **not** emit `TimeAdvanced` or consume elapsed time, but persists the
+policy variant needed to validate the decision after snapshot/replay.
+The default false mode and previously recorded player/manual intentions are
+unchanged. No schema or rules version change: **11 / 15**.
+
+A separate `bench_living_world.py` benchmark demonstrates substantial
+nonlinear growth when hundreds of full-world immutable event projections are
+generated/validated per command. This should be profiled independently of the
+linear per-NPC survival arithmetic and addressed before a large population is
+deployed.
