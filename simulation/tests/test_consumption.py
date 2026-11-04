@@ -183,3 +183,103 @@ def test_autonomous_meal_relieves_own_hunger(village):
     assert db.verify('w').to_dict()==result.state.to_dict()
 
 
+def test_autonomous_policy_only_reads_own_hunger_food(village):
+    db,clock,svc=village
+    first=choose_food_consumption(db.load('w'),'nora')
+    db.append('w','change-basims-hunger',db.load('w').revision,[e('NPCNeedChanged',{
+        'npc_id':'basim','need':'hunger','previous':25,'current':99},actor='basim')])
+    assert first==choose_food_consumption(db.load('w'),'nora')==1
+
+
+def test_autonomous_does_not_supersede_manual_action_intention(village):
+    db,clock,svc=village
+    NPCService(db,clock).decide('w','nora',command_id='plan',expected_revision=db.load('w').revision)
+    assert choose_food_consumption(db.load('w'),'nora') is None
+    result=LivingWorldEngine(db,clock,consumption_enabled=True).advance('w',seconds=1,
+                command_id='honor',expected_revision=db.load('w').revision)
+    assert _meal_id('nora',0) not in result.state.consumptions
+    assert any(action['npc_id']=='nora' for action in result.state.actions.values())
+
+
+def test_invalid_autonomous_option_is_rejected(village):
+    db,clock,svc=village
+    for invalid in (0,1,None,'yes'):
+        with pytest.raises(ValueError):
+            LivingWorldEngine(db,clock,consumption_enabled=invalid)
+
+
+def test_eating_cannot_advance_when_paused(village):
+    db,clock,svc=village
+    clock.close_session('w')
+    before=db.load('w')
+    with pytest.raises(SessionClosed):
+        LivingWorldEngine(db,clock,consumption_enabled=True).advance('w',seconds=100,
+            command_id='offline',expected_revision=before.revision)
+    assert db.load('w').to_dict()==before.to_dict()
+
+
+def test_food_transfer_alone_does_not_satisfy_hunger(village):
+    db,clock,svc=village
+    service=NPCAssistanceService(db,clock)
+    asked=service.request('w','nora','basim','food',2,'aid',expected_revision=db.load('w').revision)
+    promised=service.respond('w','basim','aid',accept=True,command_id='promise',expected_revision=asked.state.revision)
+    done=service.deliver('w','basim','aid',command_id='deliver',expected_revision=promised.state.revision)
+    assert done.state.npcs['nora']['needs']['hunger']==85
+    assert done.state.resources['nora']['food']==5
+    meal=eat(db,svc)
+    assert meal.new_hunger==60
+    assert meal.state.resources['nora']['food']==4
+
+
+def test_meal_counter_timestamps_stable_under_replay_and_snapshot(village):
+    db,clock,svc=village
+    meal=eat(db,svc)
+    db.snapshot('w')
+    assert db.verify('w').to_dict()==meal.state.to_dict()
+
+
+def test_equal_worlds_are_deterministic(tmp_path):
+    results=[]
+    for i in range(2):
+        with SQLiteEventStore(tmp_path/f'{i}.sqlite') as db:
+            setup(db,food_a=3)
+            clock=TimeEngine(db);clock.open_session('w')
+            db.append('w','need',db.load('w').revision,[e('NPCNeedChanged',{
+                'npc_id':'nora','need':'hunger','previous':25,'current':90},actor='nora')])
+            result=LivingWorldEngine(db,clock,consumption_enabled=True).advance('w',seconds=1,
+                command_id='auto',expected_revision=db.load('w').revision)
+            results.append(result.state.to_dict())
+    assert results[0]==results[1]
+
+
+def test_exceed_event_budget_rolls_back_meal(village):
+    db,clock,svc=village
+    before=db.load('w').to_dict()
+    with pytest.raises(AdvanceLimitExceeded):
+        LivingWorldEngine(db,clock,consumption_enabled=True,max_events_per_advance=1).advance('w',
+            seconds=10,command_id='too-many',expected_revision=before['revision'])
+    assert db.load('w').to_dict()==before
+
+
+def test_read_only_player_view_does_not_expose_meal_ledger(village):
+    db,clock,svc=village
+    eat(db,svc)
+    assert 'consumptions' not in db.player_view('w')
+
+
+def test_obligations_remain_recorded_after_requester_eats_and_leaves(village):
+    db,clock,svc=village
+    help_service=NPCAssistanceService(db,clock)
+    asked=help_service.request('w','nora','basim','food',2,'request-not-loan',
+              expected_revision=db.load('w').revision)
+    help_service.respond('w','basim','request-not-loan',accept=True,command_id='accept',expected_revision=asked.state.revision)
+    help_service.deliver('w','basim','request-not-loan',command_id='give',expected_revision=db.load('w').revision)
+    eat(db,svc)
+    moved=NPCMovementService(db,clock).start('w','nora','road','leave',expected_revision=db.load('w').revision)
+    assert moved.state.obligations['request-not-loan']['status']=='fulfilled'
+    assert moved.state.npcs['nora']['needs']['hunger']==60
+    assert moved.state.consumptions[_meal_id('nora',0)]['quantity']==1
+    # This fixture is a gift/aid obligation. Do not invent a repayment debt.
+    assert db.verify('w').to_dict()==moved.state.to_dict()
+
+
