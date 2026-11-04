@@ -66,7 +66,7 @@ def test_trailing_newline_food_observation_fails_closed(village):
     db, _clock = village
     old_state = snap(db)
     old_events = events_count(db)
-    for index, trailing in enumerate(("\\n", "\\r\\n")):
+    for index, trailing in enumerate(("\n", "\r\n")):
         s = db.load("r")
         event = DomainEvent("NPCInformationDelivered", "adel", "forged food text",
                             s.time, {

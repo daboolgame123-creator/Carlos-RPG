@@ -37,7 +37,9 @@ def test_grammar_rejects_malformed():
         "danger",                             # legacy key not food grammar
         "",                                   # empty
         "food-state:present; observed_at=0; extra=1",
-        "food-state:present; observed_at=0\n",  # Python '
+        "food-state:present; observed_at=0\n",  # Python '$' permits terminal LF
+        "food-state:empty; observed_at=0\r\n",
+        "food-state:present; observed_at=0\n\n",
     )
     for text in bad:
         assert parse_food_claim(text) is None
