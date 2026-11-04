@@ -141,3 +141,9 @@ frozen outside a player-authorized active session. Schema 9 / Rules 12.
 ### Phase 01-K review: causal obligation priority
 
 The pure autonomous planner orders outstanding responses and accepted promises by `(created_at, request_id)`, **not merely by request_id**. This prevents a later, lexicographically earlier request from overtaking an older eligible obligation. On auto-generated obligation IDs exceeding 128 characters, a deterministic SHA-256-based ID is used; this preserves request capability for otherwise valid long NPC IDs without breaking event-store constraints. Three new regression tests cover both obligation queues and the long-ID world-advance case. Only the opt-in policy changes; replayed event types, schema 9 and rules 12 do not change.
+
+## Phase 01-L — Atomic hunger relief and event-sourced meal ledger
+
+`WorldState.consumptions` contains audited `NPCFoodConsumed` records (`npc_id`, resource, quantity, location, logical time, before/after food and before/after hunger). The reducer performs an atomic inventory debit plus matching hunger adjustment from the actor's **own** `npcs` and `resources` projections, rejects uninitialized or insufficient food, double meals at the same tick, unneeded excessive quantity, invalid actor IDs, travel or ongoing work. Each committed meal is immutable in replay; the optimistic revision and the store's `consumption_authorized` capability are recorded with the command. The capability is **not** a public network authentication mechanism.
+
+`LivingWorldEngine(..., consumption_enabled=True)` applies a pure self-need meal policy after outstanding assistance transitions and before new routine actions. It does not invoke a wall clock or operate after a session closes. Gift inventory from another NPC is **not** automatic satiation: the recipient must eat it in a later distinct meal event. The minimal player view excludes private meal logs. `Schema 10 / Rules 13`, no automatic compatibility migration.
