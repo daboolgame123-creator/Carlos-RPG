@@ -57,7 +57,7 @@ food-state:<present|empty>; observed_at=<int>
 
 The reducer validates **all** of the following, for trusted low-level batches as well:
 
-1. Existing 01-C rules: sender == recipient, `location_id` == recipient's current location == `claim.source` minus prefix, not traveling, `received_at == state.time`, unique delivery ID.
+1. Existing 01-C rules: sender == recipient, `location_id` == recipient's current location == `claim.source` minus prefix, not traveling, `received_at == state.time`, **and for a direct food observation `observed_at == received_at == state.time`**, unique delivery ID.
 2. **New:** key site == the observation location (you can only observe food where you stand).
 3. **New — real balance check:** `state["resources"][site]["wild_food"]` must be **initialized** (`type is int`); claim `present` ⇒ actual `>= 1`; claim `empty` ⇒ actual `== 0`. Uninitialized ⇒ reject (unknown ≠ zero/empty).
 
@@ -66,6 +66,7 @@ Consequence: a forged direct-observation claim that contradicts the actual stock
 ### 5.2 Hearsay (`method="message"`, key `food:*`) — belief, possibly false
 
 - `claim.source` must equal the immediate sender (existing rule); the sharing policy **always rewrites** `source` to the immediate teller and lowers confidence per hop. **New guard:** for `food:` keys, `method=message` rejects any `source` starting with `observation:` — hearsay can never masquerade as a direct sighting (including the theoretical NPC named `observation:<x>`).
+- **Age is never refreshed by re-sharing:** `observed_at` is copied verbatim through every hop, so a fact observed at t=100 and re-shared at t=1000 arrives with `received_at=1000` but is still evaluated at age 900. Hearsay may therefore carry older information without renewing the observation date.
 - **No truth verification** (architecture principle: delivery audits provenance, not truth): a false `present`/`empty` report about any site is *accepted* as a low-confidence belief, stays in the teller-attributed form, and never becomes a fact.
 - The sharing policy reads only the **sender's own beliefs** — no remote `resources` access in emission.
 
@@ -80,14 +81,14 @@ Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The re
 | # | Existing | Incoming | Rule | Rationale |
 |---|---|---|---|---|
 | R1 | none | any valid | **adopt** | first knowledge |
-| R2 | any | **observation** | **always adopt** (`observed_at == now`) | later direct sighting supersedes: covers **successive observations** and **empty → regenerated → present** immediately |
-| R3 | observation, age `≤ 1800` | hearsay | **reject ack** (batch rolls back; delivery stays pending, re-evaluated next tick) | recent direct sighting is protected; fresh news does not silently erase it |
-| R4 | observation, age `> 1800` | hearsay | **adopt** | no observation is permanent truth; the old sighting is now stale |
-| R5 | hearsay | hearsay | adopt iff `effective(incoming) > effective(existing)`; on equal effective, iff `incoming.observed_at < existing.observed_at` (fresher fact); otherwise **reject** (keep existing) | deterministic, field-only tie-break — no delivery IDs stored in claims |
+| R2 | any | **observation** | adopt iff `incoming.observed_at >= existing.observed_at` (holds by event ordering) | a direct sighting never moves knowledge backward; covers successive observations and **empty → regenerated → present** |
+| R3 | observation, age `≤ 1800` | hearsay | **reject** (keep existing belief; delivery consumed, no belief replacement) | recent direct sighting is protected; fresh news does not silently erase it |
+| R4 | observation, age `> 1800` | hearsay | apply the **R5 comparison** (effective confidence, then larger `observed_at` wins) | protection lapsed: a stale sighting may be superseded only by genuinely newer/better hearsay |
+| R5 | hearsay | hearsay | adopt iff `effective(incoming) > effective(existing)`; on equal effective, iff `incoming.observed_at > existing.observed_at` (larger `observed_at` = newer fact); otherwise **reject** (keep existing) | deterministic, field-only tie-break — no delivery IDs stored in claims |
 | R6 | hearsay `empty`, recent | hearsay `present` | covered by R5 (age tiers decide) | regeneration via rumor only after the old direct `empty` loses effectiveness |
-| R7 | any | observation | `observed_at >= existing.observed_at` required (holds by event ordering; mismatch ⇒ reject) | monotonic time sanity |
+| R7 | any | observation | `incoming.observed_at >= existing.observed_at` required (holds by event ordering; mismatch ⇒ reject) | a direct sighting never moves knowledge backward |
 
-- **Rejection semantics:** an ack violating precedence raises in the reducer ⇒ whole command rolls back (fail-closed, unchanged state). The emitter mirrors `should_adopt` before emitting, so autonomous flows never generate rejected acks; pending deliveries are re-evaluated each advance until adoptable or superseded (bounded by the delivery history and event budget).
+- **Ack semantics:** an ack always **consumes the delivery** (removes it from the inbox). The belief is replaced **only if** `should_adopt` returns true; otherwise the existing belief is kept and no rollback occurs. Rollback (whole-batch rejection) is reserved for malformed or forged data that fails delivery validation. A rejected ack therefore never leaves a "pending" delivery — the delivery is consumed, the belief is unchanged. The emitter mirrors `should_adopt` before emitting, so autonomous flows never generate acks that the reducer would reject.
 - **What is never done:** silent in-place mutation of beliefs outside an event, deletion of a claim without a superseding claim (history lives in the event log), or reinterpreting old `text` under new rules — the grammar is part of Rules 18 semantics.
 - All rules are pure functions of `(claim, now)` ⇒ identical under snapshot/replay; OBS-1 provenance unchanged (event log + `verify()` remain the source of truth; `from_dict` stays consistency-only until P0).
 
@@ -97,7 +98,7 @@ Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The re
 2. The sharing pass mirrors social gating (not busy, not traveling) and never `continue`-skips the NPC's forage/navigation evaluation; `local_forage_wins` ordering is untouched.
 3. Sharing rate limits (`FOOD_SHARE_PAIR_COOLDOWN = 600` s per sender/recipient/site, at most one food delivery per pair per tick) are **sharing** limits, not decision delays — they cannot postpone a forage start.
 4. There is no "wait until information expires" behavior in 01-T.
-5. **Regression:** the OBS-2 scenario with `knowledge_enabled=True` reproduces 01-S timing exactly (forage starts at t=60), and a hungry NPC never spends more than 60 consecutive seconds with no running action, no travel, and no due decision. Any fix beyond this bound and any memory-targeted travel belong to 01-U.
+5. **Regression:** the OBS-2 scenario with `knowledge_enabled=True` reproduces 01-S timing exactly (forage starts at the scenario's decision cooldown), and a hungry NPC never spends more than the scenario's configured `decision_cooldown` (minimum 60 s) with no running action, no travel, and no due decision. The bound is the scenario's configured decision cooldown, **not a hardcoded 60 seconds**. Any fix beyond this bound and any memory-targeted travel belong to 01-U.
 
 ## 8. Schema / Rules / save / replay impact
 
@@ -173,6 +174,7 @@ Flag-off digest parity vs 01-S (all three digest keys); real `13/17` and `12/16`
 3. **Sharing volume vs event budget** — one delivery per pair per tick + per-site cooldown keeps advance batches small; rollback-on-budget is existing semantics.
 4. **Grammar-in-`text`** trades a structured field for zero Schema churn — strict anchored parsing mitigates ambiguity; upgrading to Option B (Schema 14 projection) stays available for 01-U/01-V if quantity/history needs appear.
 5. **Hearsay can inject false `present`** about a site — accepted by design (belief, low confidence, no decision impact in 01-T); rumor *truth-testing* belongs to 02-G.
+6. **Share-cooldown persistence:** per-pair cooldown IDs are derived deterministically from `(sender, recipient, site, time)` and checked against the durable `delivery_history`, so the sharing limit survives SQLite close/reopen with no new state collection.
 
 ## 12. Explicitly out of scope
 

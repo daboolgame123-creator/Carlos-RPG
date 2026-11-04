@@ -72,6 +72,44 @@ jobs:
               assert db.db.execute('SELECT count(*) FROM snapshots WHERE world_id="old"').fetchone()[0] == 1
           PY
 
+      - name: Reject Phase 01-S rules 13/17 saved world under Phase 01-T
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/01s-world.sqlite') as db:
+              db.create_world('old')
+              db.append('old', 'loc', 0, [
+                  DomainEvent('LocationCreated', None, 'legacy test', 0,
+                              {'id':'grove','name':'Grove'}),
+                  DomainEvent('EntityCreated', None, 'legacy test', 0,
+                              {'id':'adel','name':'Adel','location_id':'grove','controller':'npc'}),
+                  DomainEvent('NPCConfigured', None, 'legacy test', 0,
+                              {'npc_id':'adel','role':'explorer',
+                               'needs':{'fatigue':5,'hunger':70,'safety':0},
+                               'goals':{'earn':0,'explore':95,'survive':30}}),
+                  DomainEvent('ResourceChanged', None, 'legacy test', 0,
+                              {'owner_id':'adel','resource':'food','previous':None,'current':0,'source':'initialization'}),
+              ])
+              db.snapshot('old')
+          import sqlite3
+          sqlite3.connect('/tmp/01s-world.sqlite').execute(
+              'UPDATE worlds SET schema_version=13, rules_version=17 WHERE id="old"')
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/01s-world.sqlite') as db:
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('13/17 world unexpectedly accepted')
+              before=db.db.execute('SELECT schema_version,rules_version FROM worlds WHERE id="old"').fetchone()
+              assert before==(13,17)
+              assert db.db.execute('SELECT count(*) FROM events WHERE world_id="old"').fetchone()[0] == 1
+              assert db.db.execute('SELECT count(*) FROM snapshots WHERE world_id="old"').fetchone()[0] == 1
+          PY
+
       - name: Demonstrate 01-S hunger-driven foraging with seven characters
         run: PYTHONPATH=src python scenarios/test_village/demo_foraging.py
 
