@@ -44,6 +44,12 @@ def project_taking(state: dict[str, Any], event: DomainEvent, *,
             raise ValueError("site stock must have an independent recorded steward")
     elif source not in state["npcs"] or not _present(state, source, site):
         raise ValueError("personal stock can only be taken from a co-located person")
+    # Production equipment may be in use or required by an outstanding job.
+    # Until tool reservations and interruption rules exist, do not take it.
+    if source == site and any(recipe["site_id"] == site and
+                              recipe["tool_resource"] == resource
+                              for recipe in state["production_recipes"].values()):
+        raise ValueError("production equipment is not available for taking")
     source_before = state["resources"].get(source, {}).get(resource)
     target_before = state["resources"].get(actor, {}).get(resource)
     if (not _balance(source_before) or not _balance(target_before)
