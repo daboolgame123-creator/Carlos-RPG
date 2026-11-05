@@ -1,7 +1,9 @@
 """02-H2 adversarial seven-person village: perception is not accusation."""
 import pytest
 from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine, NPCPropertyService, personal_property_evidence
-from carlos_sim.store import InvalidEvent, DuplicateCommand
+from carlos_sim.store import InvalidEvent, DuplicateCommand, IntegrityError
+from carlos_sim.domain import WorldState, canonical, canonical_hash
+import json
 from test_property_02h1 import village
 
 
@@ -148,3 +150,43 @@ def test_review_actor_cannot_reference_true_taking_as_evidence_against_other(sce
     with pytest.raises(InvalidEvent, match="contradict"):
         claim(db, svc, who="basim", ident="framed", subject="adel", taking="t1")
     assert db.load("v").to_dict() == before
+
+
+def test_review_forged_detached_snapshot_cannot_claim_contradictory_firsthand(scenario):
+    db, _, svc = scenario
+    take(db, svc, witness=("salma",))
+    claim(db, svc, who="salma", ident="genuine", subject="basim", taking="t1")
+    fake = db.load("v").to_dict()
+    fake["property_claims"]["genuine"]["subject_id"] = "adel"
+    with pytest.raises(ValueError, match="reference not genuine"):
+        WorldState.from_dict(fake)
+
+
+def test_review_forged_event_hash_does_not_bypass_domain_replay(scenario):
+    db, _, svc = scenario
+    take(db, svc, witness=("salma",))
+    claim(db, svc, who="salma", ident="genuine", subject="basim", taking="t1")
+    db.snapshot("v")
+    row = db.db.execute(
+        "SELECT seq,payload FROM events WHERE world_id='v' ORDER BY seq DESC LIMIT 1"
+    ).fetchone()
+    forged = json.loads(row[1])
+    forged["data"]["subject_id"] = "adel"
+    db.db.execute(
+        "UPDATE events SET payload=?,hash=? WHERE world_id='v' AND seq=?",
+        (canonical(forged), canonical_hash(forged), row[0])
+    )
+    with pytest.raises(IntegrityError):
+        db.verify("v")
+
+
+def test_review_replay_rejects_stripped_trusted_claim_capability(scenario):
+    db, _, svc = scenario
+    claim(db, svc, who="nora", ident="c1", subject="adel")
+    db.snapshot("v")
+    db.db.execute(
+        "UPDATE commands SET claim_authorized=0 WHERE world_id='v' AND command_id=?",
+        ("property:claim:c1",)
+    )
+    with pytest.raises(IntegrityError):
+        db.verify("v")
