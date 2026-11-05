@@ -59,6 +59,8 @@ def register_origin(state: dict[str, Any], event: DomainEvent, *,
     # Neither implies transferable legal title.
     from .custody import initialize_lot
     initialize_lot(state, p["id"])
+    from .registered_claims import initialize_claim
+    initialize_claim(state, p["id"])
 
 
 def validate_origins(state: dict[str, Any]) -> None:
