@@ -149,17 +149,29 @@ class RumorIntent:
     parent_id: str | None
 
 
+def _available_for_gossip(snapshot: dict[str, Any], npc_id: str) -> bool:
+    if _in_transit(snapshot, npc_id):
+        return False
+    if any(x["npc_id"] == npc_id and x["status"] == "running"
+           for x in snapshot["actions"].values()):
+        return False
+    if any(x["npc_id"] == npc_id and x["status"] == "running"
+           for x in snapshot["production_jobs"].values()):
+        return False
+    return True
+
+
 def choose_rumor_round(state: WorldState) -> list[DomainEvent]:
     """Take a frozen snapshot: no same-tick echo, no invisible remote sources."""
     snapshot = state.to_dict()
     planned: list[DomainEvent] = []
     selected: set[tuple[str, str]] = set()
     for sender in sorted(state.npcs):
-        if _in_transit(snapshot, sender):
+        if not _available_for_gossip(snapshot, sender):
             continue
         eligible: list[tuple[str, str | None]] = []
         for mid, msg in sorted(state.social_messages.items()):
-            if (msg["status"] == "received" and msg["recipient"] == sender
+            if (msg["kind"] == "threat" and msg["status"] == "received" and msg["recipient"] == sender
                     and state.time > msg["sent_at"]):
                 eligible.append((mid, None))
         for ident, entry in sorted(state.rumor_deliveries.items()):
@@ -169,7 +181,7 @@ def choose_rumor_round(state: WorldState) -> list[DomainEvent]:
                 eligible.append((entry["original_id"], ident))
         for original, parent in eligible:
             for receiver in sorted(state.npcs):
-                if receiver == sender or _in_transit(snapshot, receiver):
+                if receiver == sender or not _available_for_gossip(snapshot, receiver):
                     continue
                 if state.entities[receiver]["location_id"] != state.entities[sender]["location_id"]:
                     continue
