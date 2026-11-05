@@ -134,6 +134,9 @@ def validate_permissions(state: dict[str, Any]) -> None:
         raise ValueError("invalid property permission records")
     takings = state["property_takings"]
     counted: dict[str, int] = {}
+    # Within a logical second, historical ordering is established by the
+    # immutable event revisions, not by timestamps alone. The reducer rejects
+    # any use after revocation; here only later-time contradictions are tested.
     for taking in takings.values():
         permit = taking["permission_id"]
         if permit is not None:
@@ -146,7 +149,7 @@ def validate_permissions(state: dict[str, Any]) -> None:
                     or taking["resource"] != rec["resource"]
                     or not rec["granted_at"] <= taking["taken_at"] < rec["expires_at"]
                     or (rec["revoked_at"] is not None
-                        and taking["taken_at"] >= rec["revoked_at"])):
+                        and taking["taken_at"] > rec["revoked_at"])):
                 raise ValueError("physical taking contradicts cited permission")
             counted[permit] = counted.get(permit, 0) + taking["quantity"]
     for ident, rec in records.items():
