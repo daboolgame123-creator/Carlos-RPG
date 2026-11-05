@@ -17,7 +17,7 @@ from .social_autonomy import MIN_SOCIAL_COOLDOWN, choose_social_intent
 from .assistance_autonomy import choose_assistance_intent
 from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
-from .knowledge import make_observation_events, choose_food_sharing, known_food_sites
+from .knowledge import make_observation_events, choose_food_sharing_round, known_food_sites
 from .food_navigation import choose_food_route
 
 
@@ -259,15 +259,12 @@ class LivingWorldEngine:
                             if a['status'] == 'running'}
                 busy_now.update(t['npc_id'] for t in current.travels.values()
                                 if t['status'] == 'traveling')
-                for sender_id in sorted(current.npcs):
-                    if sender_id in busy_now:
-                        continue
-                    for event in choose_food_sharing(current, sender_id):
-                        append(event)
-                        # A delivery and its acknowledgement share one ID;
-                        # report it once, not once per domain event.
-                        if event.event_type == "NPCInformationDelivered":
-                            knowledge_shares.append(event.data["delivery_id"])
+                # Choose all speakers from the pre-round snapshot. For a
+                # recipient and food site, one sender per round is enough.
+                for event in choose_food_sharing_round(current):
+                    append(event)
+                    if event.event_type == "NPCInformationDelivered":
+                        knowledge_shares.append(event.data["delivery_id"])
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
@@ -312,11 +309,11 @@ class LivingWorldEngine:
                         choose_food_route(current, npc_id)
                         if self.food_navigation_enabled else None
                     )
-                    if (food_intent is not None
+                    if (self.food_navigation_enabled
                             and current.time < current.npcs[npc_id]['next_decision_at']):
-                        # Wait until an existing decision cooldown elapses.
-                        # Do not let optional exploration distract the hungry
-                        # NPC while an eligible known food journey is pending.
+                        # OpenCode U-3: both optional exploration and remembered
+                        # food journeys observe pending decision cooldown.
+                        # Flag-off preserves the old 01-T navigation contract.
                         continue
                     route_id = food_intent.route_id if food_intent is not None else next_route(current, npc_id)
                     if route_id is not None:
