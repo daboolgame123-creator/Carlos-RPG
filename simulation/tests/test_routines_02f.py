@@ -176,3 +176,47 @@ def test_critical_need_prevents_optional_commute(tmp_path):
             expected_revision=state.revision)
         assert not any(t["npc_id"] == "basim" for t in result.state.travels.values())
         assert db.verify("test").to_dict() == result.state.to_dict()
+
+
+def test_exact_shift_start_does_not_trigger_early_commute(tmp_path):
+    with SQLiteEventStore(tmp_path / "boundary.sqlite") as db:
+        scenario(db, work_start=100, work_end=260)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        engine = LivingWorldEngine(db, clock, navigation_enabled=True, routines_enabled=True)
+        before = engine.advance("test", seconds=99, command_id="before",
+                                expected_revision=db.load("test").revision).state
+        assert not any(t["npc_id"] == "basim" for t in before.travels.values())
+        at_start = engine.advance("test", seconds=1, command_id="at-start",
+                                  expected_revision=before.revision).state
+        routes = [t for t in at_start.travels.values() if t["npc_id"] == "basim"]
+        assert len(routes) == 1
+        assert routes[0]["start"] == 100
+        assert routes[0]["due"] == 150
+        assert at_start.entities["basim"]["location_id"] == "square"
+        assert db.verify("test").to_dict() == at_start.to_dict()
+
+
+def test_emergency_while_busy_does_not_cancel_physical_work(tmp_path):
+    with SQLiteEventStore(tmp_path / "emergency.sqlite") as db:
+        scenario(db, work_start=0, work_end=300)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        engine = LivingWorldEngine(db, clock, navigation_enabled=True, routines_enabled=True)
+        at_60 = engine.advance("test", seconds=60, command_id="to-60",
+                               expected_revision=db.load("test").revision).state
+        doing = [a for a in at_60.actions.values()
+                 if a["npc_id"] == "basim" and a["status"] == "running"]
+        assert len(doing) == 1 and doing[0]["action"] == "work"
+        elevated = db.append("test", "hungry-on-shift", at_60.revision, [
+            ev("NPCNeedChanged", {"npc_id": "basim", "need": "hunger",
+                                  "previous": 5, "current": 95}, who="basim", at=60)
+        ])
+        assert choose_routine_route(elevated, "basim") is None
+        after = engine.advance("test", seconds=175, command_id="complete-existing",
+                               expected_revision=elevated.revision).state
+        finished = [a for a in after.actions.values() if a["npc_id"] == "basim"
+                    and a["status"] == "completed" and a["action"] == "work"]
+        assert len(finished) == 1 and finished[0]["completed_at"] == 230
+        assert len([t for t in after.travels.values() if t["npc_id"] == "basim"]) == 1
+        assert db.verify("test").to_dict() == after.to_dict()
