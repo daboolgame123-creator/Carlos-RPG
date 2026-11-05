@@ -76,15 +76,27 @@ def test_unwitnessed_self_relay_and_same_tick_forgery_fail_closed(tmp_path):
 def test_secondary_hearsay_needs_genuine_parent_and_elapsed_time(tmp_path):
     db, clock, service = world(tmp_path)
     try:
-        # The second recipient is in the market; receiver != source utterance actor.
-        speak(db, clock, sender="nora", receiver="basim", text="I am a goblin",
-              kind="greeting")
+        # Add a real fourth NPC before any time advances.
+        db.append("world", "new-neighbor", db.load("world").revision, [
+            ev("EntityCreated", {"id": "adel", "name": "Adel",
+                                  "controller": "npc", "location_id": "market"}),
+            ev("NPCConfigured", {"npc_id": "adel", "role": "merchant",
+                                  "needs": {"fatigue": 5, "hunger": 10, "safety": 0},
+                                  "goals": {"earn": 30, "explore": 10, "survive": 20}}),
+        ], bootstrap=True)
+        speak(db, clock, sender="carlos", receiver="basim")
         step(db, clock, ident="first-time")
         tell(db, service, "basim", "nora", ident="first")
         before = db.load("world")
         with pytest.raises(InvalidEvent):
-            tell(db, service, "nora", "basim", parent="first", ident="instant")
+            tell(db, service, "nora", "adel", parent="first", ident="instant")
         assert db.load("world").to_dict() == before.to_dict()
+        step(db, clock, ident="second-time")
+        forwarded = tell(db, service, "nora", "adel", parent="first", ident="second")
+        assert forwarded.rumor_deliveries["second"]["hops"] == 2
+        assert forwarded.rumor_deliveries["second"]["confidence"] == 50
+        assert forwarded.rumor_deliveries["second"]["original_id"] == "original"
+        assert db.verify("world").to_dict() == forwarded.to_dict()
     finally:
         db.close()
 
@@ -127,6 +139,16 @@ def test_snapshot_reopen_preserves_rumor_provenance(tmp_path):
 def test_default_off_retains_no_autonomous_rumor(tmp_path):
     db, clock, service = world(tmp_path)
     try:
+        # Baseline social fixture does not initialize action counters.
+        # Include the real resources needed for autonomous work/foraging.
+        setup_resources = []
+        for npc in ("nora", "basim", "sara"):
+            for resource in ("labor_units", "investigation_attempts"):
+                setup_resources.append(ev("ResourceChanged", {
+                    "owner_id": npc, "resource": resource, "previous": None,
+                    "current": 0, "source": "initialization"}))
+        db.append("world", "counters", db.load("world").revision,
+                  setup_resources, bootstrap=True)
         speak(db, clock)
         result = LivingWorldEngine(db, clock).advance(
             "world", seconds=120, command_id="off",
