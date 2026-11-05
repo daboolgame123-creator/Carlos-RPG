@@ -4,7 +4,7 @@ Date: 2026-11-05
 Branch: `simulation-engine-phase-02h`
 Starting reviewed implementation: `9d6d99095f9ec84b13893002a6166a52353d96b8` (original H1/H2/H3 all green, 802 tests on Python 3.10/3.13)
 Auditor: ChatGPT code inspection and added adversarial tests in the SAME development conversation; **not a separate independent reviewer**.
-Status: **INTERNAL_AUDIT / FINDING_FIXED_IN_CODE / CI_PENDING_FINAL_SHA / EXTERNAL_REVIEW_DEFERRED / P0 OPEN**.
+Status: **INTERNAL_AUDIT / FINDING_FIXED_IN_CODE / CI_GREEN_808_EACH / EXTERNAL_REVIEW_DEFERRED / P0 OPEN**.
 
 ## Confirmed defect: REVIEW-02H-001 — eyewitness evidence laundering
 Severity: high for future legal use; no present judicial sanctions in scope.
@@ -19,7 +19,7 @@ Remediation:
 - Adversarial tests: mismatch suspect, fabricated inflated quantity, self-implicating actor blaming another, falsified detached snapshot, rehashed forgery in SQLite immutable event stream, and stripped trusted capability; all should reject with unchanged state or raise integrity error.
 
 Code changes: `simulation/src/carlos_sim/property_evidence.py`, `simulation/src/carlos_sim/domain.py`, `simulation/tests/test_property_02h2.py`, CI predecessor compatibility checks. New code checkpoint for tests: `65e4dd582d8ea0a4cfbd442a8ce39e094aa5f303`.
-CI pending when this report was first drafted: https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42112812532.
+**Verified CI success:** https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42112812532, **808/808 tests on each Python 3.10 and 3.13**, on exact repaired code commit 65e4dd582d8ea0a4cfbd442a8ce39e094aa5f303.
 
 ## Other review observations — OPEN, not declared fixed
 
