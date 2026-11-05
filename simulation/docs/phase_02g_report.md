@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-05  
 **Branch:** `simulation-engine-phase-02g` based on green `simulation-engine-phase-02f` SHA `d46aaa04fd53f07e3fd06358f6f62efb904e7452`.  
-**Status:** IMPLEMENTED FIRST SLICE / TECHNICALLY VALIDATED AT GREEN CHECKPOINT / NEW 7-NPC PROBE CI PENDING / EXTERNAL REVIEW DEFERRED / P0 OPEN.
+**Status:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED / P0 OPEN — not independently APPROVED/CLOSED.
 
 ## Implemented scope
 
@@ -20,9 +20,9 @@ Tests in `simulation/tests/test_rumors_02g.py`: witnessed local first-person gos
 
 CI adds frozen **02-F** benchmark when OFF and genuine **02-F Schema20/Rules27** saved-world rejection without modifying the old database. Older historical parity and compatibility gates remain.
 
-**Verified checkpoint:** [GitHub Actions 42102121160](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42102121160) was green on SHA `9b395101d8b5c337d9888e6cca8bebae49a561d6`: **762/762 tests pass on Python 3.10 and Python 3.13**, including the frozen 02-F feature-off semantic parity and real old-world rejection. A further adversarial seven-NPC three-hop gossip-chain test was added at code SHA `7b7deaa8f4ef17f77600332aec1a588e8d16478d`; its green verification remains pending at this exact report revision.
+**Verified checkpoint:** [GitHub Actions 42102121160](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42102121160) was green on SHA `9b395101d8b5c337d9888e6cca8bebae49a561d6`: **762/762 tests pass on Python 3.10 and Python 3.13**, including the frozen 02-F feature-off semantic parity and real old-world rejection. The subsequent adversarial seven-NPC three-hop gossip-chain test is green at exact code SHA `7b7deaa8f4ef17f77600332aec1a588e8d16478d`: [GitHub Actions run 42102597539](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42102597539) passed **763/763 tests on Python 3.10 and 3.13**, including all genuine historical parity and safe-rejection gates. Follow-up commits only update documentation; use the verified code SHA as the technical-evidence checkpoint.
 
-**Important:** This is a *provisional* report. Do not upgrade to TECHNICALLY_VALIDATED until the exact final GitHub Actions commit passes Python 3.10 and 3.13. Independent reviewer approval is separate and remains DEFERRED. Production backup P0 remains OPEN; test worlds are disposable.
+**Important:** This is a technical verification of the code, not independent APPROVED/CLOSED certification. A separate reviewer must examine the exact SHA using [the independent-review request](phase_02g_independent_review_request.md); P0 production backup and restore certification remains OPEN. Test worlds are disposable, and the original Carlos narrative and main branch remain unchanged.
 
 ## Newly identified essential follow-ups (to track in roadmap)
 
