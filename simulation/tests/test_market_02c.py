@@ -19,7 +19,8 @@ def ev(kind, payload, actor=None, time=0):
 
 
 def prepare(db, *, market=True, production=True, copper_buyer=10,
-            init_buyer_bread=True, local_omar=False, grains=4):
+            init_buyer_bread=True, local_omar=False, grains=4,
+            site_copper=0, buyer_bread=0):
     db.create_world("village")
     events = [
         ev("LocationCreated", {"id": "bakery", "name": "Bakery"}),
@@ -30,7 +31,7 @@ def prepare(db, *, market=True, production=True, copper_buyer=10,
         }),
     ]
     for resource, value in (
-        ("grain", grains), ("oven", 2), ("bread", 0), ("coin_copper", 0),
+        ("grain", grains), ("oven", 2), ("bread", 0), ("coin_copper", site_copper),
     ):
         events.append(ev("ResourceChanged", {
             "owner_id": "bakery", "resource": resource,
@@ -51,7 +52,7 @@ def prepare(db, *, market=True, production=True, copper_buyer=10,
             }),
         ])
         quantities = {
-            "bread": 2 if person == "huda" else 0,
+            "bread": 2 if person == "huda" else buyer_bread if person == "salma" else 0,
             "grain": 2 if person == "layla" else 0,
             "coin_copper": copper_buyer if person == "salma"
                 else 10 if person == "huda" else 0,
