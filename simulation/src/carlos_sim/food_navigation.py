@@ -15,6 +15,7 @@ from .foraging import (
 )
 from .knowledge import effective_confidence, known_food_sites, parse_food_claim
 from .navigation import shortest_known_route
+from .scarcity import recent_personal_depletion
 
 
 @dataclass(frozen=True)
@@ -28,7 +29,8 @@ class FoodRouteIntent:
     observed_at: int
 
 
-def choose_food_route(state: WorldState, npc_id: str) -> FoodRouteIntent | None:
+def choose_food_route(state: WorldState, npc_id: str, *,
+                      scarcity_enabled: bool = False) -> FoodRouteIntent | None:
     """Find cheapest *known* journey to a site this NPC believes has food.
 
     The planner may read this NPC's owned-food balance but never any remote
@@ -66,6 +68,8 @@ def choose_food_route(state: WorldState, npc_id: str) -> FoodRouteIntent | None:
         if site == here or site not in state.locations:
             continue
         belief = npc["beliefs"]["food:" + site]
+        if scarcity_enabled and recent_personal_depletion(state, npc_id, site, belief):
+            continue
         parsed = parse_food_claim(belief["text"])
         if parsed is None:
             continue

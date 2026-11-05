@@ -397,3 +397,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Manual target, current action, decision cooldown, danger warning, local forage and hunger/fatigue/safety/owned-food eligibility remain binding. Hearsay is fallible and arrival never creates food.
 - Physical 120-second forage after actual arrival may collect one finite unit. No new event type or schema/rules change (13/18). CI 41930579158 passes 564 tests per Python interpreter.
 - Phase 01-U is TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING, not APPROVED/CLOSED; 01-T also pending, P0 OPEN. See [01-U report](phase_01u_report.md).
+
+## 2026-11-05 — Phase 01-V finite scarcity and refusal response (provisional)
+
+- Introduce opt-in `scarcity_enabled=False`, requiring food_navigation and assistance modes, with no new persisted event/field/Schema/Rules (remain 13/18).
+- Personal exhausted-forage outcomes in `foraging_attempts` suppress the same actor's unverified positive-food routing to that site for 3600 logical seconds; a later directly verified observation can supersede the failed attempt. Peers' failures or distant true food do not enter decisions.
+- A requester's own documented declined food request or a provider's communicated withdrawn promise suppresses requesting that provider autonomously for 3600 seconds. Own withdrawal is not refusal; the existing 900-second global re-request minimum remains mandatory.
+- All food moves require existing physical assistance fulfilment or foraging reducers; no magical grant or new event. [CI 41989436509](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41989436509): 587/587 per Python interpreter and frozen 01-U event/state parity with the 01-V flag off.
+- Status TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING; 01-T and 01-U are still pending independent review; P0 remains OPEN. See [01-V report](phase_01v_report.md).
