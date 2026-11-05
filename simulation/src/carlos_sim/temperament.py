@@ -51,8 +51,7 @@ def remember_completed_action(state: dict[str, Any], action_id: str) -> None:
         del profile["memories"][:-MEMORY_LIMIT]
 
 
-def scoring_adjustments(state: dict[str, Any], npc_id: str) -> tuple[dict[str, int], str] | None:
-    profile = state["npc_temperaments"].get(npc_id)
+def scoring_adjustments(profile: dict[str, Any] | None) -> tuple[dict[str, int], str] | None:
     if profile is None:
         return None
     t = profile["traits"]
