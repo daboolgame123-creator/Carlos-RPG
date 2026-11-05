@@ -1,6 +1,6 @@
 # Phase 01-V — Provisional design: scarcity, failed attempts, and alternate response
 
-**Status: TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING — NOT APPROVED/CLOSED.**
+**Status: TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED — NOT APPROVED/CLOSED (corrected branch).**
 **Branch:** `simulation-engine-phase-01v`, forked from technically tested but not independently approved 01-U checkpoint `47dd04ef6928af6c6b76fecdd1b29dc46a653755`.
 **Predecessors:** 01-T and 01-U = `TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING`. New work may need revision if OpenCode reports a blocker.
 **Baseline:** Schema 13 / Rules 18; 564/564 green on both Python 3.10 and 3.13, [01-U final CI](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41931491155). **P0 save/restore remains OPEN**. Disposable test worlds only.
@@ -42,3 +42,9 @@ Scarcity is consequential: an NPC who **personally failed** to collect food at a
 - If the separate OpenCode reviews of 01-T / 01-U find a blocker, mark 01-V as **dependency at risk** and reconcile before any formal closure or long-lived world.
 
 **Implementation evidence (2026-11-05):** [01-V report](phase_01v_report.md) and [independent review request](phase_01v_independent_review_request.md); tested code `0e70d4d3163b7336ad784848096e65f7edee2576`; [CI 41989436509](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41989436509) 587/587 on each Python interpreter, with frozen 01-U parity. No external sign-off yet.
+
+## 01-V amended implementation record (2026-11-05)
+
+- Corrected branch: simulation-engine-phase-01v-review-fix. Explicitly merges corrected 01-U, including corrected 01-T source, without changing original reviewed branches.
+- Inherited fixes: one recipient/site food-sharing delivery per round; no same-tick hearsay relay; safe bounded history ID parsing; U-3 decision cooldown for both food and fallback travel while food-navigation mode is on.
+- [CI 42013057857](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42013057857): 593/593 on Python 3.10 and 3.13, including 25-NPC full stack. No schema/rules upgrade; external review postponed by user, not independently approved. P0 OPEN.

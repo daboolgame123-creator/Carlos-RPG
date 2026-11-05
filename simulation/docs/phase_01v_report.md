@@ -33,3 +33,12 @@
 - **P0 OPEN:** synthetic disposable test worlds only, no automated migration or certification of durable long-lived saves; no main/story changes, no automatic PR merge, no 01-W implementation.
 
 **Provisional verdict:** technically validated with green final code CI; **EXTERNAL_REVIEW_PENDING** until a separate read-only reviewer provides a verifiable verdict on this exact phase.
+
+## 2026-11-05 — 01-V corrected dependency chain / deferred external review
+
+- The original Phase 01-T and 01-U heads were judged BLOCKED by OpenCode independent review (T-1 quadratic news spreading; T-2 hostile long history ID; T-3 zero-time gossip policy; U-3 fallback exploration decision cooldown). Historical reviews and immutable original branch tips remain recorded.
+- The new review-fix branch for 01-V explicitly merges the corrected 01-U checkpoint, which itself has the corrected 01-T history as a second Git parent. Added 01-T 25-NPC and 5000-digit regression tests and 01-U decision-cooldown regression unchanged; 01-V scarcity logic and existing 01-V regressions preserved.
+- Corrected 01-V LivingWorldEngine uses one pre-round food-sharing planner and applies U-3 cooldown rule to food-route and fallback exploration when food_navigation_enabled is on. The original 01-V scarcity_enabled feature remains opt-in and false by default.
+- Added a full-configuration 25-NPC test with knowledge, foraging, food-navigation, assistance and scarcity all enabled. It completes with 24 deliveries and fewer than the default 1000 events, and SQLite verify/replay agrees.
+- **Evidence:** corrected code commit `14357846cf644b49a219eb80223577f636d08a8f`, [GitHub Actions 42013057857](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42013057857): **593/593 passing on each Python 3.10 and Python 3.13**, plus frozen corrected Phase 01-T and 01-U opt-out parity (matching event/state digests) and prior save compatibility checks.
+- **Status:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED, NOT INDEPENDENTLY APPROVED/CLOSED. The user's deferral changes scheduling of independent review, not the evidentiary requirements for formal closure. P0 still OPEN, no real long-lived save, migration, main/story edit or review-only PR merge.

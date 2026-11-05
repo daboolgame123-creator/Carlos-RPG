@@ -405,3 +405,12 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - A requester's own documented declined food request or a provider's communicated withdrawn promise suppresses requesting that provider autonomously for 3600 seconds. Own withdrawal is not refusal; the existing 900-second global re-request minimum remains mandatory.
 - All food moves require existing physical assistance fulfilment or foraging reducers; no magical grant or new event. [CI 41989436509](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41989436509): 587/587 per Python interpreter and frozen 01-U event/state parity with the 01-V flag off.
 - Status TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING; 01-T and 01-U are still pending independent review; P0 remains OPEN. See [01-V report](phase_01v_report.md).
+
+## 2026-11-05 — Corrections carried through 01-V; independent review deferred
+
+- The OpenCode review returned BLOCKED on the original 01-T and 01-U SHAs; preserve those historical verdicts. User directed further development here and deferred, not waived, external approval.
+- Phase 01-T correction stops O(N²) same-tick food gossip and bounds the 5000-digit forged-history parsing. No zero-time hearsay relay, at most one delivery per recipient/site in a frozen pre-round snapshot.
+- Phase 01-U correction in food-navigation-enabled mode guards BOTH food travel and fallback exploration with next_decision_at; predecessor OFF parity preserved.
+- Phase 01-V review-fix inherits corrected 01-T and 01-U by Git commit parentage; keeps scarcity and alternative assistance policies opt-in and unchanged.
+- CI 42013057857: 593/593 passing on Python 3.10/3.13. 25-NPC full-stack test, prior 5000-digit hostile ID regression, stale-decision travel regression, resource conservation, atomic rollback, SQLite replay and frozen real 01-T/01-U event/state parity passed.
+- Corrected phases are TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED, never APPROVED/CLOSED absent a new independent reviewer. Schema 13/Rules 18 unchanged, P0 OPEN, no main/story edits.
