@@ -66,7 +66,7 @@ def test_memory_survives_snapshot_restore_and_matches_event_replay(tmp_path):
         assert db.verify("test").to_dict() == done.to_dict()
         bundle = tmp_path / "bundle"
         manifest = create_backup_bundle(db, "test", bundle, code_commit=SOURCE_SHA)
-        assert (manifest["schema"], manifest["rules"]) == (22, 29)
+        assert (manifest["schema"], manifest["rules"]) == (23, 30)
         assert verify_backup_bundle(bundle) == manifest
         saved = done.to_dict()
     restored_path = tmp_path / "restored.sqlite"
