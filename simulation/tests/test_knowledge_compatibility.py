@@ -14,10 +14,10 @@ from test_gathering_autonomy import make_world, NAMES
 
 def test_schema_and_rules_versions():
     assert SCHEMA_VERSION == 13
-    assert RULES_VERSION == 18
+    assert RULES_VERSION == 19
 
 
-def test_flag_off_no_new_knowledge_events_and_rules_18(tmp_path):
+def test_flag_off_no_new_knowledge_events_in_rules_19(tmp_path):
     with SQLiteEventStore(tmp_path / "flagoff.sqlite") as db:
         make_world(db)
         clock = TimeEngine(db)
@@ -27,7 +27,7 @@ def test_flag_off_no_new_knowledge_events_and_rules_18(tmp_path):
             "r", seconds=120, command_id="go",
             expected_revision=db.load("r").revision)
         s = result.state
-        assert s.rules_version == 18
+        assert s.rules_version == 19
         assert s.schema_version == 13
         # No knowledge events were emitted (flag off).
         payloads = db.db.execute("SELECT payload FROM events WHERE world_id='r'").fetchall()
