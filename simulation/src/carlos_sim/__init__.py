@@ -31,3 +31,4 @@ from .player_gateway import PlayerGateway, PlayerCommandResult
 from .production import NPCProductionService, ProductionStart
 from .market import NPCMarketService, MarketResult
 from .loans import NPCLoanService, LoanResult
+from .property import NPCPropertyService, TakingResult
