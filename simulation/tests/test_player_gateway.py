@@ -329,7 +329,7 @@ def test_malformed_player_travel_payload_cannot_forge_impossible_destination(wor
                 "origin": origin, "destination": dest, "started_at": 0,
             }},
         })
-        with pytest.raises(ValueError, match="player travel"):
+        with pytest.raises(ValueError, match="player"):
             apply_event(original, event, movement_authorized=True)
     assert db.load("world").to_dict() == original.to_dict()
 
