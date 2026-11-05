@@ -159,3 +159,44 @@ class NPCSocialService:
                                   events, social_authorized=True)
         msg = saved.social_messages[message_id]
         return SocialResult(message_id, msg['reaction'], msg['trust_before'], msg['trust_after'], saved)
+
+    def share_food_claim_to_player(
+            self, world_id: str, npc_id: str, player_id: str, *,
+            site_id: str, message_id: str, expected_revision: int) -> WorldState:
+        """Trusted NPC-side delivery of an EXISTING claim, never player coercion."""
+        self.clock._require_session(world_id)
+        state = self.store.load(world_id)
+        if state.revision != expected_revision:
+            raise RevisionConflict('stale hearsay delivery revision')
+        if (not isinstance(message_id, str) or not 1 <= len(message_id) <= 64
+                or not message_id.isascii()
+                or not all(c.isalnum() or c in '._-' for c in message_id)):
+            raise ValueError('invalid hearsay message ID')
+        if not isinstance(site_id, str) or not site_id:
+            raise ValueError('invalid knowledge site')
+        from .knowledge import FOOD_KEY_PREFIX, parse_food_claim, is_observation_source
+        from .movement import _in_transit
+        key = FOOD_KEY_PREFIX + site_id
+        if npc_id not in state.npcs or player_id not in state.entities:
+            raise ValueError('unknown NPC or player')
+        if state.entities[player_id]['controller'] != 'player':
+            raise ValueError('recipient must be a human-controlled player')
+        projection = state.to_dict()
+        if (_in_transit(projection, npc_id) or _in_transit(projection, player_id)
+                or state.entities[npc_id]['location_id'] !=
+                    state.entities[player_id]['location_id']):
+            raise ValueError('hearsay requires speaker and player co-located')
+        belief = state.npcs[npc_id]['beliefs'].get(key)
+        if belief is None or parse_food_claim(belief['text']) is None:
+            raise ValueError('NPC has no recorded food claim for this site')
+        if (not is_observation_source(belief['source'])
+                and belief['received_at'] >= state.time):
+            raise ValueError('cannot instantly re-share newly heard hearsay')
+        event = DomainEvent('PlayerHearsayReceived', npc_id,
+                            'NPC voluntarily shared an existing food claim',
+                            state.time, {
+            'player_id': player_id, 'key': key, 'text': belief['text'],
+        })
+        return self.store.append(
+            world_id, 'npc-to-player:' + message_id,
+            expected_revision, [event], social_authorized=True)
