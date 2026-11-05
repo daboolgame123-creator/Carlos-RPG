@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-05  
 **Branch:** `simulation-engine-phase-02g` based on green `simulation-engine-phase-02f` SHA `d46aaa04fd53f07e3fd06358f6f62efb904e7452`.  
-**Status:** IMPLEMENTED FIRST SLICE / FINAL CI PENDING / EXTERNAL REVIEW DEFERRED / P0 OPEN.
+**Status:** IMPLEMENTED FIRST SLICE / TECHNICALLY VALIDATED AT GREEN CHECKPOINT / NEW 7-NPC PROBE CI PENDING / EXTERNAL REVIEW DEFERRED / P0 OPEN.
 
 ## Implemented scope
 
@@ -19,6 +19,8 @@
 Tests in `simulation/tests/test_rumors_02g.py`: witnessed local first-person gossip; cautious reputation not objective truth; no unknown origin or false witness; real two-hop chain with actual elapsed logical time; remote delivery rejection; duplicate source/recipient denial; SQLite snapshot, replay and reopen; untrusted or closed-session delivery rejection; opt-in/off checks; autonomous local rumor round; tampered snapshot rejection.
 
 CI adds frozen **02-F** benchmark when OFF and genuine **02-F Schema20/Rules27** saved-world rejection without modifying the old database. Older historical parity and compatibility gates remain.
+
+**Verified checkpoint:** [GitHub Actions 42102121160](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42102121160) was green on SHA `9b395101d8b5c337d9888e6cca8bebae49a561d6`: **762/762 tests pass on Python 3.10 and Python 3.13**, including the frozen 02-F feature-off semantic parity and real old-world rejection. A further adversarial seven-NPC three-hop gossip-chain test was added at code SHA `7b7deaa8f4ef17f77600332aec1a588e8d16478d`; its green verification remains pending at this exact report revision.
 
 **Important:** This is a *provisional* report. Do not upgrade to TECHNICALLY_VALIDATED until the exact final GitHub Actions commit passes Python 3.10 and 3.13. Independent reviewer approval is separate and remains DEFERRED. Production backup P0 remains OPEN; test worlds are disposable.
 
