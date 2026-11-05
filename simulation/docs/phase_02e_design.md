@@ -1,0 +1,18 @@
+# Phase 02-E — NPC temperament, grounded experience and goal conflicts
+
+Base: Phase 02-D `65c567e9f4c94672b3f29e2c7ddad3e448cae224`, [green CI 42080223505](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42080223505), **724/724 tests on Python 3.10 and 3.13**. Branch `simulation-engine-phase-02e`. **In progress; P0 OPEN; independent review deferred; disposable worlds only.**
+
+## Scope
+Provide an **opt-in** temperament for configured NPCs: `ambition`, `curiosity`, `caution`, `discipline` (0–100). Traits are **individual preferences**, not evidence of real knowledge. Fixed trusted bootstrap event `NPCTemperamentConfigured` can set them for a real existing NPC at time zero, once per character. They don't give resources, information, money or legal authority.
+
+NPCs' existing, explainable decision policy (rest/work/investigate/wait) incorporates bounded trait adjustments **only when a temperament was configured**. Critical hunger still overwhelms optional risky choices; uncertainty or believed danger is still derived only from the NPC's own beliefs. Stable tie-breaking and integer-only scores preserve replay. No personality is assigned by hashing name, and not all unconfigured NPCs magically get a new trait profile.
+
+**Autobiographical memory is a verifiable action history, not arbitrary rumor.** Every physically completed existing NPC action of a temperament-enabled NPC adds one concise memory entry with its real action ID, action, completion time and actual need/counter effects recorded by the engine itself. Keep at most 8 most recent entries. Only the legitimate `ScheduledEventFired` path can create this memory; no standalone caller can forge a memory or claim someone else's success. Bounded recent repeated actions dampen the same optional action's utility (repetition penalty), but don't overturn survival critical priorities. Memory is private to that character's own decision and can be inspected through its own trusted local view, not implicitly broadcast to NPCs elsewhere.
+
+No general LLM psychology, morale hallucinations, emotional relationships, prejudice labels, automated money choices, criminal propensity, NPC contracts or trade AI in this slice. No change to Carlos player behavior or existing story. No global access to neighbors' private memory.
+
+## Versions and security
+Schema **19 / Rules 26** from 18/25; new `npc_temperaments` collection in immutable WorldState; bootstrap event uses existing trusted `bootstrap` provenance in SQLite commands. Memory changes are sourced entirely by existing authorized action completion scheduler; no added capability flag. A true 02-D SQLite 18/25 file is refused **unchanged** with no migration. No changes to old event kinds when opt-in is disabled.
+
+## Acceptance
+Two otherwise equivalent NPCs with identical needs/goals/locally known risk but different traits make different meaningful decisions with different reason strings. Existing unconfigured NPCs match exact previous scoring and history. Real action completion creates one memory, not at start or decision, replay and save/restore preserve it, capped rolling history after >8 actions, and recurrence affects an observable later decision while real needs are still taken into account. Corrupted/fake memory, duplicate personality bootstrap, unauthorized late configuration, unknown actor, out-of-bounds and boolean trait, source tampering, rollback on failure and exact time-clock boundaries must fail closed. Seven NPC demo with two contrasting personalities, no fictitious knowledge. Full predecessor parity, Python 3.10/3.13 tests, golden CI at final commit. External review pending and P0 remains OPEN.
