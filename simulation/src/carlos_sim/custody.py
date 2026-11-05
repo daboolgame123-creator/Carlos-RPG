@@ -31,18 +31,29 @@ def initialize_lot(state: dict[str, Any], origin_id: str) -> None:
     }
 
 
-def _transfer(event: DomainEvent, before: WorldState) -> tuple[str, str, str, int] | None:
+def _transfers(event: DomainEvent, before: WorldState) -> tuple[tuple[str, str, str, int], ...]:
+    """Explicit, independently validated physical transfer legs.
+
+    A market barter carries TWO resources in opposite directions, not just
+    the commodity. Coin is never a J1a tracked resource, but a bartered
+    tracked food/tool can have a real custody history.
+    """
     p, kind = event.data, event.event_type
     if kind == "PropertyTaken":
-        return p["source_owner_id"], event.actor_id, p["resource"], p["quantity"]
+        return ((p["source_owner_id"], event.actor_id, p["resource"], p["quantity"]),)
     if kind == "MarketTradeExecuted":
         offer = before.market_offers[p["offer_id"]]
-        return offer["stock_owner_id"], p["buyer_id"], offer["resource"], p["quantity"]
+        q = p["quantity"]
+        return (
+            (offer["stock_owner_id"], p["buyer_id"], offer["resource"], q),
+            (p["buyer_id"], offer["stock_owner_id"], offer["payment_resource"],
+             q * offer["unit_price"]),
+        )
     if kind == "AssistanceFulfilled":
         obligation = before.obligations[p["id"]]
-        return (obligation["provider"], obligation["requester"],
-                obligation["resource"], obligation["quantity"])
-    return None
+        return ((obligation["provider"], obligation["requester"],
+                 obligation["resource"], obligation["quantity"]),)
+    return ()
 
 
 def reconcile_lots(state: dict[str, Any], before: WorldState,
@@ -55,7 +66,8 @@ def reconcile_lots(state: dict[str, Any], before: WorldState,
     lots = state["property_custody_lots"]
     if not lots:
         return
-    pair = _transfer(event, before)
+    transfers = {(source, resource): (dest, q)
+                 for source, dest, resource, q in _transfers(event, before)}
     rev, at = before.revision + 1, state["time"]
     stock_before, stock_after = before.resources, state["resources"]
     touched = {(holder, lot["resource"])
@@ -116,9 +128,10 @@ def reconcile_lots(state: dict[str, Any], before: WorldState,
         total_certified = sum(q for _, q in relevant)
         if total_certified > original:
             raise ValueError("certified lot stock exceeds physical stock")
-        is_transfer = pair is not None and (source, item) == (pair[0], pair[2])
+        is_transfer = (source, item) in transfers
         if is_transfer:
-            src, dest, res, quantity = pair
+            dest, quantity = transfers[(source, item)]
+            res = item
             if (n != quantity
                     or stock_after.get(dest, {}).get(res)
                     != before.resources.get(dest, {}).get(res, -1) + quantity):
