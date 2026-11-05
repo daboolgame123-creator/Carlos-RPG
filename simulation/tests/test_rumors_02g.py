@@ -171,3 +171,53 @@ def test_invalid_stored_snapshot_cannot_invent_story(tmp_path):
             WorldState.from_dict(corrupted)
     finally:
         db.close()
+
+
+def test_autonomous_gossip_is_opt_in_local_and_based_on_actual_threat(tmp_path):
+    db, clock, service = world(tmp_path)
+    try:
+        for npc in ("nora", "basim", "sara"):
+            events = []
+            for item in ("labor_units", "investigation_attempts"):
+                events.append(ev("ResourceChanged", {
+                    "owner_id": npc, "resource": item, "previous": None,
+                    "current": 0, "source": "initialization"}))
+            db.append("world", "init:"+npc, db.load("world").revision,
+                      events, bootstrap=True)
+        speak(db, clock)
+        step(db, clock, seconds=60, ident="time-for-gossip")
+        before = db.load("world")
+        assert len(choose_rumor_round(before)) == 1
+        state = LivingWorldEngine(db, clock, rumors_enabled=True).advance(
+            "world", seconds=1, command_id="gossip-day",
+            expected_revision=before.revision).state
+        assert len(state.rumor_deliveries) == 1
+        delivery = next(iter(state.rumor_deliveries.values()))
+        assert (delivery["sender"], delivery["recipient"], delivery["subject"]) == (
+            "basim", "nora", "carlos")
+        assert state.rumor_deliveries
+        assert heard_rumors(state, "sara") == ()
+        assert db.verify("world").to_dict() == state.to_dict()
+    finally:
+        db.close()
+
+
+def test_untrusted_rumor_command_and_closed_session_rejected(tmp_path):
+    db, clock, service = world(tmp_path)
+    try:
+        speak(db, clock)
+        step(db, clock)
+        baseline = db.load("world")
+        claim = DomainEvent("RumorDelivered", "basim", "attempted forged API", baseline.time, {
+            "id": "unsafe", "recipient_id": "nora",
+            "original_id": "original", "parent_id": None})
+        with pytest.raises(InvalidEvent, match="trusted"):
+            db.append("world", "unauthorized", baseline.revision, [claim])
+        assert db.load("world").to_dict() == baseline.to_dict()
+        clock.close_session("world")
+        with pytest.raises(InvalidEvent, match="active play session"):
+            db.append("world", "while-closed", baseline.revision,
+                      [claim], social_authorized=True)
+        assert db.load("world").to_dict() == baseline.to_dict()
+    finally:
+        db.close()
