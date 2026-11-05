@@ -6,6 +6,7 @@ migration tools, and an existing target is never overwritten.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -137,7 +138,7 @@ def create_backup_bundle(store: SQLiteEventStore, world_id: str,
     published = False
     try:
         db_copy = scratch / _BUNDLE_DB
-        with sqlite3.connect(str(db_copy)) as connection:
+        with closing(sqlite3.connect(str(db_copy))) as connection:
             store.db.backup(connection)
         worlds = _audit(db_copy)
         if world_id not in {x['world_id'] for x in worlds}:
