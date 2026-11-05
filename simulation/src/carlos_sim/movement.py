@@ -143,6 +143,9 @@ def project_movement_event(state: dict[str, Any], event: DomainEvent, *,
             raise ValueError('travel origin, duration or schedule mismatch')
         if any(a['npc_id'] == npc_id and a['status'] == 'running' for a in state['actions'].values()):
             raise ValueError('NPC is busy with an existing action')
+        from .production import is_producing
+        if is_producing(state, npc_id):
+            raise ValueError('NPC cannot travel while producing goods')
         if any(t['npc_id'] == npc_id and t['status'] == 'traveling' for t in state['travels'].values()):
             raise ValueError('NPC is already traveling')
         scheduled = state['scheduled'].get(data['schedule_id'])
