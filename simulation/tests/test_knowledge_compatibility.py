@@ -13,11 +13,11 @@ from test_gathering_autonomy import make_world, NAMES
 
 
 def test_schema_and_rules_versions():
-    assert SCHEMA_VERSION == 13
-    assert RULES_VERSION == 20
+    assert SCHEMA_VERSION == 14
+    assert RULES_VERSION == 21
 
 
-def test_flag_off_no_new_knowledge_events_in_rules_20(tmp_path):
+def test_flag_off_no_new_knowledge_events_in_rules_21(tmp_path):
     with SQLiteEventStore(tmp_path / "flagoff.sqlite") as db:
         make_world(db)
         clock = TimeEngine(db)
@@ -27,8 +27,8 @@ def test_flag_off_no_new_knowledge_events_in_rules_20(tmp_path):
             "r", seconds=120, command_id="go",
             expected_revision=db.load("r").revision)
         s = result.state
-        assert s.rules_version == 20
-        assert s.schema_version == 13
+        assert s.rules_version == 21
+        assert s.schema_version == 14
         # No knowledge events were emitted (flag off).
         payloads = db.db.execute("SELECT payload FROM events WHERE world_id='r'").fetchall()
         for (payload,) in payloads:
@@ -72,3 +72,4 @@ def test_parity_bench_strip_list_unchanged():
     assert "schema_version" in text
     assert "rules_version" in text
     assert "'beliefs'" not in text
+    assert "'rpg_profiles'" in text  # only new opt-in state is excluded across versions
