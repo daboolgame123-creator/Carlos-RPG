@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine, LivingWorldEngine
+from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine, LivingWorldEngine, NPCService, NPCActionService
 from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION, WorldState
 from carlos_sim.routines import choose_routine_route
 from carlos_sim.store import InvalidEvent
@@ -220,3 +220,24 @@ def test_emergency_while_busy_does_not_cancel_physical_work(tmp_path):
         assert len(finished) == 1 and finished[0]["completed_at"] == 230
         assert len([t for t in after.travels.values() if t["npc_id"] == "basim"]) == 1
         assert db.verify("test").to_dict() == after.to_dict()
+
+
+def test_manual_direct_work_outside_workplace_is_rejected_atomically(tmp_path):
+    with SQLiteEventStore(tmp_path / "direct.sqlite") as db:
+        scenario(db)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        decision = NPCService(db, clock).decide(
+            "test", "basim", command_id="manual-choice",
+            expected_revision=db.load("test").revision)
+        assert decision.action == "work"
+        before = db.load("test")
+        with pytest.raises(InvalidEvent, match="outside its assigned workplace"):
+            NPCActionService(db, clock).start(
+                "test", "basim", "fake-remote-labor",
+                expected_revision=before.revision)
+        assert db.load("test").to_dict() == before.to_dict()
+        assert db.db.execute(
+            "SELECT COUNT(*) FROM commands WHERE command_id='action-start:fake-remote-labor'"
+        ).fetchone()[0] == 0
+        assert db.verify("test").to_dict() == before.to_dict()
