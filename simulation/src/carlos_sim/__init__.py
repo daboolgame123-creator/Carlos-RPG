@@ -34,3 +34,5 @@ from .loans import NPCLoanService, LoanResult
 from .property import NPCPropertyService, TakingResult
 
 from .property_evidence import personal_property_evidence
+
+from .complaints import NPCComplaintService, ComplaintResult, personal_complaints
