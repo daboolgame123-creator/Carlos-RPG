@@ -71,6 +71,13 @@ def file_property_claim(state: dict[str, Any], event: DomainEvent, *,
                 or (actor != recorded["actor_id"] and
                     taking + ":" + actor not in state["property_sightings"])):
             raise ValueError("claimant cannot cite unobserved or mismatched taking")
+        # A witness may lie, but cannot label a contradictory allegation as
+        # corroborated by an immutable same-tick event. Unsupported claims
+        # remain admissible without a taking_id (unverified_statement).
+        if (p["quantity"] != recorded["quantity"]
+                or (p["claim_kind"] == "accusation"
+                    and subject != recorded["actor_id"])):
+            raise ValueError("claimed suspect or amount contradicts cited physical taking")
         basis = "firsthand_action" if actor == recorded["actor_id"] else "direct_sighting"
     state["property_claims"][p["id"]] = {
         "claimant_id": actor, "claim_kind": p["claim_kind"],
@@ -124,7 +131,10 @@ def validate_property_evidence(state: dict[str, Any]) -> None:
         if taking_id is not None:
             taking = state["property_takings"].get(taking_id)
             if (taking is None or taking["site_id"] != row["site_id"]
-                    or taking["resource"] != row["resource"]):
+                    or taking["resource"] != row["resource"]
+                    or row["quantity"] != taking["quantity"]
+                    or (row["claim_kind"] == "accusation"
+                        and row["subject_id"] != taking["actor_id"])):
                 raise ValueError("claim reference not genuine")
             expected = ("firsthand_action" if row["claimant_id"] == taking["actor_id"]
                         else "direct_sighting" if taking_id + ":" + row["claimant_id"] in sightings
