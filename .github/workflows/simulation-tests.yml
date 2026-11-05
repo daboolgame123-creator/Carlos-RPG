@@ -49,12 +49,19 @@ jobs:
           ref: 5c8930b12973e7b764376147d8b43cd105a2beef
           path: reviewed-01u
           persist-credentials: false
+      - name: Check out actual Phase 01-V rules 13/18 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: 6a0f3d473f0eecb856fb2b320e1d6485b032b3bc
+          path: reviewed-01v
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
           test "$(git -C ../reviewed-01s rev-parse HEAD)" = "c35245d1904e7a6d779cafa92cbf556618247f38"
           test "$(git -C ../reviewed-01t rev-parse HEAD)" = "60593ce54ba3ea601aa3e17d01f852f97e074ef7"
           test "$(git -C ../reviewed-01u rev-parse HEAD)" = "5c8930b12973e7b764376147d8b43cd105a2beef"
+          test "$(git -C ../reviewed-01v rev-parse HEAD)" = "6a0f3d473f0eecb856fb2b320e1d6485b032b3bc"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -139,6 +146,50 @@ jobs:
               assert db.db.execute(
                   'SELECT count(*) FROM snapshots WHERE world_id="old"'
               ).fetchone()[0] == snapshots_before
+          PY
+
+      - name: Reject genuine 01-V rules 13/18 saved world without mutation
+        run: |
+          PYTHONPATH=../reviewed-01v/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/01w-reject-01v.sqlite') as db:
+              db.create_world('old')
+              db.append('old','location',0,[DomainEvent(
+                  'LocationCreated',None,'frozen 01-V world',0,
+                  {'id':'market','name':'Market'})])
+              db.snapshot('old')
+              assert db.db.execute(
+                  "SELECT schema_version,rules_version FROM worlds WHERE id='old'"
+              ).fetchone() == (13,18)
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/01w-reject-01v.sqlite') as db:
+              before = db.db.execute(
+                  "SELECT revision,sim_time,schema_version,rules_version,initial_state,initial_hash FROM worlds WHERE id='old'"
+              ).fetchone()
+              logs = db.db.execute(
+                  "SELECT payload,hash FROM events WHERE world_id='old' ORDER BY seq"
+              ).fetchall()
+              snaps = db.db.execute(
+                  "SELECT revision,state,hash FROM snapshots WHERE world_id='old'"
+              ).fetchall()
+              assert before[2:4] == (13,18)
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('old 13/18 world unexpectedly accepted under Rules 19')
+              assert db.db.execute(
+                  "SELECT revision,sim_time,schema_version,rules_version,initial_state,initial_hash FROM worlds WHERE id='old'"
+              ).fetchone() == before
+              assert db.db.execute(
+                  "SELECT payload,hash FROM events WHERE world_id='old' ORDER BY seq"
+              ).fetchall() == logs
+              assert db.db.execute(
+                  "SELECT revision,state,hash FROM snapshots WHERE world_id='old'"
+              ).fetchall() == snaps
           PY
 
       - name: Demonstrate 01-S hunger-driven foraging with seven characters
