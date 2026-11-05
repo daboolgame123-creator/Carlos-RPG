@@ -91,6 +91,12 @@ jobs:
           ref: b1345f69041e76e20b53af26251fc92946eb7230
           path: reviewed-02c
           persist-credentials: false
+      - name: Check out genuine Phase 02-D Schema 18 / Rules 25 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: 65c567e9f4c94672b3f29e2c7ddad3e448cae224
+          path: reviewed-02d
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
@@ -104,6 +110,7 @@ jobs:
           test "$(git -C ../reviewed-02a rev-parse HEAD)" = "fdf6162c65d6947507d1b4e4516c17d851873c29"
           test "$(git -C ../reviewed-02b rev-parse HEAD)" = "6dbee22a4b6b167a5b5ca5ece1c51612016b9e5d"
           test "$(git -C ../reviewed-02c rev-parse HEAD)" = "b1345f69041e76e20b53af26251fc92946eb7230"
+          test "$(git -C ../reviewed-02d rev-parse HEAD)" = "65c567e9f4c94672b3f29e2c7ddad3e448cae224"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -171,6 +178,19 @@ jobs:
           assert data['regrowth_reserve_remaining']==0
           assert data['gathered_units']==2
           assert data['replay_verified'] is True
+          PY
+
+      - name: Smoke-test 02-E seven-character personalities and grounded memories
+        run: |
+          PYTHONPATH=src python scenarios/test_village/demo_temperament_02e.py > /tmp/02e-personality.json
+          python - <<'PY'
+          import json
+          with open('/tmp/02e-personality.json', encoding='utf-8') as f:
+              d=json.load(f)
+          assert d['npc_count']==7
+          assert d['basim_action']=='work' and d['nora_action']=='investigate'
+          assert d['memory_count']==2
+          assert d['replay_verified']
           PY
 
       - name: Smoke-test 02-D seven-NPC funded loan, escape and overdue copper
@@ -371,7 +391,7 @@ jobs:
           new = json.load(open('/tmp/01u-default-off.json'))
           # Event and semantic-state equality across deliberate Rules 18->20
           # (full state hashes correctly differ because version is persisted).
-          assert old['rules_version'] == 18 and new['rules_version'] == 25
+          assert old['rules_version'] == 18 and new['rules_version'] == 26
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert old[key] == new[key], (key, old[key], new[key])
@@ -386,7 +406,7 @@ jobs:
           import json
           baseline = json.load(open('/tmp/01u-frozen.json'))
           candidate = json.load(open('/tmp/01v-default-scarcity-off.json'))
-          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 25
+          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 26
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert baseline[key] == candidate[key], (key, baseline[key], candidate[key])
@@ -604,5 +624,38 @@ jobs:
               else:
                   raise AssertionError('17/24 world unexpectedly accepted by 18/25')
               assert evidence()==old
+              assert db.db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
+          PY
+
+      - name: Reject genuine Phase 02-D 18/25 SQLite world unchanged
+        run: |
+          PYTHONPATH=../reviewed-02d/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/02d-for-02e.sqlite') as db:
+              db.create_world('old')
+              db.append('old','loc',0,[DomainEvent(
+                  'LocationCreated',None,'genuine historical 02-D fixture',0,
+                  {'id':'square','name':'Square'})])
+              db.snapshot('old')
+              assert db.db.execute('SELECT schema_version,rules_version,revision FROM worlds WHERE id="old"').fetchone()==(18,25,1)
+              assert db.verify('old').revision==1
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/02d-for-02e.sqlite') as db:
+              def evidence():
+                  return tuple(
+                      tuple(db.db.execute('SELECT * FROM '+table+' WHERE '+
+                          ('id=?' if table=='worlds' else 'world_id=?'),
+                          ('old',)).fetchall())
+                      for table in ('worlds','commands','events','snapshots'))
+              before=evidence()
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('18/25 world silently accepted by 19/26')
+              assert evidence()==before
               assert db.db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
           PY
