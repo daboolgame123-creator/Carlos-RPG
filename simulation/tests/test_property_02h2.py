@@ -115,3 +115,36 @@ def test_same_id_claim_rejected_with_no_late_change(scenario):
     with pytest.raises(DuplicateCommand):
         claim(db, svc)
     assert db.load("v").to_dict() == before
+
+
+def test_review_witness_cannot_launder_wrong_suspect_as_firsthand_evidence(scenario):
+    db, _, svc = scenario
+    take(db, svc, witness=("salma",))
+    before = db.load("v").to_dict()
+    # Salma actually saw Basim taking bread, yet accuses Adel using that ID.
+    with pytest.raises(InvalidEvent, match="contradict"):
+        claim(db, svc, who="salma", ident="misidentified", subject="adel", taking="t1")
+    assert db.load("v").to_dict() == before
+    unverified = claim(db, svc, who="salma", ident="liar", subject="adel", taking=None)
+    assert unverified.property_claims["liar"]["basis"] == "unverified_statement"
+    assert unverified.property_claims["liar"]["status"] == "unverified"
+
+
+def test_review_witness_cannot_launder_inflated_quantity(scenario):
+    db, _, svc = scenario
+    take(db, svc, witness=("salma",))
+    before = db.load("v").to_dict()
+    with pytest.raises(InvalidEvent, match="contradict"):
+        svc.claim("v", "salma", "inflated", "accusation", "bakery", "bread", 100,
+                  subject_id="basim", taking_id="t1",
+                  expected_revision=db.load("v").revision)
+    assert db.load("v").to_dict() == before
+
+
+def test_review_actor_cannot_reference_true_taking_as_evidence_against_other(scenario):
+    db, _, svc = scenario
+    take(db, svc)
+    before = db.load("v").to_dict()
+    with pytest.raises(InvalidEvent, match="contradict"):
+        claim(db, svc, who="basim", ident="framed", subject="adel", taking="t1")
+    assert db.load("v").to_dict() == before
