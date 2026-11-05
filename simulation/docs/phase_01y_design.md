@@ -1,7 +1,7 @@
 # Phase 01-Y — Minimal opt-in player RPG state, not RPG mechanics
 
 **Baseline:** Phase 01-X `b1f1c265a09d23cef3a1078cee98e3952a37ab39` — CI [42034258102](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42034258102), 615/615 on Python 3.10 and 3.13.
-**Branch:** `simulation-engine-phase-01y`. **Status: IN_PROGRESS** until full CI. **P0 OPEN**; **EXTERNAL_REVIEW_DEFERRED**; no story import or long-term save.
+**Branch:** `simulation-engine-phase-01y`. **Status: TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED** after CI [42040138624](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42040138624), 627 tests per Python version; **NOT APPROVED/CLOSED**. **P0 OPEN**; **EXTERNAL_REVIEW_DEFERRED**; no story import or long-term save.
 
 ## Gap and design
 The trusted player gateway already moves, observes, interacts and remembers, but there is no RPG status projection. We need a safe shape for health/stamina/mana, experience, level, attributes, inventory and equipment without pretending the engine has combat or XP rules.
