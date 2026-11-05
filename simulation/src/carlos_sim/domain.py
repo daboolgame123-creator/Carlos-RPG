@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 15
-RULES_VERSION = 22
+SCHEMA_VERSION = 16
+RULES_VERSION = 23
 
 
 def _thaw(value: Any) -> Any:
@@ -86,6 +86,8 @@ class WorldState:
     survival_progress: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
     rpg_profiles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     environment_cycles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    production_recipes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    production_jobs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -107,6 +109,8 @@ class WorldState:
         object.__setattr__(self, "survival_progress", _freeze(_json_copy(self.survival_progress)))
         object.__setattr__(self, "rpg_profiles", _freeze(_json_copy(self.rpg_profiles)))
         object.__setattr__(self, "environment_cycles", _freeze(_json_copy(self.environment_cycles)))
+        object.__setattr__(self, "production_recipes", _freeze(_json_copy(self.production_recipes)))
+        object.__setattr__(self, "production_jobs", _freeze(_json_copy(self.production_jobs)))
 
     def to_dict(self) -> dict[str, Any]:
         # Replay/projection states already passed full JSON normalization in
@@ -127,7 +131,9 @@ class WorldState:
                            "foraging_attempts": self.foraging_attempts,
                            "survival_progress": self.survival_progress,
                            "rpg_profiles": self.rpg_profiles,
-                           "environment_cycles": self.environment_cycles})
+                           "environment_cycles": self.environment_cycles,
+                           "production_recipes": self.production_recipes,
+                           "production_jobs": self.production_jobs})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
@@ -147,7 +153,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -155,7 +161,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -203,6 +209,8 @@ class WorldState:
         validate_foraging_attempts(d)
         from .environment import validate_environment_cycles
         validate_environment_cycles(d)
+        from .production import validate_production_state
+        validate_production_state(d)
         from .rpg_state import validate_rpg_profiles
         validate_rpg_profiles(d)
         # Public snapshots need full portable JSON normalization. Internal
@@ -247,7 +255,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -291,6 +299,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("SocialMessageSent", "SocialMessageReceived"):
         from .social import project_social_event
         project_social_event(d, e, social_authorized=social_authorized)
+    elif kind == "ProductionRecipeConfigured":
+        from .production import configure_recipe
+        configure_recipe(d, e, bootstrap=bootstrap)
+    elif kind == "ProductionStarted":
+        from .production import start_production
+        start_production(d, e, production_authorized=production_authorized)
     elif kind == "EnvironmentalCycleConfigured":
         from .environment import configure_environment_cycle
         configure_environment_cycle(d, e, bootstrap=bootstrap)
@@ -353,8 +367,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("invalid due time or schedule order")
         if p["kind"] != "signal" or not isinstance(p["payload"], Mapping) or type(p["interrupt"]) is not bool:
             raise ValueError("unsupported scheduled action")
-        if "__environment_cycle" in p["payload"]:
-            raise ValueError("environment appointment cannot be fabricated")
+        if "__environment_cycle" in p["payload"] or "__production_job" in p["payload"]:
+            raise ValueError("environment or production appointment cannot be fabricated")
         if "__npc_action_id" in p["payload"]:
             if not action_authorized or set(p["payload"]) != {"__npc_action_id"} or p["interrupt"]:
                 raise ValueError("NPC action schedule requires trusted action capability")
@@ -378,6 +392,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("cannot cancel an active player journey without an explicit policy")
         if "__environment_cycle" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel an environmental renewal cycle")
+        if "__production_job" in d["scheduled"][p["id"]]["payload"]:
+            raise ValueError("cannot cancel a material-backed production job")
         del d["scheduled"][p["id"]]
     elif kind == "ScheduledEventFired":
         if set(p) != {"id"} or not isinstance(p["id"], str) or p["id"] not in d["scheduled"]:
@@ -400,6 +416,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if "__environment_cycle" in scheduled["payload"]:
             from .environment import complete_environment_cycle
             complete_environment_cycle(d, p["id"], scheduled["payload"], state.time)
+        if "__production_job" in scheduled["payload"]:
+            from .production import finish_production
+            finish_production(d, p["id"], scheduled["payload"]["__production_job"], state.time)
         del d["scheduled"][p["id"]]
     elif kind == "TimeAdvanced":
         if set(p) != {"from", "to"} or type(p["from"]) is not int or type(p["to"]) is not int:
