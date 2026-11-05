@@ -4,7 +4,7 @@ Date: 2026-11-06 Baghdad time (2026-11-05 UTC)
 Branch: `simulation-engine-phase-04a-j1`
 Baseline: `5b37787dadd226279ed81513efd59ffcca7ade4c` on 02-H Schema24 Rules32; original base CI [42114734174](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42114734174) success, 808/808 each Python 3.10 and 3.13.
 
-**Status pending final CI:** J1a implementation done; schema/rules and new tests added; NOT yet technically validated until the latest code SHA passes CI on both Python versions. External independent review deferred and P0 production backup/recovery OPEN.
+**Status:** J1a **TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED / P0 OPEN**. At exact code commit `ca79973bce536b1853b8d5a8b9d0efc049154aad`, [GitHub Actions 42117075269](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42117075269) passed **826/826** tests each on Python 3.10 and Python 3.13. This is not an independent review or a claim of current legal title.
 
 ## Precise completed scope
 
@@ -24,4 +24,4 @@ Baseline: `5b37787dadd226279ed81513efd59ffcca7ade4c` on 02-H Schema24 Rules32; o
 
 ## Technical check
 
-The CI code SHA and final `passed` count must be added only after inspecting the actual latest green run. Never mark this stage APPROVED from CI alone.
+**Verified:** `ca79973bce536b1853b8d5a8b9d0efc049154aad`, CI 42117075269 SUCCESS on both interpreters, **826/826 each**. Subsequent docs-only commits should be independently confirmed green on their HEAD. Do not call J1b or J1c implemented; no APPROVED/CLOSED pending genuine independent review/P0.
