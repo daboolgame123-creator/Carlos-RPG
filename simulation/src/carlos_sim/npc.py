@@ -199,7 +199,8 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
                 raise ValueError("foraging decision lacks known local food or personal need")
             expected = Decision(ident, "forage", choice[0], choice[1])
         else:
-            expected = _score_choice(npc, ident, survival_active=survival_authorized)
+            expected = _score_choice(npc, ident, survival_active=survival_authorized,
+                                     temperament=state["npc_temperaments"].get(ident))
         if (p["action"], p["score"], p["reason"]) != (expected.action, expected.score, expected.reason):
             raise ValueError("NPC decision does not match deterministic utility policy")
         # Event records an intention, never silently changes HP, resources or position.
@@ -217,7 +218,8 @@ class Decision:
     reason: str
 
 
-def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool = False) -> Decision:
+def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool = False,
+                  temperament: Mapping[str, Any] | None = None) -> Decision:
     """Pure utility scoring based only on a single NPC profile."""
     needs, goals, beliefs = npc["needs"], npc["goals"], npc["beliefs"]
     danger = beliefs.get("danger")
@@ -228,6 +230,12 @@ def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool 
         "investigate": goals["explore"] + perceived_risk // 2 - needs["fatigue"] - needs["safety"],
         "wait": 10 + needs["safety"] + perceived_risk,
     }
+    temperament_explanation = None
+    if temperament is not None:
+        from .temperament import scoring_adjustments
+        adjustments, temperament_explanation = scoring_adjustments(temperament)
+        for action, extra in adjustments.items():
+            scores[action] += extra
     # A character in the explicit survival mode must not continue seeking work
     # at the cost of critical hunger. Conserving energy is not a magic rescue:
     # it does not conjure food, remove debt or cure starvation.
@@ -237,6 +245,8 @@ def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool 
     # No random draw or unordered iteration. Stable tie preference makes replay deterministic.
     action = sorted(BASE_ACTIONS, key=lambda a: (-scores[a], BASE_ACTIONS.index(a)))[0]
     reason = f"utility[{action}]={scores[action]}; belief_danger={perceived_risk}; npc={npc_id}"
+    if temperament_explanation is not None:
+        reason += "; " + temperament_explanation
     return Decision(npc_id, action, scores[action], reason)
 
 
@@ -261,7 +271,8 @@ def choose_action(state: WorldState, npc_id: str, *, survival_enabled: bool = Fa
         choice = choose_local_foraging(npc_id, npc, site, state.resources)
         if choice is not None:
             return Decision(npc_id, "forage", choice[0], choice[1])
-    return _score_choice(npc, npc_id, survival_active=survival_enabled)
+    return _score_choice(npc, npc_id, survival_active=survival_enabled,
+                         temperament=state.npc_temperaments.get(npc_id))
 
 
 class NPCService:
