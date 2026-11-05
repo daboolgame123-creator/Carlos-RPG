@@ -140,3 +140,23 @@ class NPCPropertyService:
             world_id, "property:take:" + str(taking_id),
             expected_revision, [event], taking_authorized=True)
         return TakingResult(taking_id, after)
+
+    def claim(self, world_id: str, claimant_id: str, claim_id: str,
+              claim_kind: str, site_id: str, resource: str, quantity: int,
+              *, subject_id: str | None = None, taking_id: str | None = None,
+              expected_revision: int) -> TakingResult:
+        """Record an explicitly unverified statement; never move stock."""
+        self.clock._require_session(world_id)
+        state = self.store.load(world_id)
+        if type(expected_revision) is not int or expected_revision != state.revision:
+            raise RevisionConflict("stale property claim")
+        event = DomainEvent(
+            "PropertyClaimFiled", claimant_id, "personal unverified assertion",
+            state.time, {"id": claim_id, "claim_kind": claim_kind,
+                         "subject_id": subject_id, "site_id": site_id,
+                         "resource": resource, "quantity": quantity,
+                         "taking_id": taking_id})
+        after = self.store.append(
+            world_id, "property:claim:" + str(claim_id),
+            expected_revision, [event], claim_authorized=True)
+        return TakingResult(claim_id, after)
