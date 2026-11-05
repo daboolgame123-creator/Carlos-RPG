@@ -19,7 +19,7 @@ from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
 from .knowledge import make_observation_events, choose_food_sharing_round, known_food_sites
 from .food_navigation import choose_food_route
-from .routines import choose_routine_route
+from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
 
 
 @dataclass(frozen=True)
@@ -390,6 +390,11 @@ class LivingWorldEngine:
                     if decision is None:
                         continue
                     verb = decision.action
+                if (self.routines_enabled and verb == 'work'
+                        and not routine_allows_work(current, npc_id)):
+                    # No paid work or physical labor at home/after closing. The
+                    # character stays free to reconsider on a future shift tick.
+                    continue
                 # The deterministic ID may not be reused, even after completion.
                 action_id = f'auto:{npc_id}:{current.time}'
                 if action_id in current.actions:
@@ -425,6 +430,10 @@ class LivingWorldEngine:
             # Schedule both completed actions and re-evaluations of idle NPCs.
             next_ticks = [target]
             next_ticks.extend(item['due'] for item in current.scheduled.values())
+            if self.routines_enabled:
+                next_boundary = next_routine_boundary(current)
+                if next_boundary is not None:
+                    next_ticks.append(next_boundary)
             next_ticks.extend(profile['next_decision_at'] for npc_id, profile
                               in current.npcs.items()
                               if npc_id not in busy
