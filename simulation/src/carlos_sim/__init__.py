@@ -38,3 +38,5 @@ from .property_evidence import personal_property_evidence
 from .complaints import NPCComplaintService, ComplaintResult, personal_complaints
 
 from .rights_permissions import NPCPermissionService, PermissionResult
+
+from .registered_claims import NPCRegisteredClaimService, ClaimAssignmentResult
