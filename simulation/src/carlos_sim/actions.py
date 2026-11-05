@@ -77,6 +77,11 @@ def start_action(state: dict[str, Any], event: DomainEvent, *, action_authorized
     scheduled = state["scheduled"].get(data["schedule_id"])
     if scheduled is None or scheduled["due"] != data["due"] or scheduled["payload"] != {"__npc_action_id": action_id} or scheduled["interrupt"]:
         raise ValueError("action must reference its noninterrupting scheduled signal")
+    if action == "work":
+        from .routines import work_allowed_at
+        if not work_allowed_at(state["entities"], state["npcs"],
+                               state["npc_routines"], state["time"], npc_id):
+            raise ValueError("NPC cannot start work outside its assigned workplace or shift")
     last = state["npcs"][npc_id]["last_decision"]
     if last is None or last["action"] != action or last["at"] != state["time"]:
         raise ValueError("action start requires a decision made this tick")
