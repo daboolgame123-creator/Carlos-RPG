@@ -134,6 +134,8 @@ def resolve_action(state: dict[str, Any], action_id: str, schedule_id: str, time
     action["status"] = "completed"
     action["completed_at"] = time
     action["result"] = result
+    from .temperament import remember_completed_action
+    remember_completed_action(state, action_id)
     if verb == "forage":
         # ScheduledEventFired is the durable authoritative completion event.
         # Both manual TimeEngine and autonomous LivingWorld use the same
