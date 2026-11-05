@@ -24,8 +24,8 @@ def validate_player_perception_event(state: dict[str, Any], event: DomainEvent,
             raise ValueError('cannot observe while travelling')
         if (set(p) != {'location_id', 'occupants'}
                 or p['location_id'] != place
-                or not isinstance(p['occupants'], list)
-                or p['occupants'] != _visible(state, place)):
+                or not isinstance(p['occupants'], (list, tuple))
+                or list(p['occupants']) != _visible(state, place)):
             raise ValueError('player observation must match actual local presence')
     elif event.event_type == 'PlayerHearsayReceived':
         speaker = event.actor_id
