@@ -74,6 +74,13 @@ jobs:
       - name: Smoke-test two-person finite food recovery and eating
         run: PYTHONPATH=src python scenarios/test_village/demo_gathering.py
 
+      - name: Smoke-test 01-W temporary offline Carlos player commands
+        run: |
+          printf '%s\n' look 'move square-woods' 'wait 50' look quit | PYTHONPATH=src python scenarios/test_village/play_local.py > /tmp/01w-local.txt
+          grep -q 'traveling' /tmp/01w-local.txt
+          grep -q 'location_id: woods' /tmp/01w-local.txt
+          grep -q 'disposable world discarded' /tmp/01w-local.txt
+
       - name: Demonstrate autonomous finite gathering with seven NPCs
         run: PYTHONPATH=src python scenarios/test_village/demo_gathering_autonomy.py
 
