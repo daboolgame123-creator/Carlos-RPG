@@ -114,3 +114,62 @@ def test_invalid_snapshot_cannot_reassign_workplace(tmp_path):
         snap["npc_routines"]["basim"]["home_id"] = "unknown-location"
         with pytest.raises(ValueError):
             WorldState.from_dict(snap)
+
+
+def test_full_commute_shift_and_return_home_without_teleport(tmp_path):
+    with SQLiteEventStore(tmp_path / "shift.sqlite") as db:
+        scenario(db, work_start=0, work_end=300)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        engine = LivingWorldEngine(db, clock, navigation_enabled=True, routines_enabled=True)
+        result = engine.advance("test", seconds=465, command_id="one-day-part",
+                                expected_revision=db.load("test").revision)
+        state = result.state
+        history = [t for t in state.travels.values() if t["npc_id"] == "basim"]
+        assert len(history) == 2
+        assert [(t["origin"], t["destination"], t["start"], t["arrived_at"]) for t in
+                sorted(history, key=lambda t: t["start"])] == [
+                    ("square", "smithy", 0, 50),
+                    ("smithy", "square", 410, 460)]
+        work = [a for a in state.actions.values()
+                if a["npc_id"] == "basim" and a["action"] == "work"]
+        assert len(work) == 2
+        assert all(a["start"] in (50, 230) for a in work)
+        assert state.entities["basim"]["location_id"] == "square"
+        assert db.verify("test").to_dict() == state.to_dict()
+
+
+def test_no_known_road_cannot_work_remotely_or_teleport(tmp_path):
+    with SQLiteEventStore(tmp_path / "isolated.sqlite") as db:
+        scenario(db, route=False, work_start=0, work_end=300)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        state = LivingWorldEngine(db, clock, navigation_enabled=True,
+                                  routines_enabled=True).advance(
+            "test", seconds=301, command_id="isolated",
+            expected_revision=db.load("test").revision).state
+        assert not [t for t in state.travels.values() if t["npc_id"] == "basim"]
+        assert not [a for a in state.actions.values()
+                    if a["npc_id"] == "basim" and a["action"] == "work"]
+        assert state.entities["basim"]["location_id"] == "square"
+        assert db.verify("test").to_dict() == state.to_dict()
+
+
+def test_critical_need_prevents_optional_commute(tmp_path):
+    with SQLiteEventStore(tmp_path / "hungry.sqlite") as db:
+        scenario(db)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        current = db.load("test")
+        db.append("test", "urgent-hunger", current.revision, [
+            ev("NPCNeedChanged", {"npc_id": "basim", "need": "hunger",
+                                  "previous": 5, "current": 95}, who="basim")
+        ])
+        state = db.load("test")
+        assert choose_routine_route(state, "basim") is None
+        result = LivingWorldEngine(db, clock, navigation_enabled=True,
+                                   routines_enabled=True).advance(
+            "test", seconds=1, command_id="urgent",
+            expected_revision=state.revision)
+        assert not any(t["npc_id"] == "basim" for t in result.state.travels.values())
+        assert db.verify("test").to_dict() == result.state.to_dict()
