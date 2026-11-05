@@ -103,7 +103,7 @@ def main():
                 "rules_version": snapshot["rules_version"],
                 "state_digest": canonical_hash(snapshot),
                 "state_semantic_digest": canonical_hash({
-                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs")
+                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades")
                 }),
                 "replay_equal": True,
             }
