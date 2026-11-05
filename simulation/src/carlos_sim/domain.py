@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 25
-RULES_VERSION = 33
+SCHEMA_VERSION = 26
+RULES_VERSION = 34
 
 
 def _thaw(value: Any) -> Any:
@@ -102,6 +102,8 @@ class WorldState:
     complaint_desks: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     property_complaints: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     property_title_origins: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    property_custody_lots: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    property_custody_moves: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -139,6 +141,8 @@ class WorldState:
         object.__setattr__(self, "complaint_desks", _freeze(_json_copy(self.complaint_desks)))
         object.__setattr__(self, "property_complaints", _freeze(_json_copy(self.property_complaints)))
         object.__setattr__(self, "property_title_origins", _freeze(_json_copy(self.property_title_origins)))
+        object.__setattr__(self, "property_custody_lots", _freeze(_json_copy(self.property_custody_lots)))
+        object.__setattr__(self, "property_custody_moves", _freeze(_json_copy(self.property_custody_moves)))
 
     def to_dict(self) -> dict[str, Any]:
         # Replay/projection states already passed full JSON normalization in
@@ -172,7 +176,9 @@ class WorldState:
                            "rumor_deliveries": self.rumor_deliveries, "property_takings": self.property_takings,
                            "property_sightings": self.property_sightings, "property_claims": self.property_claims,
                            "complaint_desks": self.complaint_desks, "property_complaints": self.property_complaints,
-                           "property_title_origins": self.property_title_origins})
+                           "property_title_origins": self.property_title_origins,
+                           "property_custody_lots": self.property_custody_lots,
+                           "property_custody_moves": self.property_custody_moves})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
@@ -192,7 +198,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -200,7 +206,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -262,6 +268,8 @@ class WorldState:
         validate_complaints(d)
         from .rights import validate_origins
         validate_origins(d)
+        from .custody import validate_lots
+        validate_lots(d)
         from .loans import validate_loans
         validate_loans(d)
         from .temperament import validate_temperaments
@@ -545,6 +553,11 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             apply_survival_elapsed(d, p["to"] - p["from"])
     else:
         raise ValueError(f"unknown event type: {kind}")
+    # Reconcile every material stock delta against opt-in traceable lots.
+    # Ambiguity degrades knowledge rather than assigning arbitrary units.
+    if d["property_custody_lots"]:
+        from .custody import reconcile_lots
+        reconcile_lots(d, state, e)
     d["revision"] += 1
     d["time"] = e.time
     return WorldState._from_internal_projection(d)
