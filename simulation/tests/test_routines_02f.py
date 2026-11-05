@@ -7,6 +7,7 @@ from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine, LivingWorldEng
 from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION, WorldState
 from carlos_sim.routines import choose_routine_route
 from carlos_sim.store import InvalidEvent
+from carlos_sim.time_engine import AdvanceLimitExceeded
 from test_temperament_02e import setup, ev
 
 
@@ -271,3 +272,73 @@ def test_seven_npcs_with_different_shifts_and_unconfigured_neighbors(tmp_path):
         assert result.entities["nora"]["location_id"] == "square"
         assert result.entities["salma"]["location_id"] == "square"
         assert db.verify("test").to_dict() == result.to_dict()
+
+
+def test_inflight_commute_survives_close_snapshot_and_resume(tmp_path):
+    path = tmp_path / "resume.sqlite"
+    with SQLiteEventStore(path) as db:
+        scenario(db)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        in_transit = LivingWorldEngine(db, clock, navigation_enabled=True,
+                                      routines_enabled=True).advance(
+            "test", seconds=1, command_id="start-journey",
+            expected_revision=db.load("test").revision).state
+        assert in_transit.entities["basim"]["location_id"] == "square"
+        assert any(t["status"] == "traveling" and t["npc_id"] == "basim"
+                   for t in in_transit.travels.values())
+        db.snapshot("test")
+        saved = in_transit.to_dict()
+        clock.close_session("test")
+    with SQLiteEventStore(path) as db:
+        assert db.load("test").to_dict() == saved
+        assert db.verify("test").to_dict() == saved
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        at_arrival = LivingWorldEngine(db, clock, navigation_enabled=True,
+                                       routines_enabled=True).advance(
+            "test", seconds=49, command_id="finish-journey",
+            expected_revision=db.load("test").revision).state
+        assert at_arrival.time == 50
+        assert at_arrival.entities["basim"]["location_id"] == "smithy"
+        assert db.verify("test").to_dict() == at_arrival.to_dict()
+
+
+def test_split_time_preserves_physical_work_and_travel_results(tmp_path):
+    results = []
+    for name, chunks in (("lump", (465,)), ("split", (200, 265))):
+        with SQLiteEventStore(tmp_path / (name + ".sqlite")) as db:
+            scenario(db)
+            clock = TimeEngine(db)
+            clock.open_session("test")
+            engine = LivingWorldEngine(db, clock, navigation_enabled=True,
+                                       routines_enabled=True)
+            for index, seconds in enumerate(chunks):
+                engine.advance("test", seconds=seconds,
+                               command_id=f"{name}-{index}",
+                               expected_revision=db.load("test").revision)
+            state = db.load("test")
+            assert db.verify("test").to_dict() == state.to_dict()
+            results.append(state)
+    a, b = results
+    for collection in ("npcs", "entities", "resources", "actions", "travels",
+                       "npc_routines", "npc_temperaments"):
+        assert getattr(a, collection) == getattr(b, collection), collection
+    assert a.time == b.time == 465
+
+
+def test_event_limit_failure_rolls_back_entire_routine_tick(tmp_path):
+    with SQLiteEventStore(tmp_path / "limit.sqlite") as db:
+        scenario(db)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        original = db.load("test")
+        engine = LivingWorldEngine(db, clock, navigation_enabled=True,
+                                   routines_enabled=True, max_events_per_advance=1)
+        with pytest.raises(AdvanceLimitExceeded):
+            engine.advance("test", seconds=1, command_id="too-many",
+                           expected_revision=original.revision)
+        assert db.load("test").to_dict() == original.to_dict()
+        assert db.db.execute(
+            "SELECT COUNT(*) FROM commands WHERE command_id='too-many'"
+        ).fetchone()[0] == 0
