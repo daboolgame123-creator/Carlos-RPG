@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .domain import DomainEvent
+from .player_perception import recall_player_events
 from .living_world import LivingWorldEngine
 from .movement import player_travel_signal, _in_transit
 from .social import NPCSocialService, KINDS
@@ -96,6 +97,32 @@ class PlayerGateway:
             'location_id': place, 'location_name': state.locations[place]['name'],
             'occupants': present, 'exits': exits,
         })
+
+    def observe(self, *, command_id: str,
+                expected_revision: int) -> PlayerCommandResult:
+        """Record explicitly chosen local sight; inspect stays read-only."""
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot observe while travelling')
+        from .movement import _visible
+        location = state.entities[self.player_id]['location_id']
+        occupants = _visible(state.to_dict(), location)
+        event = DomainEvent('PlayerObserved', self.player_id,
+                            'player deliberately looked around locally',
+                            state.time, {
+            'location_id': location, 'occupants': occupants,
+        })
+        self.store.append(self.world_id, 'player-observe:' + cid,
+                          expected_revision, [event], movement_authorized=True)
+        return self.inspect()
+
+    def recall(self) -> PlayerCommandResult:
+        """Only player's verified past sightings and addressed unverified speech."""
+        state = self._state()
+        memories = recall_player_events(self.store, state, self.player_id)
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'memory', memories)
 
     def move(self, route_id: str, *, command_id: str,
              expected_revision: int) -> PlayerCommandResult:
