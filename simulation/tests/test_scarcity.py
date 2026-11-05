@@ -432,3 +432,28 @@ def test_refusal_then_alternative_real_delivery_is_resource_conserving(tmp_path)
         assert s.obligations["ask-basim"]["status"] == "declined"
         assert s.obligations["ask-zara"]["status"] == "fulfilled"
         assert db.verify("w").to_dict() == s.to_dict()
+
+
+def test_all_01v_modes_25_co_located_npcs_under_event_cap(tmp_path):
+    """Bounded gossip must remain bounded with every 01-V prerequisite ON."""
+    from test_knowledge_review_blockers import setup_community, observe
+
+    with SQLiteEventStore(tmp_path / "25-all-modes.sqlite") as db:
+        setup_community(db, count=25)
+        clock = TimeEngine(db)
+        clock.open_session("scale")
+        observe(db, clock, "npc00")
+        start = db.load("scale")
+        result = LivingWorldEngine(
+            db, clock, navigation_enabled=True, knowledge_enabled=True,
+            foraging_enabled=True, food_navigation_enabled=True,
+            assistance_enabled=True, scarcity_enabled=True,
+        ).advance(
+            "scale", seconds=1, command_id="25-full-stack",
+            expected_revision=start.revision
+        )
+        assert result.state.time == 1
+        assert len(result.knowledge_shares) == 24
+        assert result.event_count < 1000
+        assert len(result.knowledge_shares) == len(set(result.knowledge_shares))
+        assert db.verify("scale").to_dict() == result.state.to_dict()
