@@ -1,4 +1,4 @@
-"""01-X disposable offline play demo; NEVER imports real Carlos story data.
+"""01-Y disposable offline play demo; NEVER imports real Carlos story data.
 
 From simulation/:
     PYTHONPATH=src python scenarios/test_village/play_local.py
@@ -13,6 +13,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 
 from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine, PlayerGateway
+from carlos_sim.rpg_state import unknown_profile
 from carlos_sim.store import InvalidEvent, RevisionConflict, DuplicateCommand
 from carlos_sim.time_engine import SessionClosed, AdvanceLimitExceeded
 
@@ -38,6 +39,13 @@ def setup(db):
             "location_id": "square",
         }),
     ]
+    # Non-canon disposable fixture; never import Carlos story statistics.
+    sample = unknown_profile()
+    sample["vitals"]["hp"] = {"current": 12, "max": 12}
+    sample["vitals"]["st"] = {"current": 8, "max": 8}
+    events.append(event("PlayerRPGInitialized", {
+        "player_id": "carlos", "profile": sample,
+    }))
     for npc, place in (("basim", "square"), ("nora", "woods")):
         events.extend([
             event("EntityCreated", {
@@ -65,8 +73,8 @@ def render(result):
 
 
 def main():
-    print("CARLOS / 01-X local disposable world — no permanent save")
-    print("Commands: look | remember | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
+    print("CARLOS / 01-Y local disposable world — fictional sample HP/ST; no permanent save")
+    print("Commands: look | remember | status | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
     print("Talk kinds: greeting, offer_help, request_help, threat")
     with TemporaryDirectory(prefix="carlos-01w-") as folder:
         with SQLiteEventStore(Path(folder) / "world.sqlite") as db:
@@ -93,7 +101,7 @@ def main():
                 if verb in ("quit", "exit"):
                     break
                 if verb == "help":
-                    print("look | remember | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
+                    print("look | remember | status | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
                     continue
                 try:
                     if verb == "look" and not args:
@@ -103,6 +111,8 @@ def main():
                             expected_revision=db.load("demo").revision)
                     elif verb == "remember" and not args:
                         result = gateway.recall()
+                    elif verb == "status" and not args:
+                        result = gateway.status()
                     elif verb == "move" and len(args) == 1:
                         counter += 1
                         result = gateway.move(
