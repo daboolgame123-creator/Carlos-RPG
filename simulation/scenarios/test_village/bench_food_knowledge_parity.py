@@ -103,7 +103,7 @@ def main():
                 "rules_version": snapshot["rules_version"],
                 "state_digest": canonical_hash(snapshot),
                 "state_semantic_digest": canonical_hash({
-                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves")
+                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions")
                 }),
                 "replay_equal": True,
             }
