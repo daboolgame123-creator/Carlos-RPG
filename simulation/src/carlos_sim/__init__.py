@@ -32,3 +32,5 @@ from .production import NPCProductionService, ProductionStart
 from .market import NPCMarketService, MarketResult
 from .loans import NPCLoanService, LoanResult
 from .property import NPCPropertyService, TakingResult
+
+from .property_evidence import personal_property_evidence
