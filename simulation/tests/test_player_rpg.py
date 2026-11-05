@@ -57,7 +57,7 @@ def vital_change(db, before, after, *, source='test-scenario', player='carlos',
 
 def test_01y_version_and_fresh_world_remains_unconfigured(world):
     db, clock, gw = world
-    assert (SCHEMA_VERSION, RULES_VERSION) == (16, 23)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (17, 24)
     assert gw.status().status == 'rpg_uninitialized'
     assert gw.status().details == {'configured': False}
     assert db.load('world').rpg_profiles == {}
