@@ -226,7 +226,12 @@ jobs:
           import json
           old = json.load(open('/tmp/01t-with-knowledge.json'))
           new = json.load(open('/tmp/01u-default-off.json'))
-          assert old == new, (old, new)
+          # Event and semantic-state equality across deliberate Rules 18->19
+          # (full state hashes correctly differ because version is persisted).
+          assert old['rules_version'] == 18 and new['rules_version'] == 19
+          for key in ('npcs', 'time', 'revision', 'events_count',
+                      'events_digest', 'state_semantic_digest', 'replay_equal'):
+              assert old[key] == new[key], (key, old[key], new[key])
           assert old['replay_equal'] is True
           PY
 
@@ -238,7 +243,10 @@ jobs:
           import json
           baseline = json.load(open('/tmp/01u-frozen.json'))
           candidate = json.load(open('/tmp/01v-default-scarcity-off.json'))
-          assert baseline == candidate, (baseline, candidate)
+          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 19
+          for key in ('npcs', 'time', 'revision', 'events_count',
+                      'events_digest', 'state_semantic_digest', 'replay_equal'):
+              assert baseline[key] == candidate[key], (key, baseline[key], candidate[key])
           assert baseline['replay_equal'] is True
           PY
 

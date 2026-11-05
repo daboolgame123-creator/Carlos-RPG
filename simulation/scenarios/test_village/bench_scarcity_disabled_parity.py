@@ -99,7 +99,14 @@ def main():
                 "revision": outcome.state.revision,
                 "events_count": len(event_log),
                 "events_digest": canonical_hash(event_log),
+                # Full digest continues to include Rules version. The next
+                # digest excludes ONLY the version field to compare behavior
+                # across the explicit 18-to-19 rules boundary.
+                "rules_version": snapshot["rules_version"],
                 "state_digest": canonical_hash(snapshot),
+                "state_semantic_digest": canonical_hash({
+                    k: v for k, v in snapshot.items() if k != "rules_version"
+                }),
                 "replay_equal": True,
             }
 
