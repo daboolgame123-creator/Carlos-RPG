@@ -109,6 +109,12 @@ jobs:
           ref: d46aaa04fd53f07e3fd06358f6f62efb904e7452
           path: reviewed-02f
           persist-credentials: false
+      - name: Check out verified Phase 02-G Schema 21 / Rules 28 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: 7b7deaa8f4ef17f77600332aec1a588e8d16478d
+          path: reviewed-02g
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
@@ -439,6 +445,31 @@ jobs:
                       'legacy_semantic_digest','replay_equal'):
               assert old[key]==new[key], (key,old[key],new[key])
           assert old['replay_equal'] is True
+          PY
+
+      - name: Reject actual Phase 02-G Schema 21 Rules 28 saved world without mutation
+        run: |
+          PYTHONPATH=../reviewed-02g/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore
+          with SQLiteEventStore('/tmp/carlos-02g-predecessor.sqlite') as store:
+              store.create_world('legacy')
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.store import UnsupportedVersion
+          path=Path('/tmp/carlos-02g-predecessor.sqlite')
+          before=hashlib.sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              try:
+                  db.load('legacy')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('02-G world was not rejected')
+              assert db.db.execute('SELECT schema_version,rules_version FROM worlds WHERE id=?', ('legacy',)).fetchone() == (21,28)
+          assert hashlib.sha256(path.read_bytes()).hexdigest() == before
           PY
 
       - name: Verify Phase 02-G feature OFF against actual Phase 02-F
