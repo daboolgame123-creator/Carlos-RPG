@@ -6,7 +6,7 @@ All experiences are projected solely from successful scheduled NPC actions.
 from __future__ import annotations
 
 from typing import Any
-from .domain import DomainEvent
+from .domain import DomainEvent, _json_copy
 
 TRAITS = ("ambition", "curiosity", "caution", "discipline")
 MEMORY_LIMIT = 8
@@ -15,7 +15,7 @@ VALID_ACTIONS = ("rest", "work", "investigate", "wait", "forage")
 
 def configure_temperament(state: dict[str, Any], event: DomainEvent, *,
                           bootstrap: bool) -> None:
-    p = event.data
+    p = _json_copy(event.data)
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
             or set(p) != {"npc_id", "traits"}):
         raise ValueError("NPC temperament requires trusted time-zero bootstrap")
