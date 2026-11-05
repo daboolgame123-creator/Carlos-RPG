@@ -87,20 +87,27 @@ def choose_routine_route(state: WorldState, npc_id: str) -> RoutineIntent | None
     return RoutineIntent(dest, path[0], "scheduled work commute" if at_work else "scheduled homeward commute")
 
 
-def routine_allows_work(state: WorldState, npc_id: str) -> bool:
-    """Work has a physical workplace and shift; ongoing work is never cancelled."""
-    profile = state.npc_routines.get(npc_id)
+def work_allowed_at(entities: Any, npcs: Any, routines: Any,
+                    world_time: int, npc_id: str) -> bool:
+    """The shared deterministic work gate for both planning and event reduction."""
+    profile = routines.get(npc_id)
     if profile is None:
         return True
     place = profile["workplace_id"]
-    if place is None or state.entities[npc_id]["location_id"] != place:
+    if place is None or entities[npc_id]["location_id"] != place:
         return False
-    npc = state.npcs[npc_id]
+    npc = npcs[npc_id]
     if npc["needs"]["hunger"] >= 90 or npc["needs"]["safety"] >= 75:
         return False
-    now = state.time % DAY_SECONDS
+    now = world_time % DAY_SECONDS
     start, end = profile["work_start"], profile["work_end"]
     return (start <= now < end) if start < end else (now >= start or now < end)
+
+
+def routine_allows_work(state: WorldState, npc_id: str) -> bool:
+    """Work has a physical workplace and shift; ongoing work is never cancelled."""
+    return work_allowed_at(state.entities, state.npcs, state.npc_routines,
+                           state.time, npc_id)
 
 
 def next_routine_boundary(state: WorldState) -> int | None:
