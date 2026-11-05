@@ -85,3 +85,34 @@ def choose_routine_route(state: WorldState, npc_id: str) -> RoutineIntent | None
     if not path:
         return None
     return RoutineIntent(dest, path[0], "scheduled work commute" if at_work else "scheduled homeward commute")
+
+
+def routine_allows_work(state: WorldState, npc_id: str) -> bool:
+    """Work has a physical workplace and shift; ongoing work is never cancelled."""
+    profile = state.npc_routines.get(npc_id)
+    if profile is None:
+        return True
+    place = profile["workplace_id"]
+    if place is None or state.entities[npc_id]["location_id"] != place:
+        return False
+    npc = state.npcs[npc_id]
+    if npc["needs"]["hunger"] >= 90 or npc["needs"]["safety"] >= 75:
+        return False
+    now = state.time % DAY_SECONDS
+    start, end = profile["work_start"], profile["work_end"]
+    return (start <= now < end) if start < end else (now >= start or now < end)
+
+
+def next_routine_boundary(state: WorldState) -> int | None:
+    """Next future clock boundary for active shifts; never uses wall-clock time."""
+    candidates = []
+    start_day = (state.time // DAY_SECONDS) * DAY_SECONDS
+    for profile in state.npc_routines.values():
+        if profile["workplace_id"] is None:
+            continue
+        for offset in (profile["work_start"], profile["work_end"]):
+            transition = start_day + offset
+            if transition <= state.time:
+                transition += DAY_SECONDS
+            candidates.append(transition)
+    return min(candidates) if candidates else None
