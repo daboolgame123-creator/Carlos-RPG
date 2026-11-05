@@ -68,7 +68,7 @@ def world(tmp_path):
 
 
 def test_opt_in_is_required_no_missing_stock_is_invented(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (19, 26)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (20, 27)
     with SQLiteEventStore(tmp_path / 'unconfigured.sqlite') as db:
         setup(db, configure=False, reserve=None, wild=0)
         clock = TimeEngine(db)
@@ -336,7 +336,7 @@ def test_backup_restore_15_22_replay_remains_exact(world, tmp_path):
     bundle = tmp_path / 'environment-backup'
     git_ref = '1225ae066f22bc2688a583d46e63ceda80558a07'
     manifest = create_backup_bundle(db, 'world', bundle, code_commit=git_ref)
-    assert manifest['schema'] == 19 and manifest['rules'] == 26
+    assert manifest["schema"] == 20 and manifest["rules"] == 27
     assert verify_backup_bundle(bundle) == manifest
     restored = tmp_path / 'restored.sqlite'
     restore_backup_bundle(bundle, restored)
