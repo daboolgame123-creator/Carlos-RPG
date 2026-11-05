@@ -253,3 +253,18 @@ def test_held_stock_grant_can_be_revoked_only_with_recipient_local(scene):
     with pytest.raises(InvalidEvent, match="meeting"):
         revoke(db, clock)
     assert db.load("v").to_dict() == old
+
+
+def test_partial_use_then_local_revocation_same_tick_preserves_history(scene):
+    db, clock = scene
+    initialized(db)
+    permit(db, clock, quantity=2)
+    take(db, clock, taking_id="first", permission_id="g1")
+    stopped = revoke(db, clock)
+    grant = stopped.property_permissions["g1"]
+    assert grant["used"] == 1 and grant["remaining"] == 1
+    assert grant["revoked_at"] == stopped.property_takings["first"]["taken_at"] == 0
+    assert grant["status"] == "revoked"
+    with pytest.raises(InvalidEvent):
+        take(db, clock, taking_id="second", permission_id="g1")
+    assert db.verify("v").to_dict() == stopped.to_dict()
