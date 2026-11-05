@@ -61,6 +61,12 @@ jobs:
           ref: 3fb18d3222ebdc08307d393bab8603a5726dda63
           path: reviewed-01w
           persist-credentials: false
+      - name: Check out genuine Phase 01-X 13/20 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: b1f1c265a09d23cef3a1078cee98e3952a37ab39
+          path: reviewed-01x
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
@@ -69,6 +75,7 @@ jobs:
           test "$(git -C ../reviewed-01u rev-parse HEAD)" = "5c8930b12973e7b764376147d8b43cd105a2beef"
           test "$(git -C ../reviewed-01v rev-parse HEAD)" = "6a0f3d473f0eecb856fb2b320e1d6485b032b3bc"
           test "$(git -C ../reviewed-01w rev-parse HEAD)" = "3fb18d3222ebdc08307d393bab8603a5726dda63"
+          test "$(git -C ../reviewed-01x rev-parse HEAD)" = "b1f1c265a09d23cef3a1078cee98e3952a37ab39"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -83,7 +90,8 @@ jobs:
 
       - name: Smoke-test 01-W temporary offline Carlos player commands
         run: |
-          printf '%s\n' look 'move square-woods' 'wait 50' look quit | PYTHONPATH=src python scenarios/test_village/play_local.py > /tmp/01w-local.txt
+          printf '%s\n' status look 'move square-woods' 'wait 50' look status quit | PYTHONPATH=src python scenarios/test_village/play_local.py > /tmp/01w-local.txt
+          grep -q 'rpg_status' /tmp/01w-local.txt
           grep -q 'traveling' /tmp/01w-local.txt
           grep -q 'location_id: woods' /tmp/01w-local.txt
           grep -q 'disposable world discarded' /tmp/01w-local.txt
@@ -235,7 +243,7 @@ jobs:
           new = json.load(open('/tmp/01u-default-off.json'))
           # Event and semantic-state equality across deliberate Rules 18->20
           # (full state hashes correctly differ because version is persisted).
-          assert old['rules_version'] == 18 and new['rules_version'] == 20
+          assert old['rules_version'] == 18 and new['rules_version'] == 21
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert old[key] == new[key], (key, old[key], new[key])
@@ -250,7 +258,7 @@ jobs:
           import json
           baseline = json.load(open('/tmp/01u-frozen.json'))
           candidate = json.load(open('/tmp/01v-default-scarcity-off.json'))
-          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 20
+          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 21
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert baseline[key] == candidate[key], (key, baseline[key], candidate[key])
@@ -299,4 +307,36 @@ jobs:
               else:
                   raise AssertionError('13/19 world silently accepted')
               assert record()==before
+          PY
+
+      - name: Reject actual Phase 01-X 13/20 SQLite file without mutation
+        run: |
+          PYTHONPATH=../reviewed-01x/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/01x-predecessor.sqlite') as db:
+              db.create_world('old')
+              db.append('old','genesis',0,[DomainEvent('LocationCreated',None,'01X old world',0,
+                  {'id':'village','name':'Village'})])
+              db.snapshot('old')
+              assert db.db.execute('SELECT schema_version,rules_version FROM worlds WHERE id="old"').fetchone() == (13,20)
+              assert db.verify('old').revision == 1
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/01x-predecessor.sqlite') as db:
+              def evidence():
+                  return (
+                      db.db.execute('SELECT * FROM worlds WHERE id="old"').fetchall(),
+                      db.db.execute('SELECT * FROM events WHERE world_id="old"').fetchall(),
+                      db.db.execute('SELECT * FROM snapshots WHERE world_id="old"').fetchall(),
+                      db.db.execute('SELECT * FROM commands WHERE world_id="old"').fetchall())
+              before = evidence()
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('incompatible 13/20 world unexpectedly accepted')
+              assert evidence() == before
+              assert db.db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
           PY
