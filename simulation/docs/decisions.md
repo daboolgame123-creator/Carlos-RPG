@@ -397,3 +397,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Manual target, current action, decision cooldown, danger warning, local forage and hunger/fatigue/safety/owned-food eligibility remain binding. Hearsay is fallible and arrival never creates food.
 - Physical 120-second forage after actual arrival may collect one finite unit. No new event type or schema/rules change (13/18). CI 41930579158 passes 564 tests per Python interpreter.
 - Phase 01-U is TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING, not APPROVED/CLOSED; 01-T also pending, P0 OPEN. See [01-U report](phase_01u_report.md).
+
+## 2026-11-05 — Corrected 01-U, U-3, reviewer deferral
+
+- OpenCode BLOCKED applies to original reviewed SHA, and remains historical. Follow-up code runs on isolated review-fix branches without rewriting PR #1 or #2 heads.
+- 01-U includes corrected 01-T's 25-NPC bounded food sharing and malformed 5000-digit historical ID guard via a Git merge parent.
+- U-3 policy: when food_navigation_enabled is ON, both fallback exploration and food routes respect the earlier next_decision_at. When OFF, corrected 01-T behavior remains unchanged.
+- CI 42011456921: 569/569 per Python 3.10 and 3.13; exact event and state parity with corrected 01-T when new flag OFF.
+- External review is DEFERRED by the user, not waived for approval; P0 OPEN, no durable world, no main or original story edits.
