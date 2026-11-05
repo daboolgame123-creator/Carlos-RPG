@@ -1,0 +1,16 @@
+# Independent 02-C review request — market title, price quotes, local trades
+
+**STATUS: REQUESTED, NOT PERFORMED.** Do not mark APPROVED/CLOSED solely from implementer's CI. **P0 remains OPEN.**
+
+Baseline genuine 02-B `6dbee22a4b6b167a5b5ca5ece1c51612016b9e5d` (Schema 16 / Rules 23), candidate `simulation-engine-phase-02c` (Schema 17 / Rules 24). Inspect the actual diff of `market.py`, `domain.py`, `store.py`, tests, demo and workflow; treat all author tests as untrusted until independently reproduced.
+
+## Challenge these invariants
+1. **Ownership:** 02-B produces bakery bread as SITE-owned inventory. Only a separately registered, physically present steward may offer bakery stock, and copper payments must enter the bakery/site ledger, **not** the steward's private account. A self-owner NPC may sell only their own initialized balance. No remote seizure, hidden transfer, laundering of fabricated stock or appropriation by choosing arbitrary owner ID.
+2. **Conservation:** For goods and copper (or barter resources), the single executed trade must subtract exactly what it adds: seller owner goods -q / buyer goods +q / buyer payment -(q×ask) / seller owner payment +(q×ask). Unknown must not become zero. Reject overdraw, overfill, negative, booleans, multiplication overflow and mismatch of quoted price.
+3. **Locality:** Quotes must be surfaced only to a physically present on-site NPC, with no global price omniscience. A buyer and the actual seller/steward must be present and not traveling/producing/engaged in another physical task at acceptance. Quotes can become stale because they do not reserve stock; the actual sale must fail rather than create a debt.
+4. **Fraud/races:** Forge actor/recipient, spoof `market_authorized`, register an untrusted or late stall, reuse trade IDs, spend the same buyer's coins on two offers simultaneously, list more than an owner has, buy an offer twice, buy after closure, change price between quote and acceptance, and attempt sale after seller has left.
+5. **Snapshots and restoration:** Every durable trade has full eight before/after balances and an exact source offer. Corrupted state and tampered trade log must fail. Compare full replay and snapshots; restore an independent SQLite bundle and complete an outstanding second sale without duplicates.
+6. **Version safety:** Create a true 02-B 16/23 world using frozen code. Open with current 17/24 and prove `UnsupportedVersion` without changing worlds/events/commands/snapshots; no accidental SQL schema conversion or silent rebase. Verify actual historical 7-NPC event and semantic parity with market off.
+7. **Scope truthfulness:** Market asks are explicit local seller quotes, NOT equilibrium or automatically supply-responsive dynamic prices. Copper is preinitialized finite test resource; other named payment goods permit barter. No NPC trading planner, buyer/player endpoint, credit, taxes, wages, logistics, public Auth or independent P0 approval.
+
+Report code SHA, independent Python 3.10/3.13 results, positive/negative edge probes, replay and isolated restore evidence and blockers separately. The maximum status without independent review is **TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED**, P0 OPEN, disposable-test only.
