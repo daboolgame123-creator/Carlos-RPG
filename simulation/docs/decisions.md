@@ -432,3 +432,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Use stable requirement ID, priority, rationale, dependency, proposed phase or an explicit unscheduled designation, minimum acceptance test, and links to its discovery phase. Reconsider open items before the next affected stage/milestone; an unimplemented requirement must never be presented as completed.
 - First items: WORLD-GAP-001 safe emergency interruptions (candidate 02-F2), WORLD-GAP-002 employment/wages (unscheduled economic slice), WORLD-GAP-003 housing/occupancy/property rights (unscheduled property slice). Full descriptions in ROADMAP.md §14 and ROADMAP_CHANGELOG.md G-016; cross-reference in phase_02f_report.md.
 - This is a planning-only decision: Schema20/Rules27 unchanged, no new authorized economic events, no change to `main` or story files, 02-F independent review still deferred and P0 OPEN.
+
+
+## 2026-11-05 — Phase 02-G local, attributed hearsay (provisional)
+
+- Ground gossip only in an existing *received* local social message, recorded with logical time and exact speaker. Its contents are **not** authenticated facts. Player claims cannot rewrite identities, age, theft history, social relations or financial resources.
+- A true first-hand listener is the only initial gossip witness. Later retellings need the individual's own previous delivery, local presence, logical time, hop and confidence bounds. No magical knowledge across locations, no same-tick forwarding, no automatic permanent social condemnation.
+- Persistent `rumor_deliveries` are opt-in, event-sourced and viewpoint scoped. Typed threat reports can affect a listener-specific *unproven* caution interpretation, but no default forced trade denial. Model interpretation of free-language jokes, insults and lies is deferred with explicit WORLD-GAP-004; personality-sensitive shopkeeper decisions are WORLD-GAP-005 (see ROADMAP.md).
+- Schema21/Rules28 are deliberate version increments; actual 02-F 20/27 worlds must be rejected unchanged. Independent review and P0 continue as mandatory gates. No changes to `main` or original story files.
