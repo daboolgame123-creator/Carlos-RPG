@@ -149,7 +149,7 @@ def test_real_work_memory_changes_followup_choice_with_same_current_needs(tmp_pa
     neutral = {"ambition": 50, "curiosity": 50,
                "caution": 50, "discipline": 50}
     with SQLiteEventStore(tmp_path / "experienced.sqlite") as db:
-        setup(db, members=("basim",), traits={"basim": neutral})
+        setup(db, members=("basim",), traits={"basim": neutral}, fatigue=0, earn=41)
         clock = TimeEngine(db)
         clock.open_session("test")
         first = decide(db, clock, "basim", "first")
