@@ -100,12 +100,12 @@ def main():
                 "events_count": len(event_log),
                 "events_digest": canonical_hash(event_log),
                 # Full digest continues to include Rules version. The next
-                # digest excludes ONLY the version field to compare behavior
+                # digest excludes versions and new empty opt-in RPG collection to compare behavior
                 # across the explicit 18-to-19 rules boundary.
                 "rules_version": snapshot["rules_version"],
                 "state_digest": canonical_hash(snapshot),
                 "state_semantic_digest": canonical_hash({
-                    k: v for k, v in snapshot.items() if k != "rules_version"
+                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles")
                 }),
                 "replay_equal": True,
             }
