@@ -1,4 +1,4 @@
-"""01-W disposable offline play demo; NEVER imports real Carlos story data.
+"""01-X disposable offline play demo; NEVER imports real Carlos story data.
 
 From simulation/:
     PYTHONPATH=src python scenarios/test_village/play_local.py
@@ -65,8 +65,8 @@ def render(result):
 
 
 def main():
-    print("CARLOS / 01-W local disposable world — no permanent save")
-    print("Commands: look | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
+    print("CARLOS / 01-X local disposable world — no permanent save")
+    print("Commands: look | remember | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
     print("Talk kinds: greeting, offer_help, request_help, threat")
     with TemporaryDirectory(prefix="carlos-01w-") as folder:
         with SQLiteEventStore(Path(folder) / "world.sqlite") as db:
@@ -93,11 +93,16 @@ def main():
                 if verb in ("quit", "exit"):
                     break
                 if verb == "help":
-                    print("look | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
+                    print("look | remember | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
                     continue
                 try:
                     if verb == "look" and not args:
-                        result = gateway.inspect()
+                        counter += 1
+                        result = gateway.observe(
+                            command_id=f"cmd-{counter}",
+                            expected_revision=db.load("demo").revision)
+                    elif verb == "remember" and not args:
+                        result = gateway.recall()
                     elif verb == "move" and len(args) == 1:
                         counter += 1
                         result = gateway.move(
