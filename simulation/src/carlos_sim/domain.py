@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 16
-RULES_VERSION = 23
+SCHEMA_VERSION = 17
+RULES_VERSION = 24
 
 
 def _thaw(value: Any) -> Any:
@@ -88,6 +88,9 @@ class WorldState:
     environment_cycles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_recipes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_jobs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    market_stalls: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    market_offers: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    market_trades: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -111,6 +114,9 @@ class WorldState:
         object.__setattr__(self, "environment_cycles", _freeze(_json_copy(self.environment_cycles)))
         object.__setattr__(self, "production_recipes", _freeze(_json_copy(self.production_recipes)))
         object.__setattr__(self, "production_jobs", _freeze(_json_copy(self.production_jobs)))
+        object.__setattr__(self, "market_stalls", _freeze(_json_copy(self.market_stalls)))
+        object.__setattr__(self, "market_offers", _freeze(_json_copy(self.market_offers)))
+        object.__setattr__(self, "market_trades", _freeze(_json_copy(self.market_trades)))
 
     def to_dict(self) -> dict[str, Any]:
         # Replay/projection states already passed full JSON normalization in
@@ -133,7 +139,10 @@ class WorldState:
                            "rpg_profiles": self.rpg_profiles,
                            "environment_cycles": self.environment_cycles,
                            "production_recipes": self.production_recipes,
-                           "production_jobs": self.production_jobs})
+                           "production_jobs": self.production_jobs,
+                           "market_stalls": self.market_stalls,
+                           "market_offers": self.market_offers,
+                           "market_trades": self.market_trades})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
@@ -153,7 +162,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -161,7 +170,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -211,6 +220,8 @@ class WorldState:
         validate_environment_cycles(d)
         from .production import validate_production_state
         validate_production_state(d)
+        from .market import validate_market
+        validate_market(d)
         from .rpg_state import validate_rpg_profiles
         validate_rpg_profiles(d)
         # Public snapshots need full portable JSON normalization. Internal
@@ -255,7 +266,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -299,6 +310,18 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("SocialMessageSent", "SocialMessageReceived"):
         from .social import project_social_event
         project_social_event(d, e, social_authorized=social_authorized)
+    elif kind == "MarketStallConfigured":
+        from .market import configure_market_stall
+        configure_market_stall(d, e, bootstrap=bootstrap)
+    elif kind == "MarketOfferPosted":
+        from .market import post_offer
+        post_offer(d, e, market_authorized=market_authorized)
+    elif kind == "MarketTradeExecuted":
+        from .market import execute_trade
+        execute_trade(d, e, market_authorized=market_authorized)
+    elif kind == "MarketOfferClosed":
+        from .market import close_offer
+        close_offer(d, e, market_authorized=market_authorized)
     elif kind == "ProductionRecipeConfigured":
         from .production import configure_recipe
         configure_recipe(d, e, bootstrap=bootstrap)
