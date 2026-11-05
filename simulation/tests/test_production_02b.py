@@ -24,9 +24,15 @@ def ev(kind, data, actor=None, at=0):
 
 
 def setup(db, *, grain=6, oven=1, bread=0, recipe=True, people=PEOPLE,
-          role_override=None):
+          role_override=None, routes=False):
     db.create_world("test")
     events = [ev("LocationCreated", {"id": "bakery", "name": "Bakery"})]
+    if routes:
+        events.extend([
+            ev("LocationCreated", {"id": "square", "name": "Square"}),
+            ev("RouteCreated", {"id": "bakery-square", "a": "bakery",
+                                "b": "square", "seconds": 50}),
+        ])
     for resource, amount in (("grain", grain), ("oven", oven), ("bread", bread)):
         if amount is not None:
             events.append(ev("ResourceChanged", {
@@ -224,3 +230,32 @@ def test_seven_npcs_continue_other_work_while_one_bakes(tmp_path):
         assert done.state.resources["bakery"]["bread"] == 1
         assert done.state.production_jobs["baker"]["status"] == "completed"
         assert db.verify("test").to_dict() == done.state.to_dict()
+
+
+def test_real_navigation_cannot_interrupt_baker_and_remote_baker_cannot_start(tmp_path):
+    from carlos_sim import NPCMovementService
+    with SQLiteEventStore(tmp_path / "busy-travel.sqlite") as db:
+        setup(db, routes=True)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        start(db, clock, "basim", "first")
+        baseline = db.load("test").to_dict()
+        with pytest.raises(InvalidEvent, match="producing"):
+            NPCMovementService(db, clock).start(
+                "test", "basim", "bakery-square", "escape",
+                expected_revision=baseline["revision"])
+        assert db.load("test").to_dict() == baseline
+
+    with SQLiteEventStore(tmp_path / "remote-worker.sqlite") as db:
+        setup(db, routes=True)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        NPCMovementService(db, clock).start(
+            "test", "basim", "bakery-square", "real-trip",
+            expected_revision=db.load("test").revision)
+        with pytest.raises(InvalidEvent):
+            start(db, clock, "basim", "in-transit")
+        advance(db, clock, 50, "arrive")
+        assert db.load("test").entities["basim"]["location_id"] == "square"
+        with pytest.raises(InvalidEvent, match="physically"):
+            start(db, clock, "basim", "absent")
