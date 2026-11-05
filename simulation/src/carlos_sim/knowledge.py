@@ -239,6 +239,11 @@ def choose_food_sharing(state: dict[str, Any], sender_id: str) -> list[DomainEve
             continue
         site = food_site_from_key(key)
         belief = sender["beliefs"][key]
+        # A story heard at this logical tick cannot be relayed instantly.
+        # A direct observation is first-hand and may be shared immediately.
+        if (not is_observation_source(belief["source"])
+                and belief["received_at"] >= now):
+            continue
         if parse_food_claim(belief["text"]) is None:
             continue
         claim = _share_claim(belief, now)
@@ -259,7 +264,12 @@ def choose_food_sharing(state: dict[str, Any], sender_id: str) -> list[DomainEve
             for old_id in recipient["delivery_history"]:
                 if old_id.startswith(prefix):
                     old_tick = old_id[len(prefix):]
-                    if old_tick.isascii() and old_tick.isdecimal():
+                    # Never int() an unbounded attacker-supplied suffix.
+                    # Invalid old IDs are historical data, not a cooldown.
+                    if (old_tick.isascii() and old_tick.isdecimal()
+                            and 0 < len(old_tick) <= 19
+                            and (len(old_tick) < 19
+                                 or old_tick <= "9223372036854775807")):
                         delta = now - int(old_tick)
                         if 0 <= delta < SHARE_PAIR_COOLDOWN:
                             recent = True
@@ -285,6 +295,37 @@ def choose_food_sharing(state: dict[str, Any], sender_id: str) -> list[DomainEve
             events.append(ack)
             shared_pairs.add(recipient_id)
     return events
+
+
+def choose_food_sharing_round(state: dict[str, Any]) -> list[DomainEvent]:
+    """Plan one bounded, deterministic, co-located sharing round.
+
+    Compute all proposals from a SINGLE pre-round state snapshot: no NPC can
+    immediately forward a story acquired during this round. At most one
+    delivery+ack per (recipient, food site) occurs in a round, even if many
+    distinct speakers believe the same thing. The first eligible speaker in
+    lexical NPC-ID order wins; this is scheduler ordering, not hidden
+    knowledge of the listener's beliefs. Never read a remote resource.
+    """
+    state = _mapping(state)
+    selected: list[DomainEvent] = []
+    told: set[tuple[str, str]] = set()
+    for sender_id in sorted(state["npcs"]):
+        proposal = choose_food_sharing(state, sender_id)
+        if len(proposal) % 2:
+            raise ValueError("food delivery must have an acknowledgement")
+        for idx in range(0, len(proposal), 2):
+            delivery, ack = proposal[idx:idx + 2]
+            if (delivery.event_type != "NPCInformationDelivered"
+                    or ack.event_type != "NPCBeliefReceived"
+                    or ack.data["delivery_id"] != delivery.data["delivery_id"]):
+                raise ValueError("invalid food-delivery event pair")
+            pair = (delivery.data["npc_id"], delivery.data["key"])
+            if pair in told:
+                continue
+            told.add(pair)
+            selected.extend((delivery, ack))
+    return selected
 
 
 def make_observation_events(state: dict[str, Any], npc_id: str, site: str,
