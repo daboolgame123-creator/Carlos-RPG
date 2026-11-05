@@ -55,6 +55,10 @@ def register_origin(state: dict[str, Any], event: DomainEvent, *,
         "registered_at": 0, "record_kind": "historical_origin_only",
         "source_balance_at_registration": balance,
     }
+    # Distinct historical entitlement record and certifiable physical holding.
+    # Neither implies transferable legal title.
+    from .custody import initialize_lot
+    initialize_lot(state, p["id"])
 
 
 def validate_origins(state: dict[str, Any]) -> None:
