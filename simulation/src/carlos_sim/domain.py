@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 19
-RULES_VERSION = 26
+SCHEMA_VERSION = 20
+RULES_VERSION = 27
 
 
 def _thaw(value: Any) -> Any:
@@ -94,6 +94,7 @@ class WorldState:
     loan_contracts: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     loan_repayments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     npc_temperaments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    npc_routines: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -123,6 +124,7 @@ class WorldState:
         object.__setattr__(self, "loan_contracts", _freeze(_json_copy(self.loan_contracts)))
         object.__setattr__(self, "loan_repayments", _freeze(_json_copy(self.loan_repayments)))
         object.__setattr__(self, "npc_temperaments", _freeze(_json_copy(self.npc_temperaments)))
+        object.__setattr__(self, "npc_routines", _freeze(_json_copy(self.npc_routines)))
 
     def to_dict(self) -> dict[str, Any]:
         # Replay/projection states already passed full JSON normalization in
@@ -151,7 +153,8 @@ class WorldState:
                            "market_trades": self.market_trades,
                            "loan_contracts": self.loan_contracts,
                            "loan_repayments": self.loan_repayments,
-                           "npc_temperaments": self.npc_temperaments})
+                           "npc_temperaments": self.npc_temperaments,
+                           "npc_routines": self.npc_routines})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
@@ -171,7 +174,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -179,7 +182,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -235,6 +238,8 @@ class WorldState:
         validate_loans(d)
         from .temperament import validate_temperaments
         validate_temperaments(d)
+        from .routines import validate_routines
+        validate_routines(d)
         from .rpg_state import validate_rpg_profiles
         validate_rpg_profiles(d)
         # Public snapshots need full portable JSON normalization. Internal
@@ -310,6 +315,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if p["id"] in d["entities"] or p["id"] in d["locations"]:
             raise ValueError("duplicate entity")
         d["entities"][p["id"]] = {k: p[k] for k in ("name", "location_id", "controller")}
+    elif kind == "NPCRoutineConfigured":
+        from .routines import configure_routine
+        configure_routine(d, e, bootstrap=bootstrap)
     elif kind == "NPCTemperamentConfigured":
         from .temperament import configure_temperament
         configure_temperament(d, e, bootstrap=bootstrap)
