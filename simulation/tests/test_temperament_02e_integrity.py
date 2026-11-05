@@ -140,3 +140,28 @@ def test_forged_decision_ignoring_memory_adjustment_fails(tmp_path):
             db.append("test", "fake-amnesia", current.revision, [forged],
                       npc_authorized=True)
         assert db.load("test").to_dict() == current.to_dict()
+
+
+def test_real_work_memory_changes_followup_choice_with_same_current_needs(tmp_path):
+    from carlos_sim.npc import _score_choice
+    neutral = {"ambition": 50, "curiosity": 50,
+               "caution": 50, "discipline": 50}
+    with SQLiteEventStore(tmp_path / "experienced.sqlite") as db:
+        setup(db, members=("basim",), traits={"basim": neutral})
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        first = decide(db, clock, "basim", "first")
+        assert first.action == "work"
+        started = NPCActionService(db, clock).start(
+            "test", "basim", "actual-work", expected_revision=rev(db))
+        completed = step(db, clock, started.due, "finish-work")
+        has_memory = choose_action(completed, "basim")
+        no_memory_hypothetical = _score_choice(
+            completed.npcs["basim"], "basim",
+            temperament={"traits": neutral, "memories": []})
+        # Exactly the same present needs and goals; the counterfactual differs
+        # only by a memory which the normal engine cannot erase.
+        assert no_memory_hypothetical.action == "work"
+        assert has_memory.action == "investigate"
+        assert "remembered_last=work" in has_memory.reason
+        assert db.verify("test").to_dict() == completed.to_dict()
