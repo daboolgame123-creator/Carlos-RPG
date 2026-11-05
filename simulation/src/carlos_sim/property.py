@@ -22,8 +22,9 @@ TAKING_KEYS = {
 def project_taking(state: dict[str, Any], event: DomainEvent, *,
                    taking_authorized: bool) -> None:
     p = event.data
-    if (not taking_authorized or set(p) != {
-            "id", "source_owner_id", "site_id", "resource", "quantity"}
+    if (not taking_authorized or set(p) not in ({
+            "id", "source_owner_id", "site_id", "resource", "quantity"}, {
+            "id", "source_owner_id", "site_id", "resource", "quantity", "witness_ids"})
             or not _id(p["id"]) or p["id"] in state["property_takings"]):
         raise ValueError("taking requires an independent trusted capability and unique ID")
     actor, source, site, resource = (
@@ -55,6 +56,8 @@ def project_taking(state: dict[str, Any], event: DomainEvent, *,
     if (not _balance(source_before) or not _balance(target_before)
             or source_before < quantity or target_before + quantity > MAX_AMOUNT):
         raise ValueError("taking requires known, sufficient and bounded inventories")
+    from .property_evidence import validate_initial_witnesses
+    witnesses = validate_initial_witnesses(state, actor, site, p.get("witness_ids", []))
     state["resources"][source][resource] = source_before - quantity
     state["resources"][actor][resource] = target_before + quantity
     state["property_takings"][p["id"]] = {
@@ -64,6 +67,14 @@ def project_taking(state: dict[str, Any], event: DomainEvent, *,
         "target_before": target_before, "target_after": target_before + quantity,
         "permission_basis": "no_grant_recorded",
     }
+    for witness in witnesses:
+        key = p["id"] + ":" + witness
+        state["property_sightings"][key] = {
+            "taking_id": p["id"], "witness_id": witness,
+            "site_id": site, "seen_at": state["time"],
+            "actor_id": actor, "source_owner_id": source,
+            "resource": resource, "quantity": quantity,
+        }
 
 
 def validate_takings(state: dict[str, Any]) -> None:
@@ -112,16 +123,19 @@ class NPCPropertyService:
 
     def take(self, world_id: str, actor_id: str, taking_id: str,
              source_owner_id: str, site_id: str, resource: str, quantity: int,
-             *, expected_revision: int) -> TakingResult:
+             *, expected_revision: int, witnessed_by: tuple[str, ...] = ()) -> TakingResult:
         self.clock._require_session(world_id)
         state = self.store.load(world_id)
         if type(expected_revision) is not int or expected_revision != state.revision:
             raise RevisionConflict("stale property command")
+        if type(witnessed_by) is not tuple:
+            raise ValueError("witnesses must be an explicit tuple")
         event = DomainEvent(
             "PropertyTaken", actor_id, "explicit physical taking",
             state.time, {"id": taking_id, "source_owner_id": source_owner_id,
                          "site_id": site_id, "resource": resource,
-                         "quantity": quantity})
+                         "quantity": quantity,
+                         "witness_ids": list(witnessed_by)})
         after = self.store.append(
             world_id, "property:take:" + str(taking_id),
             expected_revision, [event], taking_authorized=True)
