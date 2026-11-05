@@ -66,7 +66,7 @@ def test_25_co_located_npcs_no_quadratic_gossip_or_budget_deadlock(
         proposal = choose_food_sharing_round(before)
         delivered = [e for e in proposal if e.event_type == "NPCInformationDelivered"]
         # O(N) for this one site, not 25*24=600 deliveries.
-        assert len(delivered) == 24 if initial_observers == 1 else 25
+        assert len(delivered) == (24 if initial_observers == 1 else 25)
         assert len(delivered) == len({
             (e.data["npc_id"], e.data["key"]) for e in delivered
         })
