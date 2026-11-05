@@ -146,7 +146,7 @@ class PlayerGateway:
         transit = player_travel_signal(now, self.player_id)
         return PlayerCommandResult(now.world_id, now.time, now.revision,
                                    'traveling' if transit is not None else 'ready', {
-            'elapsed': result.elapsed, 'remaining': result.remaining,
+            'elapsed': result.elapsed_seconds, 'remaining': result.remaining_seconds,
             'interrupted': result.interrupted,
         })
 
