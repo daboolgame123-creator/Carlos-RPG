@@ -11,7 +11,8 @@ from .market import _id, _balance, MONEY, FORBIDDEN, MAX_QUANTITY
 
 MAX_ORIGINS = 1000
 ORIGIN_KEYS = {"source_owner_id", "recorded_beneficiary_id", "resource",
-               "quantity", "site_id", "registered_at", "record_kind"}
+               "quantity", "site_id", "registered_at", "record_kind",
+               "source_balance_at_registration"}
 
 
 def register_origin(state: dict[str, Any], event: DomainEvent, *,
@@ -52,6 +53,7 @@ def register_origin(state: dict[str, Any], event: DomainEvent, *,
         "recorded_beneficiary_id": beneficiary,
         "resource": resource, "quantity": quantity, "site_id": site,
         "registered_at": 0, "record_kind": "historical_origin_only",
+        "source_balance_at_registration": balance,
     }
 
 
@@ -71,6 +73,8 @@ def validate_origins(state: dict[str, Any]) -> None:
                 or row["resource"] in FORBIDDEN
                 or type(row["quantity"]) is not int
                 or not 1 <= row["quantity"] <= MAX_QUANTITY
+                or not _balance(row["source_balance_at_registration"])
+                or row["quantity"] > row["source_balance_at_registration"]
                 or row["registered_at"] != 0
                 or row["record_kind"] != "historical_origin_only"):
             raise ValueError("invalid origin evidence record")
@@ -81,6 +85,16 @@ def validate_origins(state: dict[str, Any]) -> None:
         elif (row["source_owner_id"] not in state["npcs"]
               or row["recorded_beneficiary_id"] != row["source_owner_id"]):
             raise ValueError("personal origin lacks original holder")
+    allocation: dict[tuple[str, str], tuple[int, int]] = {}
+    for row in records.values():
+        key = (row["source_owner_id"], row["resource"])
+        previous = allocation.get(key)
+        if previous is not None and previous[1] != row["source_balance_at_registration"]:
+            raise ValueError("historical source balance must be consistent")
+        allocation[key] = ((previous[0] if previous else 0) + row["quantity"],
+                           row["source_balance_at_registration"])
+    if any(quantity > balance for quantity, balance in allocation.values()):
+        raise ValueError("overlapping origin records exceed starting physical stock")
     # Do NOT compare historical origins to today's stock: goods may be eaten,
     # sold or taken later. Replaying initial event verifies stock at time zero.
 
