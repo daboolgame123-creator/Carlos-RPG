@@ -316,3 +316,119 @@ def test_actual_failed_forages_are_durable_no_food_appears(tmp_path):
         assert state.resources["grove"]["wild_food"] == 0
         assert sum(v["quantity"] for v in state.foraging_attempts.values()) == 2
         assert db.verify("r").to_dict() == state.to_dict()
+
+
+def test_other_requesters_refusal_is_not_known_as_my_refusal(village):
+    db, clock = village
+    record_refusal(db, clock, owner="huda")
+    clock.advance("village", seconds=900, command_id="wait-900",
+                  expected_revision=db.load("village").revision)
+    state = db.load("village")
+    assert recently_refused_by(state, "huda", "basim")
+    assert not recently_refused_by(state, "adel", "basim")
+    intent = choose_assistance_intent(state, "adel", "request",
+                                      scarcity_enabled=True)
+    assert intent is not None and intent.fields["provider"] == "basim"
+
+
+def test_all_refused_providers_mean_no_new_request_or_magic_food(tmp_path):
+    from test_assistance import setup as make_two_people, e
+
+    with SQLiteEventStore(tmp_path / "no-alternative.sqlite") as db:
+        make_two_people(db, food_a=1, food_b=0)
+        clock = TimeEngine(db)
+        clock.open_session("w")
+        s = db.load("w")
+        db.append("w", "nora-hungry", s.revision, [
+            e("NPCNeedChanged", {
+                "npc_id": "nora", "need": "hunger",
+                "previous": 25, "current": 85,
+            }, actor="nora"),
+        ], npc_authorized=True)
+        svc = NPCAssistanceService(db, clock)
+        svc.request("w", "nora", "basim", "food", 2, "first",
+                    expected_revision=db.load("w").revision)
+        svc.respond("w", "basim", "first", accept=False,
+                    command_id="basim-refuses",
+                    expected_revision=db.load("w").revision)
+        clock.advance("w", seconds=900, command_id="global-reask",
+                      expected_revision=db.load("w").revision)
+        assert choose_assistance_intent(db.load("w"), "nora", "request",
+                                        scarcity_enabled=True) is None
+        assert db.load("w").resources["nora"]["food"] == 1
+        assert db.verify("w").to_dict() == db.load("w").to_dict()
+
+
+def test_refusal_then_alternative_real_delivery_is_resource_conserving(tmp_path):
+    from test_assistance import setup as make_two_people, e
+
+    with SQLiteEventStore(tmp_path / "alternative-fulfilment.sqlite") as db:
+        make_two_people(db, food_a=1, food_b=0)
+        s = db.load("w")
+        # A separate trusted setup adds a second physically present source.
+        # This is real bootstrap inventory, never created by a refusal policy.
+        newcomer = [
+            e("EntityCreated", {
+                "id": "zara", "name": "Zara",
+                "location_id": "market", "controller": "npc",
+            }),
+            e("NPCConfigured", {
+                "npc_id": "zara", "role": "resident",
+                "needs": {"fatigue": 5, "hunger": 25, "safety": 0},
+                "goals": {"earn": 20, "explore": 10, "survive": 20},
+            }),
+        ]
+        for resource, amount in (("food", 10), ("water", 0),
+                                 ("labor_units", 0),
+                                 ("investigation_attempts", 0)):
+            newcomer.append(e("ResourceChanged", {
+                "owner_id": "zara", "resource": resource,
+                "previous": None, "current": amount,
+                "source": "initialization",
+            }))
+        db.append("w", "add-provider", s.revision, newcomer, bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("w")
+        db.append("w", "nora-hungry", db.load("w").revision, [
+            e("NPCNeedChanged", {
+                "npc_id": "nora", "need": "hunger",
+                "previous": 25, "current": 85,
+            }, actor="nora"),
+        ], npc_authorized=True)
+        svc = NPCAssistanceService(db, clock)
+        svc.request("w", "nora", "basim", "food", 2, "ask-basim",
+                    expected_revision=db.load("w").revision)
+        svc.respond("w", "basim", "ask-basim", accept=False,
+                    command_id="declined-basim",
+                    expected_revision=db.load("w").revision)
+        clock.advance("w", seconds=900, command_id="wait-global",
+                      expected_revision=db.load("w").revision)
+        state = db.load("w")
+        assert choose_assistance_intent(state, "nora", "request",
+                                        scarcity_enabled=False).fields["provider"] == "basim"
+        intent = choose_assistance_intent(state, "nora", "request",
+                                          scarcity_enabled=True)
+        assert intent is not None and intent.fields["provider"] == "zara"
+        before_sum = sum(state.resources[x]["food"] for x in
+                         ("nora", "basim", "zara"))
+        svc.request("w", "nora", "zara", "food",
+                    intent.fields["quantity"], "ask-zara",
+                    expected_revision=db.load("w").revision)
+        svc.respond("w", "zara", "ask-zara", accept=True,
+                    command_id="zara-promised",
+                    expected_revision=db.load("w").revision)
+        clock.advance("w", seconds=1, command_id="time-to-fulfil",
+                      expected_revision=db.load("w").revision)
+        done = svc.deliver("w", "zara", "ask-zara",
+                           command_id="zara-delivers",
+                           expected_revision=db.load("w").revision)
+        assert done.status == "fulfilled"
+        s = done.state
+        assert s.resources["nora"]["food"] == 4
+        assert s.resources["zara"]["food"] == 7
+        assert s.resources["basim"]["food"] == 0
+        assert sum(s.resources[x]["food"] for x in
+                   ("nora", "basim", "zara")) == before_sum == 11
+        assert s.obligations["ask-basim"]["status"] == "declined"
+        assert s.obligations["ask-zara"]["status"] == "fulfilled"
+        assert db.verify("w").to_dict() == s.to_dict()
