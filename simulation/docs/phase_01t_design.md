@@ -96,7 +96,7 @@ Adoption happens only in `NPCBeliefReceived` (ack consumes the delivery). The re
 
 1. Acquisition triggers (arrival, forage outcome, explicit observe) and the sharing pass **never** emit `NPCDecisionRecorded`, never touch `next_decision_at`, never add to `busy`.
 2. The sharing pass mirrors social gating (not busy, not traveling) and never `continue`-skips the NPC's forage/navigation evaluation; `local_forage_wins` ordering is untouched.
-3. Sharing rate limits (`SHARE_PAIR_COOLDOWN = 600` s per sender/recipient/site, at most one food delivery per pair per tick) are **sharing** limits, not decision delays — they cannot postpone a forage start.
+3. Sharing rate limits: `SHARE_PAIR_COOLDOWN = 600` s per sender/recipient/site; **at most one delivery per recipient/site per coordinator round**, regardless of how many speakers are present; and **a hearsay claim cannot be forwarded in the same logical tick it was received**. A local direct observation may be shared immediately. These limits are sharing limits, never decision delays, and do not postpone forage starts.
 4. There is no "wait until information expires" behavior in 01-T.
 5. **Regression:** the OBS-2 scenario with `knowledge_enabled=True` reproduces 01-S timing exactly (forage starts at the scenario's decision cooldown), and a hungry NPC never spends more than the scenario's configured `decision_cooldown` (minimum 60 s) with no running action, no travel, and no due decision. The bound is the scenario's configured decision cooldown, **not a hardcoded 60 seconds**. Any fix beyond this bound and any memory-targeted travel belong to 01-U.
 
@@ -171,14 +171,14 @@ Flag-off digest parity vs 01-S (all three digest keys); real `13/17` and `12/16`
 
 1. **Constants are experimental** (90/60, 600/1800 tiers, 600 share-cooldown) — named, unit-tested, adjustable without re-baselining behavior.
 2. **Rejected-ack behavior (resolved contract):** acknowledgements always consume pending deliveries, even when `should_adopt` rejects belief replacement. The original belief remains; later information needs a new delivery. This matches §6 and avoids permanently pending deliveries.
-3. **Sharing volume vs event budget** — one delivery per pair per tick + per-site cooldown keeps advance batches small; rollback-on-budget is existing semantics.
+3. **Sharing volume vs event budget — fixed after external BLOCKED review T-1:** the original per-sender/pair cooldown allowed quadratic same-tick relays and prevented 25-NPC progress at the default 1000-event budget. The new pure pre-round planner snapshots speaker beliefs and limits **each recipient/site to one delivery** per tick; the first eligible sender in sorted NPC-ID order wins. Multiple independent sites can still generate multiple events; the full command remains atomic and bounded by its existing event budget. A 25-NPC regression demonstrates O(N) single-site deliveries and progress. No hidden knowledge of the receiver is inspected.
 4. **Grammar-in-`text`** trades a structured field for zero Schema churn — strict anchored parsing mitigates ambiguity; upgrading to Option B (Schema 14 projection) stays available for 01-U/01-V if quantity/history needs appear.
 5. **Hearsay can inject false `present`** about a site — accepted by design (belief, low confidence, no decision impact in 01-T); rumor *truth-testing* belongs to 02-G.
 6. **Share-cooldown persistence:** per-pair cooldown IDs are derived deterministically from `(sender, recipient, site, time)` and checked against the durable `delivery_history`, so the sharing limit survives SQLite close/reopen with no new state collection.
 
 ## 12. Explicitly out of scope
 
-Travel/navigation toward remembered sources (01-U); fairness, scarcity, regrowth (01-V, 02-A); stored quantity claims and per-site history; multi-hop rumor chains/original-source tracking (02-G); any change to `choose_local_foraging`, decision cooldowns, `local_forage_wins` or base utility; Carlos story/`main` changes; migration of any old world; P0 closure itself.
+Travel/navigation toward remembered sources (01-U); fairness, scarcity, regrowth (01-V, 02-A); stored quantity claims and per-site history; origin-chain tracking and multi-tick rumor verification (02-G); same-tick relaying of newly received hearsay is explicitly prohibited after review T-3; any change to `choose_local_foraging`, decision cooldowns, `local_forage_wins` or base utility; Carlos story/`main` changes; migration of any old world; P0 closure itself.
 
 ---
 

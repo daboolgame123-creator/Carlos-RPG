@@ -440,3 +440,50 @@ def test_split_time_advance_preserves_physical_outcome(tmp_path):
     assert scenario(tmp_path / "split.sqlite", True) == scenario(
         tmp_path / "single.sqlite", False
     )
+
+
+def test_review_u3_fallback_exploration_obeys_existing_decision_cooldown(tmp_path):
+    """Trusted manual trip used to bypass old food-route-only cooldown check."""
+    from carlos_sim import NPCMovementService
+    from test_navigation import setup as make_navigation_world
+
+    with SQLiteEventStore(tmp_path / "u3-review.sqlite") as db:
+        make_navigation_world(db, explore=90, fatigue=5)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        NPCNavigationService(db, clock).survey(
+            "village", "nora", command_id="first-survey",
+            expected_revision=db.load("village").revision
+        )
+        recorded = NPCService(db, clock).decide(
+            "village", "nora", command_id="decision-at-zero",
+            expected_revision=db.load("village").revision
+        )
+        assert recorded is not None
+        assert db.load("village").npcs["nora"]["next_decision_at"] == 60
+        NPCMovementService(db, clock).start(
+            "village", "nora", "market-forest", "manual-journey",
+            expected_revision=db.load("village").revision
+        )
+        clock.advance("village", seconds=50, command_id="arrive-forest",
+                      expected_revision=db.load("village").revision)
+        state = db.load("village")
+        assert state.entities["nora"]["location_id"] == "forest"
+        assert state.npcs["nora"]["next_decision_at"] == 60
+        early = LivingWorldEngine(
+            db, clock, navigation_enabled=True, knowledge_enabled=True,
+            foraging_enabled=True, food_navigation_enabled=True
+        ).advance("village", seconds=1, command_id="at-50",
+                  expected_revision=state.revision)
+        assert early.state.time == 51
+        assert "auto-nav:nora:50" not in early.state.travels
+        clock.advance("village", seconds=9, command_id="to-60",
+                      expected_revision=early.state.revision)
+        ready = LivingWorldEngine(
+            db, clock, navigation_enabled=True, knowledge_enabled=True,
+            foraging_enabled=True, food_navigation_enabled=True
+        ).advance("village", seconds=1, command_id="at-60",
+                  expected_revision=db.load("village").revision)
+        assert ready.state.time == 61
+        assert "auto-nav:nora:60" in ready.state.travels
+        assert db.verify("village").to_dict() == ready.state.to_dict()

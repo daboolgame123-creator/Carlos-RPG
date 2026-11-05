@@ -30,3 +30,11 @@
 - P0 backup/restore remains OPEN. All worlds are disposable tests; no long-term durable-world claim, automatic migration, real Carlos story import, main changes, or unreviewed public access.
 
 **Verdict:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING. May be a conditional development dependency under Development Protocol section J, but is **not formally closed**.
+
+## 2026-11-05 — نتائج المراجعة والتصحيح (External Review Deferred)
+
+- حكم OpenCode الأصلي على SHA 47dd04ef هو BLOCKED بالتبعية إلى عيب T-1، مع T-2 وملاحظة U-3. هذا الحكم محفوظ ولا تحوله الاختبارات إلى APPROVED.
+- فرع simulation-engine-phase-01u-review-fix يرث تصحيح 01-T عبر merge-parent: يمنع انفجار الرسائل بين 25 شخصية، يحد أرقام معرّفات الرسائل، يمنع إعادة نقل الشائعة في نفس الزمن.
+- U-3: عند تفعيل food_navigation_enabled يحترم كل من السفر إلى الغذاء والاستكشاف الاحتياطي next_decision_at. اختبار واقعي لقرار عند t=0 وسفر يدوي يصل t=50 وعدم السفر تلقائيًا حتى t=60.
+- CI [42011456921](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42011456921) يثبت 569/569 على Python 3.10 و3.13، ومقارنة سجلات أحداث وحالة 01-U مقابل 01-T المصححة عند إيقاف علم 01-U.
+- الحالة الحالية للنسخة المصححة: TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED؛ لا إغلاق خارجي. Schema/Rules 13/18 دون تغيير، P0 OPEN.
