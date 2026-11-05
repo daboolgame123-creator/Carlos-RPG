@@ -1,0 +1,24 @@
+# Phase 02-B — bounded recipe-based NPC work (first production slice)
+
+**Baseline:** verified Phase 02-A commit `fdf6162c65d6947507d1b4e4516c17d851873c29`, [green CI 42064429357](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42064429357), 657 tests each on Python 3.10 and 3.13.
+**Branch:** `simulation-engine-phase-02b`; status IN_PROGRESS. External independent review DEFERRED, P0 OPEN. Disposable worlds only.
+
+## Narrow behavior
+A verified resident NPC with an explicitly initialized **profession** (`NPCConfigured.role`) works at a specified existing **site**. An opt-in time-zero `ProductionRecipeConfigured` registers a recipe: site, required profession, one input item and quantity, one output item and quantity, a pre-existing reusable tool and time in simulated seconds. Inputs/output/tool are site-owned `resources`, **not** Carlos's RPG equipment or privately owned NPC inventory. One recipe example: baker, local bakery with `grain=2`, `oven=1`, `bread=0`, turns two grain units into one bread unit **after 90 simulated seconds**.
+
+At a trusted explicit call `NPCProductionService.start()`, the worker must be physically present, available (not traveling, performing another NPC action or another production job), have matching profession, and the site must contain **known, sufficient** grain, a suitable **known** tool capacity and an initialized output balance. The engine atomically debits input stock and records a `ProductionStarted` ledger plus a protected scheduled appointment. It does **not** produce the bread immediately. During the job the worker is busy; ordinary NPC travel/actions and autonomous planners respect this reservation. A site with one oven can run at most one concurrent oven-based job; additional jobs need additional ovens. Tools remain owned at the worksite and are **not consumed**; tool wear/durability, wage and money are out of scope.
+
+On the due time, the normal trusted `ScheduledEventFired` checks the exact job and creates only the recipe's output at the site, marks the job complete, and records the actual output before/after. The production record keeps the worker, recipe, site, start/due/finish, input before/after, initial tool count, material amount and output before/after. No other event can fabricate a finished product, change the recipe, cancel the active job, or mint inputs. No interruption/refund policy in this slice: a job cannot be cancelled and therefore cannot lose reserved stock without explicit new future rules.
+
+The coordinator is **manual/trusted and opt-in**. No general NPC economic decision policy or player crafting endpoint is invented. Existing NPC seven-character gathering, survival, knowledge, movement, player interaction and time remain unchanged when no recipes are configured.
+
+## Contracts and safety
+- Events: `ProductionRecipeConfigured` (bootstrap only, system actor), `ProductionStarted` (trusted production capability, actual NPC actor), and ordinary `ScheduledEventFired` from trusted clock (finish). Generic `ScheduledEventCreated` cannot fabricate `__production_job` payload; generic `ScheduledEventCancelled` cannot cancel a production job.
+- Persistence: new `production_recipes` and `production_jobs` projected state collections, plus provenance flag `production_authorized` on commands for replay. **Schema 16 / Rules 23**. A real Phase 02-A SQLite 15/22 file must be rejected unchanged; no migration or auto-import.
+- Bounded ASCII IDs and positive bounded quantities and durations; reject booleans, negatives, unknown/absent quantities, unknown role/tool, duplicate jobs and orphaned schedules. A missing owner of raw resources is NOT an empty wallet.
+- Deterministic ticks, no wall-clock labor. Source of truth: recorded events, not mutable snapshot. Completion respects existing event budget and oldest-due ordering. Transaction rollbacks commit neither materials nor job on any invalid part.
+- Local trusted service only. `production_authorized` is NOT AuthN/AuthZ and must never be exposed over an HTTP gateway.
+
+## Acceptance
+Test one complete bakery transformation including 89/90-second boundary; low/unknown ingredients, missing/wrong profession, absent tool, concurrency and competing NPCs, NPC action/travel while occupied, no-output-until-due, early/forged/cancelled schedule, rollback/revision/idempotence, pause/restart/split time, snapshot and full replay, isolated 02-A backup restore, real 15/22 rejection, no effect when unconfigured, seven-NPC deterministic demonstration, historic parity and Python 3.10/3.13 final SHA.
+P0 OPEN / EXTERNAL_REVIEW_DEFERRED: production data remains disposable, with no canonical Carlos story import, network APIs, permanent save guarantee, wage/ownership disputes or generalized production planner.
