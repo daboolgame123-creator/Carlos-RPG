@@ -17,7 +17,7 @@ from .social_autonomy import MIN_SOCIAL_COOLDOWN, choose_social_intent
 from .assistance_autonomy import choose_assistance_intent
 from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
-from .knowledge import make_observation_events, choose_food_sharing, known_food_sites
+from .knowledge import make_observation_events, choose_food_sharing_round, known_food_sites
 
 
 @dataclass(frozen=True)
@@ -247,15 +247,14 @@ class LivingWorldEngine:
                             if a['status'] == 'running'}
                 busy_now.update(t['npc_id'] for t in current.travels.values()
                                 if t['status'] == 'traveling')
-                for sender_id in sorted(current.npcs):
-                    if sender_id in busy_now:
-                        continue
-                    for event in choose_food_sharing(current, sender_id):
-                        append(event)
-                        # A delivery and its acknowledgement share one ID;
-                        # report it once, not once per domain event.
-                        if event.event_type == "NPCInformationDelivered":
-                            knowledge_shares.append(event.data["delivery_id"])
+                # Freeze intentions before appending delivery events.
+                # The round planner deduplicates recipients per food site and
+                # excludes same-tick relay, so a single fact is not amplified
+                # into O(N^2) events among co-located NPCs.
+                for event in choose_food_sharing_round(current):
+                    append(event)
+                    if event.event_type == "NPCInformationDelivered":
+                        knowledge_shares.append(event.data["delivery_id"])
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
