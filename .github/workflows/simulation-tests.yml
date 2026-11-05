@@ -145,6 +145,12 @@ jobs:
           ref: 04e831ada237ed22ec87229f5850edfd31da79f6
           path: reviewed-04a-j1a
           persist-credentials: false
+      - name: Check out green J1b Schema 26 Rules 34 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: 6abb2861be1866b2d80dd5c7de688aaf0de3dfe8
+          path: reviewed-04a-j1b
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
@@ -441,7 +447,7 @@ jobs:
           new = json.load(open('/tmp/01u-default-off.json'))
           # Event and semantic-state equality across deliberate Rules 18->20
           # (full state hashes correctly differ because version is persisted).
-          assert old['rules_version'] == 18 and new['rules_version'] == 34
+          assert old['rules_version'] == 18 and new['rules_version'] == 35
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert old[key] == new[key], (key, old[key], new[key])
@@ -456,7 +462,7 @@ jobs:
           import json
           baseline = json.load(open('/tmp/01u-frozen.json'))
           candidate = json.load(open('/tmp/01v-default-scarcity-off.json'))
-          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 34
+          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 35
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert baseline[key] == candidate[key], (key, baseline[key], candidate[key])
@@ -475,6 +481,31 @@ jobs:
                       'legacy_semantic_digest','replay_equal'):
               assert old[key]==new[key], (key,old[key],new[key])
           assert old['replay_equal'] is True
+          PY
+
+      - name: Reject authentic J1b Schema 26 Rules 34 saved world byte-for-byte
+        run: |
+          PYTHONPATH=../reviewed-04a-j1b/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore
+          with SQLiteEventStore('/tmp/carlos-j1b-predecessor.sqlite') as db:
+              db.create_world('old')
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.store import UnsupportedVersion
+          path=Path('/tmp/carlos-j1b-predecessor.sqlite')
+          before=hashlib.sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('J1c1 loaded genuine Schema26/Rules34 world')
+              assert db.db.execute('SELECT schema_version,rules_version FROM worlds WHERE id=?', ('old',)).fetchone()==(26,34)
+          assert hashlib.sha256(path.read_bytes()).hexdigest()==before
           PY
 
       - name: Reject genuine J1a Schema 25 Rules 33 saved world without mutation
