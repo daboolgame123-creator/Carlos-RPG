@@ -62,7 +62,7 @@ def audit(count: int) -> dict:
             # retain the full state hash separately for same-version audits.
             'legacy_semantic_digest': canonical_hash({
                 k: v for k, v in verified.to_dict().items()
-                if k not in ('schema_version','rules_version','foraging_attempts','rpg_profiles','environment_cycles','production_recipes','production_jobs','market_stalls','market_offers','market_trades','loan_contracts','loan_repayments','npc_temperaments','npc_routines')
+                if k not in ('schema_version','rules_version','foraging_attempts','rpg_profiles','environment_cycles','production_recipes','production_jobs','market_stalls','market_offers','market_trades','loan_contracts','loan_repayments','npc_temperaments','npc_routines','rumor_deliveries')
             }),
             'replay_equal': True,
         }
