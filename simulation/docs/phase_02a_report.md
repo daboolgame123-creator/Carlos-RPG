@@ -1,6 +1,6 @@
 # 02-A technical implementation report — finite environmental stocks
 
-**Status: IN_PROGRESS pending final SHA/CI.**
+**Status: TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED — NOT APPROVED/CLOSED.**
 **Branch:** `simulation-engine-phase-02a` from `1225ae066f22bc2688a583d46e63ceda80558a07` (01-Z, [final CI 42060397577](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42060397577)).
 **Version:** Schema **15** / Rules **22**, previously 14/21.
 **P0 OPEN** / independent review **DEFERRED**. Tests use disposable worlds. No story import, no `main` modification, no general migration.
@@ -15,7 +15,7 @@
 
 ## Tests
 - **14 new tests** in `simulation/tests/test_environment_02a.py`, in addition to 643 previous tests.
-- **Confirmed implementation CI:** [42062676270](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42062676270), SUCCESS, **656/656** tests for each Python 3.10 and 3.13. This is intermediate code CI, before the exhausted-reserve optimization; the latest verification must demonstrate **657/657** tests on both Python versions, and final SHA proof must be recorded.
+- **Verified source CI:** [42063848371](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42063848371), SUCCESS, **657/657 tests on Python 3.10** and **657/657 on Python 3.13**, including the new seven-NPC CLI smoke test, frozen predecessor parity, genuine SQLite 14/21 fail-closed checks and backup/restore. Tested source SHA `6b2fd6abc3e45c60ab15502369e003afcbd7350d`. A green workflow on the **final documentation commit** must still be recorded and checked.
 - Coverage: successful 1:1 transfer, reserve depletion with terminal schedule, zero-stock long time, full-capacity no-waste, missing resources, malformed/unknown states and types, forged config/cancel/schedule/early fire, active session requirement, stale/duplicate commands, bounded batch rollback, two independent sites, split vs lumped deterministic clock, snapshot and database reopen, standalone 15/22 backup/restore, and seven autonomous NPCs competing for available harvestable food. A seven-NPC disposable demonstration in `demo_environment_02a.py` and workflow smoke must also pass at final SHA.
 - The CI checks out the **frozen genuine 01-Z predecessor** (14/21), constructs an old SQLite world with real code, then checks the new engine refuses it without altering worlds/commands/events/snapshots. Previous parity and baseline checks remain.
 

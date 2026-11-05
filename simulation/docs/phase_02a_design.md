@@ -1,7 +1,7 @@
 # Phase 02-A — Finite, conditional environmental replenishment (first slice)
 
 **Baseline:** reviewed-by-CI Phase 01-Z commit `1225ae066f22bc2688a583d46e63ceda80558a07`, [Actions 42060397577](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42060397577), 643 passed on Python 3.10 and 3.13.
-**Branch:** `simulation-engine-phase-02a`; **status IN_PROGRESS**. P0 OPEN, external independent review deferred. All fixtures disposable.
+**Branch:** `simulation-engine-phase-02a`; **status TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED** (not APPROVED/CLOSED). [CI 42063848371](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42063848371) passed 657 tests per Python version. P0 OPEN. All fixtures disposable.
 
 ## Scope and invariant
 01-Q/01-S physical gathering already consumes finite, visible site `wild_food`. Phase 02-A introduces one explicit **resource-conserving** environmental conversion policy, not an invented endless growing resource: a particular site has two known initialized stocks, `wild_food` and `regrowth_reserve`. At a user-configured, finite period, the engine converts **at most one unit** of `regrowth_reserve` into one `wild_food`, only if `wild_food < capacity` and the reserve is positive. If the reserve is zero, the site stays empty; if the food deposit is full, no reserve is wasted. **Total food+reserve is conserved on each renewal**, before NPC gathering/consumption. A deliberate initial reserve is the cause of new harvestable food, not an infinite or remote supply.

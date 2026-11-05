@@ -10,6 +10,18 @@ The authoritative forward-looking plan is **[خارطة الطريق الرسم�
 
 
 
+## Phase 02-A — finite environment in a disposable 7-NPC village
+
+Run this offline test-world example from `simulation/`:
+
+```bash
+PYTHONPATH=src python scenarios/test_village/demo_environment_02a.py
+```
+
+An explicitly initialized site converts a limited `regrowth_reserve` into `wild_food` once per configured logical period, only if it has capacity. The reserve **cannot regenerate itself**. When it runs out, further scheduled renewal stops. NPCs still need time and local physical actions to gather food; no hidden remote supply is available to them. This example is not the original Carlos story.
+
+Technical checks: **657/657 tests passed on Python 3.10 and 3.13** in [CI 42063848371](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42063848371). [02-A report](docs/phase_02a_report.md), [review request](docs/phase_02a_independent_review_request.md). **Schema 15 / Rules 22** do not load old 14/21 saves without an independently reviewed migration. **P0 OPEN**; no canonical or guaranteed long-lived save.
+
 ## Phase 01-W — local temporary player command demo
 
 This is an **offline disposable game**, not the original Carlos RPG story or a production save. It runs without a language model or API key. From the `simulation/` directory:

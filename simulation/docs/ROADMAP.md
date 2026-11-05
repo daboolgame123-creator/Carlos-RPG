@@ -2,7 +2,7 @@
 
 **الإصدار التخطيطي:** 1.0  
 **تاريخ الاعتماد المبدئي:** 2026-11-04  
-**مرجع التنفيذ الحالي:** 02-A **TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED** على `simulation-engine-phase-02a`، Schema 15 / Rules 22؛ 657 اختبارًا ناجحًا لكل Python في [CI 42062676270](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42062676270). نجاح CI لا يغلق P0، وعوالم كارلوس الطويلة الأمد غير معتمدة؛ الحفظ القديم 14/21 يرفض دون ترحيل.
+**مرجع التنفيذ الحالي:** 02-A **TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED** على `simulation-engine-phase-02a`، Schema 15 / Rules 22؛ 657 اختبارًا ناجحًا لكل Python في [CI 42063848371](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42063848371). نجاح CI لا يغلق P0، وعوالم كارلوس الطويلة الأمد غير معتمدة؛ الحفظ القديم 14/21 يرفض دون ترحيل.
 **حالة هذه الوثيقة:** خارطة معتمدة للتوجيه والأولويات، وليست تصريحًا بأن المراحل المستقبلية نُفّذت.  
 **مصدر القواعد الفعلية:** الكود والاختبارات وتقارير المراحل وملفات العالم الأصلية عند استيرادها؛ لا تحل الخطة محلها.
 
