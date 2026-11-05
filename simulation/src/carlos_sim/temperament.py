@@ -107,17 +107,19 @@ def validate_temperaments(state: dict[str, Any]) -> None:
                 raise ValueError("memory chronology cannot go backward")
             seen.add(ident)
             previous = when
-        # Do not allow a snapshot to erase the latest real recorded memories.
+        # Per NPC, jobs cannot overlap: completed_at strictly orders its own
+        # authoritative actions. A valid snapshot must remember the *exact*
+        # newest eight, not a cherry-picked past action or an erased failure.
         completed = sorted(
-            ((a["completed_at"], aid) for aid, a in state["actions"].items()
+            ((a["completed_at"], aid, a)
+             for aid, a in state["actions"].items()
              if a["npc_id"] == npc_id and a["status"] == "completed"),
-            key=lambda pair: (pair[0], pair[1]),
+            key=lambda x: (x[0], x[1]),
         )
-        # Action completions sharing a due time are ordered by scheduled
-        # insertion, not lexical ID; reconstruct the true order from schedule
-        # order would require a richer action record. Validate strict
-        # provenance of remembered entries without inventing order for ties.
-        if len(completed) < len(memories):
-            raise ValueError("more memories than completed actions")
-        if completed and not memories:
-            raise ValueError("tempered NPC cannot forget all completed actions")
+        expected = [
+            {"action_id": aid, "action": action["action"],
+             "completed_at": completed_at, "effects": action["result"]}
+            for completed_at, aid, action in completed[-MEMORY_LIMIT:]
+        ]
+        if memories != expected:
+            raise ValueError("autobiographical memory must equal latest real actions")
