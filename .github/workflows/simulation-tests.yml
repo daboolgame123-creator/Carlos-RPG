@@ -136,6 +136,22 @@ jobs:
           PY
           rm -rf "$test_dir"
 
+      - name: Smoke-test 02-A finite reserve conversion plus seven-NPC gathering
+        run: |
+          PYTHONPATH=src python scenarios/test_village/demo_environment_02a.py > /tmp/02a-environment.json
+          python - <<'PY'
+          import json
+          with open('/tmp/02a-environment.json',encoding='utf-8') as f:
+              data=json.load(f)
+          assert data['npc_count']==7
+          assert data['initial_wild_food']==0
+          assert data['initial_finite_regrowth_reserve']==2
+          assert data['converted_to_wild_food']==2
+          assert data['regrowth_reserve_remaining']==0
+          assert data['gathered_units']==2
+          assert data['replay_verified'] is True
+          PY
+
       - name: Demonstrate autonomous finite gathering with seven NPCs
         run: PYTHONPATH=src python scenarios/test_village/demo_gathering_autonomy.py
 
