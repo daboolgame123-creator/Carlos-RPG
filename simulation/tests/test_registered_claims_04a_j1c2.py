@@ -223,3 +223,59 @@ def test_snapshot_reopen_replay_agrees_with_full_event_history(tmp_path):
         assert db.verify("v").to_dict() == saved
     with SQLiteEventStore(tmp_path/"claim-contract.sqlite") as db:
         assert db.verify("v").to_dict() == saved
+
+
+def test_atomic_invalid_second_event_does_not_leave_unaccepted_offer(scene):
+    db, clock = scene
+    _register(db)
+    before = db.load("v").to_dict()
+    events = [
+        DomainEvent("RegisteredClaimTransferOffered", "adel", "agreement", 0, {
+            "id": "batch-o1", "origin_id": "origin-bread",
+            "from_account": "bakery", "recipient_id": "salma",
+            "quantity": 1, "expires_at": 100}),
+        DomainEvent("RegisteredClaimTransferAccepted", "nora", "forged acceptance", 0, {
+            "id": "batch-o1"}),
+    ]
+    with pytest.raises(InvalidEvent):
+        db.append("v", "claim-batch-atomic", _rev(db), events,
+                  claim_transfer_authorized=True)
+    assert db.load("v").to_dict() == before
+
+
+def test_receiver_is_traveling_cannot_accept_or_cancel_from_faraway(scene):
+    db, clock = scene
+    _register(db)
+    _offer(db, clock)
+    db.append("v", "route-for-claims", _rev(db), [DomainEvent(
+        "RouteCreated", None, "physical road", 0, {
+            "id": "road-bakery-square", "a": "bakery", "b": "square",
+            "seconds": 50})], bootstrap=True)
+    from carlos_sim import NPCMovementService
+    NPCMovementService(db, clock).start(
+        "v", "salma", "road-bakery-square", "leave",
+        expected_revision=_rev(db))
+    old = db.load("v").to_dict()
+    with pytest.raises(InvalidEvent):
+        _accept(db, clock)
+    with pytest.raises(InvalidEvent):
+        _cancel(db, clock)
+    assert db.load("v").to_dict() == old
+
+
+def test_snapshot_cannot_forge_conserved_balances_or_received_claim_without_receipt(scene):
+    db, clock = scene
+    _register(db)
+    _offer(db, clock)
+    original = db.load("v").to_dict()
+    forged = db.load("v").to_dict()
+    forged["registered_claim_balances"]["origin-bread"] = {
+        "bakery": 1, "salma": 1}
+    with pytest.raises(ValueError, match="differs"):
+        WorldState.from_dict(forged)
+    forged = db.load("v").to_dict()
+    forged["registered_claim_offers"]["o1"]["status"] = "accepted"
+    forged["registered_claim_offers"]["o1"]["resolved_at"] = 0
+    with pytest.raises(ValueError):
+        WorldState.from_dict(forged)
+    assert db.load("v").to_dict() == original
