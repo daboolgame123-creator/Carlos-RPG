@@ -15,7 +15,7 @@ from .time_engine import TimeEngine
 TAKING_KEYS = {
     "actor_id", "source_owner_id", "site_id", "resource", "quantity",
     "taken_at", "source_before", "source_after", "target_before",
-    "target_after", "permission_basis",
+    "target_after", "permission_basis", "permission_id",
 }
 
 
@@ -24,7 +24,10 @@ def project_taking(state: dict[str, Any], event: DomainEvent, *,
     p = event.data
     if (not taking_authorized or set(p) not in ({
             "id", "source_owner_id", "site_id", "resource", "quantity"}, {
-            "id", "source_owner_id", "site_id", "resource", "quantity", "witness_ids"})
+            "id", "source_owner_id", "site_id", "resource", "quantity", "witness_ids"}, {
+            "id", "source_owner_id", "site_id", "resource", "quantity", "permission_id"}, {
+            "id", "source_owner_id", "site_id", "resource", "quantity", "witness_ids",
+            "permission_id"})
             or not _id(p["id"]) or p["id"] in state["property_takings"]):
         raise ValueError("taking requires an independent trusted capability and unique ID")
     actor, source, site, resource = (
@@ -58,6 +61,11 @@ def project_taking(state: dict[str, Any], event: DomainEvent, *,
         raise ValueError("taking requires known, sufficient and bounded inventories")
     from .property_evidence import validate_initial_witnesses
     witnesses = validate_initial_witnesses(state, actor, site, p.get("witness_ids", ()))
+    permission_id = p.get("permission_id")
+    if permission_id is not None:
+        from .rights_permissions import redeem_permission
+        redeem_permission(state, event, permission_id=permission_id,
+                          source=source, site=site, resource=resource, quantity=quantity)
     state["resources"][source][resource] = source_before - quantity
     state["resources"][actor][resource] = target_before + quantity
     state["property_takings"][p["id"]] = {
@@ -65,7 +73,9 @@ def project_taking(state: dict[str, Any], event: DomainEvent, *,
         "resource": resource, "quantity": quantity, "taken_at": state["time"],
         "source_before": source_before, "source_after": source_before - quantity,
         "target_before": target_before, "target_after": target_before + quantity,
-        "permission_basis": "no_grant_recorded",
+        "permission_basis": "recorded_permission" if permission_id is not None
+                            else "no_grant_recorded",
+        "permission_id": permission_id,
     }
     for witness in witnesses:
         key = p["id"] + ":" + witness
@@ -95,7 +105,9 @@ def validate_takings(state: dict[str, Any]) -> None:
                 or not 1 <= item["quantity"] <= MAX_QUANTITY
                 or type(item["taken_at"]) is not int
                 or not 0 <= item["taken_at"] <= state["time"]
-                or item["permission_basis"] != "no_grant_recorded"):
+                or item["permission_basis"] not in {"no_grant_recorded", "recorded_permission"}
+                or ((item["permission_basis"] == "no_grant_recorded")
+                    != (item["permission_id"] is None))):
             raise ValueError("invalid physical taking provenance")
         a, b, q = (item["source_before"], item["target_before"],
                    item["quantity"])
@@ -123,7 +135,8 @@ class NPCPropertyService:
 
     def take(self, world_id: str, actor_id: str, taking_id: str,
              source_owner_id: str, site_id: str, resource: str, quantity: int,
-             *, expected_revision: int, witnessed_by: tuple[str, ...] = ()) -> TakingResult:
+             *, expected_revision: int, witnessed_by: tuple[str, ...] = (),
+             permission_id: str | None = None) -> TakingResult:
         self.clock._require_session(world_id)
         state = self.store.load(world_id)
         if type(expected_revision) is not int or expected_revision != state.revision:
@@ -135,7 +148,9 @@ class NPCPropertyService:
             state.time, {"id": taking_id, "source_owner_id": source_owner_id,
                          "site_id": site_id, "resource": resource,
                          "quantity": quantity,
-                         "witness_ids": list(witnessed_by)})
+                         "witness_ids": list(witnessed_by),
+                         **({"permission_id": permission_id}
+                            if permission_id is not None else {})})
         after = self.store.append(
             world_id, "property:take:" + str(taking_id),
             expected_revision, [event], taking_authorized=True)
