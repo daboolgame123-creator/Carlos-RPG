@@ -137,3 +137,10 @@
 - **الدليل:** [CI 42074833117](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42074833117) — 697 اختبارًا ناجحًا لكل Python 3.10 و3.13 (24 جديدًا). سيناريو 7 شخصيات يربط إنتاج 2 رغيف وبيعها بـ6 نحاس، ويجتاز replay والاستعادة ورفض 16/23 الأصلي. [طلب المراجعة المستقلة](phase_02c_independent_review_request.md).
 - **التوافق:** Schema 17 / Rules 24 ومجموعات `market_stalls/market_offers/market_trades` وعمود `market_authorized` بسجل الأوامر؛ رفض نسخ 16/23 القديمة بلا تعديل/ترحيل.
 - **الحكم:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED، P0 OPEN. هذا عالم disposable-test لا أصل قصة كارلوس؛ `main` غير معدل.
+
+### G-015 — 2026-11-05 — قروض 02-D ممولة وموثقة
+- **الدافع:** عرض القرض ليس دينًا ولا عملة، والديون لا تختفي بالسفر أو بالإنفاق.
+- **القرار:** `LoanProposed` عرض؛ `LoanAccepted` انتقال فعلي لقطع النحاس بموافقة المقترض؛ `LoanRepaid` سداد موثق جزئيًا أو كاملًا. وقت الاستحقاق يوسم الدين `overdue` بلا مصادرة أو غرامة، ويظل `defaulted_at` محفوظًا بعد السداد.
+- **الاختبارات:** [CI 42079223232](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42079223232): 724/724 لكل Python 3.10 و3.13، 27 جديدة، 7 شخصيات تتعامل مع السوق والسفر والدين، فحص backup/replay ورفض ملفات 17/24 القديمة.
+- **التوافق:** Schema 18 / Rules 25، `loan_contracts` و`loan_repayments` و`loan_authorized`. لا تحويل تلقائي ولا تغيير على `main`.
+- **الحالة:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED؛ P0 OPEN والعالم تجريبي.

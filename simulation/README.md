@@ -10,6 +10,18 @@ The authoritative forward-looking plan is **[خارطة الطريق الرسم�
 
 
 
+## Phase 02-D — real funded copper loans, partial repayment and recorded default
+
+From `simulation/`, run a seven-NPC **disposable** village, with explicit copper and no secret AI bank:
+
+```bash
+PYTHONPATH=src python scenarios/test_village/demo_loans_02d.py
+```
+
+A genuine lender proposes **8 copper** to a co-located debtor. The proposal alone creates **no debt or money**: only explicit debtor acceptance transfers eight real initialized coins. The debtor repays 3, buys bread through a genuine local market trade, travels to another location, and misses the exact logical due date. The **remaining 5 copper debt survives** and is marked overdue without an invented fine or seizure. Later a real bread sale supplies two more coins; the creditor travels to the debtor, and the final five are physically repaid. Total **25 previously seeded copper coins** remain conserved in the seven-character fixture, and full replay verifies exact states.
+
+[02-D report](docs/phase_02d_report.md), [independent review request](docs/phase_02d_independent_review_request.md), [verified source CI 42079223232](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42079223232): **724/724 tests each Python 3.10/3.13**. New **Schema 18 / Rules 25** do not automatically migrate earlier 17/24 worlds. **P0 OPEN, external review deferred**: no durable canonical story, law enforcement, collateral, NPC autonomously deciding to lend, public API, interests or taxes.
+
 ## Phase 02-C — physical bakery stock sold at a local quoted copper price
 
 Run the seven-NPC **disposable test world** from `simulation/`:

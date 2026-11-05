@@ -1,7 +1,7 @@
 # Phase 02-D — consensual funded loan and persistent obligations (bounded design)
 
 **Baseline:** real final 02-C `b1345f69041e76e20b53af26251fc92946eb7230`, [CI 42075528869](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42075528869) SUCCESS: 697 tests on both Python 3.10 and 3.13.
-**Branch:** `simulation-engine-phase-02d` (from exact baseline). **Status:** IN_PROGRESS. P0 OPEN, external independent review DEFERRED, all worlds disposable.
+**Branch:** `simulation-engine-phase-02d` (from exact baseline). **Status:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED (not APPROVED/CLOSED). [CI 42079223232](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42079223232): 724/724 tests per Python 3.10 and 3.13, including seven-NPC loan/market/escape and exact due-second regression. P0 OPEN; all worlds disposable.
 
 ## Intent, physical meaning and gap
 02-C atomically transfers bread and copper in a **completed trade**; 01-J/01-K's `obligations` is specifically a separate social/help request, not enforceable financial loan. 02-D does NOT reinterpret either ledger as a debt or treat a casual promise as paid funds. Add a self-contained **opt-in copper-denominated loan contract**:
