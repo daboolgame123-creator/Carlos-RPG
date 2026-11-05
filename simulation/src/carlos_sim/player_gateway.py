@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .domain import DomainEvent
+from .domain import DomainEvent, _thaw
 from .player_perception import recall_player_events
 from .living_world import LivingWorldEngine
 from .movement import player_travel_signal, _in_transit
@@ -123,6 +123,18 @@ class PlayerGateway:
         memories = recall_player_events(self.store, state, self.player_id)
         return PlayerCommandResult(state.world_id, state.time, state.revision,
                                    'memory', memories)
+
+    def status(self) -> PlayerCommandResult:
+        """The player's own opt-in RPG record, never another entity's state."""
+        state = self._state()
+        profile = state.rpg_profiles.get(self.player_id)
+        if profile is None:
+            return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                       'rpg_uninitialized', {'configured': False})
+        # Thaw a detached safe record; do not send the WorldState to a client.
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'rpg_status', {'configured': True,
+                                                  'profile': _thaw(profile)})
 
     def move(self, route_id: str, *, command_id: str,
              expected_revision: int) -> PlayerCommandResult:
