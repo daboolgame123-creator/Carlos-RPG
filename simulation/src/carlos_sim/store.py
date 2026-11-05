@@ -42,6 +42,7 @@ class SQLiteEventStore:
                 taking_authorized INTEGER NOT NULL DEFAULT 0,
                 claim_authorized INTEGER NOT NULL DEFAULT 0,
                 complaint_authorized INTEGER NOT NULL DEFAULT 0,
+                permission_authorized INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY(world_id, command_id));
             CREATE TABLE IF NOT EXISTS events (
                 world_id TEXT NOT NULL REFERENCES worlds(id), seq INTEGER NOT NULL,
@@ -104,7 +105,7 @@ class SQLiteEventStore:
         replay_query = (
             "SELECT e.seq, e.payload, e.hash, c.request_hash, c.bootstrap, "
             "c.action_authorized, c.movement_authorized, c.social_authorized, "
-            "c.assistance_authorized, c.consumption_authorized, c.survival_authorized, c.rpg_authorized, c.production_authorized, c.market_authorized, c.loan_authorized, c.taking_authorized, c.claim_authorized, c.complaint_authorized "
+            "c.assistance_authorized, c.consumption_authorized, c.survival_authorized, c.rpg_authorized, c.production_authorized, c.market_authorized, c.loan_authorized, c.taking_authorized, c.claim_authorized, c.complaint_authorized, c.permission_authorized "
             "FROM events AS e LEFT JOIN commands AS c "
             "ON e.world_id=c.world_id AND e.command_id=c.command_id "
             "WHERE e.world_id=? AND e.seq>? ORDER BY e.seq"
@@ -112,7 +113,7 @@ class SQLiteEventStore:
         for (seq, raw, stored_hash, command_hash, bootstrap,
              action_authorized, movement_authorized, social_authorized,
              assistance_authorized, consumption_authorized,
-             survival_authorized, rpg_authorized, production_authorized, market_authorized, loan_authorized, taking_authorized, claim_authorized, complaint_authorized) in self.db.execute(
+             survival_authorized, rpg_authorized, production_authorized, market_authorized, loan_authorized, taking_authorized, claim_authorized, complaint_authorized, permission_authorized) in self.db.execute(
                  replay_query, (world_id, state.revision)):
             if seq != state.revision + 1:
                 raise IntegrityError("event sequence gap")
@@ -138,6 +139,7 @@ class SQLiteEventStore:
                     taking_authorized=bool(taking_authorized),
                     claim_authorized=bool(claim_authorized),
                     complaint_authorized=bool(complaint_authorized),
+                    permission_authorized=bool(permission_authorized),
                 )
             except (ValueError, TypeError) as exc:
                 raise IntegrityError(f"corrupt event {seq}") from exc
@@ -155,7 +157,7 @@ class SQLiteEventStore:
             raise IntegrityError(str(exc)) from exc
         return state
 
-    def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False, npc_authorized: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False) -> WorldState:
+    def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False, npc_authorized: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False) -> WorldState:
         """Commit events atomically. bootstrap is a trusted setup-only capability.
 
         Never expose this method or its bootstrap switch to untrusted callers.
@@ -163,8 +165,11 @@ class SQLiteEventStore:
         """
         if not isinstance(command_id,str) or not command_id or type(expected_revision) is not int or expected_revision < 0 or not events:
             raise ValueError("command ID, expected revision and nonempty event batch required")
-        if type(bootstrap) is not bool or type(clock_authorized) is not bool or type(npc_authorized) is not bool or type(action_authorized) is not bool or type(movement_authorized) is not bool or type(social_authorized) is not bool or type(assistance_authorized) is not bool or type(consumption_authorized) is not bool or type(survival_authorized) is not bool or type(rpg_authorized) is not bool or type(production_authorized) is not bool or type(market_authorized) is not bool or type(loan_authorized) is not bool or type(taking_authorized) is not bool or type(claim_authorized) is not bool or type(complaint_authorized) is not bool:
+        if type(bootstrap) is not bool or type(clock_authorized) is not bool or type(npc_authorized) is not bool or type(action_authorized) is not bool or type(movement_authorized) is not bool or type(social_authorized) is not bool or type(assistance_authorized) is not bool or type(consumption_authorized) is not bool or type(survival_authorized) is not bool or type(rpg_authorized) is not bool or type(production_authorized) is not bool or type(market_authorized) is not bool or type(loan_authorized) is not bool or type(taking_authorized) is not bool or type(claim_authorized) is not bool or type(complaint_authorized) is not bool or type(permission_authorized) is not bool:
             raise ValueError("capability flags must be boolean")
+        if any(e.event_type in {"PropertyPermissionGranted", "PropertyPermissionRevoked"} for e in events):
+            if not permission_authorized or world_id not in self._active_worlds:
+                raise InvalidEvent("rights permissions require trusted local capability and active session")
         if any(e.event_type in {"PropertyComplaintReceived", "PropertyComplaintAcknowledged"} for e in events):
             if not complaint_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("complaints require trusted local capability and active session")
@@ -269,7 +274,7 @@ class SQLiteEventStore:
                for e in events) and world_id not in self._active_worlds:
             raise InvalidEvent("resource consumption requires an active play session")
         serialized = [e.to_dict() for e in events]
-        request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized,"action_authorized":action_authorized,"movement_authorized":movement_authorized,"social_authorized":social_authorized,"assistance_authorized":assistance_authorized,"consumption_authorized":consumption_authorized,"survival_authorized":survival_authorized,"rpg_authorized":rpg_authorized,"production_authorized":production_authorized,"market_authorized":market_authorized,"loan_authorized":loan_authorized,"taking_authorized":taking_authorized,"claim_authorized":claim_authorized,"complaint_authorized":complaint_authorized})
+        request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized,"action_authorized":action_authorized,"movement_authorized":movement_authorized,"social_authorized":social_authorized,"assistance_authorized":assistance_authorized,"consumption_authorized":consumption_authorized,"survival_authorized":survival_authorized,"rpg_authorized":rpg_authorized,"production_authorized":production_authorized,"market_authorized":market_authorized,"loan_authorized":loan_authorized,"taking_authorized":taking_authorized,"claim_authorized":claim_authorized,"complaint_authorized":complaint_authorized,"permission_authorized":permission_authorized})
         self.db.execute("BEGIN IMMEDIATE")
         try:
             existing = self.db.execute("SELECT request_hash FROM commands WHERE world_id=? AND command_id=?",(world_id,command_id)).fetchone()
@@ -284,7 +289,7 @@ class SQLiteEventStore:
             first = state.revision + 1
             for e in events:
                 try:
-                    state = apply_event(state,e,bootstrap=bootstrap,action_authorized=action_authorized,movement_authorized=movement_authorized,social_authorized=social_authorized,assistance_authorized=assistance_authorized,consumption_authorized=consumption_authorized,survival_authorized=survival_authorized,rpg_authorized=rpg_authorized,production_authorized=production_authorized,market_authorized=market_authorized,loan_authorized=loan_authorized,taking_authorized=taking_authorized,claim_authorized=claim_authorized,complaint_authorized=complaint_authorized)
+                    state = apply_event(state,e,bootstrap=bootstrap,action_authorized=action_authorized,movement_authorized=movement_authorized,social_authorized=social_authorized,assistance_authorized=assistance_authorized,consumption_authorized=consumption_authorized,survival_authorized=survival_authorized,rpg_authorized=rpg_authorized,production_authorized=production_authorized,market_authorized=market_authorized,loan_authorized=loan_authorized,taking_authorized=taking_authorized,claim_authorized=claim_authorized,complaint_authorized=complaint_authorized,permission_authorized=permission_authorized)
                 except (ValueError,TypeError) as exc:
                     raise InvalidEvent(str(exc)) from exc
             from .actions import validate_action_reservations
@@ -297,7 +302,7 @@ class SQLiteEventStore:
                 validate_travel_reservations(state)
             except ValueError as exc:
                 raise InvalidEvent(str(exc)) from exc
-            self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized),int(npc_authorized),int(action_authorized),int(movement_authorized),int(social_authorized),int(assistance_authorized),int(consumption_authorized),int(survival_authorized),int(rpg_authorized),int(production_authorized),int(market_authorized),int(loan_authorized),int(taking_authorized),int(claim_authorized),int(complaint_authorized)))
+            self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized),int(npc_authorized),int(action_authorized),int(movement_authorized),int(social_authorized),int(assistance_authorized),int(consumption_authorized),int(survival_authorized),int(rpg_authorized),int(production_authorized),int(market_authorized),int(loan_authorized),int(taking_authorized),int(claim_authorized),int(complaint_authorized),int(permission_authorized)))
             for idx, data in enumerate(serialized,start=first):
                 self.db.execute("INSERT INTO events VALUES(?,?,?,?,?)",(world_id,idx,command_id,canonical(data),canonical_hash(data)))
             self.db.execute("UPDATE worlds SET revision=?,sim_time=? WHERE id=? AND revision=?",(state.revision,state.time,world_id,expected_revision))
