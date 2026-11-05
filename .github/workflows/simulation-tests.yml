@@ -420,6 +420,20 @@ jobs:
           assert baseline['replay_equal'] is True
           PY
 
+      - name: Verify 02-F feature-off parity against frozen genuine 02-E
+        run: |
+          PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/02f-off.json
+          PYTHONPATH=../reviewed-02e/simulation/src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/02e-frozen.json
+          python - <<'PY'
+          import json
+          old=json.load(open('/tmp/02e-frozen.json'))['results'][0]
+          new=json.load(open('/tmp/02f-off.json'))['results'][0]
+          for key in ('npcs','time','revision','events_count','events_digest',
+                      'legacy_semantic_digest','replay_equal'):
+              assert old[key]==new[key], (key,old[key],new[key])
+          assert old['replay_equal'] is True
+          PY
+
       - name: Check existing seven-NPC event and semantic state parity against Phase 01-R
         run: |
           PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/01s-parity.json
