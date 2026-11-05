@@ -221,3 +221,43 @@ def test_untrusted_rumor_command_and_closed_session_rejected(tmp_path):
         assert db.load("world").to_dict() == baseline.to_dict()
     finally:
         db.close()
+
+
+def test_seven_npc_three_step_gossip_chain_preserves_private_views(tmp_path):
+    from test_social_autonomy import make_world
+    with SQLiteEventStore(tmp_path / "seven.sqlite") as db:
+        names = ("adel", "basim", "huda", "layla", "nora", "omar", "salma")
+        make_world(db, names=names)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        NPCSocialService(db, clock).interact(
+            "village", "carlos", "basim", kind="threat",
+            text="You are a goblin.", message_id="actual-insult",
+            expected_revision=db.load("village").revision)
+        service = NPCRumorService(db, clock)
+        for n, sender, receiver, parent in (
+            (1, "basim", "adel", None),
+            (2, "adel", "huda", "first"),
+            (3, "huda", "layla", "second"),
+        ):
+            clock.advance("village", seconds=60, command_id=f"time-{n}",
+                          expected_revision=db.load("village").revision)
+            service.tell(
+                "village", sender, receiver, "actual-insult",
+                parent_id=parent, delivery_id=("first", "second", "third")[n-1],
+                expected_revision=db.load("village").revision)
+        state = db.load("village")
+        assert len(state.npcs) == 7
+        assert [state.rumor_deliveries[x]["hops"] for x in ("first", "second", "third")] == [1, 2, 3]
+        assert [state.rumor_deliveries[x]["confidence"] for x in ("first", "second", "third")] == [70, 50, 30]
+        assert heard_rumors(state, "nora") == ()
+        assert perceived_reputation(state, "nora", "carlos")["reported_threats"] == 0
+        assert perceived_reputation(state, "layla", "carlos")["reported_threats"] == 1
+        assert state.entities["carlos"]["name"] == "Carlos"
+        assert db.verify("village").to_dict() == state.to_dict()
+        clock.advance("village", seconds=60, command_id="time-4",
+                      expected_revision=state.revision)
+        with pytest.raises(InvalidEvent, match="maximum hops"):
+            service.tell("village", "layla", "omar", "actual-insult",
+                         parent_id="third", delivery_id="fourth",
+                         expected_revision=db.load("village").revision)
