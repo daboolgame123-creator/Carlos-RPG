@@ -30,3 +30,11 @@ Additional independent probes:
 17. WORLD-GAP-008 still lacks officer delegation, shift scheduling, queues and inter-office referrals. Are these clearly deferred rather than silently guessed?
 
 Formal APPROVED requires an actual separate reviewer, concrete reproducible evidence and no unresolved blockers. **P0 remains OPEN**; this handoff document is not itself a review outcome.
+
+## Post-audit Rules32 update — review this exact checkpoint instead
+
+**Current candidate code SHA:** `65e4dd582d8ea0a4cfbd442a8ce39e094aa5f303`, [CI 42112812532](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42112812532), **808/808 passed each on Python 3.10 and 3.13**. This is more recent than the H3 Rules31 candidate above. Rules32 still uses Schema24; genuine prior Rules31 worlds are rejected unchanged.
+
+The internal audit discovered **REVIEW-02H-001**: a real eyewitness could cite a taking as `direct_sighting` when falsely naming someone else or claiming a different quantity. The engine now rejects such citation (the unsupported lie may still be filed as an unverified standalone claim). Independent review MUST reproduce both former loopholes, verify the repaired reducer and snapshot validator, prove rollback and verify immutable replay tamper detection. Details: [internal audit](phase_02h_internal_adversarial_audit.md).
+
+This audit and green CI **do not constitute an independent reviewer sign-off**. Before any `APPROVED` status, independently challenge identity boundaries, capability replay, privilege leakage, absence of automatic perception, actual title vs possession and P0 production backup/recovery.
