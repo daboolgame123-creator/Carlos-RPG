@@ -425,3 +425,42 @@ def test_forged_snapshot_breaches_repayment_math_or_due_time(world):
         with pytest.raises(ValueError):
             WorldState.from_dict(changed)
     assert db.verify("test").to_dict() == before.to_dict()
+
+
+def test_exact_due_second_partial_payment_before_clock_signal_remains_on_time(world):
+    db, clock, svc = world
+    propose(db, svc)
+    accept(db, svc)
+    # Clock can advance exactly TO the deadline without skipping its
+    # appointment. The payment event occurs before due-signal firing.
+    old = db.load("test")
+    advanced = db.append("test", "clock-to-boundary", old.revision, [
+        ev("TimeAdvanced", {"from": 0, "to": 120}, at=120),
+    ], clock_authorized=True)
+    assert advanced.time == 120
+    partial = repay(db, svc, 3, "at-boundary")
+    assert partial.loan_repayments["at-boundary"]["late"] is False
+    assert partial.loan_contracts["loan"]["remaining"] == 5
+    fired = db.append("test", "fire-on-boundary", rev(db), [
+        ev("ScheduledEventFired", {"id": "loan:due:loan"}, at=120),
+    ], clock_authorized=True)
+    assert fired.loan_contracts["loan"]["status"] == "overdue"
+    assert fired.loan_contracts["loan"]["defaulted_at"] == 120
+    assert fired.loan_repayments["at-boundary"]["late"] is False
+    assert db.verify("test").to_dict() == fired.to_dict()
+
+
+def test_exact_due_second_full_payment_before_clock_signal_clears_deadline(world):
+    db, clock, svc = world
+    propose(db, svc)
+    accept(db, svc)
+    old = db.load("test")
+    db.append("test", "clock-to-due", old.revision, [
+        ev("TimeAdvanced", {"from": 0, "to": 120}, at=120),
+    ], clock_authorized=True)
+    settled = repay(db, svc, 8, "paid-at-due")
+    assert settled.loan_contracts["loan"]["status"] == "paid"
+    assert settled.loan_contracts["loan"]["defaulted_at"] is None
+    assert settled.loan_repayments["paid-at-due"]["late"] is False
+    assert "loan:due:loan" not in settled.scheduled
+    assert db.verify("test").to_dict() == settled.to_dict()
