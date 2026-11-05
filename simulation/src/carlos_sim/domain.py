@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 26
-RULES_VERSION = 34
+SCHEMA_VERSION = 27
+RULES_VERSION = 35
 
 
 def _thaw(value: Any) -> Any:
@@ -104,6 +104,7 @@ class WorldState:
     property_title_origins: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     property_custody_lots: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     property_custody_moves: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    property_permissions: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -143,6 +144,7 @@ class WorldState:
         object.__setattr__(self, "property_title_origins", _freeze(_json_copy(self.property_title_origins)))
         object.__setattr__(self, "property_custody_lots", _freeze(_json_copy(self.property_custody_lots)))
         object.__setattr__(self, "property_custody_moves", _freeze(_json_copy(self.property_custody_moves)))
+        object.__setattr__(self, "property_permissions", _freeze(_json_copy(self.property_permissions)))
 
     def to_dict(self) -> dict[str, Any]:
         # Replay/projection states already passed full JSON normalization in
@@ -178,7 +180,8 @@ class WorldState:
                            "complaint_desks": self.complaint_desks, "property_complaints": self.property_complaints,
                            "property_title_origins": self.property_title_origins,
                            "property_custody_lots": self.property_custody_lots,
-                           "property_custody_moves": self.property_custody_moves})
+                           "property_custody_moves": self.property_custody_moves,
+                           "property_permissions": self.property_permissions})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
@@ -198,7 +201,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -206,7 +209,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -270,6 +273,8 @@ class WorldState:
         validate_origins(d)
         from .custody import validate_lots
         validate_lots(d)
+        from .rights_permissions import validate_permissions
+        validate_permissions(d)
         from .loans import validate_loans
         validate_loans(d)
         from .temperament import validate_temperaments
@@ -320,7 +325,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -385,6 +390,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "LoanRepaid":
         from .loans import repay_loan
         repay_loan(d, e, loan_authorized=loan_authorized)
+    elif kind == "PropertyPermissionGranted":
+        from .rights_permissions import issue_permission
+        issue_permission(d, e, permission_authorized=permission_authorized)
+    elif kind == "PropertyPermissionRevoked":
+        from .rights_permissions import revoke_permission
+        revoke_permission(d, e, permission_authorized=permission_authorized)
     elif kind == "PropertyTitleOriginRegistered":
         from .rights import register_origin
         register_origin(d, e, bootstrap=bootstrap)
