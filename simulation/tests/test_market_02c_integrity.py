@@ -170,7 +170,21 @@ def test_market_rejects_fake_free_commodities_and_counter_sale(tmp_path):
         assert db.load("village").to_dict() == old
 
 
-def test_trade_after_one_sale_uses_new_known_balances_and_price(village=None):
-    # no pytest fixture here; use isolated test world to prove second purchase
-    # reads the current owner balances, not old quote-time amounts.
-    pass
+def test_followup_sales_use_updated_ledger_not_original_offer_stock(tmp_path):
+    with SQLiteEventStore(tmp_path / "fresh-balances.sqlite") as db:
+        prepare(db)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        market = NPCMarketService(db, clock)
+        _bake(db, clock)
+        _offer(db, market)
+        first = _buy(db, market)
+        assert first.market_offers["bread-quote"]["remaining"] == 1
+        second = _buy(db, market, who="huda", ident="second-purchase")
+        trade = second.market_trades["second-purchase"]
+        assert trade["goods_source_before"] == 1
+        assert trade["goods_source_after"] == 0
+        assert trade["pay_target_before"] == 3
+        assert trade["pay_target_after"] == 6
+        assert second.market_offers["bread-quote"]["remaining"] == 0
+        assert db.verify("village").to_dict() == second.to_dict()
