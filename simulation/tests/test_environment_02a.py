@@ -100,9 +100,39 @@ def test_one_to_one_conservation_and_full_capacity_no_cost(world):
     full = tick(db, clock, 600, 'full')
     assert full.resources['grove']['wild_food'] == 2
     assert full.resources['grove']['regrowth_reserve'] == 0
-    assert full.environment_cycles['grove-cycle']['ticks'] == 12
+    assert full.environment_cycles['grove-cycle']['ticks'] == 2
+    assert full.environment_cycles['grove-cycle']['next_due'] is None
+    assert not any('__environment_cycle' in x['payload'] for x in full.scheduled.values())
     assert full.environment_cycles['grove-cycle']['converted'] == 2
     assert db.verify('world').to_dict() == full.to_dict()
+
+
+def test_exhaustion_stops_noop_tick_storm_and_source_zero_is_quiet(tmp_path):
+    with SQLiteEventStore(tmp_path / 'empty.sqlite') as db:
+        setup(db, wild=0, reserve=0, period=1)
+        clock = TimeEngine(db, max_events_per_advance=3)
+        clock.open_session('world')
+        initial = db.load('world')
+        assert initial.environment_cycles['grove-cycle']['next_due'] is None
+        assert initial.scheduled == {}
+        after = tick(db, clock, 10_000, 'long-time')
+        assert after.time == 10_000
+        assert after.environment_cycles['grove-cycle']['ticks'] == 0
+        assert after.resources['grove']['wild_food'] == 0
+        assert db.verify('world').to_dict() == after.to_dict()
+
+    with SQLiteEventStore(tmp_path / 'spent.sqlite') as db:
+        setup(db, wild=0, reserve=1, period=1)
+        clock = TimeEngine(db, max_events_per_advance=5)
+        clock.open_session('world')
+        after = tick(db, clock, 1_000, 'long-time')
+        assert after.environment_cycles['grove-cycle']['ticks'] == 1
+        assert after.environment_cycles['grove-cycle']['converted'] == 1
+        assert after.environment_cycles['grove-cycle']['next_due'] is None
+        assert not after.scheduled
+        assert after.resources['grove']['wild_food'] == 1
+        assert after.resources['grove']['regrowth_reserve'] == 0
+        assert db.verify('world').to_dict() == after.to_dict()
 
 
 def test_full_site_does_not_spend_reserve_and_no_offline_time(tmp_path):
@@ -199,7 +229,8 @@ def test_two_sites_have_independent_known_reserves(tmp_path):
         assert result.resources['woods']['regrowth_reserve'] == 0
         assert result.resources['grove']['wild_food'] == 1
         assert result.resources['grove']['regrowth_reserve'] == 1
-        assert result.environment_cycles['woods-cycle']['ticks'] == 3
+        assert result.environment_cycles['woods-cycle']['ticks'] == 1
+        assert result.environment_cycles['woods-cycle']['next_due'] is None
         assert result.environment_cycles['grove-cycle']['ticks'] == 1
         assert db.verify('world').to_dict() == result.to_dict()
 
@@ -223,7 +254,7 @@ def test_split_vs_lumped_time_and_restart_replay(tmp_path):
                 'time': last['time'],
                 'resources': last['resources'],
                 'environment_cycles': last['environment_cycles'],
-                'scheduled_due': last['scheduled']['environment:grove-cycle:5']['due'],
+                'scheduled_due': tuple(sorted(last['scheduled'])),
             })
     assert results[0] == results[1]
 
