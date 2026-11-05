@@ -29,3 +29,4 @@ from .scarcity import recent_personal_depletion, recently_refused_by
 
 from .player_gateway import PlayerGateway, PlayerCommandResult
 from .production import NPCProductionService, ProductionStart
+from .market import NPCMarketService, MarketResult
