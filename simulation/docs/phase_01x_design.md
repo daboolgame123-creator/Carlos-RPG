@@ -1,6 +1,6 @@
 # Phase 01-X — Player perception and evidence-scoped memory
 
-**Status:** IN_PROGRESS until the final branch-head CI passes. Independent review remains **EXTERNAL_REVIEW_DEFERRED**.
+**Status:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED based on 615/615 tests per Python version on CI 42033754979. **NOT APPROVED/CLOSED.**
 **Base:** validated 01-W commit `3fb18d3222ebdc08307d393bab8603a5726dda63`, CI [42021905506](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42021905506).
 **Branch:** `simulation-engine-phase-01x`. **P0: OPEN**.
 
