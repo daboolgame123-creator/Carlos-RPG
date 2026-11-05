@@ -1,6 +1,6 @@
 # Phase 02-G — Local rumors and attributed reputation, first bounded slice
 
-**Date:** 2026-11-05. **Status:** DESIGN / IMPLEMENTATION IN PROGRESS / EXTERNAL REVIEW DEFERRED.  
+**Date:** 2026-11-05. **Status:** TECHNICALLY_VALIDATED (763 green tests at code SHA 7b7deaa8) / EXTERNAL REVIEW DEFERRED / P0 OPEN.  
 **Base:** green 02-F `d46aaa04fd53f07e3fd06358f6f62efb904e7452` (GitHub Actions 42100855692). P0 remains OPEN. Disposable test worlds only.
 
 ## Missing-essential-mechanics gate
