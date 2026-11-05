@@ -293,3 +293,56 @@ def test_player_move_snapshot_close_reopen_full_replay(tmp_path):
         db.snapshot("world")
         assert db.load("world").entities["carlos"]["location_id"] == "forest"
         assert db.verify("world").to_dict() == db.load("world").to_dict()
+
+
+def test_player_journey_cannot_be_cancelled_without_explicit_game_policy(world):
+    db, clock, gw = world
+    gw.move("road", command_id="must-arrive",
+            expected_revision=db.load("world").revision)
+    unchanged = db.load("world").to_dict()
+    with pytest.raises(InvalidEvent, match="cannot cancel an active player"):
+        clock.cancel(
+            "world", "player-travel:carlos:must-arrive",
+            command_id="erase-journey",
+            expected_revision=db.load("world").revision,
+        )
+    assert db.load("world").to_dict() == unchanged
+    assert db.verify("world").to_dict() == unchanged
+
+
+def test_malformed_player_travel_payload_cannot_forge_impossible_destination(world):
+    db, clock, gw = world
+    original = db.load("world")
+    for actor, route, origin, dest, due in (
+        ("carlos", "road", "market", "forest", 89),
+        ("carlos", "road", "forest", "market", 90),
+        ("nora", "road", "market", "forest", 90),
+        ("carlos", "hidden-road", "market", "forest", 90),
+    ):
+        event = DomainEvent("ScheduledEventCreated", None,
+                            "forged player movement", 0, {
+            "id": "player-travel:" + actor + ":spoof",
+            "due": due, "order": original.next_schedule_order,
+            "kind": "signal", "interrupt": False,
+            "payload": {"__player_travel": {
+                "player_id": actor, "route_id": route,
+                "origin": origin, "destination": dest, "started_at": 0,
+            }},
+        })
+        with pytest.raises(ValueError, match="player travel"):
+            apply_event(original, event, movement_authorized=True)
+    assert db.load("world").to_dict() == original.to_dict()
+
+
+def test_raw_clock_advancement_resolves_player_arrival_without_gateway_magic(world):
+    db, clock, gw = world
+    moved = gw.move(
+        "road", command_id="start-clock-test",
+        expected_revision=db.load("world").revision)
+    direct = clock.advance(
+        "world", seconds=90, command_id="trusted-clock",
+        expected_revision=moved.revision)
+    assert direct.state.time == 90
+    assert direct.state.entities["carlos"]["location_id"] == "forest"
+    assert "player-travel:carlos:start-clock-test" not in direct.state.scheduled
+    assert db.verify("world").to_dict() == direct.state.to_dict()
