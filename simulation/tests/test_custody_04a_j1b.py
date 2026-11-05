@@ -222,3 +222,28 @@ def test_rejected_atomic_taking_does_not_write_lot_movement(scene):
     with pytest.raises(InvalidEvent):
         _take(db, clock, qty=3)
     assert db.load("v").to_dict() == before
+
+
+def test_barter_records_both_commodity_transfer_legs(tmp_path):
+    from test_market_02c import prepare
+    with SQLiteEventStore(tmp_path / "barter-lots.sqlite") as db:
+        prepare(db)
+        clock = TimeEngine(db); clock.open_session("village")
+        db.append("village", "two-origins", _rev(db, "village"), [
+            origin("huda-bread", "huda", "huda", 2, "bread", "bakery"),
+            origin("layla-grain", "layla", "layla", 2, "grain", "bakery"),
+        ], bootstrap=True)
+        market = NPCMarketService(db, clock)
+        market.post("village", "huda", "huda", "bakery", "barter-quote",
+                    "bread", 2, "grain", 1,
+                    expected_revision=_rev(db, "village"))
+        after = market.buy("village", "layla", "barter-one", "barter-quote",
+                           1, 1, expected_revision=_rev(db, "village")).state
+        bread = after.property_custody_lots["huda-bread"]
+        grain = after.property_custody_lots["layla-grain"]
+        assert dict(bread["known_holders"]) == {"huda": 1, "layla": 1}
+        assert dict(grain["known_holders"]) == {"huda": 1, "layla": 1}
+        assert after.resources["layla"]["bread"] == 1
+        assert after.resources["huda"]["grain"] == 1
+        assert len(after.property_custody_moves) == 2
+        assert db.verify("village").to_dict() == after.to_dict()
