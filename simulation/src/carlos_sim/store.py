@@ -172,7 +172,7 @@ class SQLiteEventStore:
             raise InvalidEvent("NPC action start requires trusted action capability")
         if any(e.event_type == "NPCActionStarted" for e in events) and world_id not in self._active_worlds:
             raise InvalidEvent("NPC actions cannot start outside an active play session")
-        movement_events = {"NPCTravelStarted", "NPCObserved", "NPCNavigationSurveyed", "NPCNavigationTargetSet"}
+        movement_events = {"NPCTravelStarted", "NPCObserved", "PlayerObserved", "NPCNavigationSurveyed", "NPCNavigationTargetSet"}
         if any(e.event_type in movement_events
                or (e.event_type == "ScheduledEventCreated"
                    and "__player_travel" in e.data.get("payload", {}))
@@ -181,7 +181,7 @@ class SQLiteEventStore:
                 raise InvalidEvent("NPC travel/perception requires trusted movement capability")
             if world_id not in self._active_worlds:
                 raise InvalidEvent("NPC travel/perception requires active play session")
-        if any(e.event_type in ('SocialMessageSent', 'SocialMessageReceived') for e in events):
+        if any(e.event_type in ('SocialMessageSent', 'SocialMessageReceived', 'PlayerHearsayReceived') for e in events):
             if not social_authorized:
                 raise InvalidEvent('social interaction requires trusted local capability')
             if world_id not in self._active_worlds:
