@@ -177,3 +177,11 @@
 - **التبعيات:** WORLD-GAP-001..005 ما زالت مسجلة؛ لا تعد هذه المرحلة قادرة على فهم المزاح والنبرة اللغوية أو فرض قرارات تجارية من الشائعات قبل تصميم وتحقق لاحقين.
 - **التوافق:** Schema 21 / Rules 28؛ لا ترحيل تلقائي أو تشغيل عالم طويل الأمد، ولا تعديل `main` أو ملف القصة الأصلي.
 - **المراجعة التالية:** [طلب المراجعة المستقلة لـ02-G](phase_02g_independent_review_request.md) ثم تصميم 02-H وفق ترتيب الخارطة مع فحص المتطلبات الجوهرية المفتوحة.
+
+### G-019 — 2026-11-05 — Phase 02-H1: physical taking, distinct from accusations
+
+- **Reason:** 02-C tracks owned inventory but did not permit materially recorded non-consensual possession changes. An allegation or rumor must never create a theft or a punishment.
+- **Decision:** introduce independently authorized and event-sourced `PropertyTaken` with actual physically present NPC, verified finite site or person-owned resource balance, exclusive atomic transfer, source/target ledger and no automatic discovery. Registered steward separates site stock from a character's personal property. Recipe-bound production equipment remains protected until reservation-aware handling exists.
+- **Proof:** code `ec5d7eb0633a24554636c77cb3b0efde18f7a8a7`; [CI 42105931046](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42105931046) **773/773 passing each on Python 3.10 and 3.13**; actual 02-G Schema21/Rules28 saved-world refusal without file mutation, replay, seven-NPC resource conservation, market non-double-sale, authorization and failure atomicity.
+- **Compatibility:** Schema **22**, Rules **29**, `property_takings` collection, `taking_authorized` command provenance. No implicit migration; legacy off-parity ignores only the newly empty ledger.
+- **Deferred:** 02-H2 witnesses/claims; 02-H3 complaint intake; institutional penalties/restitution/real-estate titles are not supplied by H1. WORLD-GAP-001..005, external independent review, and P0 remain OPEN. No `main` or story-file changes. [H1 report](phase_02h1_report.md).
