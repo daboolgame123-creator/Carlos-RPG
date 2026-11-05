@@ -84,6 +84,9 @@ def start_action(state: dict[str, Any], event: DomainEvent, *, action_authorized
         raise ValueError("NPC cannot start an activity while traveling")
     if any(a["npc_id"] == npc_id and a["status"] == "running" for a in state["actions"].values()):
         raise ValueError("NPC is already busy")
+    from .production import is_producing
+    if is_producing(state, npc_id):
+        raise ValueError("NPC cannot start an action while producing goods")
     if any(a["npc_id"] == npc_id and a["start"] == state["time"] for a in state["actions"].values()):
         raise ValueError("NPC decision cannot start multiple actions")
     required_counter = {"work": LABOR_RESOURCE, "investigate": INVESTIGATION_RESOURCE}.get(action)
