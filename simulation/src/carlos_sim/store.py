@@ -209,6 +209,11 @@ class SQLiteEventStore:
                 raise InvalidEvent("NPC travel/perception requires trusted movement capability")
             if world_id not in self._active_worlds:
                 raise InvalidEvent("NPC travel/perception requires active play session")
+        if any(e.event_type == 'RumorDelivered' for e in events):
+            if not social_authorized:
+                raise InvalidEvent('rumor delivery requires trusted social capability')
+            if world_id not in self._active_worlds:
+                raise InvalidEvent('rumor delivery requires active play session')
         if any(e.event_type in ('SocialMessageSent', 'SocialMessageReceived', 'PlayerHearsayReceived') for e in events):
             if not social_authorized:
                 raise InvalidEvent('social interaction requires trusted local capability')
