@@ -55,7 +55,8 @@ class LivingWorldEngine:
                  assistance_enabled: bool = False, consumption_enabled: bool = False,
                  survival_enabled: bool = False, gathering_enabled: bool = False,
                  foraging_enabled: bool = False, knowledge_enabled: bool = False,
-                 food_navigation_enabled: bool = False):
+                 food_navigation_enabled: bool = False,
+                 scarcity_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -103,6 +104,14 @@ class LivingWorldEngine:
                 "knowledge_enabled and foraging_enabled"
             )
         self.food_navigation_enabled = food_navigation_enabled
+        if type(scarcity_enabled) is not bool:
+            raise ValueError("scarcity_enabled must be boolean")
+        if scarcity_enabled and not (self.food_navigation_enabled
+                                    and self.assistance_enabled):
+            raise ValueError(
+                "scarcity_enabled requires food_navigation_enabled and assistance_enabled"
+            )
+        self.scarcity_enabled = scarcity_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -227,7 +236,9 @@ class LivingWorldEngine:
                     for actor_id in sorted(current.npcs):
                         if actor_id in acted:
                             continue
-                        intent = choose_assistance_intent(current, actor_id, phase)
+                        intent = choose_assistance_intent(
+                            current, actor_id, phase,
+                            scarcity_enabled=self.scarcity_enabled)
                         if intent is None:
                             continue
                         append(DomainEvent(intent.event_type, actor_id,
@@ -309,7 +320,8 @@ class LivingWorldEngine:
                             'NPC surveys locally observable roads', current.time,
                             {'npc_id': npc_id}), movement_capability=True)
                     food_intent = (
-                        choose_food_route(current, npc_id)
+                        choose_food_route(current, npc_id,
+                                          scarcity_enabled=self.scarcity_enabled)
                         if self.food_navigation_enabled else None
                     )
                     if (food_intent is not None

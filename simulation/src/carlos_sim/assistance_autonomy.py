@@ -14,6 +14,7 @@ from hashlib import sha256
 from typing import Any
 
 from .domain import WorldState
+from .scarcity import recently_refused_by
 
 MIN_REASK_SECONDS = 900
 FOOD_REQUEST_HUNGER = 75
@@ -53,7 +54,8 @@ def _together(state: WorldState, a: str, b: str) -> bool:
             and state.entities[a]['location_id'] == state.entities[b]['location_id'])
 
 
-def choose_assistance_intent(state: WorldState, npc_id: str, phase: str) -> AssistanceIntent | None:
+def choose_assistance_intent(state: WorldState, npc_id: str, phase: str, *,
+                             scarcity_enabled: bool = False) -> AssistanceIntent | None:
     """Evaluate one actor for one phase, without mutating world state.
 
     Phases: settle promised help; respond to existing requests; initiate a
@@ -123,6 +125,8 @@ def choose_assistance_intent(state: WorldState, npc_id: str, phase: str) -> Assi
             continue
         trust = state.relations.get(npc_id, {}).get(peer, 0)
         if trust < -20:
+            continue
+        if scarcity_enabled and recently_refused_by(state, npc_id, peer):
             continue
         # Schema eligibility check ONLY: do not read the peer's food quantity.
         if type(state.resources.get(peer, {}).get('food')) is not int:
