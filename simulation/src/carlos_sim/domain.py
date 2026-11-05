@@ -350,6 +350,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("cannot cancel an ongoing NPC action; explicit cancellation is not supported")
         if any(t["status"] == "traveling" and t["schedule_id"] == p["id"] for t in d["travels"].values()):
             raise ValueError("cannot cancel an ongoing NPC travel; explicit cancellation is not supported")
+        if "__player_travel" in d["scheduled"][p["id"]]["payload"]:
+            raise ValueError("cannot cancel an active player journey without an explicit policy")
         del d["scheduled"][p["id"]]
     elif kind == "ScheduledEventFired":
         if set(p) != {"id"} or not isinstance(p["id"], str) or p["id"] not in d["scheduled"]:
