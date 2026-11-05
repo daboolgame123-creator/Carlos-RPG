@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 13
-RULES_VERSION = 18
+RULES_VERSION = 19
 
 
 def _thaw(value: Any) -> Any:
@@ -179,6 +179,8 @@ class WorldState:
         validate_actions(d)
         from .movement import validate_movement
         validate_movement(d)
+        from .movement import validate_player_schedules
+        validate_player_schedules(d)
         from .navigation import validate_navigation
         validate_navigation(d)
         from .social import validate_social
@@ -335,6 +337,10 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if "__npc_travel_id" in p["payload"]:
             if not movement_authorized or set(p["payload"]) != {"__npc_travel_id"} or p["interrupt"]:
                 raise ValueError("NPC travel schedule requires trusted movement capability")
+        if "__player_travel" in p["payload"]:
+            if (not movement_authorized or e.actor_id is not None
+                    or set(p["payload"]) != {"__player_travel"} or p["interrupt"]):
+                raise ValueError("player travel requires trusted local movement capability")
         d["scheduled"][p["id"]] = {k: _thaw(p[k]) for k in ("due", "order", "kind", "payload", "interrupt")}
         d["next_schedule_order"] += 1
     elif kind == "ScheduledEventCancelled":
@@ -360,6 +366,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if "__npc_travel_id" in scheduled["payload"]:
             from .movement import complete_travel
             complete_travel(d, scheduled["payload"]["__npc_travel_id"], p["id"], state.time)
+        if "__player_travel" in scheduled["payload"]:
+            from .movement import complete_player_travel
+            complete_player_travel(d, p["id"], scheduled["payload"]["__player_travel"], state.time)
         del d["scheduled"][p["id"]]
     elif kind == "TimeAdvanced":
         if set(p) != {"from", "to"} or type(p["from"]) is not int or type(p["to"]) is not int:

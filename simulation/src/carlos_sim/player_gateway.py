@@ -1,0 +1,169 @@
+"""01-W: trusted offline gateway for one human-controlled player character.
+
+This is NOT an HTTP authentication boundary. Only a trusted local process
+may construct the object and hold a SQLiteEventStore capability.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from .domain import DomainEvent
+from .living_world import LivingWorldEngine
+from .movement import player_travel_signal, _in_transit
+from .social import NPCSocialService, KINDS
+from .store import SQLiteEventStore, RevisionConflict, DuplicateCommand
+from .time_engine import TimeEngine
+
+
+@dataclass(frozen=True)
+class PlayerCommandResult:
+    """No WorldState or hidden NPC information crosses the player boundary."""
+    world_id: str
+    time: int
+    revision: int
+    status: str
+    details: dict[str, Any]
+
+
+class PlayerGateway:
+    """Trusted local commands. Player actions are NEVER chosen by NPC policy."""
+
+    def __init__(self, store: SQLiteEventStore, clock: TimeEngine, *,
+                 world_id: str, player_id: str,
+                 engine: LivingWorldEngine | None = None):
+        if clock.store is not store:
+            raise ValueError('player gateway and clock must share the same store')
+        if (not isinstance(world_id, str) or not world_id
+                or not isinstance(player_id, str) or not 0 < len(player_id) <= 80):
+            raise ValueError('world and player IDs are required')
+        if engine is not None and (engine.store is not store or engine.clock is not clock):
+            raise ValueError('injected world engine must share store and clock')
+        self.store, self.clock = store, clock
+        self.world_id, self.player_id = world_id, player_id
+        self.engine = engine if engine is not None else LivingWorldEngine(store, clock)
+
+    def _state(self, expected_revision: int | None = None):
+        self.clock._require_session(self.world_id)
+        state = self.store.load(self.world_id)
+        character = state.entities.get(self.player_id)
+        if character is None or character['controller'] != 'player':
+            raise PermissionError('gateway must be bound to a player-controlled entity')
+        if expected_revision is not None and (
+                type(expected_revision) is not int or expected_revision != state.revision):
+            raise RevisionConflict('stale player command revision')
+        return state
+
+    @staticmethod
+    def _command_id(command_id: str) -> str:
+        if (not isinstance(command_id, str) or not 1 <= len(command_id) <= 64
+                or not command_id[0].isalnum()
+                or not all(ch.isascii() and (ch.isalnum() or ch in '._-')
+                           for ch in command_id)):
+            raise ValueError('command ID must be 1..64 ASCII letters/digits/._-')
+        return command_id
+
+    def inspect(self) -> PlayerCommandResult:
+        """Reveal co-located presence and adjacent roads only, no remote truth."""
+        state = self._state()
+        transit = player_travel_signal(state, self.player_id)
+        if transit is not None:
+            _, schedule, trip = transit
+            return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                       'traveling', {
+                'route_id': trip['route_id'],
+                'remaining_seconds': schedule['due'] - state.time,
+            })
+        place = state.entities[self.player_id]['location_id']
+        present = tuple(
+            {'id': ident, 'name': data['name']}
+            for ident, data in sorted(state.entities.items())
+            if data['location_id'] == place
+            and not _in_transit(state.to_dict(), ident)
+        )
+        exits = tuple(
+            {'route_id': rid, 'destination': r['b'] if r['a'] == place else r['a'],
+             'seconds': r['seconds']}
+            for rid, r in sorted(state.routes.items())
+            if place in (r['a'], r['b'])
+        )
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'present', {
+            'location_id': place, 'location_name': state.locations[place]['name'],
+            'occupants': present, 'exits': exits,
+        })
+
+    def move(self, route_id: str, *, command_id: str,
+             expected_revision: int) -> PlayerCommandResult:
+        """Start an adjacent journey; arrival occurs only when its due event fires."""
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('player already travelling')
+        if not isinstance(route_id, str) or route_id not in state.routes:
+            raise ValueError('route is not known at current location')
+        route = state.routes[route_id]
+        here = state.entities[self.player_id]['location_id']
+        if here not in (route['a'], route['b']):
+            raise ValueError('player cannot move along a nonadjacent route')
+        there = route['b'] if route['a'] == here else route['a']
+        trip_id = 'player-travel:' + self.player_id + ':' + cid
+        due = state.time + route['seconds']
+        event = DomainEvent('ScheduledEventCreated', None,
+                            'human player chose an adjacent journey',
+                            state.time, {
+            'id': trip_id, 'due': due, 'order': state.next_schedule_order,
+            'kind': 'signal', 'interrupt': False,
+            'payload': {'__player_travel': {
+                'player_id': self.player_id, 'route_id': route_id,
+                'origin': here, 'destination': there,
+                'started_at': state.time,
+            }},
+        })
+        # Local-only trusted capability; never expose store.append to clients.
+        committed = self.store.append(
+            self.world_id, 'player-move:' + cid, expected_revision,
+            [event], movement_authorized=True)
+        return PlayerCommandResult(committed.world_id, committed.time,
+                                   committed.revision, 'traveling',
+                                   {'route_id': route_id, 'remaining_seconds': route['seconds']})
+
+    def wait(self, seconds: int, *, command_id: str,
+             expected_revision: int) -> PlayerCommandResult:
+        """Advance NPC events and scheduled player arrival without an auto-player AI."""
+        cid = self._command_id(command_id)
+        self._state(expected_revision)
+        if type(seconds) is not int or seconds <= 0:
+            raise ValueError('wait seconds must be a positive integer')
+        result = self.engine.advance(
+            self.world_id, seconds=seconds, command_id='player-wait:' + cid,
+            expected_revision=expected_revision)
+        now = result.state
+        transit = player_travel_signal(now, self.player_id)
+        return PlayerCommandResult(now.world_id, now.time, now.revision,
+                                   'traveling' if transit is not None else 'ready', {
+            'elapsed': result.elapsed, 'remaining': result.remaining,
+            'interrupted': result.interrupted,
+        })
+
+    def interact(self, recipient_id: str, *, kind: str, text: str,
+                 command_id: str, expected_revision: int) -> PlayerCommandResult:
+        """Deliver only an explicit player speech act; NPC chooses its reaction."""
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot interact while travelling')
+        if (not isinstance(recipient_id, str)
+                or recipient_id not in state.npcs or recipient_id == self.player_id):
+            raise ValueError('recipient must be an existing NPC')
+        if kind not in KINDS or not isinstance(text, str) or not 1 <= len(text) <= 500:
+            raise ValueError('invalid social kind or message')
+        response = NPCSocialService(self.store, self.clock).interact(
+            self.world_id, self.player_id, recipient_id,
+            kind=kind, text=text, message_id='player-' + cid,
+            expected_revision=expected_revision)
+        return PlayerCommandResult(response.state.world_id, response.state.time,
+                                   response.state.revision, 'interacted', {
+            'recipient_id': recipient_id, 'kind': kind,
+            'reaction': response.reaction,
+        })

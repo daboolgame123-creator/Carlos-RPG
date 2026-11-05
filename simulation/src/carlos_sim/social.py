@@ -33,8 +33,8 @@ def decision(kind: str, current_trust: int) -> tuple[str, int]:
 def _present(state: dict[str, Any], entity_id: str) -> bool:
     if entity_id not in state['entities']:
         return False
-    return not any(t['npc_id'] == entity_id and t['status'] == 'traveling'
-                   for t in state['travels'].values())
+    from .movement import _in_transit
+    return not _in_transit(state, entity_id)
 
 
 def _co_located(state: dict[str, Any], sender: str, recipient: str) -> bool:

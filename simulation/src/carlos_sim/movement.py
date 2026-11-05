@@ -14,9 +14,15 @@ from .time_engine import TimeEngine
 
 
 def _in_transit(state: dict[str, Any], entity_id: str) -> bool:
-    """In-transit NPCs are not locally present at either endpoint."""
-    return any(t['npc_id'] == entity_id and t['status'] == 'traveling'
-               for t in state['travels'].values())
+    """Neither moving NPCs nor moving players are present at endpoints."""
+    if any(t['npc_id'] == entity_id and t['status'] == 'traveling'
+           for t in state['travels'].values()):
+        return True
+    return any(
+        s['payload'].get('__player_travel', {}).get('player_id') == entity_id
+        for s in state['scheduled'].values()
+        if isinstance(s['payload'].get('__player_travel'), dict)
+    )
 
 
 def _visible(state: dict[str, Any], location: str) -> list[str]:
@@ -171,6 +177,65 @@ def complete_travel(state: dict[str, Any], travel_id: str, schedule_id: str, tim
     travel['status'] = 'arrived'
     travel['arrived_at'] = time
     _observe(state, who, time)
+
+
+def player_travel_signal(state: WorldState, player_id: str):
+    """Return the player's own active signal, never the world's hidden schedule."""
+    for ident, item in state.scheduled.items():
+        trip = item['payload'].get('__player_travel')
+        if trip is not None and trip['player_id'] == player_id:
+            return ident, item, trip
+    return None
+
+
+def validate_player_schedules(state: dict[str, Any]) -> None:
+    """Player transit is encoded in a strictly checked, event-sourced signal.
+
+    No mutable side-car player travel state and no invented NPC profile.
+    """
+    busy = set()
+    for ident, item in state['scheduled'].items():
+        p = item['payload']
+        if '__player_travel' not in p:
+            continue
+        if set(p) != {'__player_travel'} or not isinstance(p['__player_travel'], dict):
+            raise ValueError('malformed player travel signal')
+        trip = p['__player_travel']
+        if set(trip) != {'player_id', 'route_id', 'origin', 'destination', 'started_at'}:
+            raise ValueError('invalid player travel fields')
+        who, rid, origin, dest = (trip[k] for k in
+                                  ('player_id', 'route_id', 'origin', 'destination'))
+        if (not all(isinstance(s, str) and s for s in (who, rid, origin, dest))
+                or who not in state['entities']
+                or state['entities'][who]['controller'] != 'player'
+                or who in busy):
+            raise ValueError('invalid player identity or concurrent travel')
+        busy.add(who)
+        route = state['routes'].get(rid)
+        if (route is None or {origin, dest} != {route['a'], route['b']}
+                or state['entities'][who]['location_id'] != origin
+                or type(trip['started_at']) is not int
+                or not 0 <= trip['started_at'] <= state['time'] <= item['due']
+                or item['due'] != trip['started_at'] + route['seconds']
+                or item['interrupt']
+                or not ident.startswith('player-travel:' + who + ':')):
+            raise ValueError('player travel requires a real adjacent route and exact duration')
+
+
+def complete_player_travel(state: dict[str, Any], signal_id: str,
+                           trip: dict[str, Any], now: int) -> None:
+    scheduled = state['scheduled'].get(signal_id)
+    if (scheduled is None or scheduled['due'] != now
+            or scheduled['payload'] != {'__player_travel': trip}):
+        raise ValueError('player arrival requires a valid due signal')
+    # Snapshot/every-event validators have already checked identity, origin,
+    # route, duration and uniqueness. Recheck the actor just before arrival.
+    who = trip['player_id']
+    if (who not in state['entities']
+            or state['entities'][who]['controller'] != 'player'
+            or state['entities'][who]['location_id'] != trip['origin']):
+        raise ValueError('player arrival has changed or forged identity')
+    state['entities'][who]['location_id'] = trip['destination']
 
 
 @dataclass(frozen=True)
