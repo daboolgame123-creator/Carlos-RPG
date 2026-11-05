@@ -197,3 +197,25 @@ def choose_rumor_round(state: WorldState) -> list[DomainEvent]:
             if planned and planned[-1].actor_id == sender:
                 break
     return planned
+
+
+class NPCRumorService:
+    """Trusted in-process speech transmission; not exposed as an unauthenticated API."""
+
+    def __init__(self, store, clock):
+        if clock.store is not store:
+            raise ValueError("rumor service and clock must share the same store")
+        self.store, self.clock = store, clock
+
+    def tell(self, world_id: str, sender: str, recipient: str, original_id: str,
+             *, delivery_id: str, expected_revision: int, parent_id: str | None = None):
+        from .store import RevisionConflict
+        self.clock._require_session(world_id)
+        state = self.store.load(world_id)
+        if state.revision != expected_revision:
+            raise RevisionConflict("stale rumor delivery revision")
+        event = DomainEvent("RumorDelivered", sender, "NPC locally relays actual speech",
+                            state.time, {"id": delivery_id, "recipient_id": recipient,
+                                         "original_id": original_id, "parent_id": parent_id})
+        return self.store.append(world_id, "rumor:" + delivery_id, expected_revision,
+                                 [event], social_authorized=True)
