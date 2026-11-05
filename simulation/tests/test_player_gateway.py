@@ -14,10 +14,26 @@ from carlos_sim.time_engine import SessionClosed, AdvanceLimitExceeded
 from test_social import setup as setup_social
 
 
+def setup_player_demo_world(db):
+    """Initialize known NPC action counters in the disposable test world."""
+    setup_social(db)
+    state = db.load("world")
+    events = [
+        DomainEvent("ResourceChanged", None, "test initialization", 0, {
+            "owner_id": npc, "resource": counter,
+            "previous": None, "current": 0, "source": "initialization",
+        })
+        for npc in ("nora", "basim", "sara")
+        for counter in ("labor_units", "investigation_attempts")
+    ]
+    db.append("world", "initialize-npc-work-counters",
+              state.revision, events, bootstrap=True)
+
+
 @pytest.fixture
 def world(tmp_path):
     with SQLiteEventStore(tmp_path / "01w.sqlite") as db:
-        setup_social(db)
+        setup_player_demo_world(db)
         clock = TimeEngine(db)
         clock.open_session("world")
         yield db, clock, PlayerGateway(
@@ -75,7 +91,8 @@ def test_travel_is_scheduled_not_teleported_and_player_cannot_be_auto_npc(world)
                       expected_revision=db.load("world").revision)
     assert arrived.time == 90
     assert db.load("world").entities["carlos"]["location_id"] == "forest"
-    assert not db.load("world").scheduled
+    assert all("__player_travel" not in item["payload"]
+               for item in db.load("world").scheduled.values())
     assert gw.inspect().details["location_id"] == "forest"
     assert {x["id"] for x in gw.inspect().details["occupants"]} == {
         "carlos", "sara"
@@ -256,7 +273,7 @@ def test_player_wait_failure_is_atomic_and_repeat_wait_is_rejected(world):
 def test_player_move_snapshot_close_reopen_full_replay(tmp_path):
     path = tmp_path / "player-reopen.sqlite"
     with SQLiteEventStore(path) as db:
-        setup_social(db)
+        setup_player_demo_world(db)
         clock = TimeEngine(db)
         clock.open_session("world")
         gw = PlayerGateway(db, clock, world_id="world", player_id="carlos")
