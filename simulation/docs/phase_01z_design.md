@@ -1,7 +1,7 @@
 # Phase 01-Z — resumable *disposable-test* play and preflight P0 backup evidence
 
 **Baseline:** 01-Y `a7e0e8e4d1671bc16f5a3c4f9bbd4ee3bb8c4210` — [CI 42040723164](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42040723164), 627/627 on Python 3.10 and 3.13.
-**Branch:** `simulation-engine-phase-01z`. **Status:** IN_PROGRESS; external independent review deferred; P0 OPEN until independent assessment of restore/recovery.
+**Branch:** `simulation-engine-phase-01z`. **Status:** TECHNICALLY_TESTED / DISPOSABLE_TEST_ONLY; external independent review deferred; P0 OPEN. [CI 42059385146](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42059385146) green with 643 tests per Python version and a separate-process resume/restore smoke. Formal P0 acceptance is still required.
 **Types:** persistence/integration/security (no new game events/behavior rules).
 
 ## Dependency and honest scope

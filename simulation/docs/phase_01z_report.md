@@ -1,6 +1,6 @@
 # Phase 01-Z — Technical implementation and P0 candidate review report
 
-**Branch:** `simulation-engine-phase-01z`. **Status: IN_PROGRESS while final CI is pending.**
+**Branch:** `simulation-engine-phase-01z`. **Status: TECHNICALLY_TESTED / DISPOSABLE_TEST_ONLY / P0_OPEN / EXTERNAL_REVIEW_DEFERRED — not APPROVED/CLOSED.**
 **Baseline:** 01-Y `a7e0e8e4d1671bc16f5a3c4f9bbd4ee3bb8c4210` — [CI 42040723164](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42040723164), 627/627 tests per Python 3.10/3.13.
 **Versions:** **Schema 14 / Rules 21 unchanged**. No new world event type or schema migration.
 **P0: OPEN** (backup/recovery candidate implemented, **independent verification pending**).
@@ -16,7 +16,7 @@
 ## Current test evidence
 The focused phase-01Z suite adds **16 tests** to the prior 627. The tests cover WAL capture while source continues advancing, frozen snapshot restore, verifying **all** worlds included in a full DB copy, malformed/corrupted backup/manifest, wrong version, missing player, no-overwrite restore, failed destination copy cleanup, inconsistent source, partial fixture failure, snapshot and replay verification, time freeze on restart mid-travel, read-model privacy, invalid request IDs, and no duplicate commands. Tests exercise actual SQLite files, not a mocked event stream.
 
-**Full CI result for implementation and independent CLI smoke:** PENDING until recorded on final SHA. A provisional 643/643 passing run of focused implementation will be cited only when confirmed. Internal review findings and corrections are preserved in Git history, and final validation must refer to final HEAD.
+**Confirmed full regression + separate-process CLI smoke:** [GitHub Actions 42059385146](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42059385146) completed SUCCESS at implementation SHA `2053ba97e3569545dd49aced3331ddba34843ba3`, **643/643 tests on Python 3.10** and **643/643 on Python 3.13**. Both jobs completed the new 01-Z two-process CLI smoke and isolated backup restore verification, in addition to all earlier regression/parity gates. This is **627 inherited + 16 new tests**; no independent review. The final documentation commit must also have green CI before citing it as tested.
 
 ## Known limits and deferred P0 requirements
 - **The P0 gate remains OPEN.** An independent review and demonstrated disaster recovery process, including crashes/power loss, filesystem permissions, Windows operational behavior, and attack-model evaluation, are still required before treating player history as durable production data.
