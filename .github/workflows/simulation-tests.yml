@@ -96,6 +96,39 @@ jobs:
           grep -q 'location_id: woods' /tmp/01w-local.txt
           grep -q 'disposable world discarded' /tmp/01w-local.txt
 
+      - name: Smoke-test 01-Z separate-process resume and independent checkpoints
+        run: |
+          test_dir="$(mktemp -d)"
+          mkdir -p "$test_dir/backups"
+          printf '%s\n' 'move square-woods' quit | PYTHONPATH=src python scenarios/test_village/play_resumable_demo.py --db "$test_dir/demo.sqlite" --backups "$test_dir/backups" --new --code-commit "$GITHUB_SHA" --disposable-test > "$test_dir/start.log"
+          printf '%s\n' 'wait 50' look remember status quit | PYTHONPATH=src python scenarios/test_village/play_resumable_demo.py --db "$test_dir/demo.sqlite" --backups "$test_dir/backups" --resume --code-commit "$GITHUB_SHA" --disposable-test > "$test_dir/resume.log"
+          grep -q 'traveling' "$test_dir/start.log"
+          grep -q 'remaining_seconds: 50' "$test_dir/resume.log"
+          grep -q 'location_id: woods' "$test_dir/resume.log"
+          grep -q 'rpg_status' "$test_dir/resume.log"
+          grep -q 'checkpoint:' "$test_dir/start.log"
+          grep -q 'checkpoint:' "$test_dir/resume.log"
+          PYTHONPATH=src python - "$test_dir" <<'PY'
+          from pathlib import Path
+          import sys
+          from carlos_sim.backup import verify_backup_bundle, restore_backup_bundle
+          from carlos_sim import SQLiteEventStore
+          root = Path(sys.argv[1])
+          folders = sorted((root / 'backups').iterdir())
+          assert len(folders) >= 3
+          for folder in folders:
+              verify_backup_bundle(folder)
+          first = folders[0]
+          restored = root / 'isolated-restore.sqlite'
+          restore_backup_bundle(first, restored)
+          with SQLiteEventStore(restored) as db:
+              assert db.verify('demo').time == 0
+              assert db.db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
+          with SQLiteEventStore(root / 'demo.sqlite') as db:
+              assert db.verify('demo').time == 50
+          PY
+          rm -rf "$test_dir"
+
       - name: Demonstrate autonomous finite gathering with seven NPCs
         run: PYTHONPATH=src python scenarios/test_village/demo_gathering_autonomy.py
 
