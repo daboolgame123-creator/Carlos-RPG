@@ -67,6 +67,12 @@ jobs:
           ref: b1f1c265a09d23cef3a1078cee98e3952a37ab39
           path: reviewed-01x
           persist-credentials: false
+      - name: Check out verified Phase 01-Z Schema 14 / Rules 21 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: 1225ae066f22bc2688a583d46e63ceda80558a07
+          path: reviewed-01z
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
@@ -76,6 +82,7 @@ jobs:
           test "$(git -C ../reviewed-01v rev-parse HEAD)" = "6a0f3d473f0eecb856fb2b320e1d6485b032b3bc"
           test "$(git -C ../reviewed-01w rev-parse HEAD)" = "3fb18d3222ebdc08307d393bab8603a5726dda63"
           test "$(git -C ../reviewed-01x rev-parse HEAD)" = "b1f1c265a09d23cef3a1078cee98e3952a37ab39"
+          test "$(git -C ../reviewed-01z rev-parse HEAD)" = "1225ae066f22bc2688a583d46e63ceda80558a07"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -276,7 +283,7 @@ jobs:
           new = json.load(open('/tmp/01u-default-off.json'))
           # Event and semantic-state equality across deliberate Rules 18->20
           # (full state hashes correctly differ because version is persisted).
-          assert old['rules_version'] == 18 and new['rules_version'] == 21
+          assert old['rules_version'] == 18 and new['rules_version'] == 22
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert old[key] == new[key], (key, old[key], new[key])
@@ -291,7 +298,7 @@ jobs:
           import json
           baseline = json.load(open('/tmp/01u-frozen.json'))
           candidate = json.load(open('/tmp/01v-default-scarcity-off.json'))
-          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 21
+          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 22
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert baseline[key] == candidate[key], (key, baseline[key], candidate[key])
@@ -372,4 +379,41 @@ jobs:
                   raise AssertionError('incompatible 13/20 world unexpectedly accepted')
               assert evidence() == before
               assert db.db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
+          PY
+
+      - name: Reject genuine Phase 01-Z 14/21 SQLite world without any mutation
+        run: |
+          PYTHONPATH=../reviewed-01z/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/01z-for-02a.sqlite') as db:
+              db.create_world('legacy')
+              db.append('legacy', 'location', 0, [
+                  DomainEvent('LocationCreated', None, 'old 01-Z', 0,
+                              {'id':'grove','name':'Grove'})])
+              db.snapshot('legacy')
+              assert db.db.execute(
+                  'SELECT schema_version,rules_version,revision FROM worlds WHERE id="legacy"'
+              ).fetchone() == (14,21,1)
+              assert db.verify('legacy').revision == 1
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/01z-for-02a.sqlite') as db:
+              def evidence():
+                  return tuple(
+                      tuple(db.db.execute(
+                          'SELECT * FROM '+table+' WHERE '+
+                          ('id=?' if table == 'worlds' else 'world_id=?'),
+                          ('legacy',)).fetchall())
+                      for table in ('worlds', 'commands', 'events', 'snapshots')
+                  )
+              before=evidence()
+              try:
+                  db.load('legacy')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('old 14/21 world silently accepted')
+              assert evidence()==before
+              assert db.db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
           PY
