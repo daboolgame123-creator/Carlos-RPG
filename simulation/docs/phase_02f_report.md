@@ -3,7 +3,7 @@
 **Date:** 2026-11-05  
 **Branch:** `simulation-engine-phase-02f`  
 **Baseline:** `simulation-engine-phase-02e`, SHA `c892cb0b3948b2affff03c82c65a3bc243049e39` (green)  
-**Status:** IMPLEMENTED / FULL FINAL-COMMIT CI PENDING / EXTERNAL REVIEW DEFERRED / P0 OPEN  
+**Status:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED / P0 OPEN (not formally CLOSED)  
 **Scope:** disposable test worlds only; no changes to `main` or original Carlos story.
 
 ## What is implemented
@@ -33,9 +33,9 @@
 
 CI also includes frozen historical parity benchmarks, genuine 02-E feature-off comparison, and true 02-E saved-world rejection check.
 
-## Validation status at writing
+## Validation evidence
 
-A prior advanced implementation checkpoint at SHA `df3f8ebc` passed GitHub Actions on both Python 3.10 and 3.13, with **749 tests** reported on Python 3.10. Additional tests and CI checks were committed subsequently. **Do not quote the prior run as final verification for the latest HEAD.** Final evidence must come from a green GitHub Actions run on the exact final SHA, both versions, after documentation is committed.
+Full GitHub Actions [run 42098158161](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42098158161) on source SHA `bdffa60f34c3e4793318cdb6d304b4708faee83e` passed **753/753 tests on Python 3.10 and Python 3.13** and the entire matrix, including genuine frozen 02-E feature-off parity and untouched 19/26 saved-world rejection. Earlier run 42098083363 passed 753 tests on both interpreters, before adding the final frozen-parity CI gate. Documentation-only commits after the source checkpoint do not alter runtime behavior; check their SHA CI separately before final closure.
 
 ## Explicit limitations / future work
 
