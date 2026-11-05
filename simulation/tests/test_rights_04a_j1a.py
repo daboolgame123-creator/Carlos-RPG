@@ -116,3 +116,27 @@ def test_money_is_excluded_from_physical_title_origin(scene):
     with pytest.raises(InvalidEvent):
         register(db, [origin("money", "nora", "nora", 1, "coin_copper")])
     assert db.load("v").to_dict() == old
+
+
+def test_forged_second_valid_shaped_origin_cannot_overallocate_snapshot(scene):
+    db, _ = scene
+    register(db, [origin()])
+    old = db.load("v").to_dict()
+    second = dict(old["property_title_origins"]["origin-bread"])
+    old["property_title_origins"]["invented"] = second
+    with pytest.raises(ValueError, match="overlapping"):
+        WorldState.from_dict(old)
+
+
+def test_historical_balance_provenance_survives_when_stock_depleted(scene):
+    db, clock = scene
+    register(db, [origin()])
+    svc = NPCPropertyService(db, clock)
+    svc.take("v", "basim", "t1", "bakery", "bakery", "bread", 1,
+             expected_revision=db.load("v").revision)
+    svc.take("v", "nora", "t2", "bakery", "bakery", "bread", 1,
+             expected_revision=db.load("v").revision)
+    after = db.load("v")
+    assert after.resources["bakery"]["bread"] == 0
+    assert after.property_title_origins["origin-bread"]["source_balance_at_registration"] == 2
+    assert db.verify("v").to_dict() == after.to_dict()
