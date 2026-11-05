@@ -115,6 +115,12 @@ jobs:
           ref: 7b7deaa8f4ef17f77600332aec1a588e8d16478d
           path: reviewed-02g
           persist-credentials: false
+      - name: Check out green Phase 02-H1 Schema 22 / Rules 29 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: ec5d7eb0633a24554636c77cb3b0efde18f7a8a7
+          path: reviewed-02h1
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
@@ -411,7 +417,7 @@ jobs:
           new = json.load(open('/tmp/01u-default-off.json'))
           # Event and semantic-state equality across deliberate Rules 18->20
           # (full state hashes correctly differ because version is persisted).
-          assert old['rules_version'] == 18 and new['rules_version'] == 29
+          assert old['rules_version'] == 18 and new['rules_version'] == 30
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert old[key] == new[key], (key, old[key], new[key])
@@ -426,7 +432,7 @@ jobs:
           import json
           baseline = json.load(open('/tmp/01u-frozen.json'))
           candidate = json.load(open('/tmp/01v-default-scarcity-off.json'))
-          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 29
+          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 30
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert baseline[key] == candidate[key], (key, baseline[key], candidate[key])
@@ -445,6 +451,31 @@ jobs:
                       'legacy_semantic_digest','replay_equal'):
               assert old[key]==new[key], (key,old[key],new[key])
           assert old['replay_equal'] is True
+          PY
+
+      - name: Reject actual Phase 02-H1 Schema 22 Rules 29 saved world without mutation
+        run: |
+          PYTHONPATH=../reviewed-02h1/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore
+          with SQLiteEventStore('/tmp/carlos-02h1-predecessor.sqlite') as store:
+              store.create_world('legacy')
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.store import UnsupportedVersion
+          path=Path('/tmp/carlos-02h1-predecessor.sqlite')
+          before=hashlib.sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              try:
+                  db.load('legacy')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('02-H1 saved world was not rejected')
+              assert db.db.execute('SELECT schema_version,rules_version FROM worlds WHERE id=?', ('legacy',)).fetchone() == (22,29)
+          assert hashlib.sha256(path.read_bytes()).hexdigest() == before
           PY
 
       - name: Reject actual Phase 02-G Schema 21 Rules 28 saved world without mutation
