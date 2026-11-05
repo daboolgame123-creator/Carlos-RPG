@@ -97,6 +97,12 @@ jobs:
           ref: 65c567e9f4c94672b3f29e2c7ddad3e448cae224
           path: reviewed-02d
           persist-credentials: false
+      - name: Check out verified Phase 02-E Schema 19 / Rules 26 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: c892cb0b3948b2affff03c82c65a3bc243049e39
+          path: reviewed-02e
+          persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
@@ -111,6 +117,7 @@ jobs:
           test "$(git -C ../reviewed-02b rev-parse HEAD)" = "6dbee22a4b6b167a5b5ca5ece1c51612016b9e5d"
           test "$(git -C ../reviewed-02c rev-parse HEAD)" = "b1345f69041e76e20b53af26251fc92946eb7230"
           test "$(git -C ../reviewed-02d rev-parse HEAD)" = "65c567e9f4c94672b3f29e2c7ddad3e448cae224"
+          test "$(git -C ../reviewed-02e rev-parse HEAD)" = "c892cb0b3948b2affff03c82c65a3bc243049e39"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -627,6 +634,37 @@ jobs:
               assert db.db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
           PY
 
+      - name: Reject genuine Phase 02-E 19/26 saved world without mutation
+        run: |
+          PYTHONPATH=../reviewed-02e/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          with SQLiteEventStore('/tmp/02e-for-02f.sqlite') as db:
+              db.create_world('old')
+              db.append('old','place',0,[DomainEvent(
+                  'LocationCreated',None,'genuine frozen 02-E',0,
+                  {'id':'square','name':'Square'})])
+              db.snapshot('old')
+              assert db.verify('old').revision==1
+              assert db.db.execute('SELECT schema_version,rules_version FROM worlds WHERE id="old"').fetchone()==(19,26)
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          with SQLiteEventStore('/tmp/02e-for-02f.sqlite') as db:
+              def evidence():
+                  return tuple(
+                      tuple(db.db.execute('SELECT * FROM '+table+' WHERE '+
+                          ('id=?' if table=='worlds' else 'world_id=?'),
+                          ('old',)).fetchall())
+                      for table in ('worlds','commands','events','snapshots'))
+              before=evidence()
+              try:
+                  db.load('old')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('real 02-E saved world was silently accepted')
+              assert evidence()==before
+          PY
       - name: Reject genuine Phase 02-D 18/25 SQLite world unchanged
         run: |
           PYTHONPATH=../reviewed-02d/simulation/src python - <<'PY'
