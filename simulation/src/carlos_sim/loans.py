@@ -212,9 +212,8 @@ def validate_loans(state: dict[str, Any]) -> None:
                 or contract["accepted_at"] is None
                 or p["paid_at"] < contract["accepted_at"]
                 or type(p["late"]) is not bool
-                or p["late"] != (p["paid_at"] > contract["due_at"]
-                        or (p["paid_at"] == contract["due_at"]
-                            and contract["defaulted_at"] is not None))):
+                or (p["paid_at"] < contract["due_at"] and p["late"])
+                or (p["paid_at"] > contract["due_at"] and not p["late"])):
             raise ValueError("repayment date/party inconsistent with loan contract")
         entries = [p[k] for k in ("debtor_before", "debtor_after",
                                   "creditor_before", "creditor_after")]
