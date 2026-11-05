@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 17
-RULES_VERSION = 24
+SCHEMA_VERSION = 18
+RULES_VERSION = 25
 
 
 def _thaw(value: Any) -> Any:
@@ -91,6 +91,8 @@ class WorldState:
     market_stalls: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     market_offers: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     market_trades: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    loan_contracts: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    loan_repayments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -117,6 +119,8 @@ class WorldState:
         object.__setattr__(self, "market_stalls", _freeze(_json_copy(self.market_stalls)))
         object.__setattr__(self, "market_offers", _freeze(_json_copy(self.market_offers)))
         object.__setattr__(self, "market_trades", _freeze(_json_copy(self.market_trades)))
+        object.__setattr__(self, "loan_contracts", _freeze(_json_copy(self.loan_contracts)))
+        object.__setattr__(self, "loan_repayments", _freeze(_json_copy(self.loan_repayments)))
 
     def to_dict(self) -> dict[str, Any]:
         # Replay/projection states already passed full JSON normalization in
@@ -142,7 +146,9 @@ class WorldState:
                            "production_jobs": self.production_jobs,
                            "market_stalls": self.market_stalls,
                            "market_offers": self.market_offers,
-                           "market_trades": self.market_trades})
+                           "market_trades": self.market_trades,
+                           "loan_contracts": self.loan_contracts,
+                           "loan_repayments": self.loan_repayments})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
@@ -162,7 +168,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -170,7 +176,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -222,6 +228,8 @@ class WorldState:
         validate_production_state(d)
         from .market import validate_market
         validate_market(d)
+        from .loans import validate_loans
+        validate_loans(d)
         from .rpg_state import validate_rpg_profiles
         validate_rpg_profiles(d)
         # Public snapshots need full portable JSON normalization. Internal
@@ -266,7 +274,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -310,6 +318,18 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("SocialMessageSent", "SocialMessageReceived"):
         from .social import project_social_event
         project_social_event(d, e, social_authorized=social_authorized)
+    elif kind == "LoanProposed":
+        from .loans import propose_loan
+        propose_loan(d, e, loan_authorized=loan_authorized)
+    elif kind == "LoanClosed":
+        from .loans import close_offer
+        close_offer(d, e, loan_authorized=loan_authorized)
+    elif kind == "LoanAccepted":
+        from .loans import accept_loan
+        accept_loan(d, e, loan_authorized=loan_authorized)
+    elif kind == "LoanRepaid":
+        from .loans import repay_loan
+        repay_loan(d, e, loan_authorized=loan_authorized)
     elif kind == "MarketStallConfigured":
         from .market import configure_market_stall
         configure_market_stall(d, e, bootstrap=bootstrap)
@@ -390,8 +410,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("invalid due time or schedule order")
         if p["kind"] != "signal" or not isinstance(p["payload"], Mapping) or type(p["interrupt"]) is not bool:
             raise ValueError("unsupported scheduled action")
-        if "__environment_cycle" in p["payload"] or "__production_job" in p["payload"]:
-            raise ValueError("environment or production appointment cannot be fabricated")
+        if any(k in p["payload"] for k in ("__environment_cycle", "__production_job", "__loan_due")):
+            raise ValueError("protected system appointment cannot be fabricated")
         if "__npc_action_id" in p["payload"]:
             if not action_authorized or set(p["payload"]) != {"__npc_action_id"} or p["interrupt"]:
                 raise ValueError("NPC action schedule requires trusted action capability")
@@ -417,6 +437,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("cannot cancel an environmental renewal cycle")
         if "__production_job" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel a material-backed production job")
+        if "__loan_due" in d["scheduled"][p["id"]]["payload"]:
+            raise ValueError("cannot cancel a legitimate loan deadline")
         del d["scheduled"][p["id"]]
     elif kind == "ScheduledEventFired":
         if set(p) != {"id"} or not isinstance(p["id"], str) or p["id"] not in d["scheduled"]:
@@ -442,6 +464,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if "__production_job" in scheduled["payload"]:
             from .production import finish_production
             finish_production(d, p["id"], scheduled["payload"]["__production_job"], state.time)
+        if "__loan_due" in scheduled["payload"]:
+            from .loans import mark_due
+            mark_due(d, p["id"], scheduled["payload"]["__loan_due"], state.time)
         del d["scheduled"][p["id"]]
     elif kind == "TimeAdvanced":
         if set(p) != {"from", "to"} or type(p["from"]) is not int or type(p["to"]) is not int:
