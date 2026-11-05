@@ -57,6 +57,7 @@ class PlayerGateway:
     @staticmethod
     def _command_id(command_id: str) -> str:
         if (not isinstance(command_id, str) or not 1 <= len(command_id) <= 64
+                or not command_id[0].isascii()
                 or not command_id[0].isalnum()
                 or not all(ch.isascii() and (ch.isalnum() or ch in '._-')
                            for ch in command_id)):
@@ -75,11 +76,14 @@ class PlayerGateway:
                 'remaining_seconds': schedule['due'] - state.time,
             })
         place = state.entities[self.player_id]['location_id']
+        # Use one detached state projection to check presence; do not
+        # materialize the entire world repeatedly for each visible entity.
+        projected = state.to_dict()
         present = tuple(
             {'id': ident, 'name': data['name']}
             for ident, data in sorted(state.entities.items())
             if data['location_id'] == place
-            and not _in_transit(state.to_dict(), ident)
+            and not _in_transit(projected, ident)
         )
         exits = tuple(
             {'route_id': rid, 'destination': r['b'] if r['a'] == place else r['a'],
