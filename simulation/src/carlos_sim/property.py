@@ -57,7 +57,7 @@ def project_taking(state: dict[str, Any], event: DomainEvent, *,
             or source_before < quantity or target_before + quantity > MAX_AMOUNT):
         raise ValueError("taking requires known, sufficient and bounded inventories")
     from .property_evidence import validate_initial_witnesses
-    witnesses = validate_initial_witnesses(state, actor, site, p.get("witness_ids", []))
+    witnesses = validate_initial_witnesses(state, actor, site, p.get("witness_ids", ()))
     state["resources"][source][resource] = source_before - quantity
     state["resources"][actor][resource] = target_before + quantity
     state["property_takings"][p["id"]] = {
