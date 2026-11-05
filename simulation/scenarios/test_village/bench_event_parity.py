@@ -58,11 +58,11 @@ def audit(count: int) -> dict:
             'events_digest': canonical_hash(events),
             'state_digest': canonical_hash(verified.to_dict()),
             # Cross-version semantic parity: strip ONLY changed version and
-            # 01-S's new empty-for-disabled-mode foraging collection. Always
+            # 01-S's empty foraging and 01-Y's empty opt-in RPG collections. Always
             # retain the full state hash separately for same-version audits.
             'legacy_semantic_digest': canonical_hash({
                 k: v for k, v in verified.to_dict().items()
-                if k not in ('schema_version','rules_version','foraging_attempts')
+                if k not in ('schema_version','rules_version','foraging_attempts','rpg_profiles')
             }),
             'replay_equal': True,
         }
