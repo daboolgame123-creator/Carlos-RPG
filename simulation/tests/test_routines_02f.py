@@ -241,3 +241,33 @@ def test_manual_direct_work_outside_workplace_is_rejected_atomically(tmp_path):
             "SELECT COUNT(*) FROM commands WHERE command_id='action-start:fake-remote-labor'"
         ).fetchone()[0] == 0
         assert db.verify("test").to_dict() == before.to_dict()
+
+
+def test_seven_npcs_with_different_shifts_and_unconfigured_neighbors(tmp_path):
+    with SQLiteEventStore(tmp_path / "seven.sqlite") as db:
+        setup(db, configured=False)
+        who = ("basim", "nora", "salma")
+        events = [
+            ev("LocationCreated", {"id": "bakery", "name": "Bakery"}),
+            ev("RouteCreated", {"id": "square-bakery", "a": "square",
+                                "b": "bakery", "seconds": 50}),
+        ]
+        for index, npc in enumerate(who):
+            events.append(ev("NPCRoutineConfigured", {
+                "npc_id": npc, "home_id": "square", "workplace_id": "bakery",
+                "work_start": index * 100, "work_end": 400 + index * 100
+            }))
+        db.append("test", "seven-setup", db.load("test").revision, events,
+                  bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        result = LivingWorldEngine(db, clock, navigation_enabled=True,
+                                   routines_enabled=True).advance(
+            "test", seconds=50, command_id="seven",
+            expected_revision=db.load("test").revision).state
+        assert len(result.npcs) == 7
+        assert set(result.npc_routines) == set(who)
+        assert result.entities["basim"]["location_id"] == "bakery"
+        assert result.entities["nora"]["location_id"] == "square"
+        assert result.entities["salma"]["location_id"] == "square"
+        assert db.verify("test").to_dict() == result.to_dict()
