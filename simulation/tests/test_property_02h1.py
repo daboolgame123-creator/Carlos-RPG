@@ -4,7 +4,7 @@ from carlos_sim import (
     DomainEvent, SQLiteEventStore, TimeEngine, NPCPropertyService,
     NPCMarketService,
 )
-from carlos_sim.store import InvalidEvent
+from carlos_sim.store import InvalidEvent, DuplicateCommand
 
 PEOPLE = ("basim", "nora", "adel", "salma", "huda", "omar", "layla")
 
@@ -117,6 +117,6 @@ def test_duplicate_identifier_does_not_transfer_twice(setup):
     db, clock, service = setup
     take(db, service)
     before = db.load("v").to_dict()
-    with pytest.raises(InvalidEvent):
+    with pytest.raises(DuplicateCommand):
         take(db, service)
     assert db.load("v").to_dict() == before
