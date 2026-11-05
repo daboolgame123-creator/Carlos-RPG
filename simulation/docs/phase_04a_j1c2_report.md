@@ -4,7 +4,7 @@ Date: 2026-11-06 Baghdad time (2026-11-05 UTC)
 Branch: `simulation-engine-phase-04a-j1`
 Base: J1c1 Schema27 Rules35, CI 42128330511, 865/865 each Python 3.10 and 3.13.
 
-**Status at writing:** CODE IMPLEMENTED / FULL TEST VALIDATION PENDING / INDEPENDENT REVIEW DEFERRED / P0 OPEN. Record exact newest CI SHA and counts ONLY after verified green on BOTH Python 3.10 and 3.13.
+**Status:** **J1c2a TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED / P0 OPEN**. Verified exact code commit `ac0eed8b0e34036cae14c302f2b6dcadb8df6b62`, [CI 42131594796](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42131594796), **889/889 passed on EACH Python 3.10 and 3.13**. Not production-ready or independent approval, not legally enforceable title.
 
 ## Actual implemented scope, not legal title
 
@@ -26,4 +26,4 @@ Base: J1c1 Schema27 Rules35, CI 42128330511, 865/865 each Python 3.10 and 3.13.
 
 ## CI evidence
 
-Pending verified HEAD run: https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42131594796, code checkpoint ac0eed8b0e34036cae14c302f2b6dcadb8df6b62. If failed, document actual failed probes and fix them instead of marking success.
+**Verified:** [CI 42131594796](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42131594796), code `ac0eed8b0e34036cae14c302f2b6dcadb8df6b62`, 889/889 tests SUCCESS on Python 3.10 (job 127609294698) and Python 3.13 (job 127609294124). Later documentation-only commits are separate and not used as code-validation evidence.
