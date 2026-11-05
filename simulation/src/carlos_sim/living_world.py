@@ -20,6 +20,7 @@ from .gathering import choose_gathering_intent
 from .knowledge import make_observation_events, choose_food_sharing_round, known_food_sites
 from .food_navigation import choose_food_route
 from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
+from .rumors import choose_rumor_round
 
 
 @dataclass(frozen=True)
@@ -58,7 +59,8 @@ class LivingWorldEngine:
                  foraging_enabled: bool = False, knowledge_enabled: bool = False,
                  food_navigation_enabled: bool = False,
                  scarcity_enabled: bool = False,
-                 routines_enabled: bool = False):
+                 routines_enabled: bool = False,
+                 rumors_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -119,6 +121,9 @@ class LivingWorldEngine:
         if routines_enabled and not navigation_enabled:
             raise ValueError('routines_enabled requires navigation_enabled')
         self.routines_enabled = routines_enabled
+        if type(rumors_enabled) is not bool:
+            raise ValueError('rumors_enabled must be boolean')
+        self.rumors_enabled = rumors_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -288,6 +293,10 @@ class LivingWorldEngine:
                     append(event)
                     if event.event_type == "NPCInformationDelivered":
                         knowledge_shares.append(event.data["delivery_id"])
+            if self.rumors_enabled:
+                # Frozen-source planning: no same-tick rumor amplification.
+                for event in choose_rumor_round(current):
+                    append(event, social_capability=True)
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
                 if npc_id in busy:
@@ -447,7 +456,7 @@ class LivingWorldEngine:
         committed = self.store.append(world_id, command_id, expected_revision, events,
                                       clock_authorized=True, npc_authorized=True,
                                       action_authorized=True, movement_authorized=self.navigation_enabled,
-                                      social_authorized=self.social_enabled,
+                                      social_authorized=(self.social_enabled or self.rumors_enabled),
                                       assistance_authorized=self.assistance_enabled,
                                       consumption_authorized=self.consumption_enabled,
                                       survival_authorized=self.survival_enabled)
