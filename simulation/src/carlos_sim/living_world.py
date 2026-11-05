@@ -226,12 +226,17 @@ class LivingWorldEngine:
                     if a['status'] == 'running'}
             busy.update(t['npc_id'] for t in current.travels.values()
                         if t['status'] == 'traveling')
+            busy.update(j['npc_id'] for j in current.production_jobs.values()
+                        if j['status'] == 'running')
             if self.assistance_enabled:
                 # The fixed passes are independent of lexical NPC ID ordering:
                 # settle old promises, then respond, request, and respond to
                 # requests created in this tick. A provider can only make one
                 # choice per tick; physical delivery requires a later tick.
-                acted: set[str] = set()
+                acted: set[str] = {
+                    j['npc_id'] for j in current.production_jobs.values()
+                    if j['status'] == 'running'
+                }
                 for phase in ('settle', 'respond', 'request', 'respond'):
                     for actor_id in sorted(current.npcs):
                         if actor_id in acted:
