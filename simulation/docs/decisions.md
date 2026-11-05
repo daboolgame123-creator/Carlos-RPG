@@ -414,3 +414,13 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Phase 01-V review-fix inherits corrected 01-T and 01-U by Git commit parentage; keeps scarcity and alternative assistance policies opt-in and unchanged.
 - CI 42013057857: 593/593 passing on Python 3.10/3.13. 25-NPC full-stack test, prior 5000-digit hostile ID regression, stale-decision travel regression, resource conservation, atomic rollback, SQLite replay and frozen real 01-T/01-U event/state parity passed.
 - Corrected phases are TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED, never APPROVED/CLOSED absent a new independent reviewer. Schema 13/Rules 18 unchanged, P0 OPEN, no main/story edits.
+
+## 2026-11-05 — Phase 01-W player gateway and saved-world version safety
+
+- Player character must be a genuine entity with `controller='player'`, never an NPC profile and never a subject of automated NPC planning.
+- Trusted local `PlayerGateway` binds one player/world and exposes explicit `inspect`, `move`, `wait`, `interact` only. No network authorization is claimed. All mutations are checked by existing SQLite event log/scheduler; no external text interpreter is trusted.
+- Player move creates a validated `ScheduledEventCreated` with a reserved `__player_travel` payload. Movement happens ONLY on authorized due `ScheduledEventFired`; player is absent from both endpoints in transit. Adjacent route duration, uniqueness, controller, event capability and session are enforced. No in-flight cancellation without an explicit future rule.
+- `wait` may advance autonomous NPCs through LivingWorldEngine; only the player chooses Carlos actions. `interact` reuses NPC-controlled local social reactions. `inspect` reveals only current local publicly observable data, not secret state.
+- Because scheduled-event semantics changed, `RULES_VERSION=19`, `SCHEMA_VERSION=13`. Real previous Rules18 SQLite world is rejected untouched. No migration, no long-lived game, no story import until P0.
+- [CI 42021241326](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42021241326): 607/607 per Python version, CLI smoke, old-world rejection, atomic failure/replay, exact event and semantic state parity to corrected T/U (compare snapshot excluding ONLY Rules version).
+- External review deferred by user, not waived for approval. 01-W is TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED.

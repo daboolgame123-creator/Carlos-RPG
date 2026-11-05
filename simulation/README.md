@@ -6,8 +6,21 @@ Independent, offline Python core for *test worlds only*. **No actual Carlos stor
 
 The plan is explicitly **living and revisable**; see [Roadmap Change Log](docs/ROADMAP_CHANGELOG.md) for reasons behind future additions or priority changes. See [Save Compatibility & Safety Policy](docs/SAVE_COMPATIBILITY_POLICY.md) for the **P0 gate before first long-lived world**. These are policies, **not** a claim that a general backup/migration tool is already implemented.
 
-The authoritative forward-looking plan is **[خارطة الطريق الرسمية](docs/ROADMAP.md)**. It distinguishes independently closed Phase 01-S from technically tested but externally unreviewed Phases 01-T/01-U/01-V, and defines later planned milestones and dependencies. Every phase must follow the **[Development & Review Protocol](docs/DEVELOPMENT_PROTOCOL.md)**. These documents do not imply any feature is implemented; only tested phase reports and code establish that.
+The authoritative forward-looking plan is **[خارطة الطريق الرسمية](docs/ROADMAP.md)**. It distinguishes independently closed Phase 01-S from technically validated but externally unapproved Phases 01-T/01-U/01-V/01-W, and defines later planned milestones and dependencies. Every phase must follow the **[Development & Review Protocol](docs/DEVELOPMENT_PROTOCOL.md)**. These documents do not imply any feature is implemented; only tested phase reports and code establish that.
 
+
+
+## Phase 01-W — local temporary player command demo
+
+This is an **offline disposable game**, not the original Carlos RPG story or a production save. It runs without a language model or API key. From the `simulation/` directory:
+
+```bash
+PYTHONPATH=src python scenarios/test_village/play_local.py
+```
+
+Commands: `look`, `move square-woods`, `wait 50`, `talk basim greeting Hello`, `quit`. You decide Carlos's actions; NPC replies and elapsed travel are enforced by the engine. The temporary SQLite file is deleted at exit. **Rules 19 / Schema 13** refuse older 13/18 saves without migration. **P0 backup/restore gate remains OPEN**; no long-lived world or network access.
+
+See [01-W technical report](docs/phase_01w_report.md) and [planned independent review](docs/phase_01w_review_request.md). **607 tests pass on each of Python 3.10 and 3.13** in [CI 42021241326](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42021241326); the external review is deferred rather than approved.
 
 ## Requirements
 

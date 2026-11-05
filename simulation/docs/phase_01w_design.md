@@ -1,6 +1,6 @@
 # Phase 01-W — Local player command gateway (provisional technical design)
 
-**State:** IN_PROGRESS / EXTERNAL_REVIEW_DEFERRED. Work on `simulation-engine-phase-01w`; parent tested Phase 01-V correction `6a0f3d473f0eecb856fb2b320e1d6485b032b3bc`. Original OpenCode BLOCKED findings for old 01-T/01-U SHAs remain recorded. Main and narrative files protected.
+**State:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED — NOT APPROVED/CLOSED. Work on `simulation-engine-phase-01w`; parent tested Phase 01-V correction `6a0f3d473f0eecb856fb2b320e1d6485b032b3bc`. Original OpenCode BLOCKED findings for old 01-T/01-U SHAs remain recorded. Main and narrative files protected.
 
 ## Intent and trust boundary
 
@@ -29,3 +29,5 @@
 8. Full Python 3.10 / 3.13 CI, frozen predecessor compat rejects actual 13/18 worlds; **EXTERNAL_REVIEW_DEFERRED** and **P0 OPEN** documented.
 
 **Special note:** This is a trusted *local Python application* facade. Binding `player_id` in a Python object is **not** authentication or network authorization. Never expose store or capability flags to an untrusted client.
+
+**Implementation evidence:** [01-W report](phase_01w_report.md) and [review handoff](phase_01w_review_request.md); code SHA `8787cf549973d78b1fc471fc86858b23aa422840`; [CI 42021241326](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42021241326) **607/607** each on Python 3.10 and 3.13. No independent approval, no P0 closure.
