@@ -1,6 +1,6 @@
 # Phase 02-B — technical implementation report
 
-**Status: IN_PROGRESS — final CI evidence pending; NOT APPROVED/CLOSED.**
+**Status: TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED — NOT APPROVED/CLOSED.**
 **Branch:** `simulation-engine-phase-02b`.
 **Baseline:** Phase 02-A verified commit `fdf6162c65d6947507d1b4e4516c17d851873c29` and [CI 42064429357](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42064429357), 657/657 tests on Python 3.10 and 3.13.
 **Versions:** Schema **16**, Rules **23** (from 15/22).
@@ -24,7 +24,7 @@ Add 16 targeted tests: a 7-NPC bakery with real inputs and two ovens, 89/90-seco
 
 A disposable `simulation/scenarios/test_village/demo_production_02b.py` fixture shows **7 NPCs, 2 bakers, 2 ovens, 4 grain → 2 bread at 90 seconds**, verified by full replay. This is manually initiated; it is **not yet an autonomous vocational/economic planning engine**.
 
-**Final CI / commit:** Pending verification. Earlier red intermediate commits are construction steps, not the final result. Once CI is green on the actual documentation HEAD, record exact run, tests per Python, demo status and source SHA.
+**Verified implementation CI:** [42068908977](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42068908977), SUCCESS at code SHA `a543e918768d5374043e57f993f286546fc65933`: **673/673 tests** on Python **3.10** and **673/673 tests** on **3.13**. Both matrix jobs passed the two-baker seven-person demo, frozen multi-generation parity, and genuine 02-A 15/22 refusal without mutation. This is 657 inherited + 16 new tests. The final documentation SHA is a separate CI check to verify before delivering the phase; intermediate red construction commits are not accepted as final results.
 
 ## Internal review and limits
 

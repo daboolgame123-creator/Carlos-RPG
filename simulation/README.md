@@ -10,6 +10,18 @@ The authoritative forward-looking plan is **[خارطة الطريق الرسم�
 
 
 
+## Phase 02-B — worksite recipes, professions and production time
+
+From the `simulation/` folder, run the offline **disposable** seven-character bakery:
+
+```bash
+PYTHONPATH=src python scenarios/test_village/demo_production_02b.py
+```
+
+Two initialized bakers at a bakery with **4 grain, 2 ovens and zero bread** must spend 90 seconds of explicit simulation time and reserve both ovens before **2 bread** appears. Site-owned ingredients are debited when the job starts; bread is produced **only** when the due scheduled event fires. Tools are checked and reserved but not consumed; workers cannot simultaneously travel or start another job. No NPC automatically selects a trade or invents a product.
+
+[Technical 02-B report](docs/phase_02b_report.md), [review request](docs/phase_02b_independent_review_request.md), [CI 42068908977](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42068908977) — **673 tests per Python 3.10/3.13**. Current version **Schema 16 / Rules 23**, previous 15/22 world files fail closed. **P0 remains OPEN / independent review deferred**: this is not a durable canonical Carlos story, a market, a complete job schedule or a network-accessible production service.
+
 ## Phase 02-A — finite environment in a disposable 7-NPC village
 
 Run this offline test-world example from `simulation/`:

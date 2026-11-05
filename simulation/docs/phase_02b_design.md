@@ -1,7 +1,7 @@
 # Phase 02-B — bounded recipe-based NPC work (first production slice)
 
 **Baseline:** verified Phase 02-A commit `fdf6162c65d6947507d1b4e4516c17d851873c29`, [green CI 42064429357](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42064429357), 657 tests each on Python 3.10 and 3.13.
-**Branch:** `simulation-engine-phase-02b`; status IN_PROGRESS. External independent review DEFERRED, P0 OPEN. Disposable worlds only.
+**Branch:** `simulation-engine-phase-02b`; status TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED (not APPROVED/CLOSED). [CI 42068908977](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42068908977) green with 673 tests per Python version and seven-NPC smoke. P0 OPEN. Disposable worlds only.
 
 ## Narrow behavior
 A verified resident NPC with an explicitly initialized **profession** (`NPCConfigured.role`) works at a specified existing **site**. An opt-in time-zero `ProductionRecipeConfigured` registers a recipe: site, required profession, one input item and quantity, one output item and quantity, a pre-existing reusable tool and time in simulated seconds. Inputs/output/tool are site-owned `resources`, **not** Carlos's RPG equipment or privately owned NPC inventory. One recipe example: baker, local bakery with `grain=2`, `oven=1`, `bread=0`, turns two grain units into one bread unit **after 90 simulated seconds**.
