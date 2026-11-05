@@ -10,6 +10,18 @@ The authoritative forward-looking plan is **[خارطة الطريق الرسم�
 
 
 
+## Phase 02-C — physical bakery stock sold at a local quoted copper price
+
+Run the seven-NPC **disposable test world** from `simulation/`:
+
+```bash
+PYTHONPATH=src python scenarios/test_village/demo_market_02c.py
+```
+
+Two bakers spend 90 simulated seconds making **two loaves** from **four grain** and two reusable ovens. The bakery owns the resulting bread. The explicitly registered steward offers it for **3 pre-existing copper coins per loaf**; two on-site buyers each pay 3, receive 1 bread, and leave the **bakery/site account** 6 copper richer. The steward's own cash stays unchanged. Trusted `NPCMarketService` also supports fixed-ratio personal barter, local price quotes and seller closure; it does **not** choose bargains or generate copper or goods for players.
+
+[02-C technical report](docs/phase_02c_report.md), [independent review request](docs/phase_02c_independent_review_request.md), [CI 42074833117](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42074833117) — **697/697 per Python 3.10/3.13**. Schema **17/Rules24**, previous 16/23 files rejected unchanged; **P0 OPEN**, external review deferred, no canonical long-lived-world guarantee or real market equilibrium pricing.
+
 ## Phase 02-B — worksite recipes, professions and production time
 
 From the `simulation/` folder, run the offline **disposable** seven-character bakery:

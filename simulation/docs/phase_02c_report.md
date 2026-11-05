@@ -1,6 +1,6 @@
 # Phase 02-C — technical implementation report: local title and conserved trades
 
-**Status:** **TECHNICALLY_TESTED CANDIDATE / FINAL-SHA CI PENDING / EXTERNAL_REVIEW_DEFERRED / P0 OPEN**. **NOT APPROVED/CLOSED.**
+**Status:** **TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED / P0 OPEN**. **NOT APPROVED/CLOSED.**
 **Branch:** `simulation-engine-phase-02c`, based on 02-B `6dbee22a4b6b167a5b5ca5ece1c51612016b9e5d` ([green CI 42069605497](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42069605497), 673 tests per Python version).
 **Schema 17 / Rules 24** from 16/23. No migration. The original story and `main` remain unchanged. Only disposable-test worlds.
 
@@ -19,7 +19,7 @@
 
 Added **24 tests** beyond 02-B's **673** (= **697** total) for bakery-to-market transfers, barter, price/quantity protection, no hidden title transfer, competing buyers, local visibility, off-site spoofing and travel, missing goods/currency, copper and goods overflow, wrong seller, closed listing, session pause, old market offer replay, atomic rollback, immutable snapshot validation, database restart and independently verified backup/restoration. Inherited security/parity tests remain.
 
-**Source validation:** [CI 42074780496](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42074780496) has both 697-test Python 3.10 and 3.13 matrix jobs green, including the 02-C bakery-to-market demo, genuine old 02-B refusal and multi-generation event/semantic parity. After the latest focused test replacement and this report, **final HEAD must be confirmed green separately**; never claim final approval based on an earlier SHA.
+**Confirmed code validation:** [CI 42074833117](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42074833117) SUCCESS at code SHA `4f36439467e60122fc00088245f078239e39a045` with **697/697 Python 3.10** and **697/697 Python 3.13**, including the 02-C bakery-to-market demo, real 02-B 16/23 refusal and historical event/semantic parity. Final documentation HEAD must receive a **matching green CI** before final delivery; independent approval is still absent.
 
 ## Deferred, not claimed
 

@@ -1,6 +1,6 @@
 # Phase 02-C — Local title, quoted prices and atomic sale/barter (bounded slice)
 
-**Baseline:** Phase 02-B `6dbee22a4b6b167a5b5ca5ece1c51612016b9e5d` ([CI 42069605497](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42069605497), 673/673 on Python 3.10/3.13). **Branch:** `simulation-engine-phase-02c`. **Status:** IN_PROGRESS. P0 OPEN / EXTERNAL_REVIEW_DEFERRED. Disposable test worlds only.
+**Baseline:** Phase 02-B `6dbee22a4b6b167a5b5ca5ece1c51612016b9e5d` ([CI 42069605497](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42069605497), 673/673 on Python 3.10/3.13). **Branch:** `simulation-engine-phase-02c`. **Status:** TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED (NOT APPROVED/CLOSED). [CI 42074833117](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42074833117) passed 697 tests per Python. P0 OPEN. Disposable test worlds only.
 
 ## Problem and physical model
 02-B makes **site-owned** bakery bread after elapsed work time, without transferring ownership of workshop stock to the baker. Inventing baker ownership would violate provenance. 02-C connects this output to a **local sale without fabricated goods**:
