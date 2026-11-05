@@ -1,6 +1,6 @@
 # Phase 02-F — Homes, work locations, daily routine, and interruption policy
 
-**Status:** DESIGN COMPLETE / IMPLEMENTATION NOT STARTED / NOT APPROVED  
+**Status:** IMPLEMENTATION CHECKPOINT / FINAL CI PENDING / EXTERNAL REVIEW DEFERRED / NOT APPROVED  
 **Date:** 2026-11-05  
 **Base:** `simulation-engine-phase-02e` after green CI [42095487418](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42095487418). External review remains deferred and the production backup/restore P0 gate remains OPEN. Work only with disposable worlds.
 
@@ -20,7 +20,7 @@ Seven NPCs can have distinct assigned homes/workplaces and daily windows. A work
 8. **Atomicity and trust:** bootstrap profile and any new operational events must be validated by reducer and persisted by the event store with explicit authorized provenance. A text instruction, narrator claim, or forged schedule may not set an NPC's residence or move an NPC.
 9. **No global director:** occupations and routine assignments do not give knowledge of other NPCs' plans. NPC schedules need not be chosen for the purpose of encountering Carlos.
 
-## Suggested narrow implementation (to be reviewed before code)
+## Narrow implementation (implemented; external review still pending)
 
 - Store a validated `npc_routines` map separate from the NPC's dynamic needs and its 02-E autobiographical memory, with `home_id`, optional `workplace_id`, `work_start`, `work_end`, and an optional local routine state only if strictly required by deterministic replay.
 - Introduce a strictly validated, time-zero-only `NPCRoutineConfigured` event for an existing NPC.
