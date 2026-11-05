@@ -1,6 +1,6 @@
 # Phase 01-V — Provisional design: scarcity, failed attempts, and alternate response
 
-**Status: IN_PROGRESS — conditional development, NOT APPROVED.**
+**Status: TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING — NOT APPROVED/CLOSED.**
 **Branch:** `simulation-engine-phase-01v`, forked from technically tested but not independently approved 01-U checkpoint `47dd04ef6928af6c6b76fecdd1b29dc46a653755`.
 **Predecessors:** 01-T and 01-U = `TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING`. New work may need revision if OpenCode reports a blocker.
 **Baseline:** Schema 13 / Rules 18; 564/564 green on both Python 3.10 and 3.13, [01-U final CI](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41931491155). **P0 save/restore remains OPEN**. Disposable test worlds only.
@@ -40,3 +40,5 @@ Scarcity is consequential: an NPC who **personally failed** to collect food at a
 - Phase 01-V may become **TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_PENDING** only after all regression checks on the final SHA, full design/report and a distinct review request. No self-review counts as external approval.
 - Never merge review-only PRs, change `main` or original Carlos story files, import user worlds, silently upgrade 13/18 saves or claim P0 completed.
 - If the separate OpenCode reviews of 01-T / 01-U find a blocker, mark 01-V as **dependency at risk** and reconcile before any formal closure or long-lived world.
+
+**Implementation evidence (2026-11-05):** [01-V report](phase_01v_report.md) and [independent review request](phase_01v_independent_review_request.md); tested code `0e70d4d3163b7336ad784848096e65f7edee2576`; [CI 41989436509](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/41989436509) 587/587 on each Python interpreter, with frozen 01-U parity. No external sign-off yet.
