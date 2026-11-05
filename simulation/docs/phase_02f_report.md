@@ -50,3 +50,16 @@ Full GitHub Actions [run 42098158161](https://github.com/daboolgame123-creator/C
 Check `simulation/src/carlos_sim/routines.py`, `actions.py`, `living_world.py`, `domain.py`, versioned event store and all 02-F tests. Try forged home/work configuration, start-at-work without a known route, mid-travel duplicate commands, rushing a shift with split time, two simultaneous NPCs, delayed job completion, emergency starvation, last-tick work and overnight rollover. Verify the actual 02-E parent commit and event parity when routine feature is OFF. Return APPROVED/BLOCKED/INCONCLUSIVE with reviewed SHA and reproducible evidence.
 
 **Reminder:** Never merge this review work into `main` or certify a permanent Carlos world until independent review and P0 conditions are satisfied.
+
+
+## Follow-up requirement register — explicit user decision (2026-11-05)
+
+The user's rule is now recorded in [ROADMAP.md §14](ROADMAP.md) and [ROADMAP_CHANGELOG.md G-016](ROADMAP_CHANGELOG.md): essential missing world mechanics must get a durable, prioritized, testable roadmap entry **when discovered**, not an untracked mention of “later.” Before a new phase or affected milestone, review all open gaps for blockers.
+
+Three **NOT IMPLEMENTED** items discovered from 02-F have permanent traceable IDs:
+
+- `WORLD-GAP-001`: safe interruption/cancellation of running work or travel during emergencies; candidate follow-up **02-F2**, before richer hazard behavior. Preserve committed resources, travel time, pending schedules and deterministic replay.
+- `WORLD-GAP-002`: funded wages, agreed employment contracts and unpaid wage obligations; candidate economic work after 02-B/C/D/F and before institution-scale economy. Never mint salary from thin air.
+- `WORLD-GAP-003`: distinct residence/occupancy, title, tenancy and property disputes; candidate later ownership/housing work dependent on 02-C/02-H and eventually 04-A. Routine home assignment is **not** property ownership.
+
+This documentation changes **no** engine rules or implemented functionality, retains Schema 20 / Rules 27, and does **not** close independent review or P0.
