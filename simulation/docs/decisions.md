@@ -424,3 +424,11 @@ Open questions for later phases: NPC decision cadence, resource production and t
 - Because scheduled-event semantics changed, `RULES_VERSION=19`, `SCHEMA_VERSION=13`. Real previous Rules18 SQLite world is rejected untouched. No migration, no long-lived game, no story import until P0.
 - [CI 42021241326](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42021241326): 607/607 per Python version, CLI smoke, old-world rejection, atomic failure/replay, exact event and semantic state parity to corrected T/U (compare snapshot excluding ONLY Rules version).
 - External review deferred by user, not waived for approval. 01-W is TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED.
+
+
+## 2026-11-05 — Mandatory tracking of essential deferred world mechanics
+
+- User decision: Every important missing mechanic discovered while developing the Carlos simulation must be **registered explicitly and immediately**, even if implementation is deferred. A casual comment in a phase report is insufficient.
+- Use stable requirement ID, priority, rationale, dependency, proposed phase or an explicit unscheduled designation, minimum acceptance test, and links to its discovery phase. Reconsider open items before the next affected stage/milestone; an unimplemented requirement must never be presented as completed.
+- First items: WORLD-GAP-001 safe emergency interruptions (candidate 02-F2), WORLD-GAP-002 employment/wages (unscheduled economic slice), WORLD-GAP-003 housing/occupancy/property rights (unscheduled property slice). Full descriptions in ROADMAP.md §14 and ROADMAP_CHANGELOG.md G-016; cross-reference in phase_02f_report.md.
+- This is a planning-only decision: Schema20/Rules27 unchanged, no new authorized economic events, no change to `main` or story files, 02-F independent review still deferred and P0 OPEN.
