@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 13
-RULES_VERSION = 19
+RULES_VERSION = 20
 
 
 def _thaw(value: Any) -> Any:
@@ -281,6 +281,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("SocialMessageSent", "SocialMessageReceived"):
         from .social import project_social_event
         project_social_event(d, e, social_authorized=social_authorized)
+    elif kind in ("PlayerObserved", "PlayerHearsayReceived"):
+        from .player_perception import validate_player_perception_event
+        validate_player_perception_event(
+            d, e, movement_authorized=movement_authorized,
+            social_authorized=social_authorized)
+        # Player recollections derive from the immutable event log, never NPC state.
     elif kind in ("AssistanceRequested", "AssistanceResponded", "AssistanceFulfilled", "AssistanceCancelled"):
         from .assistance import project_assistance_event
         project_assistance_event(d, e, assistance_authorized=assistance_authorized)
