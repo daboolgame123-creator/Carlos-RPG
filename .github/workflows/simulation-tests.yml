@@ -40,14 +40,14 @@ jobs:
       - name: Check out frozen Phase 01-T predecessor for 01-U parity
         uses: actions/checkout@v5
         with:
-          ref: d2a397bde95d2596592818f348d68b030f78f48a
+          ref: 60593ce54ba3ea601aa3e17d01f852f97e074ef7
           path: reviewed-01t
           persist-credentials: false
       - name: Verify frozen 01-R and 01-S compatibility baselines
         run: |
           test "$(git -C ../reviewed-baseline rev-parse HEAD)" = "0770498a1f257a252a82fde5ade1c43d3a791e3f"
           test "$(git -C ../reviewed-01s rev-parse HEAD)" = "c35245d1904e7a6d779cafa92cbf556618247f38"
-          test "$(git -C ../reviewed-01t rev-parse HEAD)" = "d2a397bde95d2596592818f348d68b030f78f48a"
+          test "$(git -C ../reviewed-01t rev-parse HEAD)" = "60593ce54ba3ea601aa3e17d01f852f97e074ef7"
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
