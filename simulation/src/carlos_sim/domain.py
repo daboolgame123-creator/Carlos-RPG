@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 21
-RULES_VERSION = 28
+SCHEMA_VERSION = 22
+RULES_VERSION = 29
 
 
 def _thaw(value: Any) -> Any:
@@ -96,6 +96,7 @@ class WorldState:
     npc_temperaments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     npc_routines: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     rumor_deliveries: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    property_takings: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "entities", _freeze(_json_copy(self.entities)))
@@ -127,6 +128,7 @@ class WorldState:
         object.__setattr__(self, "npc_temperaments", _freeze(_json_copy(self.npc_temperaments)))
         object.__setattr__(self, "npc_routines", _freeze(_json_copy(self.npc_routines)))
         object.__setattr__(self, "rumor_deliveries", _freeze(_json_copy(self.rumor_deliveries)))
+        object.__setattr__(self, "property_takings", _freeze(_json_copy(self.property_takings)))
 
     def to_dict(self) -> dict[str, Any]:
         # Replay/projection states already passed full JSON normalization in
@@ -157,7 +159,7 @@ class WorldState:
                            "loan_repayments": self.loan_repayments,
                            "npc_temperaments": self.npc_temperaments,
                            "npc_routines": self.npc_routines,
-                           "rumor_deliveries": self.rumor_deliveries})
+                           "rumor_deliveries": self.rumor_deliveries, "property_takings": self.property_takings})
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> WorldState:
@@ -177,7 +179,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -185,7 +187,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -239,6 +241,8 @@ class WorldState:
         validate_production_state(d)
         from .market import validate_market
         validate_market(d)
+        from .property import validate_takings
+        validate_takings(d)
         from .loans import validate_loans
         validate_loans(d)
         from .temperament import validate_temperaments
@@ -289,7 +293,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -354,6 +358,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "LoanRepaid":
         from .loans import repay_loan
         repay_loan(d, e, loan_authorized=loan_authorized)
+    elif kind == "PropertyTaken":
+        from .property import project_taking
+        project_taking(d, e, taking_authorized=taking_authorized)
     elif kind == "MarketStallConfigured":
         from .market import configure_market_stall
         configure_market_stall(d, e, bootstrap=bootstrap)
