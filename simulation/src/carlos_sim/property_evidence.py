@@ -24,7 +24,7 @@ CLAIM_KEYS = {
 
 def validate_initial_witnesses(state: dict[str, Any], actor: str,
                                site: str, witnesses: Any) -> tuple[str, ...]:
-    if (type(witnesses) is not list or len(witnesses) > 7
+    if (type(witnesses) is not tuple or len(witnesses) > 7
             or any(not _id(w) for w in witnesses)
             or len(witnesses) != len(set(witnesses))
             or actor in witnesses):
