@@ -3,7 +3,7 @@
 **Date:** 2026-11-06 Baghdad time (2026-11-05 UTC)
 **Branch:** `simulation-engine-phase-04a-j1`
 **Baseline:** J1b Schema26/Rules34, [CI 42121767798](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42121767798), 841/841 each Python 3.10 and 3.13.
-**State:** `IMPLEMENTED / FULL-CI-VALIDATION-IN-PROGRESS / EXTERNAL_REVIEW_DEFERRED / P0 OPEN`. Do not label J1c legally complete.
+**State:** `J1c1 TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED / P0 OPEN`; **865/865 tests passed on EACH Python 3.10 and 3.13**, exact code checkpoint `9d573b0472ecf721afa8f4672d02312af22e86ce`, [CI 42127560935](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42127560935). Not J1c legal-title completion.
 
 ## Scope
 
@@ -34,4 +34,4 @@ Safety:
 
 ## Technical validation
 
-Final exact code commit SHA, CI job IDs and passed counts must be inserted only after observed successful CI for both Python 3.10 and 3.13. Earlier failure during version-update commits does not count as a validated final run.
+**Verified:** code commit `9d573b0472ecf721afa8f4672d02312af22e86ce`, GitHub Actions [42127560935](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42127560935), **865/865 passed** on Python **3.10** and **3.13**. Corrected same-tick revocation ordering was included. Later documentation-only commits are not evidence of a separate code change. No independent review occurred.
