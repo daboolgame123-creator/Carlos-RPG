@@ -2,7 +2,7 @@
 import pytest
 
 from carlos_sim import (DomainEvent, SQLiteEventStore, TimeEngine,
-                        NPCPropertyService, NPCComplaintService, personal_complaints)
+                        NPCPropertyService, NPCComplaintService, NPCMovementService, personal_complaints)
 from carlos_sim.store import InvalidEvent, DuplicateCommand, RevisionConflict
 from test_property_02h1 import village
 
@@ -162,3 +162,36 @@ def test_replay_and_snapshot_preserve_private_complaint(scene):
     db.snapshot("v")
     assert db.load("v").to_dict() == done.to_dict()
     assert db.verify("v").to_dict() == done.to_dict()
+
+
+def test_officer_in_transit_cannot_receive_or_acknowledge(scene):
+    db, clock, ps, service = scene
+    claim(db, ps)
+    db.append("v", "new-route", db.load("v").revision, [
+        ev("RouteCreated", {"id": "bakery-square", "a": "bakery",
+                            "b": "square", "seconds": 40})
+    ], bootstrap=True)
+    movement = NPCMovementService(db, clock)
+    movement.start("v", "layla", "bakery-square", "leave-desk",
+                   expected_revision=db.load("v").revision)
+    before = db.load("v").to_dict()
+    with pytest.raises(InvalidEvent):
+        file(db, service)
+    assert db.load("v").to_dict() == before
+
+
+def test_officer_departure_prevents_later_acknowledgement(scene):
+    db, clock, ps, service = scene
+    claim(db, ps)
+    file(db, service)
+    db.append("v", "new-route-ack", db.load("v").revision, [
+        ev("RouteCreated", {"id": "bakery-square", "a": "bakery",
+                            "b": "square", "seconds": 40})
+    ], bootstrap=True)
+    NPCMovementService(db, clock).start(
+        "v", "layla", "bakery-square", "officer-journey",
+        expected_revision=db.load("v").revision)
+    before = db.load("v").to_dict()
+    with pytest.raises(InvalidEvent):
+        ack(db, service)
+    assert db.load("v").to_dict() == before
