@@ -19,6 +19,7 @@ from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
 from .knowledge import make_observation_events, choose_food_sharing_round, known_food_sites
 from .food_navigation import choose_food_route
+from .routines import choose_routine_route
 
 
 @dataclass(frozen=True)
@@ -56,7 +57,8 @@ class LivingWorldEngine:
                  survival_enabled: bool = False, gathering_enabled: bool = False,
                  foraging_enabled: bool = False, knowledge_enabled: bool = False,
                  food_navigation_enabled: bool = False,
-                 scarcity_enabled: bool = False):
+                 scarcity_enabled: bool = False,
+                 routines_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -112,6 +114,11 @@ class LivingWorldEngine:
                 "scarcity_enabled requires food_navigation_enabled and assistance_enabled"
             )
         self.scarcity_enabled = scarcity_enabled
+        if type(routines_enabled) is not bool:
+            raise ValueError('routines_enabled must be boolean')
+        if routines_enabled and not navigation_enabled:
+            raise ValueError('routines_enabled requires navigation_enabled')
+        self.routines_enabled = routines_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int) -> LivingAdvanceResult:
@@ -331,7 +338,12 @@ class LivingWorldEngine:
                         # U-3: both fallback exploration and hungry food travel
                         # respect the previous decision cooldown in opt-in mode.
                         continue
-                    route_id = food_intent.route_id if food_intent is not None else next_route(current, npc_id)
+                    routine_intent = (choose_routine_route(current, npc_id)
+                                      if self.routines_enabled and food_intent is None
+                                      else None)
+                    route_id = (food_intent.route_id if food_intent is not None
+                                else routine_intent.route_id if routine_intent is not None
+                                else next_route(current, npc_id))
                     if route_id is not None:
                         route = current.routes[route_id]
                         here = current.entities[npc_id]['location_id']
@@ -342,6 +354,9 @@ class LivingWorldEngine:
                         due_at = current.time + route['seconds']
                         schedule_id = 'npc-travel:' + travel_id
                         travel_reason = 'autonomous movement over a learned road'
+                        if routine_intent is not None:
+                            travel_reason = (f'{routine_intent.reason}; '
+                                             f'destination={routine_intent.destination}')
                         if food_intent is not None:
                             travel_reason = (
                                 f'autonomous food journey; belief_site={food_intent.destination}; '
