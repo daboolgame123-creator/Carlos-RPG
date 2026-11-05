@@ -120,7 +120,9 @@ def test_bootstrap_flags_and_atomic_invalid_followup_do_not_insert_traits(tmp_pa
 
 def test_forged_decision_ignoring_memory_adjustment_fails(tmp_path):
     with SQLiteEventStore(tmp_path / "replay-guard.sqlite") as db:
-        setup(db, members=("basim",))
+        setup(db, members=("basim",), traits={"basim": {
+            "ambition": 100, "curiosity": 0, "caution": 100, "discipline": 100
+        }})
         clock = TimeEngine(db)
         clock.open_session("test")
         decide(db, clock, "basim", "first")
