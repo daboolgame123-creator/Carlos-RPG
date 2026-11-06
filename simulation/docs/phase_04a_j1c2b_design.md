@@ -149,3 +149,16 @@ After verifying **932/932 full regressions on each Python 3.10 and 3.13** at cod
 **Implementation:** `simulation/src/carlos_sim/title_law_draft.py` (commit `383ca096a85dee498f3294ddc5328b98411931a0`). **Tests:** `simulation/tests/test_title_law_draft_04a_j1c2b.py` (commit `ab7a5a00afe3b38fbb75aa07caa740a4f2b4b006`) verify valid proposals remain powerless; invalid sites/authorities/retroactive and boolean times/possession-based title fail closed; proposed authority grants no privileges; logical time and replay/snapshot invariants.
 
 **Status:** Implementation complete as a **non-binding draft validation slice**, CI pending on the new exact code SHA. This does NOT select a political ruler, establish enforceable law or close J1c2b. The later choice of normative institution/title provenance remains explicit and separately testable. Independent review deferred by owner, production P0 and network authorization remain unapproved as tracked in `EXTERNAL_VALIDATION_LEDGER.md`.
+
+
+## Institution charter nominee validation — nonbinding and off-ledger (2026-11-06)
+
+The latest full regression checks for code commit `ab7a5a00afe3b38fbb75aa07caa740a4f2b4b006` completed SUCCESS: **950/950 tests on each Python 3.10/3.13**, plus companion adversarial jobs ([full CI 42226560154](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42226560154)).
+
+Next scoped change adds `prepare_local_institution_charter_draft` as an **unapproved institution nomination validator** next to the existing local law draft. It requires a real existing site, a real local non-traveling and not-currently-occupied NPC nominee, a syntactically valid institution ID, an enumerated proposed institutional model and a strictly prospective effective time. This leverages the existing `market._present` physical presence rules on a detached world-state copy.
+
+It explicitly reports `nominee_consent_recorded=False`, `institution_registered=False`, `appointed_officer_id=None`, and `can_decide_title=False`, `can_seize_property=False`, `can_delegate_authority=False`. The *proposal string* **is not a capability**, and there is no event, persistent institution ledger, authentication, law registration or jurisdiction. It does not grant a complaint-desk officer judicial powers.
+
+Source commit `5d42031d8c60cbf6b4a1ad67ad70eff80477b7e4`; tests commit `2eab41472acc4d8c284872b879be119931d7021c` covers detached no-side-effects, invalid nomination/site/model/time, traveling nominee and replay consistency. **New code still requires exact-commit CI success** before test claims can be made. This is a technical prerequisite, **not** a binding title engine or a J1c2b closure.
+
+Open design prerequisites: record nominee's explicit consent, establish an actual institution jurisdiction and powers by approved world rules, develop trusted registration event provenance and authorize future civil procedures. No explicit world-political authority has yet been selected. Production P0 and external independent review statuses remain tracked separately in `EXTERNAL_VALIDATION_LEDGER.md`.
