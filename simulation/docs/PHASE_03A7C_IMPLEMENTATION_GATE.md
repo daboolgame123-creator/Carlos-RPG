@@ -203,3 +203,26 @@ SQL replay/verification must match; capacity overflow must not erase
 prior memories, create diagnoses, or silently start a new action.
 Commits: producer `61d8510a`, regression `1b7bf9af`.
 **Verification pending exact SHA dual-Python CI.**
+
+
+## 03-A7c observable funded care — 2026-11-07
+
+An independent pure projector, `observed_supportive_care` (commit
+`d97f39cd`), reads a *real pending, funded RecoveryStarted action*
+and only presents its **external care interaction** when an available
+local NPC has recorded seeing BOTH the caregiver and recipient in the
+same site/tick. It deliberately hides injury IDs, severity, materials,
+effectiveness and clinical diagnosis. Expired or completed treatment,
+unobserved peers, missing location and unvalidated world snapshots yield
+no observation. This read-only projection does NOT create a new belief,
+domain event or medical sign. It is separate from the persistent
+`visible-rest` behavior history.
+
+Multi-NPC integration tests at `6f8f0813` check Adel's real care of
+Nora, Basim as actual witness, Salma/Huda/Omar not learning passively,
+expiration after clock time, completed treatment not being presented as
+active, and unchanged replay. **Verification pending dual-Python CI**
+on the exact final SHA. This remains behavioral evidence only:
+a care interaction does not prove a particular wound, disease or
+visible physical impairment. The separate physical symptom source is
+still blocked, and 03-A remains open.
