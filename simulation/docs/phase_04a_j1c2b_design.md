@@ -102,3 +102,12 @@ The remaining normative decision is **not** an implementation bug: local legal r
 - These observations are an internal auditor-only history and do not infer legal title, change actual goods/claims or grant the player omniscient knowledge.
 - Code commit `2afa8ce35896ab8eead9ffd414d0476b7256d925`; four new targeted historical integrity probes at `e425322780dd071bbb4c758f51e884205efc83f1`. The previous exact-code CI [42213953492](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42213953492) completed **916/916** on 3.10/3.13 and companion [42213953544](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42213953544) completed SUCCESS; **new feature verification must use new SHA results**.
 - The J1c2b binding legal-title, jurisdiction and adjudication decisions remain UNSPECIFIED; read-only evidence is not adjudication. Do not label entire J1c2b complete.
+
+
+## J1c2b factual allegations audit — no legal adjudication (2026-11-06)
+
+Added `property_claim_audit_packet(state, claim_id)` in `title_evidence.py`. This trusted-only, read-only report distinguishes an unverified NPC assertion (`property_claims`) from an existing cited physical taking (`property_takings`). A witness-backed allegation can corroborate the **physical action only**, never ownership, legal culpability or enforceable title.
+
+**Important provenance limitation:** existing `property_claims` have no `origin_id`. The auditor must **not** associate a claim with a specific registered provenance lot just because the site, resource or time appears similar. The explicit return is `registered_origin_id=None`, `origin_linkage="not_established"`, `legally_enforceable_owner=None`, `guilt_determined=False`. A missing claim is rejected without mutation. Results stay restricted to trusted internal audit; they are not player/LLM/public views.
+
+Code commit `9fa113a191ab724df4bc2a46c3d766777421d022`; four additional tests commit `09b0f8a4892d6280397186aa7b841c85710ceb9d` (false accusation, actual witnessed taking only, unknown IDs, read-only snapshots/full replay). New CI must pass before this slice is marked verified. No Schema/Rules changes; binding legal-title and local law remain undefined. Stage J1c2b stays OPEN.
