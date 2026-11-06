@@ -29,7 +29,7 @@ def test_observed_event_never_implicitly_creates_injury(kind):
 @pytest.mark.parametrize("changes", [
     {"subject_id": "ghost"}, {"subject_id": True},
     {"source_event": None}, {"source_event": {}},
-    {"source_event": DomainEvent("PropertyTaken", None, "future", 21, {})},
+    {"source_event": DomainEvent("PropertyTaken", None, "future", 21, {})},\n    {"source_event": DomainEvent("PropertyTaken", None, "negative", -1, {})},\n    {"source_event": DomainEvent("PropertyTaken", None, "boolean", True, {})},\n    {"source_event": DomainEvent("PropertyTaken", None, "", 10, {})},\n    {"source_event": DomainEvent("", None, "no type", 10, {})},\n    {"source_event": DomainEvent("PropertyTaken", None, "future schema", 10, {}, event_version=2)},
 ])
 def test_invalid_source_fails_closed(changes):
     w = scene()
