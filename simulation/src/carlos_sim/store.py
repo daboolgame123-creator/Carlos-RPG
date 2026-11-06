@@ -161,6 +161,11 @@ class SQLiteEventStore:
             validate_travel_reservations(state)
         except ValueError as exc:
             raise IntegrityError(str(exc)) from exc
+        from .recovery_events import validate_treatment_reservations
+        try:
+            validate_treatment_reservations(state)
+        except ValueError as exc:
+            raise IntegrityError(str(exc)) from exc
         return state
 
     def append(self, world_id: str, command_id: str, expected_revision: int, events: Sequence[DomainEvent], *, bootstrap: bool = False, clock_authorized: bool = False, npc_authorized: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False, recovery_authorized: bool = False) -> WorldState:
@@ -316,6 +321,11 @@ class SQLiteEventStore:
             from .movement import validate_travel_reservations
             try:
                 validate_travel_reservations(state)
+            except ValueError as exc:
+                raise InvalidEvent(str(exc)) from exc
+            from .recovery_events import validate_treatment_reservations
+            try:
+                validate_treatment_reservations(state)
             except ValueError as exc:
                 raise InvalidEvent(str(exc)) from exc
             self.db.execute("INSERT INTO commands VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",(world_id,command_id,request_hash,first,state.revision,int(bootstrap),int(clock_authorized),int(npc_authorized),int(action_authorized),int(movement_authorized),int(social_authorized),int(assistance_authorized),int(consumption_authorized),int(survival_authorized),int(rpg_authorized),int(production_authorized),int(market_authorized),int(loan_authorized),int(taking_authorized),int(claim_authorized),int(complaint_authorized),int(permission_authorized),int(claim_transfer_authorized),int(injury_authorized),int(recovery_authorized)))
