@@ -237,7 +237,8 @@ def make_rest_activity_events(state: WorldState, observer_id: str,
                    for a in state.actions.values()):
             continue
         key = activity_memory_key(subject, state.time)
-        if key in state.npcs[observer_id]["beliefs"]:
+        if (key in state.npcs[observer_id]["beliefs"]
+                or any(item["key"] == key for item in state.npcs[observer_id]["inbox"].values())):
             continue
         claim = {
             "text": f"visible-resting; observed_at={state.time}",
