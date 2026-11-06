@@ -185,3 +185,21 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
   supportive care is *not* proof of a physical symptom or diagnosis.
   There is no trusted producer for limp/wound/collapse.
 - `03-A7c` parent and `03-A` are OPEN; `main` unchanged.
+
+
+## 03-A7c ordered care witnessing (2026-11-07)
+
+- `03-A7c-ordered-care-evidence`: `VERIFICATION_PENDING`.
+  The older same-tick care scene returned false evidence when a witness
+  looked before the care activity started. Replaced with an opt-in
+  `care_enabled=True` single-command `NPCObserved` +
+  `NPCInformationDelivered` + `NPCBeliefReceived` sequence.
+  Reducer validates physical care against treatment state; store requires
+  the care delivery to follow the observer's own observation in that
+  SAME append, and rejects a `RecoveryStarted` between them.
+  Code commits `467b1fef`, `41016531`, `794dd725`, `26abe8f1`,
+  `e33b1966`; regression tests `ac4717ac`, `376a04c9`,
+  `ff43efbd`. Final-SHA dual Python CI required.
+- Visible care still means only an external care interaction, never a
+  guaranteed physical symptom or medical diagnosis. Parent
+  `03-A7c` and `03-A` remain OPEN.
