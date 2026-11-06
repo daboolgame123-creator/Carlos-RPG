@@ -336,3 +336,65 @@ def test_salma_independently_witnesses_care_while_huda_stays_uninformed(tmp_path
         assert db.verify("v").to_dict() == salma.to_dict()
     finally:
         db.close()
+
+
+def test_care_memory_full_does_not_prevent_basim_observing(tmp_path):
+    """Long-running funded care can be seen after bounded memory fills."""
+    from carlos_sim.injury_observation import recall_supportive_care, MAX_CARE_MEMORIES
+    db, clock, service = scene(tmp_path)
+    try:
+        begin(db, service)
+        movement = NPCMovementService(db, clock)
+        for tick in range(MAX_CARE_MEMORIES + 1):
+            viewed = movement.observe(
+                "v", "basim", command_id=f"care-look-{tick}",
+                expected_revision=db.load("v").revision, care_enabled=True)
+            assert len(recall_supportive_care(viewed, "basim")) == min(
+                tick + 1, MAX_CARE_MEMORIES)
+            if tick < MAX_CARE_MEMORIES:
+                clock.advance("v", seconds=1, command_id=f"care-tick-{tick}",
+                              expected_revision=viewed.revision)
+        assert len(recall_supportive_care(db.load("v"), "basim")) == MAX_CARE_MEMORIES
+        assert db.verify("v").to_dict() == db.load("v").to_dict()
+    finally:
+        db.close()
+
+
+def test_care_evidence_refuses_relabelled_subject_and_forged_diagnosis(tmp_path):
+    """Care evidence does not grant an arbitrary medical diagnosis."""
+    from carlos_sim import DomainEvent
+    from carlos_sim.store import InvalidEvent
+    import pytest
+    db, clock, service = scene(tmp_path)
+    try:
+        start = begin(db, service)
+        valid = NPCMovementService(db, clock).observe(
+            "v", "basim", command_id="genuine-look",
+            expected_revision=start.revision, care_enabled=True)
+        before = valid.to_dict()
+        for idx, (key, text) in enumerate((
+            ("visible-care:huda:adel:0",
+             "visible-supportive-care; caregiver=adel; observed_at=0"),
+            ("visible-care:nora:adel:0",
+             "diagnosed-severe-injury; observed_at=0"),
+            ("visible-care:nora:basim:0",
+             "visible-supportive-care; caregiver=basim; observed_at=0"),
+        )):
+            forged = DomainEvent("NPCInformationDelivered", "basim",
+                                  "forged care inference", valid.time, {
+                "npc_id": "basim", "delivery_id": f"forged-care-{idx}",
+                "key": key,
+                "claim": {"text": text, "source": "observation:bakery",
+                          "received_at": valid.time, "confidence": 90},
+                "sender_id": "basim", "location_id": "bakery",
+                "method": "observation",
+            })
+            # Not even a trusted NPC capability can invent an extra first-hand
+            # sighting, reinterpret care as disease, or change its participants.
+            with pytest.raises(InvalidEvent):
+                db.append("v", f"reject-false-care-{idx}", valid.revision,
+                          [forged], npc_authorized=True, movement_authorized=True)
+            assert db.load("v").to_dict() == before
+        assert db.verify("v").to_dict() == before
+    finally:
+        db.close()
