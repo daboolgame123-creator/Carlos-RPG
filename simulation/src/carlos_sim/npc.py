@@ -143,6 +143,9 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
                 # Hearsay can never masquerade as a direct sighting.
                 if p["claim"]["source"].startswith("observation:"):
                     raise ValueError("hearsay cannot masquerade as an observation")
+        if p["key"].startswith("visible-rest:"):
+            from .injury_observation import check_activity_memory_delivery
+            check_activity_memory_delivery(state, event)
         npc["inbox"][delivery_id] = {k: _json_copy(p[k]) for k in ("key", "claim", "sender_id", "location_id", "method")}
         npc["delivery_history"].append(delivery_id)
     elif event.event_type == "NPCBeliefReceived":
