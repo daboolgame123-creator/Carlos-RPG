@@ -80,3 +80,17 @@ The actual domain reducer processes `ScheduledEventCreated`, `ScheduledEventFire
 - Audit the rest of the scheduling command producers and player-observation gateway before choosing field names and event authorization; do **not** implement a reducer yet.
 
 This source audit is a partial 03-A1 deliverable. It has not been runtime tested. No actual injury state or healing mechanic has been added.
+
+## 03-A2 preliminary read-only injury intake (2026-11-06)
+
+The audit now covers `PlayerGateway.status/inspect/observe`, `SQLiteEventStore`'s replay authorization rows, and `domain.py` schedule creation/firing/cancellation. Important constraint: privileged scheduler payloads are protected by existing capability flags and cannot safely be reused for a new recovery action without a dedicated authorization and validation path. Also, `PlayerGateway` explicitly reveals only the invoking player's RPG profile; proposed NPC injury records must NOT be automatically exposed via it.
+
+New isolated code:
+- `simulation/src/carlos_sim/injury_intake.py` at commit `6eb1a651`.
+- `simulation/tests/test_injury_intake_03a.py` at commit `1e84b4c7`.
+
+This is an **unverified test-scenario intake proposal**, not an injury reducer. It validates existing subject ID, ID syntax, severity 1..100, exact logical onset time and test-only source description. Critically, a caller-provided source reference **is not verified provenance**, so every returned packet explicitly says `source_provenance_verified=False`, `injury_recorded=False`, `hp_adjustment=None`, `commit_authorized=False`. It does not write, heal, authorize a gameplay command or expose private NPC health.
+
+A temporary stand-alone contract test for the matching pure function passed 3 unittest cases and 11 invalid parameter variants in the chat's Python environment. **That is not a test of the GitHub package or pytest integration**. The committed tests must be run on exact code SHA in real engine environment; full CI/parity are also pending. The 03-A stage remains OPEN.
+
+Before persisted injuries, build and test a trusted **source-of-injury event** authorization path, independent NPC injury storage with schema/rules migration policy, and explicit scheduler capability for recovery. Do not treat speculative intake as proof that any injury happened.
