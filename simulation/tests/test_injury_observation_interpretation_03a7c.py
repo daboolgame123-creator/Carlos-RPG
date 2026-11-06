@@ -28,7 +28,7 @@ def test_same_observation_same_agnostic_interpretation(tmp_path, injury, fatigue
             "world", "nora", command_id="decide", expected_revision=db.load("world").revision)
         assert choice.action == "rest"
         action = NPCActionService(db, clock).start(
-            "world", "nora", "rest-nora", expected_revision=db.load("world").revision, activity_enabled=True)
+            "world", "nora", "rest-nora", expected_revision=db.load("world").revision)
         assert explain_visible_rest(action.state, "basim", "nora") is None
         recorded = movement.observe(
             "world", "basim", command_id="look", expected_revision=action.state.revision, activity_enabled=True)
@@ -57,7 +57,7 @@ def test_historical_sighting_cannot_claim_present_cause_after_tick(tmp_path):
                                           expected_revision=db.load("world").revision)
         movement = NPCMovementService(db, clock)
         seen = movement.observe("world", "basim", command_id="look",
-                                expected_revision=db.load("world").revision)
+                                expected_revision=db.load("world").revision, activity_enabled=True)
         assert explain_visible_rest(seen, "basim", "nora") is not None
         later = clock.advance("world", seconds=1, command_id="tick",
                               expected_revision=seen.revision).state
