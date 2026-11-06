@@ -140,3 +140,50 @@ def test_previous_31_39_world_refused_without_migration(tmp_path):
         assert db.db.execute("SELECT * FROM worlds WHERE id='v'").fetchone() == before
     finally:
         db.close()
+
+
+def test_caregiver_leaves_and_treatment_interrupted_without_refund(tmp_path):
+    from carlos_sim.movement import NPCMovementService
+    db, clock, svc = scene(tmp_path)
+    try:
+        w = db.load("v")
+        db.append("v", "new-route", w.revision, [
+            DomainEvent("RouteCreated", None, "existing physical footpath", 0,
+                        {"id": "bakery-square", "a": "bakery", "b": "square", "seconds": 50}),
+        ], bootstrap=True)
+        started = begin(db, svc)
+        NPCMovementService(db, clock).start(
+            "v", "adel", "bakery-square", "caregiver-leaves",
+            expected_revision=started.revision)
+        after_travel = clock.advance(
+            "v", seconds=50, command_id="walk-away",
+            expected_revision=db.load("v").revision).state
+        assert after_travel.entities["adel"]["location_id"] == "square"
+        assert after_travel.injuries["nora-fatigue"]["severity"] == 25
+        outcome = clock.advance(
+            "v", seconds=550, command_id="treatment-due",
+            expected_revision=after_travel.revision).state
+        assert outcome.time == 600
+        assert outcome.injuries["nora-fatigue"]["severity"] == 25
+        assert outcome.treatments["care-one"]["status"] == "interrupted"
+        assert outcome.resources["adel"]["food"] == 1
+        assert db.verify("v").to_dict() == outcome.to_dict()
+    finally:
+        db.close()
+
+
+def test_forged_recovery_appointment_rejected_even_with_authorization(tmp_path):
+    db, clock, svc = scene(tmp_path)
+    try:
+        w = db.load("v")
+        with pytest.raises(InvalidEvent):
+            db.append("v", "fake-schedule", w.revision, [
+                DomainEvent("ScheduledEventCreated", None, "no material reservation", 0,
+                            {"id": "heal.fake", "due": 600,
+                             "order": w.next_schedule_order, "kind": "signal",
+                             "payload": {"__npc_recovery": "fake"},
+                             "interrupt": False}),
+            ], recovery_authorized=True)
+        assert db.verify("v").to_dict() == w.to_dict()
+    finally:
+        db.close()
