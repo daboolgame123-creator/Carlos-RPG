@@ -111,3 +111,21 @@ def observed_local_activities(state: WorldState, observer_id: str) -> tuple[dict
         if result is not None:
             results.append(result)
     return tuple(results)
+
+
+def explain_visible_rest(state: WorldState, observer_id: str,
+                         subject_id: str) -> dict[str, object] | None:
+    """An evidence-constrained interpretation: the *cause is unknown*.
+
+    This is a deliberately conservative baseline. Individual suspicions can
+    be modeled later only from separately established, observer-owned
+    experience and memories. A visible rest is never proof of an injury.
+    """
+    observed = observed_resting_activity(state, observer_id, subject_id)
+    if observed is None:
+        return None
+    return {
+        **observed,
+        "interpretation": "cause_unknown",
+        "medical_conclusion": None,
+    }
