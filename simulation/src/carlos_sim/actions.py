@@ -77,6 +77,9 @@ def start_action(state: dict[str, Any], event: DomainEvent, *, action_authorized
     scheduled = state["scheduled"].get(data["schedule_id"])
     if scheduled is None or scheduled["due"] != data["due"] or scheduled["payload"] != {"__npc_action_id": action_id} or scheduled["interrupt"]:
         raise ValueError("action must reference its noninterrupting scheduled signal")
+    from .npc import _injury_rest_decision
+    if action != "rest" and _injury_rest_decision(state["injuries"], npc_id) is not None:
+        raise ValueError("severe self-injury prevents starting strenuous or exploratory activity")
     if action == "work":
         from .routines import work_allowed_at
         if not work_allowed_at(state["entities"], state["npcs"],
