@@ -100,3 +100,27 @@ interpretation as medical fact or already persisted belief.
 **Status:** ready for exact final-SHA Python 3.10 / 3.13 CI verification;
 the symptom-specific source and observer-scoped historical health knowledge
 remain blocked. Parent 03-A remains OPEN; P0 unchanged.
+
+
+## 03-A7c conservative inference baseline — 2026-11-07
+
+A pure `explain_visible_rest` helper returns the same explicitly
+`cause_unknown` interpretation for healthy and injured actors performing
+the same validated rest action. It **does not establish** a subjective
+belief, health diagnosis, memory claim or fact about what motivated the
+rest. Its evidence is only the observer-scoped current-tick sighting and
+the running activity; a missing, distant or stale sighting returns no result.
+
+Tests in `test_injury_observation_interpretation_03a7c.py` cover
+healthy/ill indistinguishability, no hidden injury ID/severity leakage,
+old sightings, invalid actors, and a replay check. The code introduces
+no new WorldState fields, event types or version changes.
+
+Real per-character *differences* in interpretation must depend on
+independently obtained knowledge, a separately accepted source and
+specific deterministic policy. Do not fabricate the NPC's memories or
+translate ordinary resting into visible physical impairment.
+
+**Provisional state**: `VERIFICATION_PENDING` until dual-Python CI
+passes on the final SHA. The observer-specific durable health memory and
+physical symptom provenance remain unimplemented; 03-A stays OPEN.
