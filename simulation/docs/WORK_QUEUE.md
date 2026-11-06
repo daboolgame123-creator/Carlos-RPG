@@ -142,3 +142,16 @@ No automatic observer knowledge, hearsay, treatment or merging. Parent 03-A OPEN
   medical-symptom-source, distinct from proven behavioral resting memory.
 
 No cross-branch merge and no closure of parent 03-A7c / 03-A.
+
+## 03-A7c finite resting-memory capacity — 2026-11-07
+
+- `03-A7c-memory-capacity`: `CHAT_EXECUTABLE / VERIFICATION_PENDING`.
+  Source `61d8510a`, 65-distinct-tick integration test `1b7bf9af`.
+  When one observer has 64 visible-rest memories, the next explicit
+  `NPCObserved` must still commit; only additional memory projections are
+  skipped. Pending inbox deliveries count against available capacity.
+  Exact final-SHA Python 3.10/3.13 CI is required before closure.
+- Previous idempotency regression `ccb09cc0` obtained GitHub Actions success
+  at its own exact SHA; later pending-delivery and capacity changes must be
+  tested independently.
+- No medical-sign producer or health diagnosis created. Parent 03-A7c OPEN.
