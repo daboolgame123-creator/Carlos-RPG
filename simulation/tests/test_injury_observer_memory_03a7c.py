@@ -303,3 +303,22 @@ def test_pending_first_hand_delivery_is_not_duplicated_by_next_look(tmp_path):
         assert len(recall_rest_activity(completed, "basim")) == 1
         assert completed.npcs["basim"]["inbox"] == {}
         assert db.verify("world").to_dict() == completed.to_dict()
+
+
+def test_capacity_exhaustion_does_not_block_valid_local_look(tmp_path):
+    """A character with 64 genuine memories can still look around."""
+    from carlos_sim.injury_observation import MAX_REST_MEMORIES
+    with SQLiteEventStore(tmp_path / "bounded-history.sqlite") as db:
+        clock, movement, state = start_world(db, injury=True)
+        for tick in range(MAX_REST_MEMORIES + 1):
+            current = db.load("world")
+            observed = movement.observe(
+                "world", "basim", command_id=f"look{tick}",
+                expected_revision=current.revision, activity_enabled=True)
+            assert len(recall_rest_activity(observed, "basim")) == min(
+                tick + 1, MAX_REST_MEMORIES)
+            if tick != MAX_REST_MEMORIES:
+                clock.advance("world", seconds=1, command_id=f"wait{tick}",
+                              expected_revision=observed.revision)
+        assert len(recall_rest_activity(db.load("world"), "basim")) == MAX_REST_MEMORIES
+        assert db.verify("world").to_dict() == db.load("world").to_dict()
