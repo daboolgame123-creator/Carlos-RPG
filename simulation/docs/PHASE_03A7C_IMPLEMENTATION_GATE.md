@@ -160,3 +160,26 @@ Separate 03-A7c *medical signs* remains blocked on an actual physical
 symptom source. Ordinary visible rest cannot legally be relabeled limp,
 collapse or confirmed health evidence, and must not spontaneously
 trigger help or health rumors.
+
+
+## Verification ledger — 2026-11-07
+
+The initial opt-in observer-owned historical visible-rest memory slice and its
+seven-NPC + persistence + forged-source regression passed the full GitHub
+Actions simulation suite at exact SHA `91e6004e841dda54a18b8f517aa6bcf880933fc1`
+(run `42305932829`, Python 3.10 and Python 3.13 both success).
+This is a **technically tested behavioral-memory slice**, not completion of
+03-A7c medical observation.
+
+Subsequent integrity follow-up: repeated same-tick explicit sightings,
+multi-tick historical events, acknowledgment without a matching delivery and
+lack of automatic sharing are regression-tested at `ccb09cc0`. The activity
+draft producer now skips a key already present in the observer's pending inbox,
+so repeat observation does not create a competing delivery (`c82e60cf`).
+The new exact pending-delivery/ack test is at `90804577`. Those latest
+changes remain **VERIFICATION_PENDING until their full SHA dual-Python CI
+has completed successfully**.
+
+Existing events, version numbers and world state remain unchanged by the
+follow-up. This test slice MUST NOT grant a medical source, infer motive or
+create autonomous social sharing.
