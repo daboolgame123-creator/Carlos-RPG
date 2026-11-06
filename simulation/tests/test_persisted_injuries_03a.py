@@ -30,7 +30,7 @@ def test_npc_injury_is_persisted_and_replayed(tmp_path):
         assert db.snapshot("v").to_dict() == after.to_dict()
     with SQLiteEventStore(path) as reopened:
         assert reopened.load("v").injuries["inj-1"]["severity"] == 30
-        assert reopened.verify("v", use_snapshot=False).injuries["inj-1"]["severity"] == 30
+        assert reopened.load("v", use_snapshot=False).injuries["inj-1"]["severity"] == 30
 
 
 @pytest.mark.parametrize("bad", [
