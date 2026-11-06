@@ -162,3 +162,17 @@ It explicitly reports `nominee_consent_recorded=False`, `institution_registered=
 Source commit `5d42031d8c60cbf6b4a1ad67ad70eff80477b7e4`; tests commit `2eab41472acc4d8c284872b879be119931d7021c` covers detached no-side-effects, invalid nomination/site/model/time, traveling nominee and replay consistency. **New code still requires exact-commit CI success** before test claims can be made. This is a technical prerequisite, **not** a binding title engine or a J1c2b closure.
 
 Open design prerequisites: record nominee's explicit consent, establish an actual institution jurisdiction and powers by approved world rules, develop trusted registration event provenance and authorize future civil procedures. No explicit world-political authority has yet been selected. Production P0 and external independent review statuses remain tracked separately in `EXTERNAL_VALIDATION_LEDGER.md`.
+
+
+## First persisted local institution founding record — implementation under verification (2026-11-06)
+
+Following 962/962 verified full regressions each on Python 3.10/3.13 for the off-ledger nominee design ([CI 42227263627](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42227263627)), we added a **narrow persisted founding record**.
+
+- **DomainEvent:** `LocalInstitutionRegistered` accepted **only** with trusted `bootstrap=True`, simulation time zero and `actor_id=None`, with an existing site and available real co-located NPC representative. The registration is bounded (100) and refuses duplicate institution IDs, duplicate sites and repeated representatives. Event becomes independently replayable in SQLite like other trusted setup records; invalid events roll back atomically.
+- **Stored collection:** `local_institutions` with `site_id`, `representative_id`, `model`, `registered_at=0`, and exact `mandate="existence_record_only"`. Full state validation rejects forged snapshot fields and fake representatives. The representative is a recorded **founding-site contact, not a judge**, and historical consent is **not** inferred from mere presence.
+- **Schema 29 / Rules 37**, both deliberately bumped. Existing Schema28/Rules36 worlds must be rejected without mutation; no implicit migration. This is a breaking snapshot format change for disposable-world tests only.
+- **No legal authority:** The event is not a law, title, court, complaint adjudication, right to confiscate, or assumption of political legitimacy. `institution_record` is trusted audit-only and explicitly `can_decide_title=False`, `can_seize_property=False`, `authorized_court_id=None`.
+- **Implementation commits:** `ecd79f05c8c4a6f73d24dbcc6ce70a886f51671d` (new module), `9a20e76b48fd6b893d995c1f79a46fa2859d4a8a` (versioned Domain integration), `eccf90eef066ebc5d7ea303f9b5771eb41a38690` (tests).
+- **Tests added** for successful physical founding, forged actor and fake/remote representative, absent trusted capability, duplicate site, mixed valid+invalid atomic rollback, forged snapshot, independent reopen and full replay, old schema rejection.
+
+**IMPORTANT VALIDATION GATE:** These changes are **not yet technically accepted** until full and adversarial CI completes on the exact code SHA. A separate end-to-end old-world file byte-for-byte rejection is desirable in addition to the current old-format snapshot unit check; if not run, keep it as an unverified test requirement. An actual law, title registry and binding title-transfer rules are still unimplemented. J1c2b remains OPEN; independent review deferred and production P0 not approved.
