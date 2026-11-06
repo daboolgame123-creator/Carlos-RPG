@@ -37,7 +37,7 @@ def test_same_visible_rest_cannot_disclose_injury(tmp_path, injury, fatigue):
             "world", "nora", "rest-by-nora", expected_revision=db.load("world").revision)
         assert observed_resting_activity(started.state, "basim", "nora") is None
         observed = movement.observe(
-            "world", "basim", command_id="look:rest",
+            "world", "basim", command_id="look-rest",
             expected_revision=started.state.revision, activity_enabled=True)
         evidence = observed_resting_activity(observed, "basim", "nora")
         assert evidence == {
