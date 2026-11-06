@@ -49,3 +49,12 @@
 - **Remaining closure blockers:** separately executed and documented non-production offline recovery drill with independent verification and owner P0 approval; independent adversarial review with explicit sign-off. Trusted internal actor identity remains a mandatory boundary for any future untrusted interface.
 
 **Decision: J1c2a remains OPEN, no J1c2b implementation.**
+
+
+## User-approved external-review deferral and executed restore drill (2026-11-06)
+
+- The project owner explicitly **deferred genuine independent review** for now. Record as **DEFERRED BY OWNER, NOT APPROVED**. Do not misrepresent an assistant-produced report as external independent approval.
+- A separate one-shot **non-pytest disposable-world operational drill** ran on exact code SHA `f4c1adc552bf9c8a0dae985e5af67477d22baf61`: [GitHub Actions 42201414528](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42201414528). Both Python 3.10 and 3.13 jobs completed SUCCESS.
+- The actual generated world contained seven actors and 37 events plus one snapshot; backup/recovery digests matched on both versions; SQLite integrity, state/event replay equivalence, subsequent lawful claim transfer, source isolation, no overwrite and corruption rejection all passed. Detailed executed transcript evidence in [phase_04a_j1c2a_executed_recovery_drill.md](phase_04a_j1c2a_executed_recovery_drill.md).
+- This **satisfies the disposable-world operational drill requirement**. It is not an approved production-server disaster-recovery procedure or an independent review.
+- The earlier policy text describes review and production P0 as hard closure gates. The owner's review deferral is an explicit change of priority, not an approval of those gates. Without a separately documented change to closure/transition acceptance and any still-needed operational P0 owner approval, do not silently mark J1c2a fully CLOSED.
