@@ -35,7 +35,7 @@ def test_seven_npc_scene_scoped_to_observer_and_factual_actions(tmp_path):
         assert observed_local_activities(started.state, "basim") == ()
         seen = movement.observe(
             "v", "basim", command_id="basim-looks",
-            expected_revision=started.state.revision,
+            expected_revision=started.state.revision, activity_enabled=True,
         )
         expected = ({
             "subject_id": "nora", "sign": "visible_resting",
@@ -50,10 +50,11 @@ def test_seven_npc_scene_scoped_to_observer_and_factual_actions(tmp_path):
         assert observed_local_activities(seen, "not-real") == ()
         assert all("severity" not in repr(row) and "injury" not in repr(row)
                    for row in observed_local_activities(seen, "basim"))
-        assert all(not npc["beliefs"] for npc in seen.npcs.values())
+        assert seen.npcs["huda"]["beliefs"] == {}
+        assert "visible-rest:nora:0" in seen.npcs["basim"]["beliefs"]
         salma_seen = movement.observe(
             "v", "salma", command_id="salma-looks",
-            expected_revision=seen.revision,
+            expected_revision=seen.revision, activity_enabled=True,
         )
         assert observed_local_activities(salma_seen, "salma") == expected
         assert observed_local_activities(salma_seen, "basim") == expected
@@ -72,7 +73,7 @@ def test_historical_scene_does_not_become_current_diagnosis(tmp_path):
             expected_revision=db.load("v").revision)
         observed = movement.observe(
             "v", "basim", command_id="observation",
-            expected_revision=db.load("v").revision)
+            expected_revision=db.load("v").revision, activity_enabled=True)
         assert len(observed_local_activities(observed, "basim")) == 1
         db.snapshot("v")
         expected = observed.to_dict()
