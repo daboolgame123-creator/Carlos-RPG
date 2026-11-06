@@ -55,3 +55,47 @@ def historical_title_evidence(state: WorldState, origin_id: str) -> dict[str, An
         "legal_rule_applied": None,
         "physical_custody_derived": False,
     }
+
+
+def origin_evidence_packet(state: WorldState, origin_id: str) -> dict[str, Any]:
+    """Trusted-auditor packet: historical ledger and physical custody side by side.
+
+    The two traces must never be reconciled into a legal owner, and unresolved
+    physical units must not be arbitrarily allocated to a recorded claimant.
+    This can expose confidential actor locations/accounts: NEVER give the
+    result directly to a player, NPC, LLM, or an untrusted network request.
+    """
+    history = historical_title_evidence(state, origin_id)
+    lot = state.property_custody_lots.get(origin_id)
+    if lot is None:
+        raise ValueError("registered physical custody lot missing")
+    movements = [
+        {"id": key, "from_holder": row["source_holder"],
+         "to_holder": row["target_holder"], "quantity": row["quantity"],
+         "kind": row["kind"], "event_kind": row["event_kind"],
+         "event_revision": row["event_revision"], "at": row["at"]}
+        for key, row in state.property_custody_moves.items()
+        if row["origin_id"] == origin_id
+    ]
+    movements.sort(key=lambda item: (item["event_revision"], item["id"]))
+    physical = {
+        "known_holders": dict(sorted(lot["known_holders"].items())),
+        "unresolved_quantity": lot["unresolved_quantity"],
+        "exited_quantity": lot["exited_quantity"],
+        "physical_movements": movements,
+        "provenance_certainty": (
+            "partial_or_unknown" if lot["unresolved_quantity"] else "tracked_or_exited"
+        ),
+    }
+    if (sum(physical["known_holders"].values())
+            + physical["unresolved_quantity"]
+            + physical["exited_quantity"] != history["registered_quantity"]):
+        raise ValueError("custody evidence does not conserve registered origin")
+    return {
+        "historical_claim_evidence": history,
+        "physical_custody_evidence": physical,
+        "legal_title_status": "undetermined",
+        "legally_enforceable_owner": None,
+        "legal_rule_applied": None,
+        "audience": "trusted_internal_audit_only",
+    }
