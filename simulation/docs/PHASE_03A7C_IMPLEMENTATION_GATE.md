@@ -1,0 +1,57 @@
+# 03-A7c — Implementation gate and observation integrity (2026-11-07)
+
+Branch: `simulation-engine-phase-03a7c-observation-contract`
+Parent branch: `simulation-engine-phase-03a-treatment-integrity`
+Parent phase: **03-A OPEN**.
+
+## Analysis before implementation
+
+Owner instruction "تابع" after the limited-observation recommendation is treated
+as approval of **the principle**: only explicit, local, qualitative visible
+signs, with historical provenance; no diagnosis, numeric severity or automatic
+sharing. It does not authorize inventing a visual symptom from a severity
+integer alone.
+
+Existing `injuries` tracks injury ID, subject, severity, status, onset and
+last_changed. These fields **do not describe a visibly observable symptom**.
+A severe internal injury is not necessarily a visible limp. Mapping
+`severity >= 20` to `visible_mobility_difficulty` would falsely claim
+evidence the engine does not possess.
+
+## Safe execution split
+
+- **03-A7c-guard**: `CHAT_EXECUTABLE / READY_FOR_VERIFICATION`.
+  Add negative integration checks that peer NPCs do not automatically learn
+  another NPC's injury from a bootstrap ledger entry, and that reopening
+  SQLite preserves the isolation. This is a security baseline, **not** feature
+  implementation. Run exact-SHA full CI on Python 3.10 and 3.13.
+- **03-A7c-source**: `BLOCKED_BY_DEPENDENCY / BLOCKED` until the engine
+  has a trusted, deterministically verifiable source of an *actual visible
+  symptom*, e.g. a recorded limp/mobility impairment due to a validated
+  physical action result. Need separately bounded symptom taxonomy and
+  projection from that event. Never generate a symptom solely from numeric
+  injury severity or caller-supplied prose.
+- **03-A7c-observe**: `BLOCKED_BY_DEPENDENCY / BLOCKED` on source.
+  Trusted, explicit local observation must check observer and subject
+  distinct configured NPCs, both actually present and available, local
+  site and logical time, source revision/provenance; emit a receiver-scoped
+  event/claim only. No automatic disclosure per tick, message propagation,
+  HP changes, resource deduction or treatment.
+- **03-A7c-replay**: `BLOCKED_BY_DEPENDENCY / BLOCKED` on observe.
+  Negative tests for forged sign/source/location/time/actor, duplicate IDs,
+  travel/busy state, invisible injuries, stale revision and partial
+  transactions; positive tests with Nora, Basim, Salma, Adel and Huda,
+  replay/snapshots/reopening, full parity and dual-Python CI.
+
+## Compatibility and interfaces
+
+Keep 03-A8a and existing event format unchanged until a verified symptom
+source exists. A new persisted event or changed projection requires explicit
+Schema/Rules version analysis; historic digests must not be rewritten.
+NPC memory should contain only target ID, qualitative sign code, where/when
+observed and trustworthy origin, with historical semantics. The injury ID,
+severity, diagnosis, onset and treatment details stay private. The player
+gateway must not receive that private record.
+
+No 03-A7c closure, production readiness or independent audit is claimed
+by the guard tests. Do not merge to `main` or the 04-A institution branch.
