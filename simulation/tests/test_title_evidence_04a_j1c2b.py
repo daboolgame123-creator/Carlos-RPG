@@ -120,3 +120,49 @@ def test_origin_packet_is_read_only_and_replay_equivalent(scene):
     assert origin_evidence_packet(db.verify("v"), "origin-bread") == expected
     assert db.verify("v").to_dict() == before
     assert origin_evidence_packet(db.load("v", use_snapshot=False), "origin-bread") == expected
+
+
+def test_expired_historical_offer_is_not_presented_as_active(scene):
+    db, clock = scene
+    register(db, [origin()])
+    service = NPCRegisteredClaimService(db, clock)
+    service.offer("v", "adel", "short", "origin-bread", "bakery",
+                  "salma", 1, expires_at=5, expected_revision=_rev(db))
+    assert len(historical_title_evidence(db.load("v"), "origin-bread")[
+        "open_historical_assignment_offers"]) == 1
+    clock.advance("v", seconds=5, command_id="expire-evidence",
+                  expected_revision=_rev(db))
+    evidence = historical_title_evidence(db.verify("v"), "origin-bread")
+    assert evidence["open_historical_assignment_offers"] == []
+    assert evidence["current_recorded_claim_balances"] == {"bakery": 2}
+    assert evidence["legal_title_status"] == "undetermined"
+
+
+def test_evidence_results_are_detached_from_world_state(scene):
+    db, clock = scene
+    register(db, [origin()])
+    service = NPCRegisteredClaimService(db, clock)
+    service.offer("v", "adel", "offer-1", "origin-bread", "bakery",
+                  "salma", 1, expires_at=100, expected_revision=_rev(db))
+    before = db.verify("v").to_dict()
+    evidence = historical_title_evidence(db.load("v"), "origin-bread")
+    evidence["current_recorded_claim_balances"]["bakery"] = 999
+    evidence["open_historical_assignment_offers"][0]["quantity"] = 999
+    assert db.verify("v").to_dict() == before
+    fresh = historical_title_evidence(db.load("v"), "origin-bread")
+    assert fresh["current_recorded_claim_balances"]["bakery"] == 2
+    assert fresh["open_historical_assignment_offers"][0]["quantity"] == 1
+
+
+def test_two_separate_origins_do_not_mix_evidence(scene):
+    db, clock = scene
+    register(db, [origin("origin-bread-a", quantity=1),
+                  origin("origin-bread-b", quantity=1)])
+    first = historical_title_evidence(db.verify("v"), "origin-bread-a")
+    second = historical_title_evidence(db.verify("v"), "origin-bread-b")
+    assert first["registered_quantity"] == second["registered_quantity"] == 1
+    assert first["origin_id"] != second["origin_id"]
+    assert first["accepted_historical_assignments"] == []
+    assert second["accepted_historical_assignments"] == []
+    assert first["legally_enforceable_owner"] is None
+    assert second["legally_enforceable_owner"] is None
