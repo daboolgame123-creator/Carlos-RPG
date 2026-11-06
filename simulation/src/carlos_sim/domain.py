@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 29
-RULES_VERSION = 37
+SCHEMA_VERSION = 30
+RULES_VERSION = 38
 
 
 def _thaw(value: Any) -> Any:
@@ -85,6 +85,7 @@ class WorldState:
     foraging_attempts: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     survival_progress: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
     rpg_profiles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    injuries: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     environment_cycles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_recipes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_jobs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
@@ -129,6 +130,7 @@ class WorldState:
         object.__setattr__(self, "foraging_attempts", _freeze(_json_copy(self.foraging_attempts)))
         object.__setattr__(self, "survival_progress", _freeze(_json_copy(self.survival_progress)))
         object.__setattr__(self, "rpg_profiles", _freeze(_json_copy(self.rpg_profiles)))
+        object.__setattr__(self, "injuries", _freeze(_json_copy(self.injuries)))
         object.__setattr__(self, "environment_cycles", _freeze(_json_copy(self.environment_cycles)))
         object.__setattr__(self, "production_recipes", _freeze(_json_copy(self.production_recipes)))
         object.__setattr__(self, "production_jobs", _freeze(_json_copy(self.production_jobs)))
@@ -172,7 +174,7 @@ class WorldState:
                            "consumptions": self.consumptions, "gatherings": self.gatherings,
                            "foraging_attempts": self.foraging_attempts,
                            "survival_progress": self.survival_progress,
-                           "rpg_profiles": self.rpg_profiles,
+                           "rpg_profiles": self.rpg_profiles, "injuries": self.injuries,
                            "environment_cycles": self.environment_cycles,
                            "production_recipes": self.production_recipes,
                            "production_jobs": self.production_jobs,
@@ -213,7 +215,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -221,7 +223,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -299,6 +301,8 @@ class WorldState:
         validate_routines(d)
         from .rpg_state import validate_rpg_profiles
         validate_rpg_profiles(d)
+        from .injury_events import validate_injury_state
+        validate_injury_state(d)
         # Public snapshots need full portable JSON normalization. Internal
         # projections have already been sourced from a detached, verified
         # WorldState and a portable DomainEvent. Both paths run the SAME
@@ -463,6 +467,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "EnvironmentalCycleConfigured":
         from .environment import configure_environment_cycle
         configure_environment_cycle(d, e, bootstrap=bootstrap)
+    elif kind == "InjuryRecorded":
+        from .injury_events import project_bootstrap_injury
+        project_bootstrap_injury(d, e, bootstrap=bootstrap)
     elif kind in ("PlayerRPGInitialized", "PlayerVitalChanged"):
         from .rpg_state import project_rpg_event
         project_rpg_event(d, e, bootstrap=bootstrap, rpg_authorized=rpg_authorized)
