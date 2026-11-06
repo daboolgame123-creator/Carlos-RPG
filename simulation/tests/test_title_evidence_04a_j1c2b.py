@@ -166,3 +166,66 @@ def test_two_separate_origins_do_not_mix_evidence(scene):
     assert second["accepted_historical_assignments"] == []
     assert first["legally_enforceable_owner"] is None
     assert second["legally_enforceable_owner"] is None
+
+
+def test_expired_offer_still_visible_in_historical_audit(scene):
+    db, clock = scene
+    register(db, [origin()])
+    service = NPCRegisteredClaimService(db, clock)
+    service.offer("v", "adel", "expiring", "origin-bread", "bakery",
+                  "salma", 1, expires_at=5, expected_revision=_rev(db))
+    clock.advance("v", seconds=5, command_id="advance-expiring",
+                  expected_revision=_rev(db))
+    evidence = historical_title_evidence(db.verify("v"), "origin-bread")
+    assert evidence["open_historical_assignment_offers"] == []
+    history = evidence["historical_assignment_offer_history"]
+    assert len(history) == 1
+    assert history[0]["recorded_status"] == "open"
+    assert history[0]["effective_status"] == "expired"
+    assert history[0]["resolved_at"] is None
+    assert evidence["legally_enforceable_owner"] is None
+
+
+def test_cancelled_offer_retains_reasonably_precise_history(scene):
+    db, clock = scene
+    register(db, [origin()])
+    service = NPCRegisteredClaimService(db, clock)
+    service.offer("v", "adel", "withdrawn", "origin-bread", "bakery",
+                  "salma", 1, expires_at=100, expected_revision=_rev(db))
+    service.cancel("v", "adel", "withdrawn", expected_revision=_rev(db))
+    evidence = historical_title_evidence(db.verify("v"), "origin-bread")
+    assert evidence["open_historical_assignment_offers"] == []
+    assert evidence["accepted_historical_assignments"] == []
+    assert evidence["historical_assignment_offer_history"][0]["recorded_status"] == "cancelled"
+    assert evidence["historical_assignment_offer_history"][0]["effective_status"] == "cancelled"
+    assert evidence["historical_assignment_offer_history"][0]["resolved_at"] == 0
+    assert evidence["current_recorded_claim_balances"] == {"bakery": 2}
+
+
+def test_accepted_offer_history_is_not_lost_or_reclassified_as_expired(scene):
+    db, clock = scene
+    register(db, [origin()])
+    service = NPCRegisteredClaimService(db, clock)
+    service.offer("v", "adel", "accepted-1", "origin-bread", "bakery",
+                  "salma", 1, expires_at=5, expected_revision=_rev(db))
+    service.accept("v", "salma", "accepted-1", expected_revision=_rev(db))
+    clock.advance("v", seconds=5, command_id="advance-after-accept",
+                  expected_revision=_rev(db))
+    evidence = historical_title_evidence(db.verify("v"), "origin-bread")
+    assert evidence["historical_assignment_offer_history"][0]["effective_status"] == "accepted"
+    assert evidence["accepted_historical_assignments"][0]["offer_id"] == "accepted-1"
+    assert evidence["legally_enforceable_owner"] is None
+
+
+def test_offer_history_is_detached_and_matches_full_replay(scene):
+    db, clock = scene
+    register(db, [origin()])
+    NPCRegisteredClaimService(db, clock).offer(
+        "v", "adel", "pending", "origin-bread", "bakery",
+        "salma", 1, expires_at=100, expected_revision=_rev(db))
+    db.snapshot("v")
+    expected = historical_title_evidence(db.verify("v"), "origin-bread")
+    assert historical_title_evidence(db.load("v", use_snapshot=False), "origin-bread") == expected
+    expected["historical_assignment_offer_history"][0]["quantity"] = 99
+    assert historical_title_evidence(db.load("v"), "origin-bread")[
+        "historical_assignment_offer_history"][0]["quantity"] == 1
