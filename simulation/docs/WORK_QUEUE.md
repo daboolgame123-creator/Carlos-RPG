@@ -77,3 +77,14 @@ producer. See [implementation gate](PHASE_03A7C_IMPLEMENTATION_GATE.md).
 
 The earlier `DECISION_REQUIRED` entry is a dated historical gate, not a claim
 that 03-A7c was implemented or closed. Parent 03-A stays OPEN.
+
+
+## 03-A7c factual activity evidence — 2026-11-07
+
+| ID | Title | Dependencies | Classification | Status | Evidence / next |
+|---|---|---|---|---|---|
+| 03-A7c-rest-evidence | Project only the visibly running rest action under a recorded local sighting, without injury inference or automatic memory | 03-A7c-guard, existing action schedule / NPCObserved | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Code `62cdd7b0`, multi-NPC/healthy-vs-injured/reopen tests `67af6c2a`; verify full Python 3.10/3.13 CI on latest SHA |
+| 03-A7c-medical-sign-source | Record validated *physical injury symptom* from causal injury/action evidence | Real physical sign source, not numeric severity or resting alone | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Visible rest is not a medical observation; no fabricated limp or collapse |
+| 03-A7c-observer-memory | Persist historical qualitative health observation scoped to observer | 03-A7c-medical-sign-source and trusted event contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | No auto-sharing, diagnosis, severity leak, or player-view expansion |
+
+This is a bounded independent 03-A7c slice, not parent completion.
