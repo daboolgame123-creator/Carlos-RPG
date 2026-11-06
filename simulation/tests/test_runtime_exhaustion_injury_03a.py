@@ -112,3 +112,20 @@ def test_tampering_command_capability_breaks_full_replay(tmp_path):
             db.load("v", use_snapshot=False)
     finally:
         db.close()
+
+
+def test_runtime_injury_requires_active_session(tmp_path):
+    db, svc = setup(tmp_path)
+    try:
+        svc.clock.close_session("v")
+        before = db.load("v").to_dict()
+        with pytest.raises(PermissionError):
+            svc.record("v", subject_id="nora", injury_id="no-session",
+                       command_id="closed", expected_revision=before["revision"])
+        with pytest.raises(InvalidEvent):
+            db.append("v", "bypass", before["revision"], [incident(db)],
+                      injury_authorized=True)
+        assert db.verify("v").to_dict() == before
+    finally:
+        db.close()
+
