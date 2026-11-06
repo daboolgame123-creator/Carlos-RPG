@@ -195,3 +195,74 @@ def test_seven_npc_village_each_witness_keeps_own_memory(tmp_path):
         assert len(recall_rest_activity(db.load("v"), "basim")) == 1
         assert len(recall_rest_activity(db.load("v"), "salma")) == 1
         assert recall_rest_activity(db.load("v"), "omar") == ()
+
+
+def test_second_explicit_look_same_tick_does_not_duplicate_memory(tmp_path):
+    with SQLiteEventStore(tmp_path / "duplicate-look.sqlite") as db:
+        _clock, movement, before = start_world(db, injury=True)
+        first = movement.observe(
+            "world", "basim", command_id="firstlook",
+            expected_revision=before.revision, activity_enabled=True)
+        memories = recall_rest_activity(first, "basim")
+        assert len(memories) == 1
+        second = movement.observe(
+            "world", "basim", command_id="secondlook",
+            expected_revision=first.revision, activity_enabled=True)
+        assert recall_rest_activity(second, "basim") == memories
+        assert len([key for key in second.npcs["basim"]["beliefs"]
+                    if key.startswith("visible-rest:")]) == 1
+        assert db.verify("world").to_dict() == second.to_dict()
+
+
+def test_memory_at_different_ticks_is_historical_not_current_diagnosis(tmp_path):
+    with SQLiteEventStore(tmp_path / "history.sqlite") as db:
+        clock, movement, before = start_world(db, injury=False)
+        first = movement.observe(
+            "world", "basim", command_id="initiallook",
+            expected_revision=before.revision, activity_enabled=True)
+        advanced = clock.advance(
+            "world", seconds=1, command_id="after1second",
+            expected_revision=first.revision).state
+        second = movement.observe(
+            "world", "basim", command_id="laterlook",
+            expected_revision=advanced.revision, activity_enabled=True)
+        events = recall_rest_activity(second, "basim")
+        assert [e["observed_at"] for e in events] == [0, 1]
+        assert all(e["interpretation"] == "cause_unknown" for e in events)
+        assert all(e["sign"] == "visible_resting" for e in events)
+        assert db.verify("world").to_dict() == second.to_dict()
+
+
+def test_no_direct_belief_mutation_without_evidenced_delivery(tmp_path):
+    with SQLiteEventStore(tmp_path / "ack-injection.sqlite") as db:
+        _clock, movement, before = start_world(db, injury=True)
+        sight = movement.observe(
+            "world", "basim", command_id="normal-look",
+            expected_revision=before.revision)
+        forged_ack = DomainEvent(
+            "NPCBeliefReceived", "basim", "fabricated acknowledgement", 0, {
+                "npc_id": "basim", "key": "visible-rest:nora:0",
+                "delivery_id": "missing-delivery",
+            })
+        with pytest.raises(InvalidEvent):
+            db.append("world", "invent-memory", sight.revision,
+                      [forged_ack], npc_authorized=True)
+        assert recall_rest_activity(db.load("world"), "basim") == ()
+        assert db.verify("world").to_dict() == sight.to_dict()
+
+
+def test_activity_memory_does_not_propagate_through_food_sharing(tmp_path):
+    from carlos_sim.knowledge import choose_food_sharing_round
+    with SQLiteEventStore(tmp_path / "no-sharing.sqlite") as db:
+        _clock, movement, before = start_world(db, injury=True)
+        witnessed = movement.observe(
+            "world", "basim", command_id="witness",
+            expected_revision=before.revision, activity_enabled=True)
+        assert len(recall_rest_activity(witnessed, "basim")) == 1
+        proposed = choose_food_sharing_round(witnessed.to_dict())
+        assert not any(
+            e.data.get("key", "").startswith("visible-rest:")
+            for e in proposed
+        )
+        assert recall_rest_activity(witnessed, "nora") == ()
+        assert db.verify("world").to_dict() == witnessed.to_dict()
