@@ -453,7 +453,7 @@ jobs:
           new = json.load(open('/tmp/01u-default-off.json'))
           # Event and semantic-state equality across the deliberate Rules 18 -> current
           # boundary (full state hashes correctly differ because version is persisted).
-          assert old['rules_version'] == 18 and new['rules_version'] == 38
+          assert old['rules_version'] == 18 and new['rules_version'] == 39
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert old[key] == new[key], (key, old[key], new[key])
@@ -468,7 +468,7 @@ jobs:
           import json
           baseline = json.load(open('/tmp/01u-frozen.json'))
           candidate = json.load(open('/tmp/01v-default-scarcity-off.json'))
-          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 38
+          assert baseline['rules_version'] == 18 and candidate['rules_version'] == 39
           for key in ('npcs', 'time', 'revision', 'events_count',
                       'events_digest', 'state_semantic_digest', 'replay_equal'):
               assert baseline[key] == candidate[key], (key, baseline[key], candidate[key])
