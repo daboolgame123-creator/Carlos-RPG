@@ -24,9 +24,17 @@ def evaluate_injury_source(state: WorldState, *, subject_id: str,
         raise ValueError("injury subject must exist")
     if type(source_event) is not DomainEvent:
         raise ValueError("source must be a domain event")
-    if source_event.time > state.time:
+    # DomainEvent construction only freezes the data. Validate its complete
+    # strict serialized contract before trusting time, version or cause.
+    try:
+        checked = DomainEvent.from_dict(source_event.to_dict())
+    except (ValueError, TypeError) as exc:
+        raise ValueError("malformed injury source candidate") from exc
+    event = checked.to_dict()
+    if not event["event_type"]:
+        raise ValueError("empty event type is not a source")
+    if event["time"] > state.time:
         raise ValueError("future event cannot cause a present injury")
-    event = source_event.to_dict()
     if event["event_type"] in (
         "PropertyTaken", "MarketTradeExecuted", "PlayerVitalChanged",
         "NPCObserved", "PlayerObserved", "PropertyClaimFiled",
