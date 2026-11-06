@@ -121,3 +121,24 @@ the complete 03-A7c feature. Parent 03-A remains OPEN.
 | 03-A7c-health-memory | `BLOCKED` | Requires clinical-sign source, separate medical observation policy, adversarial provenance validation |
 
 No automatic observer knowledge, hearsay, treatment or merging. Parent 03-A OPEN.
+
+
+## 03-A7c evidence check and pending idempotency follow-up — 2026-11-07
+
+- `03-A7c-activity-memory-base`: `CLOSED_TECHNICALLY`, **not**
+  `APPROVED` — GitHub Actions run `42305932829` on `91e6004e`;
+  Python 3.10 and Python 3.13 both SUCCESS. Covers opt-in local
+  visible-rest memory, healthy/injured indistinguishability, seven NPCs,
+  SQLite replay and tamper rejection. External adversarial review deferred.
+- `03-A7c-activity-memory-integrity`: `VERIFICATION_PENDING` — newer
+  tests for duplicate same-tick observations, two separate remembered times,
+  no invented acknowledgement, no automatic food-knowledge re-sharing,
+  pending delivery deduplication and its later acknowledgement; latest
+  test commit `90804577`, documentation follow-up on same branch.
+- `03-A7c-medical-symptom-source`: `BLOCKED_BY_DEPENDENCY` — no
+  trusted event-sourced physical symptom; no limp inferred from rest or
+  severity.
+- `03-A7c-medical-observer-memory`: `BLOCKED_BY_DEPENDENCY` on
+  medical-symptom-source, distinct from proven behavioral resting memory.
+
+No cross-branch merge and no closure of parent 03-A7c / 03-A.
