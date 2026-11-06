@@ -314,3 +314,25 @@ def test_unvalidated_snapshot_and_unknown_observers_cannot_recall_care(tmp_path)
         assert recall_supportive_care(initial, "basim") == ()
     finally:
         db.close()
+
+
+def test_salma_independently_witnesses_care_while_huda_stays_uninformed(tmp_path):
+    from carlos_sim.injury_observation import recall_supportive_care
+    db, clock, service = scene(tmp_path)
+    try:
+        began = begin(db, service)
+        movement = NPCMovementService(db, clock)
+        basim = movement.observe(
+            "v", "basim", command_id="basim-care",
+            expected_revision=began.revision, care_enabled=True)
+        assert len(recall_supportive_care(basim, "basim")) == 1
+        assert recall_supportive_care(basim, "salma") == ()
+        salma = movement.observe(
+            "v", "salma", command_id="salma-care",
+            expected_revision=basim.revision, care_enabled=True)
+        assert recall_supportive_care(salma, "salma") == recall_supportive_care(salma, "basim")
+        for who in ("huda", "omar", "nora", "adel"):
+            assert recall_supportive_care(salma, who) == ()
+        assert db.verify("v").to_dict() == salma.to_dict()
+    finally:
+        db.close()
