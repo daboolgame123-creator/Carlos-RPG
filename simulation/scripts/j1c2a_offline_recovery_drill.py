@@ -17,7 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests"))
 from test_property_02h1 import village  # noqa: E402
 from test_rights_04a_j1a import origin, register  # noqa: E402
-from carlos_sim import SQLiteEventStore, TimeEngine, NPCRegisteredClaimService  # noqa: E402
+from carlos_sim import SQLiteEventStore, TimeEngine, NPCRegisteredClaimService, DomainEvent  # noqa: E402
+from carlos_sim.local_institutions import institution_record  # noqa: E402
 from carlos_sim.backup import (  # noqa: E402
     BackupError, create_backup_bundle, verify_backup_bundle, restore_backup_bundle,
 )
@@ -47,6 +48,11 @@ def main() -> None:
         bundle = root / "backup"
         with SQLiteEventStore(source) as db:
             village(db)
+            db.append("v", "founding-institution", revision(db), [DomainEvent(
+                "LocalInstitutionRegistered", None, "trusted founding record", 0, {
+                    "id": "council-bakery", "site_id": "bakery",
+                    "representative_id": "adel", "model": "local_council",
+                })], bootstrap=True)
             clock = TimeEngine(db)
             clock.open_session("v")
             register(db, [origin()])
@@ -56,6 +62,7 @@ def main() -> None:
             offer(claims, db, "pending", "nora")
             db.snapshot("v")
             before = db.verify("v").to_dict()
+            assert institution_record(db.load("v"), "council-bakery")["can_decide_title"] is False
             assert before["registered_claim_balances"]["origin-bread"] == {"bakery": 1, "salma": 1}
             assert before["registered_claim_offers"]["pending"]["status"] == "open"
             db.db.execute("PRAGMA journal_mode=WAL")
@@ -70,6 +77,7 @@ def main() -> None:
         with SQLiteEventStore(restored) as db:
             assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
             assert db.verify("v").to_dict() == before
+            assert institution_record(db.load("v"), "council-bakery")["mandate"] == "existence_record_only"
             assert db.db.execute("SELECT count(*) FROM events WHERE world_id='v'").fetchone()[0] == manifest["worlds"][0]["events"]
             assert db.db.execute("SELECT count(*) FROM snapshots WHERE world_id='v'").fetchone()[0] == manifest["worlds"][0]["snapshots"]
             clock = TimeEngine(db)
