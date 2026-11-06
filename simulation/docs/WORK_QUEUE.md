@@ -292,3 +292,21 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
 - Strictly do not equate recorded rest with a physical injury symptom.
   The trusted visible limp/wound/collapse source remains
   `BLOCKED_BY_DEPENDENCY`; parent `03-A7c` and `03-A` remain OPEN.
+
+
+## 03-A7c same-tick rest integrity — verified closure 2026-11-07
+
+- `03-A7c-rest-scene-ordering`: `CLOSED_TECHNICALLY` at exact
+  commit `ba5e885a78056da842f0a8cbe2ada152e3729e8d`.
+  GitHub Actions run `42314040340`: both Python 3.10 and 3.13
+  `SUCCESS`. Full suite covers direct and independent observation,
+  pending delivery, no retroactive same-second rest memory, no causal
+  diagnosis, replay, reopening, and backward-compatibility CI gates.
+- Older intermediary commits had regression failures from tests still using
+  passive observations, an invalid command ID, and an unsupported
+  argument to the action service. All corrected in the verified head.
+- `03-A7c` is **NOT CLOSED** as a parent: physical externally
+  observable injury symptoms are still absent. A trusted physical
+  action-result producer, rigorous event provenance and local
+  qualitative witness pipeline remain prerequisites.
+- Neither `main` nor schema/rules versions are changed.
