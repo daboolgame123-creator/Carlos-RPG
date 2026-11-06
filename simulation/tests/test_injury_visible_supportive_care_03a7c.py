@@ -157,3 +157,43 @@ def test_look_before_care_same_tick_never_predicts_future_care(tmp_path):
         assert db.verify("v").to_dict() == now_seen.to_dict()
     finally:
         db.close()
+
+
+def test_earlier_look_cannot_be_reused_to_forge_same_tick_care_delivery(tmp_path):
+    from carlos_sim import DomainEvent
+    from carlos_sim.store import InvalidEvent
+    import pytest
+    db, clock, service = scene(tmp_path)
+    try:
+        movement = NPCMovementService(db, clock)
+        seen = movement.observe("v", "basim", command_id="look-first",
+                                expected_revision=db.load("v").revision)
+        begun = begin(db, service)
+        assert begun.time == seen.time == 0
+        claim = DomainEvent(
+            "NPCInformationDelivered", "basim", "forged late interpretation", 0, {
+                "npc_id": "basim", "delivery_id": "false-earlier-care",
+                "key": "visible-care:nora:adel:0",
+                "claim": {
+                    "text": "visible-supportive-care; caregiver=adel; observed_at=0",
+                    "source": "observation:bakery",
+                    "received_at": 0, "confidence": 90,
+                },
+                "sender_id": "basim", "location_id": "bakery",
+                "method": "observation",
+            })
+        # Trust flags alone cannot make a past look witness a later action.
+        for flags in ({"npc_authorized": True},
+                      {"npc_authorized": True, "movement_authorized": True}):
+            with pytest.raises(InvalidEvent):
+                db.append("v", "forged-care" + str(len(flags)), begun.revision,
+                          [claim], **flags)
+        assert observed_supportive_care(db.load("v"), "basim", "nora") is None
+        assert db.verify("v").to_dict() == begun.to_dict()
+        observed = movement.observe("v", "basim", command_id="real-care-look",
+                                    expected_revision=begun.revision,
+                                    care_enabled=True)
+        assert observed_supportive_care(observed, "basim", "nora") is not None
+        assert db.verify("v").to_dict() == observed.to_dict()
+    finally:
+        db.close()
