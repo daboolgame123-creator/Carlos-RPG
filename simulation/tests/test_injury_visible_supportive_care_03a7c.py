@@ -197,3 +197,40 @@ def test_earlier_look_cannot_be_reused_to_forge_same_tick_care_delivery(tmp_path
         assert db.verify("v").to_dict() == observed.to_dict()
     finally:
         db.close()
+
+
+def test_same_batch_care_created_after_look_cannot_be_witnessed(tmp_path):
+    from carlos_sim import DomainEvent
+    from carlos_sim.store import InvalidEvent
+    import pytest
+    db, clock, _service = scene(tmp_path)
+    try:
+        initial = db.load("v")
+        sight = DomainEvent("NPCObserved", "basim", "looks before treatment", 0,
+                            {"npc_id": "basim"})
+        care = DomainEvent("RecoveryStarted", "adel", "later same-tick care", 0, {
+            "id": "later-care", "injury_id": "nora-fatigue",
+            "subject_id": "nora", "caregiver_id": "adel", "site_id": "bakery",
+            "schedule_id": "heal.later-care", "started_at": 0,
+            "due_at": 600, "resource": "food", "quantity": 1,
+            "improvement": 10,
+        })
+        forged = DomainEvent("NPCInformationDelivered", "basim",
+                             "claimed to see care before it started", 0, {
+            "npc_id": "basim", "delivery_id": "impossible-care",
+            "key": "visible-care:nora:adel:0",
+            "claim": {"text": "visible-supportive-care; caregiver=adel; observed_at=0",
+                      "source": "observation:bakery",
+                      "received_at": 0, "confidence": 90},
+            "sender_id": "basim", "location_id": "bakery",
+            "method": "observation",
+        })
+        with pytest.raises(InvalidEvent, match="care must start before"):
+            db.append("v", "wrong-order", initial.revision,
+                      [sight, care, forged],
+                      movement_authorized=True, npc_authorized=True,
+                      recovery_authorized=True)
+        assert db.load("v").to_dict() == initial.to_dict()
+        assert db.verify("v").to_dict() == initial.to_dict()
+    finally:
+        db.close()
