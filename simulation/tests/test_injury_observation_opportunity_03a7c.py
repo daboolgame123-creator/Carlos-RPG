@@ -134,3 +134,53 @@ def test_sighting_does_not_survive_observer_departure(tmp_path):
         ).state
         assert not witnessed_peer_here(traveling, "basim", "nora")
         assert db.verify("village").to_dict() == traveling.to_dict()
+
+
+@pytest.mark.parametrize("busy_person", ["nora", "basim"])
+def test_running_action_invalidates_current_sighting(tmp_path, busy_person):
+    """Neither a working observer nor a busy subject is an available witness."""
+    from carlos_sim import NPCService, NPCActionService
+    from test_actions import setup as setup_action_world
+    with SQLiteEventStore(tmp_path / ("busy-" + busy_person + ".sqlite")) as db:
+        setup_action_world(db)
+        clock = TimeEngine(db)
+        clock.open_session("world")
+        movement = NPCMovementService(db, clock)
+        observed = movement.observe(
+            "world", "basim", command_id="watch:before-action",
+            expected_revision=db.load("world").revision,
+        )
+        assert witnessed_peer_here(observed, "basim", "nora")
+        decision = NPCService(db, clock).decide(
+            "world", busy_person, command_id="decide:busy-" + busy_person,
+            expected_revision=observed.revision,
+        )
+        assert decision is not None
+        started = NPCActionService(db, clock).start(
+            "world", busy_person, "action-" + busy_person,
+            expected_revision=db.load("world").revision,
+        )
+        assert not witnessed_peer_here(started.state, "basim", "nora")
+        assert db.verify("world").to_dict() == started.state.to_dict()
+
+
+def test_observation_command_requires_live_revision(scene):
+    from carlos_sim.store import RevisionConflict, DuplicateCommand
+    db, _clock, movement = scene
+    old = db.load("v")
+    first = movement.observe(
+        "v", "basim", command_id="watch:revision",
+        expected_revision=old.revision,
+    )
+    with pytest.raises(RevisionConflict):
+        movement.observe(
+            "v", "nora", command_id="watch:outdated",
+            expected_revision=old.revision,
+        )
+    with pytest.raises(DuplicateCommand):
+        movement.observe(
+            "v", "basim", command_id="watch:revision",
+            expected_revision=first.revision,
+        )
+    assert db.load("v").to_dict() == first.to_dict()
+    assert db.verify("v").to_dict() == first.to_dict()
