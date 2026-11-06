@@ -77,7 +77,9 @@ def test_double_treatment_and_missing_funds_are_atomic(tmp_path):
         assert db.verify("v").to_dict() == first.to_dict()
     finally:
         db.close()
-    db, clock, svc = scene(tmp_path / "separate", stock=0)
+    separate = tmp_path / "separate"
+    separate.mkdir()
+    db, clock, svc = scene(separate, stock=0)
     try:
         before = db.load("v").to_dict()
         with pytest.raises(InvalidEvent):
