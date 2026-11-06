@@ -73,3 +73,11 @@ A first **read-only provenance inventory** was introduced without defining a jur
 Tests: `simulation/tests/test_title_evidence_04a_j1c2b.py` (original registration, consensual reassignment, physical taking and resale, missing origin, snapshot/replay consistency). They verify read-only behavior and no accidental legal-title inference. Commit introducing tests: `df86a0953fb9ddf53791b77c6a160bb708b92d38`. CI results must be verified on this exact code commit before marking these tests passed.
 
 **Remaining unresolved scope:** prospective law and political authority, lawful transfer semantics, mixed-lot provenance and contested claims. Binding legal-title state/events remain intentionally unimplemented. Schema 28 / Rules 36 unchanged. This does not close J1c2b.
+
+
+## Follow-up evidence packet (2026-11-06)
+
+- `title_evidence.origin_evidence_packet` now places **historical registered claim evidence** beside **physically certified custody**, with the streams explicitly distinct. It never computes `legally_enforceable_owner`, applies a legal law, or resolves competing property rights.
+- When the existing J1b custody reducer marks fungible units as `unresolved_quantity`, the packet reports `provenance_certainty="partial_or_unknown"`, never guesses who physically has the specific origin item. `exited_quantity` is separately counted.
+- It preserves physical movement audit provenance but exposes the packet **only to trusted internal auditors**; it is forbidden as a direct response to player/NPC/LLM/untrusted interfaces without a knowledge-filtered authorized adapter.
+- Three tests cover historical claimant versus real physical holder, mixed/uncertain physical provenance, and replay equivalence/read-only behavior, at test-code commit `15608bf0477babeefa203531f4012a8a837dd50a`. CI requires exact-commit verification. Schema/Rules remain 28/36; no legal title write commands or legislation exist.
