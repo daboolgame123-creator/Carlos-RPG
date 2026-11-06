@@ -359,3 +359,70 @@ def test_claim_context_is_read_only_and_replay_equivalent(scene):
     packet["selected_claim"]["claimant_id"] = "forged"
     assert property_claim_context_packet(db.load("v"), "claim")["selected_claim"]["claimant_id"] == "nora"
     assert db.verify("v").to_dict()["property_claims"] == before["property_claims"]
+
+
+def test_incident_packet_links_only_explicitly_cited_physical_event(scene):
+    from carlos_sim.title_evidence import physical_incident_audit_packet
+    db, clock = scene
+    service = NPCPropertyService(db, clock)
+    service.take("v", "basim", "taking", "bakery", "bakery", "bread", 1,
+                 witnessed_by=("salma", "huda"), expected_revision=_rev(db))
+    service.claim("v", "salma", "witness1", "accusation", "bakery", "bread", 1,
+                  subject_id="basim", taking_id="taking", expected_revision=_rev(db))
+    service.claim("v", "huda", "witness2", "accusation", "bakery", "bread", 1,
+                  subject_id="basim", taking_id="taking", expected_revision=_rev(db))
+    service.claim("v", "nora", "uncited", "accusation", "bakery", "bread", 1,
+                  subject_id="adel", taking_id=None, expected_revision=_rev(db))
+    packet = physical_incident_audit_packet(db.verify("v"), "taking")
+    assert [x["witness_id"] for x in packet["eyewitness_records"]] == ["huda", "salma"]
+    assert [x["claim_id"] for x in packet["claims_explicitly_citing_event"]] == [
+        "witness1", "witness2"
+    ]
+    assert all(x["same_physical_incident_established"]
+               for x in packet["claims_explicitly_citing_event"])
+    assert not packet["uncited_claims_attributed_to_event"]
+    assert packet["registered_origin_id"] is None
+    assert packet["legally_enforceable_owner"] is None
+    assert not packet["guilt_determined"]
+
+
+def test_incident_packet_without_witnesses_does_not_invent_any(scene):
+    from carlos_sim.title_evidence import physical_incident_audit_packet
+    db, clock = scene
+    NPCPropertyService(db, clock).take(
+        "v", "basim", "unseen", "bakery", "bakery", "bread", 1,
+        expected_revision=_rev(db))
+    packet = physical_incident_audit_packet(db.verify("v"), "unseen")
+    assert packet["eyewitness_records"] == []
+    assert packet["claims_explicitly_citing_event"] == []
+    assert packet["physical_actor_id"] == "basim"
+    assert packet["legal_title_status"] == "undetermined"
+
+
+def test_incident_packet_unknown_ids_fail_closed(scene):
+    from carlos_sim.title_evidence import physical_incident_audit_packet
+    db, clock = scene
+    before = db.load("v").to_dict()
+    for bad in ("", None, 42):
+        with pytest.raises(ValueError, match="nonempty"):
+            physical_incident_audit_packet(db.load("v"), bad)
+    with pytest.raises(ValueError, match="not found"):
+        physical_incident_audit_packet(db.load("v"), "made-up")
+    assert db.verify("v").to_dict() == before
+
+
+def test_incident_packet_is_detached_and_snapshot_replay_equivalent(scene):
+    from carlos_sim.title_evidence import physical_incident_audit_packet
+    db, clock = scene
+    NPCPropertyService(db, clock).take(
+        "v", "basim", "event1", "bakery", "bakery", "bread", 1,
+        witnessed_by=("salma",), expected_revision=_rev(db))
+    before = db.verify("v").to_dict()
+    packet = physical_incident_audit_packet(db.load("v"), "event1")
+    db.snapshot("v")
+    assert physical_incident_audit_packet(db.verify("v"), "event1") == packet
+    assert physical_incident_audit_packet(db.load("v", use_snapshot=False), "event1") == packet
+    packet["eyewitness_records"][0]["witness_id"] = "forged"
+    assert physical_incident_audit_packet(db.load("v"), "event1")[
+        "eyewitness_records"][0]["witness_id"] == "salma"
+    assert db.verify("v").to_dict()["property_takings"] == before["property_takings"]
