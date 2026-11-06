@@ -34,6 +34,9 @@ jobs:
       - name: Run adversarial regression probes
         working-directory: simulation
         run: python -m pytest -q tests/test_adversarial_registered_claims_04a_j1c2.py
+      - name: Run recovery and restore protection probes
+        working-directory: simulation
+        run: python -m pytest -q tests/test_j1c2a_recovery_gate.py tests/test_j1c2a_recovery_protection.py
       - name: Run full simulation regression suite
         working-directory: simulation
         run: python -m pytest -q
