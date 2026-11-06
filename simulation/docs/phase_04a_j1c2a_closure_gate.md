@@ -58,3 +58,18 @@
 - The actual generated world contained seven actors and 37 events plus one snapshot; backup/recovery digests matched on both versions; SQLite integrity, state/event replay equivalence, subsequent lawful claim transfer, source isolation, no overwrite and corruption rejection all passed. Detailed executed transcript evidence in [phase_04a_j1c2a_executed_recovery_drill.md](phase_04a_j1c2a_executed_recovery_drill.md).
 - This **satisfies the disposable-world operational drill requirement**. It is not an approved production-server disaster-recovery procedure or an independent review.
 - The earlier policy text describes review and production P0 as hard closure gates. The owner's review deferral is an explicit change of priority, not an approval of those gates. Without a separately documented change to closure/transition acceptance and any still-needed operational P0 owner approval, do not silently mark J1c2a fully CLOSED.
+
+
+## Final technical closure decision — 2026-11-06
+
+**Decision: J1c2a CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER / P0_PRODUCTION_NOT_APPROVED.**
+
+Authority: the project owner explicitly amended the stage-gate policy on 2026-11-06. Independent review is documented and deferred, **not** represented as passed; deferral alone no longer bars progress on isolated simulation development. See repository `AGENTS.md` latest policy and [EXTERNAL_VALIDATION_LEDGER.md](EXTERNAL_VALIDATION_LEDGER.md). Earlier OPEN/blocked labels above record the historical states **before this owner-approved technical closure**.
+
+Evidence:
+- Implemented in-scope historical registered claim offer/accept/cancel/replay and bounded balances; no legal title, stock transfer or judicial judgment.
+- On code `fcde52a2a40940930f23cd5ee541f79d155332bc`, both 3.10/3.13 complete CI checks SUCCESS: [full suite 42199572367](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572367) **905/905** each, and [adversarial + dedicated backup 42199572310](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572310) SUCCESS each. Atomic no-replace backup publication race covered by dedicated regression.
+- On drill code `f4c1adc552bf9c8a0dae985e5af67477d22baf61`, independent-of-pytest disposable-world restore [42201414528](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42201414528) SUCCESS 3.10 and 3.13; 7 characters / 37 events / one snapshot / SHA256 equality / integrity / replay / resume / no-overwrite / corrupt refusal. General CI on this SHA also completed SUCCESS on both Python versions. Later documentation-only commits did not alter engine behavior.
+- Outstanding **external** verification is itemized as EXT-001/002/003 in `EXTERNAL_VALIDATION_LEDGER.md`; no production use is approved. Network actor authentication is still unimplemented (EXT-004), prohibiting untrusted interfaces.
+
+Scope boundary: this is closure **only of J1c2a engineering in a disposable, trusted, offline simulation**. It does not certify legally binding title, law, court, production disaster recovery, real device behavior or public authorization. Open new J1c2b **analysis/design only first**; implementation must be governed by a separately scoped and tested contract. There is no permission to mutate `main` or original narrative files.
