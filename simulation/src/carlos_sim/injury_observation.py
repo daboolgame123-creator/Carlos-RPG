@@ -206,7 +206,11 @@ def check_activity_memory_delivery(state: dict, event) -> None:
         item["key"] == key for item in state["npcs"][observer]["inbox"].values()
     ):
         raise ValueError("duplicate recorded resting memory")
-    if sum(k.startswith(ACTIVITY_PREFIX) for k in state["npcs"][observer]["beliefs"]) >= MAX_REST_MEMORIES:
+    stored = sum(k.startswith(ACTIVITY_PREFIX)
+                 for k in state["npcs"][observer]["beliefs"])
+    pending = sum(item["key"].startswith(ACTIVITY_PREFIX)
+                  for item in state["npcs"][observer]["inbox"].values())
+    if stored + pending >= MAX_REST_MEMORIES:
         raise ValueError("visible-activity history capacity reached")
 
 
