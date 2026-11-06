@@ -295,3 +295,67 @@ def test_claim_audit_read_only_snapshot_and_full_replay(scene):
     assert property_claim_audit_packet(db.load("v", use_snapshot=False), "statement") == packet
     packet["claimant_id"] = "fraud"
     assert property_claim_audit_packet(db.verify("v"), "statement")["claimant_id"] == "nora"
+
+
+def test_claim_context_compares_statements_without_identifying_common_loaf(scene):
+    from carlos_sim.title_evidence import property_claim_context_packet
+    db, clock = scene
+    svc = NPCPropertyService(db, clock)
+    svc.claim("v", "nora", "claim-a", "ownership", "bakery", "bread", 1,
+              subject_id=None, taking_id=None, expected_revision=_rev(db))
+    svc.claim("v", "huda", "claim-b", "accusation", "bakery", "bread", 1,
+              subject_id="adel", taking_id=None, expected_revision=_rev(db))
+    packet = property_claim_context_packet(db.verify("v"), "claim-a")
+    assert packet["selected_claim"]["claimant_id"] == "nora"
+    assert [r["claim_id"] for r in packet["potentially_related_statements"]] == ["claim-b"]
+    assert packet["potentially_related_statements"][0]["comparison_basis"] == "same_site_and_resource_only"
+    assert not packet["potentially_related_statements"][0]["same_physical_incident_established"]
+    assert not packet["potentially_related_statements"][0]["same_registered_origin_established"]
+    assert not packet["conflict_determined"]
+    assert packet["legally_enforceable_owner"] is None
+
+
+def test_claim_context_does_not_invent_incident_for_separate_statements(scene):
+    from carlos_sim.title_evidence import property_claim_context_packet
+    db, clock = scene
+    svc = NPCPropertyService(db, clock)
+    svc.claim("v", "nora", "first", "loss", "bakery", "bread", 1,
+              subject_id=None, taking_id=None, expected_revision=_rev(db))
+    clock.advance("v", seconds=7, command_id="context-next",
+                  expected_revision=_rev(db))
+    svc.claim("v", "huda", "later", "ownership", "bakery", "bread", 1,
+              subject_id=None, taking_id=None, expected_revision=_rev(db))
+    packet = property_claim_context_packet(db.verify("v"), "first")
+    assert packet["potentially_related_statements"][0]["filed_at"] == 7
+    assert packet["potentially_related_statements"][0]["taking_id"] is None
+    assert packet["comparison_scope"] == "same_site_and_resource_only"
+    assert packet["legal_title_status"] == "undetermined"
+
+
+def test_claim_context_excludes_unrelated_site_and_resource(scene):
+    from carlos_sim.title_evidence import property_claim_context_packet
+    db, clock = scene
+    svc = NPCPropertyService(db, clock)
+    svc.claim("v", "nora", "first", "ownership", "bakery", "bread", 1,
+              subject_id=None, taking_id=None, expected_revision=_rev(db))
+    svc.claim("v", "huda", "other-resource", "ownership", "bakery",
+              "equipment", 1, subject_id=None, taking_id=None,
+              expected_revision=_rev(db))
+    packet = property_claim_context_packet(db.verify("v"), "first")
+    assert packet["potentially_related_statements"] == []
+
+
+def test_claim_context_is_read_only_and_replay_equivalent(scene):
+    from carlos_sim.title_evidence import property_claim_context_packet
+    db, clock = scene
+    NPCPropertyService(db, clock).claim(
+        "v", "nora", "claim", "ownership", "bakery", "bread", 1,
+        subject_id=None, taking_id=None, expected_revision=_rev(db))
+    before = db.verify("v").to_dict()
+    packet = property_claim_context_packet(db.load("v"), "claim")
+    db.snapshot("v")
+    assert property_claim_context_packet(db.verify("v"), "claim") == packet
+    assert property_claim_context_packet(db.load("v", use_snapshot=False), "claim") == packet
+    packet["selected_claim"]["claimant_id"] = "forged"
+    assert property_claim_context_packet(db.load("v"), "claim")["selected_claim"]["claimant_id"] == "nora"
+    assert db.verify("v").to_dict()["property_claims"] == before["property_claims"]
