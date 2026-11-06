@@ -77,3 +77,26 @@ activity. It does not prove a limp, collapse, diagnosis, health condition,
 cause or medical necessity. The broader 03-A7c symptom source and receiver-
 scoped knowledge events remain open pending a separately justified physical
 sign event. Never silently reinterpret `visible_resting` as an injury code.
+
+
+## 03-A7c local scene projection — 2026-11-07
+
+A pure, read-only `observed_local_activities(state, observer_id)` function
+was added to `injury_observation.py` on code commit `461d0285`.
+It returns only supported `visible_resting` entries from real ongoing
+rest actions for peers listed in that observer's *same-tick* recorded
+`NPCObserved` snapshot. It does not synthesize a new event or belief,
+peek at the injury ledger, classify health, or transmit a rumor.
+
+Seven-NPC test scenarios at `test_injury_local_activity_scene_03a7c.py`
+prove Basim and Salma must individually observe Nora; Adel, Huda and
+other non-observers learn nothing, Omar's distant location stays isolated,
+and replay/snapshot/SQLite reopening preserve the factual scene projection.
+The current scene loses its availability after advancing logical time.
+A different NPC interpretation of a visible activity is future work,
+dependent on its own evidential knowledge. Do not present a speculative
+interpretation as medical fact or already persisted belief.
+
+**Status:** ready for exact final-SHA Python 3.10 / 3.13 CI verification;
+the symptom-specific source and observer-scoped historical health knowledge
+remain blocked. Parent 03-A remains OPEN; P0 unchanged.
