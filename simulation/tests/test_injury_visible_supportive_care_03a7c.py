@@ -12,7 +12,7 @@ def test_adel_caring_for_nora_visible_only_to_real_witness(tmp_path):
         assert observed_supportive_care(begun, "basim", "nora") is None
         movement = NPCMovementService(db, clock)
         seen = movement.observe("v", "basim", command_id="watch-care",
-                                expected_revision=begun.revision)
+                                expected_revision=begun.revision, care_enabled=True)
         expected = {
             "subject_id": "nora", "caregiver_id": "adel",
             "sign": "visible_supportive_care", "site_id": "bakery",
@@ -23,7 +23,9 @@ def test_adel_caring_for_nora_visible_only_to_real_witness(tmp_path):
             assert observed_supportive_care(seen, observer, "nora") is None
         assert "nora-fatigue" not in repr(expected)
         assert "severity" not in repr(expected)
-        assert all(not npc["beliefs"] for npc in seen.npcs.values())
+        assert seen.npcs["salma"]["beliefs"] == {}
+        assert seen.npcs["nora"]["beliefs"] == {}
+        assert all("nora-fatigue" not in repr(v) for v in seen.npcs["basim"]["beliefs"].values())
         assert db.verify("v").to_dict() == seen.to_dict()
     finally:
         db.close()
@@ -36,7 +38,7 @@ def test_care_sighting_expires_without_retroactive_medical_knowledge(tmp_path):
         movement = NPCMovementService(db, clock)
         observed = movement.observe(
             "v", "basim", command_id="care",
-            expected_revision=begun.revision)
+            expected_revision=begun.revision, care_enabled=True)
         assert observed_supportive_care(observed, "basim", "nora") is not None
         db.snapshot("v")
         assert db.verify("v").to_dict() == observed.to_dict()
@@ -44,7 +46,7 @@ def test_care_sighting_expires_without_retroactive_medical_knowledge(tmp_path):
             "v", seconds=1, command_id="tick",
             expected_revision=observed.revision).state
         assert observed_supportive_care(later, "basim", "nora") is None
-        assert later.npcs["basim"]["beliefs"] == {}
+        assert len([k for k in later.npcs["basim"]["beliefs"] if k.startswith("visible-care:")]) == 1
         assert db.verify("v").to_dict() == later.to_dict()
     finally:
         db.close()
@@ -60,7 +62,7 @@ def test_care_after_its_completion_is_not_visible_as_active(tmp_path):
         assert finished.treatments["care-one"]["status"] == "completed"
         observed = NPCMovementService(db, clock).observe(
             "v", "basim", command_id="late-look",
-            expected_revision=finished.revision)
+            expected_revision=finished.revision, care_enabled=True)
         assert observed_supportive_care(observed, "basim", "nora") is None
         assert db.verify("v").to_dict() == observed.to_dict()
     finally:
@@ -96,7 +98,7 @@ def test_caregiver_departs_so_supportive_care_is_not_visible(tmp_path):
             expected_revision=started.revision)
         sight = movement.observe(
             "v", "basim", command_id="watch-departed",
-            expected_revision=departing.state.revision)
+            expected_revision=departing.state.revision, care_enabled=True)
         assert sight.treatments["care-one"]["status"] == "pending"
         assert observed_supportive_care(sight, "basim", "nora") is None
         assert sight.injuries["nora-fatigue"]["severity"] == 25
@@ -113,7 +115,7 @@ def test_care_is_visible_only_to_present_witness_after_snapshot_reopen(tmp_path)
         movement = NPCMovementService(db, clock)
         observed = movement.observe(
             "v", "basim", command_id="seen-before-close",
-            expected_revision=started.revision)
+            expected_revision=started.revision, care_enabled=True)
         evidence = observed_supportive_care(observed, "basim", "nora")
         assert evidence is not None
         assert observed_supportive_care(observed, "salma", "nora") is None
@@ -133,3 +135,25 @@ def test_care_is_visible_only_to_present_witness_after_snapshot_reopen(tmp_path)
             expected_revision=loaded.revision).state
         assert observed_supportive_care(later, "basim", "nora") is None
         assert reopened.verify("v").to_dict() == later.to_dict()
+
+
+def test_look_before_care_same_tick_never_predicts_future_care(tmp_path):
+    db, clock, service = scene(tmp_path)
+    try:
+        movement = NPCMovementService(db, clock)
+        looked = movement.observe("v", "basim", command_id="look-before-care",
+                                  expected_revision=db.load("v").revision,
+                                  care_enabled=True)
+        assert observed_supportive_care(looked, "basim", "nora") is None
+        started = begin(db, service)
+        assert started.time == looked.time == 0
+        # Even with matching time and occupants, the earlier look has no
+        # ordered claim about an action that had not started.
+        assert observed_supportive_care(started, "basim", "nora") is None
+        now_seen = movement.observe("v", "basim", command_id="look-after-care",
+                                    expected_revision=started.revision,
+                                    care_enabled=True)
+        assert observed_supportive_care(now_seen, "basim", "nora") is not None
+        assert db.verify("v").to_dict() == now_seen.to_dict()
+    finally:
+        db.close()
