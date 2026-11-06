@@ -18,6 +18,8 @@
 | Authentication for untrusted network/player access | **OPEN / HIGH** | current local in-process trusted services accept actor IDs and trusted capability flags; do not expose them to an untrusted caller; define/test authenticated entry-point before such exposure |
 | Recorded legal title, binding jurisdiction and courts | OUT OF CURRENT J1c2a SCOPE | cannot be silently inferred from historical-claim accounting. Explicitly outside J1c2a and reserved for future approved design |
 
+**Tracked blocking external review:** [GitHub Issue #5 — J1c2a independent review and P0 recovery](https://github.com/daboolgame123-creator/Carlos-RPG/issues/5). Issue creation is a request, NOT external sign-off or completion of P0; its checklist remains open until separately documented evidence and approval. Latest checked docs-only HEAD `f22ddd5686145532279c4426c8ab96240f1ba16b` [CI 42139494294](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42139494294) SUCCESS.
+
 ## Pending work WITHOUT opening a new stage
 
 1. **Independent reviewer:** use a different human or genuinely independent review agent/environment than the implementing/reviewing author, verify HEAD source and rerun independent attack tests, produce a dated report listing reviewed SHA, test outputs, findings, severity, remediation and explicit approval or rejection. Do not relabel self-review external.
