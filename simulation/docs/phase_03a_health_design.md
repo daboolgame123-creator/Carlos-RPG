@@ -94,3 +94,13 @@ This is an **unverified test-scenario intake proposal**, not an injury reducer. 
 A temporary stand-alone contract test for the matching pure function passed 3 unittest cases and 11 invalid parameter variants in the chat's Python environment. **That is not a test of the GitHub package or pytest integration**. The committed tests must be run on exact code SHA in real engine environment; full CI/parity are also pending. The 03-A stage remains OPEN.
 
 Before persisted injuries, build and test a trusted **source-of-injury event** authorization path, independent NPC injury storage with schema/rules migration policy, and explicit scheduler capability for recovery. Do not treat speculative intake as proof that any injury happened.
+
+## 03-A2 deterministic injury-transition prototype (2026-11-06)
+
+**Files committed:** `simulation/src/carlos_sim/injury_transitions.py` (`bf6850e7`), `simulation/tests/test_injury_transitions_03a.py` (`c6fb867b`).
+
+The pure module validates strictly bounded injury IDs, severity, onset/change times, and the active/recovered consistency invariant. `compute_recovery_transition` returns a new detached record only if exact hypothetical schedule boundaries are met, rejecting early/late execution, stale intervals, invalid improvements and repeated recovery. The candidate caller must still prove the event source, actor permission, scheduled action provenance, location, and resources independently.
+
+**Local test evidence:** the same pure implementation, with a stand-alone import adjusted for the isolated local test directory, passed `22 passed` in pytest. This is **not** proof of full project integration, event persistence, or GitHub Actions. The committed package-import tests and complete Python 3.10/3.13 suites remain **VERIFICATION_PENDING**.
+
+**Important:** No new DomainEvent has been authorized or registered; `WorldState`, SQLite schema, rules version, and `PlayerGateway` were deliberately untouched. A returned recovered record is **not an actual healed NPC**. Integration, trust checks, real recovery scheduling, inventory/energy costs, and full replay remain for later 03-A substeps.
