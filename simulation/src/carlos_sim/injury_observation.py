@@ -298,3 +298,47 @@ def recall_rest_activity(state: WorldState, observer_id: str) -> tuple[dict[str,
             "interpretation": "cause_unknown",
         })
     return tuple(sorted(found, key=lambda row: (row["observed_at"], row["subject_id"])))
+
+
+def observed_supportive_care(state: WorldState, observer_id: str,
+                            subject_id: str) -> dict[str, object] | None:
+    """Present-tense sighting of actual scheduled care, not its diagnosis.
+
+    A trusted RecoveryStarted event has created a paid, active supportive
+    care process. The observing NPC must have separately looked at both the
+    caregiver and recipient at this site this tick. No injury ID, severity,
+    treatment amount or outcome is disclosed.
+    """
+    if type(state) is not WorldState:
+        raise ValueError("validated WorldState required")
+    if (type(observer_id) is not str or type(subject_id) is not str
+            or observer_id == subject_id or observer_id not in state.npcs
+            or subject_id not in state.npcs):
+        return None
+    site = state.entities[observer_id]["location_id"]
+    raw = state.to_dict()
+    if not _present(raw, observer_id, site):
+        return None
+    sight = state.observations.get(observer_id, {}).get(site)
+    if (sight is None or sight["at"] != state.time
+            or observer_id not in sight["occupants"]
+            or subject_id not in sight["occupants"]):
+        return None
+    for care in state.treatments.values():
+        caregiver = care["caregiver_id"]
+        if (care["subject_id"] != subject_id or caregiver == observer_id
+                or care["site_id"] != site or care["status"] != "pending"
+                or not care["started_at"] <= state.time < care["due_at"]
+                or caregiver not in sight["occupants"]
+                or not _present(raw, subject_id, site)
+                or not _present(raw, caregiver, site)):
+            continue
+        return {
+            "subject_id": subject_id,
+            "caregiver_id": caregiver,
+            "sign": "visible_supportive_care",
+            "site_id": site,
+            "observed_at": state.time,
+            "medical_conclusion": None,
+        }
+    return None
