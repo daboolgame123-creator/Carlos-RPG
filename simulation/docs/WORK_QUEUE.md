@@ -88,3 +88,14 @@ that 03-A7c was implemented or closed. Parent 03-A stays OPEN.
 | 03-A7c-observer-memory | Persist historical qualitative health observation scoped to observer | 03-A7c-medical-sign-source and trusted event contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | No auto-sharing, diagnosis, severity leak, or player-view expansion |
 
 This is a bounded independent 03-A7c slice, not parent completion.
+
+
+## 03-A7c local scene projection — 2026-11-07
+
+| ID | Title | Dependencies | Classification | Status | Evidence / next |
+|---|---|---|---|---|---|
+| 03-A7c-scene | Return only observer-scoped, current-tick visible resting activity for a recorded local NPC sighting | Existing verified 03-A7c rest evidence and NPCObserved | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Pure projector at `461d0285`, seven-NPC tests at `2a010ac0`, final SHA CI required; no medical inference, event, or claim persisted |
+| 03-A7c-medical-source | Evidence-backed physical sign distinct from rest | Authorized physical source not reducible to severity | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Cannot assert limp or collapse from injury ledger alone |
+| 03-A7c-private-memory | Observer-scoped historical qualitative health claim | 03-A7c-medical-source and event/capability contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Must reject fabricated symptoms and preserve replay across SQLite reopen |
+
+The scene projection is not closure of the parent 03-A7c task.
