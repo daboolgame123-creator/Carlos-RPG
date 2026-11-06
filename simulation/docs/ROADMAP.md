@@ -379,3 +379,11 @@
 - **الدليل:** [CI 42021241326](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42021241326) — **607/607 اختبارًا ناجحًا** لكل إصدار، مع CLI مؤقت، فحص replay، رفض عالم 13/18 فعليًا دون تعديل، وتعادل أحداث/سلوك المراحل السابقة بعد استثناء رقم Rules فقط.
 - **التوافق:** Schema 13 / **Rules 19** بسبب دلالة حدث انتقال اللاعب؛ لا هجرة أو تعديل 13/18 قديم أو ملفات قصة كارلوس. **P0 OPEN**.
 - **المراجع:** [تصميم 01-W](phase_01w_design.md)، [تقريرها](phase_01w_report.md)، [طلب مراجعة مستقبلية](phase_01w_review_request.md)؛ الحالة TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED، لا إغلاق رسمي.
+
+
+## Update 2026-11-06 — J1c2a closed technically; J1c2b analysis opened
+
+- **04-A/J1c2a = CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER.** Approved change to procedural closure rules recorded in repository `AGENTS.md`. This does not certify production P0 or any untrusted network access.
+- Evidence: [CI 42199572310](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572310) and [42199572367](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572367): 905 full regression tests passed each Python 3.10/3.13; [offline recovery 42201414528](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42201414528): disposable 7-person / 37-event world passed restore and resume both versions. See [closure gate](phase_04a_j1c2a_closure_gate.md) and [external validation ledger](EXTERNAL_VALIDATION_LEDGER.md).
+- **04-A/J1c2b = ANALYSIS / DESIGN IN PROGRESS**, [design](phase_04a_j1c2b_design.md). Do not silently conflate recorded historical claims with binding legal title. No new legal-title events or version migration until local normative title/jurisdiction contract is fixed.
+- External review remains deferred, production P0 remains not approved; document any required actual-device test, do not claim it passed. `main` and original story untouched.
