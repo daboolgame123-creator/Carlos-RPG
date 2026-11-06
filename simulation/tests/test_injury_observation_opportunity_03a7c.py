@@ -79,3 +79,58 @@ def test_reject_plain_dict_as_authoritative_world(scene):
     db, _clock, movement = scene
     with pytest.raises(ValueError):
         witnessed_peer_here(db.load("v").to_dict(), "basim", "nora")
+
+
+def test_observation_expiring_after_logical_time_advance(scene):
+    db, clock, movement = scene
+    seen = movement.observe(
+        "v", "basim", command_id="watch:old",
+        expected_revision=db.load("v").revision,
+    )
+    assert witnessed_peer_here(seen, "basim", "nora")
+    later = clock.advance(
+        "v", seconds=1, command_id="time:after-watch",
+        expected_revision=seen.revision,
+    ).state
+    assert not witnessed_peer_here(later, "basim", "nora")
+    assert db.verify("v").to_dict() == later.to_dict()
+
+
+def test_sighting_does_not_survive_target_departure(tmp_path):
+    from test_movement import build
+    with SQLiteEventStore(tmp_path / "departure.sqlite") as db:
+        build(db)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        movement = NPCMovementService(db, clock)
+        observed = movement.observe(
+            "village", "basim", command_id="look:before-travel",
+            expected_revision=db.load("village").revision,
+        )
+        assert witnessed_peer_here(observed, "basim", "nora")
+        traveling = movement.start(
+            "village", "nora", "path", "nora-departs",
+            expected_revision=observed.revision,
+        ).state
+        assert not witnessed_peer_here(traveling, "basim", "nora")
+        assert db.verify("village").to_dict() == traveling.to_dict()
+
+
+def test_sighting_does_not_survive_observer_departure(tmp_path):
+    from test_movement import build
+    with SQLiteEventStore(tmp_path / "observer-departs.sqlite") as db:
+        build(db)
+        clock = TimeEngine(db)
+        clock.open_session("village")
+        movement = NPCMovementService(db, clock)
+        observed = movement.observe(
+            "village", "basim", command_id="look:before-departure",
+            expected_revision=db.load("village").revision,
+        )
+        assert witnessed_peer_here(observed, "basim", "nora")
+        traveling = movement.start(
+            "village", "basim", "path", "basim-departs",
+            expected_revision=observed.revision,
+        ).state
+        assert not witnessed_peer_here(traveling, "basim", "nora")
+        assert db.verify("village").to_dict() == traveling.to_dict()
