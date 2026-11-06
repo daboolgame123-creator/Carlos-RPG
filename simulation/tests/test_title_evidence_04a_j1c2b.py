@@ -76,3 +76,47 @@ def test_snapshot_replay_evidence_consistent(scene):
     db.snapshot("v")
     assert historical_title_evidence(db.verify("v"), "origin-bread") == expected
     assert historical_title_evidence(db.load("v", use_snapshot=False), "origin-bread") == expected
+
+
+def test_origin_packet_separates_holder_from_historical_claimant(scene):
+    from carlos_sim.title_evidence import origin_evidence_packet
+    db, clock = scene
+    register(db, [origin()])
+    NPCPropertyService(db, clock).take(
+        "v", "basim", "t1", "bakery", "bakery", "bread", 1,
+        expected_revision=_rev(db))
+    packet = origin_evidence_packet(db.verify("v"), "origin-bread")
+    assert packet["historical_claim_evidence"]["current_recorded_claim_balances"] == {"bakery": 2}
+    assert packet["physical_custody_evidence"]["known_holders"] == {"bakery": 1, "basim": 1}
+    assert packet["physical_custody_evidence"]["unresolved_quantity"] == 0
+    assert packet["physical_custody_evidence"]["physical_movements"][0]["event_kind"] == "PropertyTaken"
+    assert packet["legally_enforceable_owner"] is None
+    assert packet["audience"] == "trusted_internal_audit_only"
+
+
+def test_origin_packet_marks_mixed_unresolved_goods_without_assigning_title(scene):
+    from carlos_sim.title_evidence import origin_evidence_packet
+    db, clock = scene
+    register(db, [origin(quantity=1)])
+    NPCPropertyService(db, clock).take(
+        "v", "basim", "t1", "bakery", "bakery", "bread", 1,
+        expected_revision=_rev(db))
+    packet = origin_evidence_packet(db.verify("v"), "origin-bread")
+    physical = packet["physical_custody_evidence"]
+    assert physical["known_holders"] == {}
+    assert physical["unresolved_quantity"] == 1
+    assert physical["provenance_certainty"] == "partial_or_unknown"
+    assert physical["physical_movements"][0]["kind"] == "unresolved"
+    assert packet["legally_enforceable_owner"] is None
+
+
+def test_origin_packet_is_read_only_and_replay_equivalent(scene):
+    from carlos_sim.title_evidence import origin_evidence_packet
+    db, clock = scene
+    register(db, [origin()])
+    before = db.load("v").to_dict()
+    expected = origin_evidence_packet(db.load("v"), "origin-bread")
+    db.snapshot("v")
+    assert origin_evidence_packet(db.verify("v"), "origin-bread") == expected
+    assert db.verify("v").to_dict() == before
+    assert origin_evidence_packet(db.load("v", use_snapshot=False), "origin-bread") == expected
