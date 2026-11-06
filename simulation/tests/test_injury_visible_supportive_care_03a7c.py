@@ -398,3 +398,40 @@ def test_care_evidence_refuses_relabelled_subject_and_forged_diagnosis(tmp_path)
         assert db.verify("v").to_dict() == before
     finally:
         db.close()
+
+
+def test_caregiver_leaves_mid_treatment_basim_retains_only_historical_sighting(tmp_path):
+    """Prior witnessed care survives interruption, but does not remain active."""
+    from carlos_sim import DomainEvent
+    from carlos_sim.injury_observation import recall_supportive_care
+    db, clock, service = scene(tmp_path)
+    try:
+        initial = db.load("v")
+        db.append("v", "route-for-interrupted-care", initial.revision, [
+            DomainEvent("RouteCreated", None, "existing bakery to square route", 0,
+                        {"id": "care-departure-route", "a": "bakery",
+                         "b": "square", "seconds": 50})
+        ], bootstrap=True)
+        begun = begin(db, service)
+        movement = NPCMovementService(db, clock)
+        basim = movement.observe(
+            "v", "basim", command_id="seen-caring",
+            expected_revision=begun.revision, care_enabled=True)
+        expected = recall_supportive_care(basim, "basim")
+        assert len(expected) == 1
+        depart = movement.start(
+            "v", "adel", "care-departure-route", "depart-during-care",
+            expected_revision=basim.revision)
+        assert observed_supportive_care(depart.state, "basim", "nora") is None
+        assert recall_supportive_care(depart.state, "basim") == expected
+        assert recall_supportive_care(depart.state, "huda") == ()
+        finished = clock.advance(
+            "v", seconds=600, command_id="interrupted-care-due",
+            expected_revision=depart.state.revision).state
+        assert finished.treatments["care-one"]["status"] == "interrupted"
+        assert recall_supportive_care(finished, "basim") == expected
+        assert observed_supportive_care(finished, "basim", "nora") is None
+        assert finished.injuries["nora-fatigue"]["severity"] == 25
+        assert db.verify("v").to_dict() == finished.to_dict()
+    finally:
+        db.close()
