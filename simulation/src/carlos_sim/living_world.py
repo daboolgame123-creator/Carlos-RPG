@@ -325,14 +325,18 @@ class LivingWorldEngine:
                 # NPC ignores visible food here whenever a road is available.
                 # The same pure predicate is used later by choose_action and
                 # event replay; it inspects this NPC plus this site only.
+                from .npc import _injury_rest_decision
+                injury_requires_rest = (
+                    _injury_rest_decision(current.injuries, npc_id) is not None)
                 local_forage_wins = False
-                if self.foraging_enabled and not pending_action:
+                if self.foraging_enabled and not pending_action and not injury_requires_rest:
                     from .foraging import choose_local_foraging
                     local_site = current.entities[npc_id]['location_id']
                     local_forage_wins = choose_local_foraging(
                         npc_id, current.npcs[npc_id], local_site,
                         current.resources) is not None
-                if self.navigation_enabled and not pending_action and not local_forage_wins:
+                if (self.navigation_enabled and not pending_action
+                        and not local_forage_wins and not injury_requires_rest):
                     if needs_survey(current, npc_id):
                         append(DomainEvent('NPCNavigationSurveyed', npc_id,
                             'NPC surveys locally observable roads', current.time,

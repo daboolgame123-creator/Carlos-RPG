@@ -43,6 +43,6 @@ For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-1
 
 | ID | Title | Dependencies | Classification | Status | Evidence | Next step |
 |---|---|---|---|---|---|---|
-| 03-A7a | Self-only, read-only injury decision advisory | Verified 03-A6 `2ca67e83` (Schema32/Rules40) | `CHAT_EXECUTABLE` | `IN_PROGRESS` | New independent `simulation-engine-phase-03a-injury-behavior` branch | Implement pure policy from own persisted injuries, reject cross-NPC leakage, run dual-Python full CI |
-| 03-A7b | Integrate own-injury effect into deterministic NPC decision/event replay | 03-A7a exact-SHA green and planned replay contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Requires verified 03-A7a read-only policy | Review NPCService/LivingWorldEngine/forage parity and version bump before editing |
+| 03-A7a | Self-only, read-only injury decision advisory | Verified 03-A6 `2ca67e83` (Schema32/Rules40) | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `eac14eb9`; CI `42282996746`: 1117/1117 passed on Python 3.10/3.13 | Self-only isolated advisory verified; external review deferred |
+| 03-A7b | Integrate own-injury effect into deterministic NPC decision/event replay | 03-A7a exact-SHA green | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `73da9660`; CI `42284128589`: 1121/1121 passed, Rules 41 | Rest-on-severe-injury recorded and replayed; external review deferred |
 | 03-A7c | Observations and disclosure of another NPC's visible injury | knowledge observation provenance + approved visibility contract | `DECISION_REQUIRED` | `WAITING_DECISION` | No general diagnosis or omniscient observer | Define observable symptoms and what NPC can infer |
