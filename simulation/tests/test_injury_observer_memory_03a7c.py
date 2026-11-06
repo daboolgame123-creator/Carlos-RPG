@@ -286,7 +286,9 @@ def test_pending_first_hand_delivery_is_not_duplicated_by_next_look(tmp_path):
             })
         after_delivery = db.append(
             "world", "pending-delivery", observed.revision,
-            [pending], npc_authorized=True)
+            [DomainEvent("NPCObserved", "basim", "same-command direct sighting", observed.time,
+                         {"npc_id": "basim"}), pending],
+            npc_authorized=True, movement_authorized=True)
         assert recall_rest_activity(after_delivery, "basim") == ()
         assert "pending-activity" in after_delivery.npcs["basim"]["inbox"]
         repeated = movement.observe(
@@ -346,7 +348,9 @@ def test_pending_evidence_cannot_bypass_finite_memory_capacity(tmp_path):
                 "method": "observation",
             })
             db.append("world", f"delivery-{tick}", observed.revision,
-                      [pending], npc_authorized=True)
+                      [DomainEvent("NPCObserved", "basim", "same-command direct sighting", observed.time,
+                         {"npc_id": "basim"}), pending],
+            npc_authorized=True, movement_authorized=True)
             if tick != MAX_REST_MEMORIES - 1:
                 clock.advance("world", seconds=1, command_id=f"tick-{tick}",
                               expected_revision=db.load("world").revision)
