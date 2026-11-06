@@ -234,3 +234,83 @@ def test_same_batch_care_created_after_look_cannot_be_witnessed(tmp_path):
         assert db.verify("v").to_dict() == initial.to_dict()
     finally:
         db.close()
+
+
+def test_basim_remembers_real_care_after_completion_but_others_do_not(tmp_path):
+    from carlos_sim.injury_observation import recall_supportive_care
+    from carlos_sim.store import DuplicateCommand
+    import pytest
+    path = tmp_path / "care.sqlite"
+    db, clock, service = scene(tmp_path)
+    try:
+        begun = begin(db, service)
+        movement = NPCMovementService(db, clock)
+        witnessed = movement.observe(
+            "v", "basim", command_id="remember-care",
+            expected_revision=begun.revision, care_enabled=True)
+        expected = ({
+            "subject_id": "nora", "caregiver_id": "adel",
+            "sign": "visible_supportive_care", "site_id": "bakery",
+            "observed_at": 0, "interpretation": "cause_unknown",
+            "medical_conclusion": None,
+        },)
+        assert recall_supportive_care(witnessed, "basim") == expected
+        for who in ("salma", "huda", "omar", "adel", "nora"):
+            assert recall_supportive_care(witnessed, who) == ()
+        again = movement.observe(
+            "v", "basim", command_id="look-again",
+            expected_revision=witnessed.revision, care_enabled=True)
+        assert recall_supportive_care(again, "basim") == expected
+        done = clock.advance(
+            "v", seconds=600, command_id="finish-care",
+            expected_revision=again.revision).state
+        assert done.treatments["care-one"]["status"] == "completed"
+        assert observed_supportive_care(done, "basim", "nora") is None
+        assert recall_supportive_care(done, "basim") == expected
+        assert "nora-fatigue" not in repr(expected)
+        db.snapshot("v")
+        original = done.to_dict()
+        assert db.verify("v").to_dict() == original
+    finally:
+        db.close()
+    with SQLiteEventStore(path) as reopened:
+        restored = reopened.load("v")
+        assert restored.to_dict() == original
+        assert reopened.verify("v").to_dict() == original
+        assert recall_supportive_care(restored, "basim") == expected
+        assert recall_supportive_care(restored, "salma") == ()
+
+
+def test_look_before_care_creates_no_historical_memory(tmp_path):
+    from carlos_sim.injury_observation import recall_supportive_care
+    db, clock, service = scene(tmp_path)
+    try:
+        movement = NPCMovementService(db, clock)
+        earlier = movement.observe(
+            "v", "basim", command_id="look-before-care",
+            expected_revision=db.load("v").revision,
+            care_enabled=True)
+        begun = begin(db, service)
+        assert earlier.time == begun.time
+        assert recall_supportive_care(begun, "basim") == ()
+        later = movement.observe(
+            "v", "basim", command_id="look-during-care",
+            expected_revision=begun.revision, care_enabled=True)
+        assert len(recall_supportive_care(later, "basim")) == 1
+        assert db.verify("v").to_dict() == later.to_dict()
+    finally:
+        db.close()
+
+
+def test_unvalidated_snapshot_and_unknown_observers_cannot_recall_care(tmp_path):
+    from carlos_sim.injury_observation import recall_supportive_care
+    import pytest
+    db, clock, service = scene(tmp_path)
+    try:
+        initial = begin(db, service)
+        with pytest.raises(ValueError):
+            recall_supportive_care(initial.to_dict(), "basim")
+        assert recall_supportive_care(initial, "unknown") == ()
+        assert recall_supportive_care(initial, "basim") == ()
+    finally:
+        db.close()
