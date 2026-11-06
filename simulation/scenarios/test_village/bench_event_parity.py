@@ -51,7 +51,7 @@ def audit(count: int) -> dict:
                                ('parity-world',)).fetchall()
         verified = db.verify('parity-world')
         assert verified.to_dict() == result.state.to_dict()
-        assert not verified.injuries, 'feature-off parity must contain no injuries'
+        assert not verified.to_dict().get('injuries', {}), 'feature-off parity must contain no injuries'
         return {
             'npcs': count, 'time': verified.time,
             'revision': verified.revision,
