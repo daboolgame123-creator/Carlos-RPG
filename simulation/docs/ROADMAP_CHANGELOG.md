@@ -269,4 +269,5 @@
 - **Problem:** full CI `42229493643` on `617b931d` passed 976 pytest tests but failed the 01-T `legacy_semantic_digest` gate.
 - **Cause:** Schema 29 added the empty `local_institutions` collection, but three cross-version parity benches did not strip it from their semantic projection. Event log and every shared semantic field were identical; only the empty new key differed.
 - **Fix:** extend the three strip lists and add a regression guard in `test_knowledge_compatibility.py`. No expected digest was replaced and no parity assertion was disabled.
-- **Local evidence:** 976 passed / 1 skipped on Python 3.10 and 3.13; 01-T/01-U/01-V/02-F/02-G/01-R parity restored. Exact-SHA CI remains required before technical closure.
+- **Local evidence:** 976 passed / 1 skipped on Python 3.10 and 3.13; 01-T/01-U/01-V/02-F/02-G/01-R parity restored.
+- **Second stale pin:** pushed CI `42244658986` passed pytest and adversarial jobs but failed the 01-U gate on a hardcoded candidate Rules 36 assertion. Updated 01-U/01-V pins to 37 and added a guard test tied to `RULES_VERSION`. Exact-SHA CI remains required before technical closure.

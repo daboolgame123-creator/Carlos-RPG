@@ -98,3 +98,18 @@ def test_all_cross_version_parity_benches_strip_local_institutions():
     for name in benches:
         text = (root / name).read_text()
         assert "'local_institutions'" in text or '"local_institutions"' in text, name
+
+
+def test_ci_parity_gates_pin_current_rules_version():
+    """Keep explicit CI version pins in sync with RULES_VERSION.
+
+    The 01-U and 01-V parity steps pin the baseline at Rules 18 and the
+    candidate at the current rules version. A J1c2b version bump left these
+    assertions at 36 and broke CI after the digest fix; this guard makes the
+    next bump fail locally instead of in a later workflow step.
+    """
+    workflow = (Path(__file__).resolve().parents[2]
+                / ".github" / "workflows" / "simulation-tests.yml")
+    text = workflow.read_text()
+    assert f"new['rules_version'] == {RULES_VERSION}" in text
+    assert f"candidate['rules_version'] == {RULES_VERSION}" in text
