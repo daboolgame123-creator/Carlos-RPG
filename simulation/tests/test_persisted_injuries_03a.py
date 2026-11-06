@@ -72,7 +72,8 @@ def test_injury_cannot_materialize_after_logical_time_zero(tmp_path):
         village(db)
         clock = TimeEngine(db)
         clock.open_session("v")
-        clock.advance("v", 1)
+        clock.advance("v", seconds=1, command_id="time-forward",
+                      expected_revision=db.load("v").revision)
         now = db.load("v")
         with pytest.raises(InvalidEvent):
             db.append("v", "late-injury", now.revision,
