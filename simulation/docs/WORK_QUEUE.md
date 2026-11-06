@@ -110,3 +110,14 @@ The scene projection is not closure of the parent 03-A7c task.
 
 This subtask does NOT implement durable symptom memory, an illness diagnosis or
 the complete 03-A7c feature. Parent 03-A remains OPEN.
+
+
+## 03-A7c observer-specific historical activity memory — 2026-11-07
+
+| Task | Status | Evidence / qualification |
+|---|---|---|
+| 03-A7c-activity-memory | `VERIFICATION_PENDING` | Code `11fb80e6`, reducer `30f38247`, explicit atomic movement API `6329f6a8`; tests `151ced1f` and seven-NPC `cf9f1c91`; require exact final-SHA dual Python CI. Observer-only, visible-rest *behavior*, cause unknown; does not imply clinical health |
+| 03-A7c-physical-signs | `BLOCKED` | No trusted physical limb/visible injury impairment source; rest alone is insufficient |
+| 03-A7c-health-memory | `BLOCKED` | Requires clinical-sign source, separate medical observation policy, adversarial provenance validation |
+
+No automatic observer knowledge, hearsay, treatment or merging. Parent 03-A OPEN.
