@@ -7,7 +7,7 @@ import pytest
 
 from carlos_sim import NPCRegisteredClaimService
 from carlos_sim.domain import WorldState, canonical, canonical_hash
-from carlos_sim.store import InvalidEvent
+from carlos_sim.store import InvalidEvent, IntegrityError
 from test_rights_04a_j1a import scene
 from test_registered_claims_04a_j1c2 import _register, _offer, _accept, _rev
 
@@ -70,7 +70,7 @@ def test_rehashed_snapshot_with_fake_claim_balance_cannot_be_loaded(scene):
     )
     with pytest.raises(ValueError):
         WorldState.from_dict(json.loads(canonical(forged)))
-    with pytest.raises(Exception):
+    with pytest.raises(IntegrityError):
         db.load("v")
     # Genesis replay remains independent of snapshots.
     assert db.load("v", use_snapshot=False).to_dict() == saved.to_dict()
