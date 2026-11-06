@@ -53,3 +53,11 @@ For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-1
 |---|---|---|---|---|---|---|
 | 03-A8a | Reject paid recovery without matching durable schedule at atomic append/replay boundaries | Verified 03-A6 and 03-A7b | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `75dc8141`; CI `42290286511` — 1125/1125 on Python 3.10/3.13 | Recovery reservation invariant verified; external review deferred |
 | 03-A7c | Cross-NPC visible symptoms and disclosure contract | Explicit observation/knowledge policy | `DECISION_REQUIRED` | `WAITING_DECISION` | Current engine does not establish diagnosis or peer knowledge | Do not implement auto-disclosure until visible symptom rules are adopted |
+
+
+## 03-A7c health observation slice — 2026-11-06
+
+| ID | Title | Dependencies | Classification | Status | Evidence | Next |
+|---|---|---|---|---|---|---|
+| 03-A7c1 | Read-only candidate visible-symptom interpretation; three-character tests | 03-A8a verified code, explicit owner policy | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | `simulation/docs/PHASE_03A7C_OBSERVATION_CONTRACT.md`; candidate only, no event grant | Verify final SHA on both Pythons, then build trusted symptom observation source |
+| 03-A7c2 | Persist source-authenticated observations/knowledge with replay and no forged diagnosis | 03-A7c1, approved observation trigger and event authority | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | No authorized injury symptom signal or event projection yet | Define observable event source and strictly validate at append/replay; test on NPCs |
