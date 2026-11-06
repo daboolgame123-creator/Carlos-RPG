@@ -9,11 +9,12 @@
 | --- | --- | --- |
 | Planning before coding | PASS | `phase_04a_j1c2_design.md`; original J1c2a bounded scope and risks |
 | J1c2a implementation | PASS | `registered_claims.py`, `domain.py`, `rights.py`, `store.py` |
-| Adversarial + full regression | PASS | [CI 42137905742](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42137905742) **897/897 passed each** on Python 3.10 and 3.13. [CI 42137905809](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42137905809) adversarial workflow success on both versions |
+| Adversarial + full regression | PASS | [CI 42139139403](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42139139403) **899/899 passed each** Python 3.10/3.13, specialized probes **5/5** each; earlier [CI 42137905742](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42137905742) passed 897/897 each |
 | Additional internal code review | PASS **internal only** | `phase_04a_j1c2a_followup_review.md`, including 3 extra probes, known trust limitations |
 | Documentation/roadmap | PASS | `phase_04a_j1c2_report.md`, `ROADMAP.md`, `ROADMAP_CHANGELOG.md` |
 | Genuine independent external adversarial approval | **OPEN / BLOCKING** | `phase_04a_j1c2_independent_review_request.md` defines test scopes; **no signed separate reviewer report exists** |
-| Production recovery / backup P0 evidence required for full acceptance | **OPEN / BLOCKING** | historical snapshot and version rejection tests are not a full independently demonstrated production backup-and-restore drill |
+| Current-stage claim-backup technical tests | **PASS (technical only)** | `test_j1c2a_recovery_gate.py`: backup while accepted and open offers coexist, SQLite WAL, verification, restore and resume with unchanged rights and custody; corrupted backup is refused without creating output. Included in [CI 42139139403](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42139139403), 899/899 each. |
+| Independently demonstrated production recovery / P0 acceptance | **OPEN / BLOCKING** | Test fixture is a disposable CI world. No independent disaster recovery sign-off or production-world restoration approval; existing prior-version reject is not migration. |
 | Authentication for untrusted network/player access | **OPEN / HIGH** | current local in-process trusted services accept actor IDs and trusted capability flags; do not expose them to an untrusted caller; define/test authenticated entry-point before such exposure |
 | Recorded legal title, binding jurisdiction and courts | OUT OF CURRENT J1c2a SCOPE | cannot be silently inferred from historical-claim accounting. Explicitly outside J1c2a and reserved for future approved design |
 
