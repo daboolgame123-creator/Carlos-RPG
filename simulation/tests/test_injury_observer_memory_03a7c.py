@@ -266,3 +266,40 @@ def test_activity_memory_does_not_propagate_through_food_sharing(tmp_path):
         )
         assert recall_rest_activity(witnessed, "nora") == ()
         assert db.verify("world").to_dict() == witnessed.to_dict()
+
+
+def test_pending_first_hand_delivery_is_not_duplicated_by_next_look(tmp_path):
+    with SQLiteEventStore(tmp_path / "pending-look.sqlite") as db:
+        _clock, movement, before = start_world(db, injury=True)
+        observed = movement.observe(
+            "world", "basim", command_id="plain-look",
+            expected_revision=before.revision)
+        pending = DomainEvent(
+            "NPCInformationDelivered", "basim", "test pending physical evidence", 0, {
+                "npc_id": "basim", "delivery_id": "pending-activity",
+                "key": "visible-rest:nora:0",
+                "claim": {"text": "visible-resting; observed_at=0",
+                          "source": "observation:square",
+                          "received_at": 0, "confidence": 90},
+                "sender_id": "basim", "location_id": "square",
+                "method": "observation",
+            })
+        after_delivery = db.append(
+            "world", "pending-delivery", observed.revision,
+            [pending], npc_authorized=True)
+        assert recall_rest_activity(after_delivery, "basim") == ()
+        assert "pending-activity" in after_delivery.npcs["basim"]["inbox"]
+        repeated = movement.observe(
+            "world", "basim", command_id="next-look",
+            expected_revision=after_delivery.revision, activity_enabled=True)
+        assert recall_rest_activity(repeated, "basim") == ()
+        assert set(repeated.npcs["basim"]["inbox"]) == {"pending-activity"}
+        ack = DomainEvent(
+            "NPCBeliefReceived", "basim", "acknowledge genuine pending observation", 0,
+            {"npc_id": "basim", "key": "visible-rest:nora:0",
+             "delivery_id": "pending-activity"})
+        completed = db.append(
+            "world", "ack-pending", repeated.revision, [ack], npc_authorized=True)
+        assert len(recall_rest_activity(completed, "basim")) == 1
+        assert completed.npcs["basim"]["inbox"] == {}
+        assert db.verify("world").to_dict() == completed.to_dict()
