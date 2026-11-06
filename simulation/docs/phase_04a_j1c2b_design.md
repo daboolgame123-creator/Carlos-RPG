@@ -176,3 +176,13 @@ Following 962/962 verified full regressions each on Python 3.10/3.13 for the off
 - **Tests added** for successful physical founding, forged actor and fake/remote representative, absent trusted capability, duplicate site, mixed valid+invalid atomic rollback, forged snapshot, independent reopen and full replay, old schema rejection.
 
 **IMPORTANT VALIDATION GATE:** These changes are **not yet technically accepted** until full and adversarial CI completes on the exact code SHA. A separate end-to-end old-world file byte-for-byte rejection is desirable in addition to the current old-format snapshot unit check; if not run, keep it as an unverified test requirement. An actual law, title registry and binding title-transfer rules are still unimplemented. J1c2b remains OPEN; independent review deferred and production P0 not approved.
+
+
+## Follow-up integration review and CI remediation (2026-11-06)
+
+- Initial Schema29/Rules37 run on code `eccf90eef066ebc5d7ea303f9b5771eb41a38690` **FAILED**. Adversarial recovery job identified a J1c2a test pinned to 28/36; full Python 3.10 suite yielded **958 passed, 17 failed**, all reported failures asserting old version numbers (not yet evidence that the new registry behavior was wrong).
+- Updated the J1c2a recovery-manifest expectation to use `SCHEMA_VERSION/RULES_VERSION` at `d8397709d9b3a87bbccf2a301cf1518db92f5e1d`, and re-pinned version-only assertions in the 14 impacted legacy test modules to **29/37**. These changes do **not** relax fail-closed rejection of actual old-world state.
+- Added SQLite old-version refusal test asserting bytes remain untouched after failed load (synthetic older-version row; **not** equivalent to running a genuine historical 28/36 file), commit `701c198264e6e5fde3966ad0dae98a07a1a27f38`.
+- Extended the independent-process `j1c2a_offline_recovery_drill.py` to include a genuinely persisted `LocalInstitutionRegistered` record in the seven-NPC world; script explicitly verifies no court power pre-backup and after restore, commit `0652e639bc5b1df71fff29b39a872368392b118c`.
+- Hardened malformed institution model-type rejection, commit `617b931da5cc3b433525ae6410f5e878dfc87012`. New exact-commit full regression, dedicated adversarial and standalone recovery CI on Python 3.10/3.13 were queued at documentation time. **Do not mark J1c2b validated until all required jobs succeed.**
+- The external independent reviewer is deferred by owner. Production-specific P0 remains unapproved. This registered institution is a **founding existence record only**, with no authority to validate ownership, judge, seize, punish, or bind parties.
