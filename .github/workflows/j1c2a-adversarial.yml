@@ -4,7 +4,9 @@ on:
   push:
     branches: [simulation-engine-phase-04a-j1]
     paths:
-      - "simulation/tests/test_adversarial_registered_claims_04a_j1c2.py"
+      - "simulation/src/**"
+      - "simulation/tests/**"
+      - "simulation/pyproject.toml"
       - ".github/workflows/j1c2a-adversarial.yml"
   workflow_dispatch:
 
