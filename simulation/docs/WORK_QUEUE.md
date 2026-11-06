@@ -230,3 +230,18 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
 - Prior tests for Basim/Salma observer-owned care memories after treatment,
   snapshot/replay and same-tick ordering remain mandatory. Parent
   03-A7c / 03-A still OPEN; physical injury symptom source not implemented.
+
+
+## 03-A7c interruption witness test (2026-11-07)
+
+- `03-A7c-historical-care-interruption`: `VERIFICATION_PENDING`
+  at `9611616a`. Integration scenario: Basim observes Adel actually caring
+  for Nora; Adel leaves via a timed physical route; care becomes invisible
+  immediately, but the true older first-hand memory remains after the due
+  appointment is interrupted. No refund, cure, omniscient knowledge for
+  Huda, or revision/replay mismatch.
+- Prior care-memory integrity and 65-tick history completed successfully
+  on exact SHA `a109911e` (run `42311461630`, Python 3.10/3.13).
+  Keep the new interruption test separate until its own final-SHA green run.
+- The physical injury symptom model is still unimplemented; 03-A7c and
+  parent 03-A remain OPEN and no change to `main`.
