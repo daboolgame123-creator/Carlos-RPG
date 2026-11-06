@@ -124,3 +124,39 @@ translate ordinary resting into visible physical impairment.
 **Provisional state**: `VERIFICATION_PENDING` until dual-Python CI
 passes on the final SHA. The observer-specific durable health memory and
 physical symptom provenance remain unimplemented; 03-A stays OPEN.
+
+
+## 03-A7c observer-owned *historical activity* memory — 2026-11-07
+
+Implementation is now present as an **opt-in behavioral evidence slice**,
+not the physical injury-symptom feature. With
+`NPCMovementService.observe(..., activity_enabled=True)` and an active
+session, the command atomically appends the existing `NPCObserved` event
+then a verified `NPCInformationDelivered` and
+`NPCBeliefReceived` pair for each physically present resting peer.
+The namespaced `visible-rest:<subject>:<tick>` claim is stored only in
+that observer's personal NPC beliefs, with `observation:<site>` provenance.
+The trusted reducer re-verifies same-tick local sighting, ongoing true
+rest action, source text, identity, location, confidence and bounded
+memory capacity. Passive observations and inactive sessions do not
+produce the memory. The existing schema and rules versions are unchanged;
+existing NPC observation invocations remain opt-out by default.
+
+`recall_rest_activity` returns only the caller-named observer's
+persisted evidence: a dated `visible_resting` fact with
+`interpretation=cause_unknown`. History stays historical after
+action completion. It contains **no injury ID, diagnosis, severity,
+cause or treatment**; healthy exhausted and injured resting Nora create
+indistinguishable observation evidence.
+
+Verification acceptance: 2-NPC healthy/injured parity; adversarial forged
+actor/source/site/sign/timestamp/recipient/confidence rejection and
+transaction rollback; seven-person village (Nora, Basim, Salma, Adel,
+Huda, Omar, Layla); snapshot, cross-process SQLite reopening, deterministic
+replay, dual Python 3.10/3.13 CI on exact SHA. At writing,
+these tests are added but **CI verification is pending**.
+
+Separate 03-A7c *medical signs* remains blocked on an actual physical
+symptom source. Ordinary visible rest cannot legally be relabeled limp,
+collapse or confirmed health evidence, and must not spontaneously
+trigger help or health rumors.
