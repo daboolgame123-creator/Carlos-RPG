@@ -77,6 +77,11 @@ def observed_resting_activity(state: WorldState, observer_id: str,
     )
     if not resting:
         return None
+    # A same-second NPCObserved snapshot may predate an action.
+    # Require first-hand evidence from an explicit ordered observation.
+    key = activity_memory_key(subject_id, state.time)
+    if key not in state.npcs[observer_id]["beliefs"]:
+        return None
     return {
         "subject_id": subject_id,
         "sign": "visible_resting",
