@@ -57,3 +57,57 @@ def prepare_local_title_law_draft(
         ],
         "audience": "trusted_internal_design_only",
     }
+
+
+def prepare_local_institution_charter_draft(
+    state: WorldState, *,
+    institution_id: str,
+    site_id: str,
+    officer_id: str,
+    authority_model: str,
+    effective_from: int,
+) -> dict[str, Any]:
+    """Validate a proposed local institution with a real co-located nominee.
+
+    Candidate presence does not equal consent, appointment, capability,
+    judicial power, or an established law. No event is emitted.
+    """
+    from .market import _id
+
+    if not _id(institution_id):
+        raise ValueError("institution draft requires bounded unique-format ID")
+    if type(officer_id) is not str or officer_id not in state.npcs:
+        raise ValueError("institution nominee must be a real NPC")
+    proposal = prepare_local_title_law_draft(
+        state, site_id=site_id, authority_model=authority_model,
+        effective_from=effective_from,
+        transfer_rule="requires_preexisting_verified_title_and_mutual_consent",
+    )
+    from .market import _present
+    # _present expects a mutable state dictionary, and checks real
+    # location, travel and competing work. It does not appoint an officer.
+    if not _present(state.to_dict(), officer_id, site_id):
+        raise ValueError("nominee must be present and free at proposed site")
+    return {
+        "institution_id_proposed": institution_id,
+        "site_id_proposed": site_id,
+        "officer_id_nominated": officer_id,
+        "authority_model_proposed": authority_model,
+        "effective_from_proposed": effective_from,
+        "charter_status": "unapproved_draft",
+        "nominee_consent_recorded": False,
+        "appointed_officer_id": None,
+        "institution_registered": False,
+        "can_receive_legal_claims": False,
+        "can_decide_title": False,
+        "can_seize_property": False,
+        "can_delegate_authority": False,
+        "legal_title_status": proposal["legal_title_status"],
+        "next_prerequisites": [
+            "approval_of_institution_and_nominee_consent",
+            "trusted_registration_and_versioned_capability",
+            "explicit_local_jurisdiction_and_conflict_rules",
+            "notification_and_hearing_before_any_binding_decision",
+        ],
+        "audience": "trusted_internal_design_only",
+    }
