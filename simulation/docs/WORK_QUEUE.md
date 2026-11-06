@@ -51,5 +51,5 @@ For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-1
 
 | ID | Task | Dependencies | Classification | Status | Evidence | Next |
 |---|---|---|---|---|---|---|
-| 03-A8a | Reject paid recovery without matching durable schedule at atomic append/replay boundaries | Verified 03-A6 and 03-A7b | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | `simulation-engine-phase-03a-treatment-integrity`, Rules42 and `test_treatment_reservations_03a.py` | Run complete Python 3.10 / 3.13 GitHub Actions on exact final SHA; fix any failed checks before closure |
+| 03-A8a | Reject paid recovery without matching durable schedule at atomic append/replay boundaries | Verified 03-A6 and 03-A7b | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `75dc8141`; CI `42290286511` — 1125/1125 on Python 3.10/3.13 | Recovery reservation invariant verified; external review deferred |
 | 03-A7c | Cross-NPC visible symptoms and disclosure contract | Explicit observation/knowledge policy | `DECISION_REQUIRED` | `WAITING_DECISION` | Current engine does not establish diagnosis or peer knowledge | Do not implement auto-disclosure until visible symptom rules are adopted |
