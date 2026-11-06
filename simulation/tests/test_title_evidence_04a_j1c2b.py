@@ -229,3 +229,69 @@ def test_offer_history_is_detached_and_matches_full_replay(scene):
     expected["historical_assignment_offer_history"][0]["quantity"] = 99
     assert historical_title_evidence(db.load("v"), "origin-bread")[
         "historical_assignment_offer_history"][0]["quantity"] == 1
+
+
+def test_claim_packet_does_not_turn_false_accusation_into_legal_truth(scene):
+    from carlos_sim.title_evidence import property_claim_audit_packet
+    db, clock = scene
+    register(db, [origin()])
+    service = NPCPropertyService(db, clock)
+    service.take("v", "basim", "taken", "bakery", "bakery", "bread", 1,
+                 witnessed_by=("salma",), expected_revision=_rev(db))
+    service.claim("v", "nora", "false", "accusation", "bakery",
+                  "bread", 1, subject_id="adel", taking_id=None,
+                  expected_revision=_rev(db))
+    packet = property_claim_audit_packet(db.verify("v"), "false")
+    assert packet["basis"] == "unverified_statement"
+    assert packet["alleged_subject_id"] == "adel"
+    assert packet["cited_physical_taking"] is None
+    assert packet["registered_origin_id"] is None
+    assert packet["origin_linkage"] == "not_established"
+    assert packet["legally_enforceable_owner"] is None
+    assert not packet["guilt_determined"]
+
+
+def test_firsthand_sighting_corroborates_action_only_not_title(scene):
+    from carlos_sim.title_evidence import property_claim_audit_packet
+    db, clock = scene
+    register(db, [origin()])
+    service = NPCPropertyService(db, clock)
+    service.take("v", "basim", "observed", "bakery", "bakery", "bread", 1,
+                 witnessed_by=("salma",), expected_revision=_rev(db))
+    service.claim("v", "salma", "eyewitness", "accusation", "bakery",
+                  "bread", 1, subject_id="basim", taking_id="observed",
+                  expected_revision=_rev(db))
+    packet = property_claim_audit_packet(db.verify("v"), "eyewitness")
+    assert packet["basis"] == "direct_sighting"
+    assert packet["cited_physical_taking"]["actor_id"] == "basim"
+    assert packet["cited_physical_taking"]["evidence_scope"] == "recorded_physical_action_only"
+    assert packet["origin_linkage"] == "not_established"
+    assert packet["legal_title_status"] == "undetermined"
+    assert packet["legally_enforceable_owner"] is None
+
+
+def test_claim_audit_rejects_unknown_id_without_state_change(scene):
+    from carlos_sim.title_evidence import property_claim_audit_packet
+    db, clock = scene
+    old = db.load("v").to_dict()
+    for invalid in ("", None, 12):
+        with pytest.raises(ValueError, match="nonempty"):
+            property_claim_audit_packet(db.load("v"), invalid)
+    with pytest.raises(ValueError, match="not found"):
+        property_claim_audit_packet(db.load("v"), "fabricated")
+    assert db.verify("v").to_dict() == old
+
+
+def test_claim_audit_read_only_snapshot_and_full_replay(scene):
+    from carlos_sim.title_evidence import property_claim_audit_packet
+    db, clock = scene
+    register(db, [origin()])
+    NPCPropertyService(db, clock).claim(
+        "v", "nora", "statement", "ownership", "bakery", "bread", 1,
+        subject_id=None, taking_id=None, expected_revision=_rev(db))
+    packet = property_claim_audit_packet(db.load("v"), "statement")
+    db.snapshot("v")
+    assert property_claim_audit_packet(db.verify("v"), "statement") == packet
+    assert property_claim_audit_packet(db.load("v", use_snapshot=False), "statement") == packet
+    packet["claimant_id"] = "fraud"
+    assert property_claim_audit_packet(db.verify("v"), "statement")["claimant_id"] == "nora"
