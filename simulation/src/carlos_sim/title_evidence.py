@@ -113,3 +113,53 @@ def origin_evidence_packet(state: WorldState, origin_id: str) -> dict[str, Any]:
         "legal_rule_applied": None,
         "audience": "trusted_internal_audit_only",
     }
+
+
+def property_claim_audit_packet(state: WorldState, claim_id: str) -> dict[str, Any]:
+    """Trusted-only audit of an NPC statement and its cited physical record.
+
+    A claim has no origin_id in the existing schema. Never bind it to a
+    particular registered origin based on location/resource coincidence.
+    Direct sighting supports the described *physical taking*, not ownership,
+    criminal guilt, or legal title.
+    """
+    if type(claim_id) is not str or not claim_id:
+        raise ValueError("nonempty claim ID required")
+    claim = state.property_claims.get(claim_id)
+    if claim is None:
+        raise ValueError("property claim not found")
+    taking_id = claim["taking_id"]
+    observed = None
+    if taking_id is not None:
+        taking = state.property_takings.get(taking_id)
+        if taking is None:
+            raise ValueError("claim cites missing taking")
+        observed = {
+            "taking_id": taking_id,
+            "actor_id": taking["actor_id"],
+            "source_owner_id": taking["source_owner_id"],
+            "resource": taking["resource"],
+            "quantity": taking["quantity"],
+            "site_id": taking["site_id"],
+            "taken_at": taking["taken_at"],
+            "evidence_scope": "recorded_physical_action_only",
+        }
+    return {
+        "claim_id": claim_id,
+        "claimant_id": claim["claimant_id"],
+        "claim_kind": claim["claim_kind"],
+        "alleged_subject_id": claim["subject_id"],
+        "resource": claim["resource"],
+        "quantity": claim["quantity"],
+        "site_id": claim["site_id"],
+        "filed_at": claim["filed_at"],
+        "claim_status": claim["status"],
+        "basis": claim["basis"],
+        "cited_physical_taking": observed,
+        "registered_origin_id": None,
+        "origin_linkage": "not_established",
+        "legal_title_status": "undetermined",
+        "legally_enforceable_owner": None,
+        "guilt_determined": False,
+        "audience": "trusted_internal_audit_only",
+    }
