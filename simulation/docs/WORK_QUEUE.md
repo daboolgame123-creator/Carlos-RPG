@@ -46,3 +46,18 @@ For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-1
 | 03-A7a | Self-only, read-only injury decision advisory | Verified 03-A6 `2ca67e83` (Schema32/Rules40) | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `eac14eb9`; CI `42282996746`: 1117/1117 passed on Python 3.10/3.13 | Self-only isolated advisory verified; external review deferred |
 | 03-A7b | Integrate own-injury effect into deterministic NPC decision/event replay | 03-A7a exact-SHA green | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `73da9660`; CI `42284128589`: 1121/1121 passed, Rules 41 | Rest-on-severe-injury recorded and replayed; external review deferred |
 | 03-A7c | Observations and disclosure of another NPC's visible injury | knowledge observation provenance + approved visibility contract | `DECISION_REQUIRED` | `WAITING_DECISION` | No general diagnosis or omniscient observer | Define observable symptoms and what NPC can infer |
+
+## 03-A8a — health recovery reservation integrity (2026-11-06)
+
+| ID | Task | Dependencies | Classification | Status | Evidence | Next |
+|---|---|---|---|---|---|---|
+| 03-A8a | Reject paid recovery without matching durable schedule at atomic append/replay boundaries | Verified 03-A6 and 03-A7b | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `75dc8141`; CI `42290286511` — 1125/1125 on Python 3.10/3.13 | Recovery reservation invariant verified; external review deferred |
+| 03-A7c | Cross-NPC visible symptoms and disclosure contract | Explicit observation/knowledge policy | `DECISION_REQUIRED` | `WAITING_DECISION` | Current engine does not establish diagnosis or peer knowledge | Do not implement auto-disclosure until visible symptom rules are adopted |
+
+
+## 03-A7c observation decision draft — 2026-11-06
+
+- **Task:** `03-A7c` — Cross-NPC visible injury observations.
+- **Classification / status:** `DECISION_REQUIRED / WAITING_DECISION`; parent `03-A` still open.
+- **Proposal:** [PHASE_03A7C_OBSERVATION_DECISION_DRAFT.md](PHASE_03A7C_OBSERVATION_DECISION_DRAFT.md) distinguishes optional, explicit local qualitative symptom observations from private injury truth and diagnosis. Owner has **not** approved the proposed defaults.
+- **Next:** obtain owner choice between limited symptom observation and deferral; only then plan implementation, versioning, character adversarial tests, full dual-Python CI and exact-SHA verification. No injury disclosure code implemented by this documentation task.

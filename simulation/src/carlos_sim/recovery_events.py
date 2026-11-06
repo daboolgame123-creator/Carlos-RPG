@@ -130,3 +130,40 @@ def finish_recovery(state: dict[str, Any], schedule_id: str, payload: dict[str, 
     else:
         # Committed food was used/reserved at start, so no unexplained refund.
         t["status"] = "interrupted"
+
+
+def validate_treatment_reservations(state: Any) -> None:
+    """Require exactly one matching durable appointment per pending treatment.
+
+    Call at full command and replay boundaries, NOT between RecoveryStarted
+    and ScheduledEventCreated within the same atomic command.
+    """
+    if hasattr(state, "to_dict"):
+        state = state.to_dict()
+    if type(state) is not dict:
+        raise ValueError("invalid treatment reservation state")
+    scheduled = state["scheduled"]
+    treatments = state["treatments"]
+    referenced: dict[str, str] = {}
+    for schedule_id, appointment in scheduled.items():
+        payload = appointment["payload"]
+        if "__npc_recovery" not in payload:
+            continue
+        if set(payload) != {"__npc_recovery"} or appointment["interrupt"]:
+            raise ValueError("malformed recovery appointment")
+        treatment_id = payload["__npc_recovery"]
+        if type(treatment_id) is not str or treatment_id not in treatments:
+            raise ValueError("orphaned recovery appointment")
+        record = treatments[treatment_id]
+        if (record["status"] != "pending"
+                or record["schedule_id"] != schedule_id
+                or record["due_at"] != appointment["due"]):
+            raise ValueError("recovery schedule does not match pending treatment")
+        if treatment_id in referenced:
+            raise ValueError("duplicate appointment for pending treatment")
+        referenced[treatment_id] = schedule_id
+    for treatment_id, record in treatments.items():
+        if record["status"] == "pending" and referenced.get(treatment_id) != record["schedule_id"]:
+            raise ValueError("paid recovery has no corresponding appointment")
+        if record["status"] != "pending" and treatment_id in referenced:
+            raise ValueError("completed recovery still has an appointment")
