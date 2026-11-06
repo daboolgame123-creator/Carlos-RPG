@@ -123,7 +123,7 @@ def test_backup_live_wal_restore_frozen_state_and_resume(tmp_path):
     manifest = session.checkpoint(bundle, code_commit=COMMIT)
     assert manifest['code_commit'] == COMMIT
     assert manifest['source_world'] == 'world'
-    assert manifest["schema"] == 32 and manifest["rules"] == 40
+    assert manifest["schema"] == 32 and manifest["rules"] == 41
     assert manifest['worlds'][0]['revision'] == captured['revision']
     assert verify_backup_bundle(bundle) == manifest
     # The live source keeps evolving independently of this frozen checkpoint.
