@@ -245,3 +245,29 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
   Keep the new interruption test separate until its own final-SHA green run.
 - The physical injury symptom model is still unimplemented; 03-A7c and
   parent 03-A remain OPEN and no change to `main`.
+
+
+## 03-A7c — verified care memory and travel boundary (2026-11-07)
+
+- `03-A7c-historical-care-interruption`: `CLOSED_TECHNICALLY` —
+  GitHub Actions `42312139434`, commit `49d93f41`,
+  both Python 3.10 and 3.13 SUCCESS. Adel's real departure leaves
+  Basim's already witnessed care memory intact, while the unfinished
+  funded appointment interrupts without miraculous healing.
+- `03-A7c-historical-care-travel`: `CLOSED_TECHNICALLY` —
+  GitHub Actions `42312298248`, exact commit `ab7c04a3`,
+  both Python 3.10 and 3.13 SUCCESS. Basim keeps his prior
+  factual memory after traveling away but gains no remote sight of care.
+- `03-A7c-activity-and-care-behavioral-memory`: `CLOSED_TECHNICALLY`
+  for the current limited *visible activity* scopes; full medical symptom
+  observation is **NOT** complete. Previous dual-Python green tests cover
+  observer identity isolation, 64-record limits, 65-tick witness trials,
+  fake actor/source/time rejection, SQLite snapshots and replay,
+  same-logical-tick event ordering, and genuine independent witnesses.
+- `03-A7c-physical-symptom-source`: `BLOCKED_BY_DEPENDENCY` —
+  source-of-truth still tracks injuries but no grounded visible wound,
+  limp or other physical sign is produced by a verified event. Ordinary
+  rest and supportive care are not such signs.
+- `03-A7c` parent and `03-A` remain `OPEN`, no merge to `main`.
+  Do not claim symptom observation or full gate closure on the basis of
+  behavioral memory coverage.
