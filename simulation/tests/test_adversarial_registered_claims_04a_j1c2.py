@@ -74,3 +74,29 @@ def test_rehashed_snapshot_with_fake_claim_balance_cannot_be_loaded(scene):
         db.load("v")
     # Genesis replay remains independent of snapshots.
     assert db.load("v", use_snapshot=False).to_dict() == saved.to_dict()
+
+
+
+def test_self_consistent_forged_snapshot_is_caught_by_full_event_replay(scene):
+    db, clock = scene
+    _register(db)
+    _offer(db, clock, ident="original", recipient="salma")
+    genuine = _accept(db, clock, ident="original")
+    db.snapshot("v")
+    forged = genuine.to_dict()
+    # Rewrite all mutually dependent projection tables consistently;
+    # a snapshot-only structural validator may accept this presentation,
+    # but the durable event log still records Salma's actual acceptance.
+    forged["registered_claim_offers"]["original"]["recipient_id"] = "nora"
+    forged["registered_claim_transfers"]["original"]["recipient_id"] = "nora"
+    forged["registered_claim_balances"]["origin-bread"] = {
+        "bakery": 1, "nora": 1
+    }
+    assert WorldState.from_dict(forged).to_dict() == forged
+    db.db.execute(
+        "UPDATE snapshots SET state=?, hash=? WHERE world_id=? AND revision=?",
+        (canonical(forged), canonical_hash(forged), "v", genuine.revision)
+    )
+    assert db.load("v", use_snapshot=False).to_dict() == genuine.to_dict()
+    with pytest.raises(IntegrityError, match="snapshot and full replay disagree"):
+        db.verify("v")
