@@ -322,3 +322,59 @@ def test_capacity_exhaustion_does_not_block_valid_local_look(tmp_path):
                               expected_revision=observed.revision)
         assert len(recall_rest_activity(db.load("world"), "basim")) == MAX_REST_MEMORIES
         assert db.verify("world").to_dict() == db.load("world").to_dict()
+
+
+def test_pending_evidence_cannot_bypass_finite_memory_capacity(tmp_path):
+    """64 unacknowledged first-hand sightings block an illicit 65th delivery."""
+    from carlos_sim.injury_observation import MAX_REST_MEMORIES
+    with SQLiteEventStore(tmp_path / "pending-cap.sqlite") as db:
+        clock, movement, _before = start_world(db, injury=True)
+        for tick in range(MAX_REST_MEMORIES):
+            observed = movement.observe(
+                "world", "basim", command_id=f"look-{tick}",
+                expected_revision=db.load("world").revision)
+            pending = DomainEvent("NPCInformationDelivered", "basim",
+                                  "legitimate pending visual evidence", tick, {
+                "npc_id": "basim", "delivery_id": f"pending-{tick}",
+                "key": f"visible-rest:nora:{tick}",
+                "claim": {
+                    "text": f"visible-resting; observed_at={tick}",
+                    "source": "observation:square",
+                    "received_at": tick, "confidence": 90,
+                },
+                "sender_id": "basim", "location_id": "square",
+                "method": "observation",
+            })
+            db.append("world", f"delivery-{tick}", observed.revision,
+                      [pending], npc_authorized=True)
+            if tick != MAX_REST_MEMORIES - 1:
+                clock.advance("world", seconds=1, command_id=f"tick-{tick}",
+                              expected_revision=db.load("world").revision)
+        state = db.load("world")
+        assert len(state.npcs["basim"]["inbox"]) == MAX_REST_MEMORIES
+        assert recall_rest_activity(state, "basim") == ()
+        clock.advance("world", seconds=1, command_id="tick-capacity",
+                      expected_revision=state.revision)
+        seen = movement.observe(
+            "world", "basim", command_id="look-capacity",
+            expected_revision=db.load("world").revision,
+            activity_enabled=True)
+        assert len(seen.npcs["basim"]["inbox"]) == MAX_REST_MEMORIES
+        assert recall_rest_activity(seen, "basim") == ()
+        forged = DomainEvent("NPCInformationDelivered", "basim",
+                              "overflow attempt", seen.time, {
+            "npc_id": "basim", "delivery_id": "over-capacity",
+            "key": f"visible-rest:nora:{seen.time}",
+            "claim": {
+                "text": f"visible-resting; observed_at={seen.time}",
+                "source": "observation:square",
+                "received_at": seen.time, "confidence": 90,
+            },
+            "sender_id": "basim", "location_id": "square",
+            "method": "observation",
+        })
+        with pytest.raises(InvalidEvent):
+            db.append("world", "overflow-forgery", seen.revision,
+                      [forged], npc_authorized=True)
+        assert db.load("world").to_dict() == seen.to_dict()
+        assert db.verify("world").to_dict() == seen.to_dict()
