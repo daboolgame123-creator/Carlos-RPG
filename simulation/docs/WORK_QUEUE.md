@@ -203,3 +203,18 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
 - Visible care still means only an external care interaction, never a
   guaranteed physical symptom or medical diagnosis. Parent
   `03-A7c` and `03-A` remain OPEN.
+
+
+## 03-A7c historical supportive care recall — 2026-11-07
+
+- Ordered care observation: `CLOSED_TECHNICALLY` against CI
+  `42310095549` at `ebb0f8ee`, Python 3.10/3.13 both success.
+- Historical care memory: `VERIFICATION_PENDING`; pure
+  `recall_supportive_care` reads only the observer's previous validated
+  `visible-care` belief, never injury severity, cause or resource details.
+  Implementation `c1301fc9` and tests `b54b76b6` cover Basim retaining
+  factual memory after Adel finishes, Salma/Huda/Omar not learning it,
+  repeated observation not duplicating the record, time-zero look before
+  care not predicting it, and snapshot/SQLite replay. Require final SHA CI.
+- No actual physical wound, limp, collapse or medical diagnosis producer yet.
+  Parent 03-A7c / 03-A remain OPEN; no merge to main.
