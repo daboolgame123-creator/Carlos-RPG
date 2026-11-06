@@ -65,3 +65,18 @@ If reusing existing event families is safer, document the exact equivalence befo
 ## Planning status
 
 The independent design outline is completed. 03-A1 implementation remains pending source audit and acceptance checks. Branch stays separate and must not be merged into the 04-A branch while concurrent changes are unverified.
+
+## 03-A1 source audit — first concrete findings (2026-11-06)
+
+Reviewed actual `domain.py` and `rpg_state.py` at the independent green baseline. **Important correction to the initial plan:** `rpg_profiles` only accepts `state["entities"][id]["controller"] == "player"`. It is **not** an NPC health system. `PlayerRPGInitialized` is trusted time-zero bootstrap and `PlayerVitalChanged` is exclusively trusted `source="test-scenario"`, with explicit previous/current and no gameplay healing. Therefore no NPC injury reducer may assume the existing RPG ledger holds NPC vitals.
+
+The actual domain reducer processes `ScheduledEventCreated`, `ScheduledEventFired`, and `ScheduledEventCancelled` with strict due/order rules. Recovery must integrate with the existing schedule without bypassing scheduled event order or mutating time itself.
+
+### Scope correction required before implementing 03-A2
+
+- Implement **NPC injury evidence/capability** in an independently validated bounded structure instead of placing NPCs in `rpg_profiles`.
+- Player HP may only be coupled to health by an explicit new trusted event contract (and schema/rules bump), not by silently reusing `PlayerVitalChanged` or treating missing HP as zero.
+- Tests for Nora/Basim/Salma should first prove that they are NPCs and have no RPG player profile, then test injury state independently of HP. A separately configured player profile scenario is needed for HP-specific behavior.
+- Audit the rest of the scheduling command producers and player-observation gateway before choosing field names and event authorization; do **not** implement a reducer yet.
+
+This source audit is a partial 03-A1 deliverable. It has not been runtime tested. No actual injury state or healing mechanic has been added.
