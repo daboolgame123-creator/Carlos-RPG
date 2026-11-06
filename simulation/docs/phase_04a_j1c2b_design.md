@@ -121,3 +121,14 @@ Added `property_claim_context_packet` to the trusted-only read-only audit layer.
 - Code `b8ce3865fb9ba952b089260fd27d16d0930513ff`; four additional tests `93c82401d66e3f694f9168bd7e77130bef3e7b5a` cover apparent competing claims, different filing times, unrelated resource exclusion and immutable replay.
 - **Do not claim the additional tests passed until GitHub Actions results on the exact code SHA are verified.** Earlier 924/924 suites on code `09b0f8a4892d6280397186aa7b841c85710ceb9d` finished SUCCESS on Python 3.10 and 3.13 ([CI 42217038655](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42217038655)).
 - Binding legal-title adjudication still requires a separately defined local law, validated source evidence and explicit authority. J1c2b remains OPEN.
+
+
+## Exact physical-incident evidence grouping (2026-11-06)
+
+Added `physical_incident_audit_packet(state, taking_id)` as a **trusted-internal read-only projection**. Unlike location/resource comparisons, a claim that explicitly cites an existing taking ID is linked to that *particular physical action*, with dedicated eyewitness records and chronological claim references. This is grounded in existing `PropertyTaken`/`property_sightings`/`property_claims` event identity and requires no schema/version change.
+
+The packet explicitly **excludes uncited allegations** (even about the same resource/site) and returns no presumed registered origin or lawful owner. A firsthand sighting may establish the referenced physical action, but not absence of permission, guilt or enforceable title. The method must never become a public or character-facing source of omniscient knowledge; no new authentication boundary was installed.
+
+New code commit `80c6e8cda04b8bc3219c59fe73e228e540523ce9`, four regression tests commit `7730f49b7908769ad1d0c150d565ca6376f56aab`: multi-witness and referenced claims (with unrelated false accusation), unseen action, unknown IDs, immutable snapshots/full replay. **Await exact-commit GitHub Actions to mark passing**.
+
+**Stage scope still OPEN:** legal jurisdiction, formal right creation and contested-title resolution require approved prospective normative rules. No court, ruling, sanction, world migration or production authorization has been added.
