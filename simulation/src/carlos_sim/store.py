@@ -294,6 +294,20 @@ class SQLiteEventStore:
         if any(e.event_type == "ResourceChanged" and e.data.get("source") != "initialization"
                for e in events) and world_id not in self._active_worlds:
             raise InvalidEvent("resource consumption requires an active play session")
+        # First-hand care must be captured atomically *after* the current
+        # NPCObserved event in this very command. Same-tick sightings recorded
+        # by an earlier command are NOT proof of an activity started later.
+        for i, evidence in enumerate(events):
+            if (evidence.event_type == "NPCInformationDelivered"
+                    and isinstance(evidence.data.get("key"), str)
+                    and evidence.data["key"].startswith("visible-care:")):
+                who = evidence.data.get("npc_id")
+                if (not movement_authorized or not npc_authorized
+                        or not any(previous.event_type == "NPCObserved"
+                                   and previous.actor_id == who
+                                   and previous.data.get("npc_id") == who
+                                   for previous in events[:i])):
+                    raise InvalidEvent("first-hand care requires same-command ordered observation")
         serialized = [e.to_dict() for e in events]
         request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized,"action_authorized":action_authorized,"movement_authorized":movement_authorized,"social_authorized":social_authorized,"assistance_authorized":assistance_authorized,"consumption_authorized":consumption_authorized,"survival_authorized":survival_authorized,"rpg_authorized":rpg_authorized,"production_authorized":production_authorized,"market_authorized":market_authorized,"loan_authorized":loan_authorized,"taking_authorized":taking_authorized,"claim_authorized":claim_authorized,"complaint_authorized":complaint_authorized,"permission_authorized":permission_authorized,"claim_transfer_authorized":claim_transfer_authorized,"injury_authorized":injury_authorized,"recovery_authorized":recovery_authorized})
         self.db.execute("BEGIN IMMEDIATE")
