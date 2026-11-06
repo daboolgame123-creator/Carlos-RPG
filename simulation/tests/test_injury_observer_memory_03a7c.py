@@ -382,3 +382,35 @@ def test_pending_evidence_cannot_bypass_finite_memory_capacity(tmp_path):
                       [forged], npc_authorized=True)
         assert db.load("world").to_dict() == seen.to_dict()
         assert db.verify("world").to_dict() == seen.to_dict()
+
+
+def test_earlier_same_tick_look_does_not_predict_later_rest(tmp_path):
+    from carlos_sim.injury_observation import observed_resting_activity
+    with SQLiteEventStore(tmp_path / "rest-order.sqlite") as db:
+        actions_world(db, fatigue=90)
+        clock = TimeEngine(db)
+        clock.open_session("world")
+        movement = NPCMovementService(db, clock)
+        before = movement.observe(
+            "world", "basim", command_id="before-rest",
+            expected_revision=db.load("world").revision)
+        NPCService(db, clock).decide(
+            "world", "nora", command_id="now-rest",
+            expected_revision=before.revision)
+        started = NPCActionService(db, clock).start(
+            "world", "nora", "rest-started-after-look",
+            expected_revision=db.load("world").revision).state
+        assert started.time == before.time == 0
+        assert observed_resting_activity(started, "basim", "nora") is None
+        assert recall_rest_activity(started, "basim") == ()
+        # Another plain look still cannot create proof of an activity.
+        plain = movement.observe(
+            "world", "basim", command_id="plain-later",
+            expected_revision=started.revision)
+        assert observed_resting_activity(plain, "basim", "nora") is None
+        witnessed = movement.observe(
+            "world", "basim", command_id="actual-rest-look",
+            expected_revision=plain.revision, activity_enabled=True)
+        assert observed_resting_activity(witnessed, "basim", "nora") is not None
+        assert len(recall_rest_activity(witnessed, "basim")) == 1
+        assert db.verify("world").to_dict() == witnessed.to_dict()
