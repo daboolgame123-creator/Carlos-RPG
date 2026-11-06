@@ -121,3 +121,17 @@ def test_old_schema_state_rejected_without_accepting_old_version():
     s["rules_version"] = RULES_VERSION - 1
     with pytest.raises(ValueError, match="unsupported world version"):
         WorldState.from_dict(s)
+
+
+def test_prior_schema_sqlite_file_refused_without_rewriting_bytes(tmp_path):
+    """Synthetic older-version row; genuine historical world remains a separate CI probe."""
+    path = tmp_path/"old-world.sqlite"
+    with SQLiteEventStore(path) as db:
+        village(db)
+        db.db.execute("UPDATE worlds SET schema_version=?,rules_version=? WHERE id='v'",
+                      (SCHEMA_VERSION-1, RULES_VERSION-1))
+    original = path.read_bytes()
+    with SQLiteEventStore(path) as db:
+        with pytest.raises(UnsupportedVersion):
+            db.load("v")
+    assert path.read_bytes() == original
