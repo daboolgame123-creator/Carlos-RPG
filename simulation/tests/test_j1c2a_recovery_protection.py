@@ -67,3 +67,36 @@ def test_tampered_manifest_is_rejected_before_output_creation(tmp_path):
     with pytest.raises(BackupError):
         restore_backup_bundle(bundle, target)
     assert not target.exists()
+
+
+def test_concurrent_directory_creator_cannot_be_replaced(tmp_path, monkeypatch):
+    """Deterministically interleave a creator after the second absence check."""
+    import carlos_sim.backup as backup_module
+
+    source = tmp_path / "source.sqlite"
+    destination = tmp_path / "racing-bundle"
+    original_check = backup_module._require_new_path
+    checks = 0
+
+    def racing_check(path):
+        nonlocal checks
+        original_check(path)
+        if path == destination:
+            checks += 1
+            if checks == 2:
+                destination.mkdir()
+                (destination / "another-process.txt").write_text("preserve")
+
+    with SQLiteEventStore(source) as store:
+        village(store)
+        clock = TimeEngine(store)
+        clock.open_session("v")
+        register(store, [origin()])
+        monkeypatch.setattr(backup_module, "_require_new_path", racing_check)
+        with pytest.raises(FileExistsError):
+            create_backup_bundle(store, "v", destination, code_commit=CODE_SHA)
+
+    assert (destination / "another-process.txt").read_text() == "preserve"
+    assert not (destination / "manifest.json").exists()
+    assert not (destination / "world.sqlite").exists()
+    assert not list(tmp_path.glob(".carlos-backup-staging-*"))
