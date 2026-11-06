@@ -290,7 +290,8 @@ class NPCMovementService:
 
     def observe(self, world_id: str, npc_id: str, *, command_id: str,
                 expected_revision: int, knowledge_enabled: bool = False,
-                activity_enabled: bool = False) -> WorldState:
+                activity_enabled: bool = False,
+                care_enabled: bool = False) -> WorldState:
         self.clock._require_session(world_id)
         state = self.store.load(world_id)
         if state.revision != expected_revision:
@@ -301,6 +302,8 @@ class NPCMovementService:
             raise ValueError('knowledge_enabled must be boolean')
         if type(activity_enabled) is not bool:
             raise ValueError('activity_enabled must be boolean')
+        if type(care_enabled) is not bool:
+            raise ValueError('care_enabled must be boolean')
         events = [
             DomainEvent('NPCObserved', npc_id, 'NPC observes only co-located entities',
                         state.time, {'npc_id': npc_id})]
@@ -312,9 +315,12 @@ class NPCMovementService:
         if activity_enabled:
             from .injury_observation import make_rest_activity_events
             events.extend(make_rest_activity_events(state, npc_id, command_id))
+        if care_enabled:
+            from .injury_observation import make_visible_care_events
+            events.extend(make_visible_care_events(state, npc_id, command_id))
         return self.store.append(world_id, command_id, expected_revision, events,
                                  movement_authorized=True,
-                                 npc_authorized=knowledge_enabled or activity_enabled)
+                                 npc_authorized=knowledge_enabled or activity_enabled or care_enabled)
 
 
 def perceive_local(state: WorldState, npc_id: str) -> dict[str, Any] | None:
