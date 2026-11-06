@@ -435,3 +435,43 @@ def test_caregiver_leaves_mid_treatment_basim_retains_only_historical_sighting(t
         assert db.verify("v").to_dict() == finished.to_dict()
     finally:
         db.close()
+
+
+def test_basim_leaves_after_witnessing_care_and_does_not_see_it_remotely(tmp_path):
+    """A first-hand memory travels with the observer; current sight does not."""
+    from carlos_sim import DomainEvent
+    from carlos_sim.injury_observation import recall_supportive_care
+    db, clock, service = scene(tmp_path)
+    try:
+        initial = db.load("v")
+        db.append("v", "route-for-witness", initial.revision, [
+            DomainEvent("RouteCreated", None, "established bakery-square footpath", 0,
+                        {"id": "witness-route", "a": "bakery",
+                         "b": "square", "seconds": 50})
+        ], bootstrap=True)
+        begun = begin(db, service)
+        movement = NPCMovementService(db, clock)
+        seen = movement.observe(
+            "v", "basim", command_id="basim-sees-real-care",
+            expected_revision=begun.revision, care_enabled=True)
+        prior = recall_supportive_care(seen, "basim")
+        assert len(prior) == 1
+        departed = movement.start(
+            "v", "basim", "witness-route", "basim-departs",
+            expected_revision=seen.revision)
+        assert observed_supportive_care(departed.state, "basim", "nora") is None
+        assert recall_supportive_care(departed.state, "basim") == prior
+        arrived = clock.advance(
+            "v", seconds=50, command_id="basim-arrives",
+            expected_revision=departed.state.revision).state
+        assert arrived.entities["basim"]["location_id"] == "square"
+        assert observed_supportive_care(arrived, "basim", "nora") is None
+        assert recall_supportive_care(arrived, "basim") == prior
+        remote = movement.observe(
+            "v", "basim", command_id="basim-remote-look",
+            expected_revision=arrived.revision, care_enabled=True)
+        assert observed_supportive_care(remote, "basim", "nora") is None
+        assert recall_supportive_care(remote, "basim") == prior
+        assert db.verify("v").to_dict() == remote.to_dict()
+    finally:
+        db.close()
