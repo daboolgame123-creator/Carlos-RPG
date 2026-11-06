@@ -300,45 +300,157 @@ def recall_rest_activity(state: WorldState, observer_id: str) -> tuple[dict[str,
     return tuple(sorted(found, key=lambda row: (row["observed_at"], row["subject_id"])))
 
 
+# Dedicated, non-diagnostic event-backed local caregiving evidence.
+CARE_PREFIX = "visible-care:"
+MAX_CARE_MEMORIES = 64
+
+
+def care_memory_key(subject: str, caregiver: str, tick: int) -> str:
+    from .injury_transitions import _ident, _time
+    if not _ident(subject) or not _ident(caregiver) or not _time(tick):
+        raise ValueError("invalid caregiving memory key")
+    return f"{CARE_PREFIX}{subject}:{caregiver}:{tick}"
+
+
+def _care_matches(state: dict, observer: str, subject: str,
+                  caregiver: str, site: str) -> bool:
+    from .market import _present
+    if (observer in (subject, caregiver)
+            or any(who not in state["npcs"] for who in (observer, subject, caregiver))
+            or any(state["entities"][who]["location_id"] != site
+                   or not _present(state, who, site)
+                   for who in (observer, subject, caregiver))):
+        return False
+    return any(
+        care["subject_id"] == subject and care["caregiver_id"] == caregiver
+        and care["site_id"] == site and care["status"] == "pending"
+        and care["started_at"] <= state["time"] < care["due_at"]
+        for care in state["treatments"].values()
+    )
+
+
+def check_visible_care_delivery(state: dict, event) -> None:
+    """Verify first-hand care against the actual order of domain events.
+
+    This runs immediately after the same-command NPCObserved event. A look
+    made before care starts cannot be retroactively converted into evidence.
+    """
+    p = event.data
+    observer = p["npc_id"]
+    key = p["key"]
+    if type(key) is not str or not key.startswith(CARE_PREFIX):
+        raise ValueError("invalid care evidence key")
+    parts = key[len(CARE_PREFIX):].split(":")
+    if len(parts) != 3:
+        raise ValueError("invalid care evidence identity")
+    subject, caregiver, raw_tick = parts
+    if (not raw_tick.isascii() or not raw_tick.isdecimal()
+            or raw_tick != str(state["time"])
+            or key != care_memory_key(subject, caregiver, state["time"])):
+        raise ValueError("invalid care evidence timestamp")
+    site = state["entities"][observer]["location_id"]
+    claim = {"text": f"visible-supportive-care; caregiver={caregiver}; observed_at={state['time']}",
+             "source": "observation:" + site, "received_at": state["time"],
+             "confidence": 90}
+    sight = state["observations"].get(observer, {}).get(site)
+    if (event.actor_id != observer or p["sender_id"] != observer
+            or p["method"] != "observation" or p["location_id"] != site
+            or p["claim"] != claim or sight is None
+            or sight["at"] != state["time"]
+            or any(who not in sight["occupants"]
+                   for who in (observer, subject, caregiver))
+            or not _care_matches(state, observer, subject, caregiver, site)):
+        raise ValueError("care evidence requires actual witnessed ongoing care")
+    npc = state["npcs"][observer]
+    if (key in npc["beliefs"]
+            or any(item["key"] == key for item in npc["inbox"].values())):
+        raise ValueError("care evidence already recorded")
+    counted = sum(k.startswith(CARE_PREFIX) for k in npc["beliefs"])
+    counted += sum(item["key"].startswith(CARE_PREFIX)
+                   for item in npc["inbox"].values())
+    if counted >= MAX_CARE_MEMORIES:
+        raise ValueError("care evidence memory capacity reached")
+
+
+def make_visible_care_events(state: WorldState, observer_id: str,
+                             command_id: str) -> list:
+    """Create care delivery+ack only for real active care at an explicit look."""
+    from .domain import DomainEvent
+    from .injury_transitions import _ident
+    if type(state) is not WorldState or observer_id not in state.npcs:
+        raise ValueError("configured observer required")
+    if not _ident(command_id):
+        raise ValueError("bounded care-observation command required")
+    raw = state.to_dict()
+    site = state.entities[observer_id]["location_id"]
+    from .market import _present
+    if not _present(raw, observer_id, site):
+        raise ValueError("observer unavailable")
+    npc = raw["npcs"][observer_id]
+    remaining = MAX_CARE_MEMORIES - sum(
+        k.startswith(CARE_PREFIX) for k in npc["beliefs"])
+    remaining -= sum(item["key"].startswith(CARE_PREFIX)
+                     for item in npc["inbox"].values())
+    events = []
+    seen = set()
+    for care in sorted(state.treatments.values(),
+                       key=lambda t: (t["subject_id"], t["caregiver_id"], t["id"])):
+        if remaining <= 0:
+            break
+        subject, caregiver = care["subject_id"], care["caregiver_id"]
+        pair = (subject, caregiver)
+        if pair in seen or not _care_matches(raw, observer_id, subject, caregiver, site):
+            continue
+        seen.add(pair)
+        key = care_memory_key(subject, caregiver, state.time)
+        if (key in npc["beliefs"] or
+                any(item["key"] == key for item in npc["inbox"].values())):
+            continue
+        ident = f"care-obs:{observer_id}:{subject}:{caregiver}:{state.time}:{command_id}"
+        claim = {
+            "text": f"visible-supportive-care; caregiver={caregiver}; observed_at={state.time}",
+            "source": "observation:" + site,
+            "received_at": state.time, "confidence": 90,
+        }
+        events.extend([
+            DomainEvent("NPCInformationDelivered", observer_id,
+                        "first-hand visible supportive care", state.time,
+                        {"npc_id": observer_id, "delivery_id": ident,
+                         "key": key, "claim": claim, "sender_id": observer_id,
+                         "location_id": site, "method": "observation"}),
+            DomainEvent("NPCBeliefReceived", observer_id,
+                        "retain first-hand visible supportive care", state.time,
+                        {"npc_id": observer_id, "key": key, "delivery_id": ident}),
+        ])
+        remaining -= 1
+    return events
+
+
 def observed_supportive_care(state: WorldState, observer_id: str,
                             subject_id: str) -> dict[str, object] | None:
-    """Present-tense sighting of actual scheduled care, not its diagnosis.
-
-    A trusted RecoveryStarted event has created a paid, active supportive
-    care process. The observing NPC must have separately looked at both the
-    caregiver and recipient at this site this tick. No injury ID, severity,
-    treatment amount or outcome is disclosed.
-    """
+    """Current witnessed care only if an event-backed first-hand claim exists."""
     if type(state) is not WorldState:
         raise ValueError("validated WorldState required")
     if (type(observer_id) is not str or type(subject_id) is not str
-            or observer_id == subject_id or observer_id not in state.npcs
-            or subject_id not in state.npcs):
+            or observer_id not in state.npcs or subject_id not in state.npcs):
         return None
     site = state.entities[observer_id]["location_id"]
     raw = state.to_dict()
-    if not _present(raw, observer_id, site):
-        return None
-    sight = state.observations.get(observer_id, {}).get(site)
-    if (sight is None or sight["at"] != state.time
-            or observer_id not in sight["occupants"]
-            or subject_id not in sight["occupants"]):
-        return None
-    for care in state.treatments.values():
-        caregiver = care["caregiver_id"]
-        if (care["subject_id"] != subject_id or caregiver == observer_id
-                or care["site_id"] != site or care["status"] != "pending"
-                or not care["started_at"] <= state.time < care["due_at"]
-                or caregiver not in sight["occupants"]
-                or not _present(raw, subject_id, site)
-                or not _present(raw, caregiver, site)):
+    for key, claim in state.npcs[observer_id]["beliefs"].items():
+        if not key.startswith(CARE_PREFIX):
             continue
-        return {
-            "subject_id": subject_id,
-            "caregiver_id": caregiver,
-            "sign": "visible_supportive_care",
-            "site_id": site,
-            "observed_at": state.time,
-            "medical_conclusion": None,
-        }
+        parts = key[len(CARE_PREFIX):].split(":")
+        if len(parts) != 3:
+            continue
+        subject, caregiver, tick = parts
+        if subject != subject_id or tick != str(state.time):
+            continue
+        if (claim["text"] != f"visible-supportive-care; caregiver={caregiver}; observed_at={state.time}"
+                or claim["source"] != "observation:" + site
+                or claim["received_at"] != state.time
+                or not _care_matches(raw, observer_id, subject_id, caregiver, site)):
+            continue
+        return {"subject_id": subject_id, "caregiver_id": caregiver,
+                "sign": "visible_supportive_care", "site_id": site,
+                "observed_at": state.time, "medical_conclusion": None}
     return None
