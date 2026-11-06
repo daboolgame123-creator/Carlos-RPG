@@ -395,3 +395,16 @@
 - Independent offline seven-actor recovery with 38 events, including the registered institution, **PASSED** on Python 3.10 and 3.13 at code `617b931da5cc3b433525ae6410f5e878dfc87012`; verifies replay, integrity, resumed simulation and no overwrite.
 - An initial test pass on old version-number assertions **failed**; repaired the legacy test expectations to current versions and retained a synthetic prior-SQLite refusal test. Full regression/adversarial CI on final SHA is **pending**, not approved.
 - J1c2b remains **OPEN**; additional legal authority, explicit consent/law adoption and title state are not built. Outside-environment review/P0 remains deferred/unapproved, respectively. See [design log](phase_04a_j1c2b_design.md) and [validation ledger](EXTERNAL_VALIDATION_LEDGER.md).
+
+
+## قرار توجيه التنفيذ بين المحادثة وOpenCode (2026-11-06)
+
+اعتمد صاحب المشروع **تصنيفًا إلزاميًا لكل مهمة قبل البدء بها**، مع تخطي **جدولي** فقط للمهام التي تحتاج بيئة خارجية أو قرارًا لم يُحسم، والبحث عن أول عمل مستقل حقيقي. المرجع الإجرائي الملزم: [WORK_ROUTING_PROTOCOL.md](WORK_ROUTING_PROTOCOL.md) وسجل الحالة الحية [WORK_QUEUE.md](WORK_QUEUE.md)، وأحكام `AGENTS.md` الأحدث.
+
+- **داخل المحادثة:** أنجز العمل القابل للتنفيذ والاختبار عبر الأدوات وGitHub؛ لا تحل إلى OpenCode لمجرد أن المهمة كبيرة.
+- **جزئيًا داخل المحادثة:** نفذ الجزء الممكن ووثّق بوابة التحقق الخارجي في [EXTERNAL_VALIDATION_LEDGER.md](EXTERNAL_VALIDATION_LEDGER.md) دون ادعاء نجاح.
+- **OpenCode/بيئة خارجية:** سجّل المبرر، SHA الأساس، خطوات إعادة الإنتاج وشروط القبول، واترك المهمة مفتوحة.
+- **المرحلة المرتبطة بمتطلب مؤجل:** `BLOCKED_BY_DEPENDENCY`، ممنوع تنفيذها. ابحث عن مهمة مستقلة على أساس متحقق منه. مثال: 33 تحتاج جهازًا خارجيًا؛ 34 تعتمد عليها فتُحجب؛ 35 مستقلة قابلة للاختبار هنا فيجوز تنفيذها، مع بقاء 33 و34 مفتوحتين.
+- **العائق الحالي:** J1c2b Schema29/Rules37 بحاجة إلى إصلاح الانحدار وبصمة التوافق الدلالي، ولا يجوز تصنيف فشل CI كسبب للهروب إلى مرحلة جديدة أو الدمج على فرع متعثر.
+
+**توضيح التعديل:** هذا القرار أحدث من منع الانتقال المطلق في النسخ السابقة من الخارطة؛ وهو يسمح **بإعادة ترتيب العمل المستقل فقط**، لا باعتبار المراحل المتوقفة مكتملة أو الاستغناء عن بوابات الإغلاق والتبعيات والأمن.
