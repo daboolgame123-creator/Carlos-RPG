@@ -218,3 +218,15 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
   care not predicting it, and snapshot/SQLite replay. Require final SHA CI.
 - No actual physical wound, limp, collapse or medical diagnosis producer yet.
   Parent 03-A7c / 03-A remain OPEN; no merge to main.
+
+
+## 03-A7c care-memory adversarial completion (2026-11-07)
+
+- `03-A7c-care-memory-integrity`: `VERIFICATION_PENDING` — commit
+  `3dfbc713` adds 65 distinct-tick care observations against a 64-memory
+  ceiling while care remains genuinely pending and tests that forged
+  recipient, caregiver or diagnosed illness cannot create accepted care
+  evidence. Exact final SHA must pass the Python 3.10/3.13 CI.
+- Prior tests for Basim/Salma observer-owned care memories after treatment,
+  snapshot/replay and same-tick ordering remain mandatory. Parent
+  03-A7c / 03-A still OPEN; physical injury symptom source not implemented.
