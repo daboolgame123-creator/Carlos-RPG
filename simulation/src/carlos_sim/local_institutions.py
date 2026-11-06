@@ -28,7 +28,7 @@ def register_institution(state: dict[str, Any], event, *, bootstrap: bool) -> No
     representative = p["representative_id"]
     if (not _id(site) or site not in state["locations"]
             or not _id(representative) or representative not in state["npcs"]
-            or p["model"] not in MODELS
+            or type(p["model"]) is not str or p["model"] not in MODELS
             or not _present(state, representative, site)
             or any(row["site_id"] == site for row in state["local_institutions"].values())
             or any(row["representative_id"] == representative
@@ -53,7 +53,7 @@ def validate_institutions(state: dict[str, Any]) -> None:
         if (not _id(ident) or type(row) is not dict or set(row) != INSTITUTION_KEYS
                 or row["site_id"] not in state["locations"]
                 or row["representative_id"] not in state["npcs"]
-                or row["model"] not in MODELS
+                or type(row["model"]) is not str or row["model"] not in MODELS
                 or row["registered_at"] != 0
                 or row["mandate"] != "existence_record_only"
                 or row["site_id"] in seen_sites
