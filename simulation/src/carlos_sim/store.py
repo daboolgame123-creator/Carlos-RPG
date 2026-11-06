@@ -294,21 +294,23 @@ class SQLiteEventStore:
         if any(e.event_type == "ResourceChanged" and e.data.get("source") != "initialization"
                for e in events) and world_id not in self._active_worlds:
             raise InvalidEvent("resource consumption requires an active play session")
-        # First-hand care must be captured atomically *after* the current
-        # NPCObserved event in this very command. Same-tick sightings recorded
-        # by an earlier command are NOT proof of an activity started later.
+        # First-hand activity and care evidence must follow the observer's
+        # own NPCObserved event in this SAME atomic command. A same-tick
+        # earlier look cannot be retroactively upgraded into new evidence.
         for i, evidence in enumerate(events):
             if (evidence.event_type == "NPCInformationDelivered"
                     and isinstance(evidence.data.get("key"), str)
-                    and evidence.data["key"].startswith("visible-care:")):
+                    and evidence.data["key"].startswith(("visible-care:", "visible-rest:"))):
                 who = evidence.data.get("npc_id")
                 sights = [j for j, previous in enumerate(events[:i])
                           if previous.event_type == "NPCObserved"
                           and previous.actor_id == who
                           and previous.data.get("npc_id") == who]
-                if (not movement_authorized or not npc_authorized or not sights
-                        or any(previous.event_type == "RecoveryStarted"
-                               for previous in events[sights[-1] + 1:i])):
+                if not movement_authorized or not npc_authorized or not sights:
+                    raise InvalidEvent("first-hand activity requires same-command observation")
+                if (evidence.data["key"].startswith("visible-care:")
+                        and any(previous.event_type == "RecoveryStarted"
+                                for previous in events[sights[-1] + 1:i])):
                     raise InvalidEvent("care must start before the witnessed observation")
         serialized = [e.to_dict() for e in events]
         request_hash = canonical_hash({"events":serialized,"expected_revision":expected_revision,"bootstrap":bootstrap,"clock_authorized":clock_authorized,"npc_authorized":npc_authorized,"action_authorized":action_authorized,"movement_authorized":movement_authorized,"social_authorized":social_authorized,"assistance_authorized":assistance_authorized,"consumption_authorized":consumption_authorized,"survival_authorized":survival_authorized,"rpg_authorized":rpg_authorized,"production_authorized":production_authorized,"market_authorized":market_authorized,"loan_authorized":loan_authorized,"taking_authorized":taking_authorized,"claim_authorized":claim_authorized,"complaint_authorized":complaint_authorized,"permission_authorized":permission_authorized,"claim_transfer_authorized":claim_transfer_authorized,"injury_authorized":injury_authorized,"recovery_authorized":recovery_authorized})
