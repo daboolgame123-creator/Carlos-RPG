@@ -226,3 +226,29 @@ on the exact final SHA. This remains behavioral evidence only:
 a care interaction does not prove a particular wound, disease or
 visible physical impairment. The separate physical symptom source is
 still blocked, and 03-A remains open.
+
+
+## Ordering audit — same logical tick observation (2026-11-07)
+
+Potential unsound inference found during further review: `NPCObserved`
+retains `at` and `occupants`, but NOT the observed action/treatment set
+or an event-sequence marker. A read-only observer projector can therefore
+mistake a prior look at a person for a look at an activity that began
+*later in that same logical tick*. Matching the site and simulation time
+is not sufficient to prove observation order.
+
+This is **OPEN / BLOCKING** for claiming full temporal provenance of
+`observed_supportive_care` and `observed_resting_activity`. The
+`activity_enabled=True` first-hand resting memory remains safer at the
+event-command boundary because it verifies the action before atomically
+committing `NPCObserved` followed by the delivery/ack. However the
+public pure current-scene projection still needs a separate ordering fix.
+
+Required fix: record and validate the observed activity's causal event
+sequence (or immutable activity snapshot) within a versioned observation
+contract; reject observations of actions started after the actual look,
+including same-tick ordering, and exercise replay, malformed snapshots
+and multi-NPC tests. Do not solve this by assigning a fictitious earlier
+clock time. Until then do NOT describe scene-only projectors as
+fully temporally proven; they are same-tick snapshots without order
+evidence. The separate physical medical symptom source remains blocked.
