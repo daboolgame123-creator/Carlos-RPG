@@ -1,0 +1,67 @@
+# Phase 03-A — Health, injury and recovery: isolated design contract
+
+Date: 2026-11-06
+Status: DESIGN_DRAFT / NOT IMPLEMENTED / NOT TESTED
+Work classification: CHAT_EXECUTABLE (design), CHAT_PARTIAL_EXTERNAL_GATE (runtime verification)
+Branch: design-phase-03a-health
+Baseline: green documentation commit 7a124c83f3a350f813f46af1f6ea10a342ad18b5
+Independence: does **not** consume J1c2b-LAW, institutional authority, title, courts or pending authority-draft verification.
+
+## Purpose
+
+Make injury and recovery causal, local and persistent, rather than arbitrary story decisions. Extend the already-existing opt-in RPG profile and event-sourced world, but never silently interpret old HP changes as injuries. The first implementation must remain a **disposable-world, trusted-engine-only** feature. Combat, death, disease spread, professions, medicines and AI diagnosis are separate stages.
+
+## Decisions frozen for first proposed slice (no executable rule yet)
+
+1. A character's HP is distinct from a list of specific injuries. Existing profile HP alone is insufficient to infer *where* an injury exists or its cause. When existing old worlds lack an injury ledger, it is **unknown**, not 'healthy'.
+2. An injury is created by a validated event referencing the affected character and a source/cause already established in the same transaction or accepted trusted scenario; never by a narrator's assertion.
+3. Injuries have stable IDs, affected entity IDs, onset simulation time, bounded severity, and an explicit state (active/recovered). A state change is event-sourced and replayable. No duplicate recovery and no spontaneous recovery by wall-clock passage.
+4. Recovery is an **action with time and prerequisites**, not a free `wait` or a blind HP increase. An initial recovery slice may record medically agnostic resting/recovery progress, but must not claim treatment efficacy or clinical realism.
+5. Injury impairs action participation based on deterministic capability gates; never alter queued actions halfway without an explicit interruption/cancellation event. Integrate with existing scheduled action machinery rather than introduce a second independent clock.
+6. The actor cannot claim to heal another NPC at a remote location; check co-location, travel/work commitments, identity and trust boundary at actual event application.
+7. A player sees only permitted symptoms, current permitted vitals and observable consequences. NPC-only internal medical state is not exposed through player status or narrative/LLM adapters.
+8. Rules operate in logical simulation time; time-splitting invariance must be proved for equivalent schedules. Recovery cannot happen before its completion event or at negative elapsed duration.
+9. Old SQLite worlds with incompatible schema/rules are refused unmodified unless a separate, tested migration exists; preserve original parity expectations when feature is disabled.
+10. No injury generates XP, currency, skill, item or death automatically in this stage.
+
+## Minimal domain event design (proposed, not yet implemented)
+
+- `InjuryRecorded`: trusted, verified source; affected ID; injury ID; severity 1..100; onset time == event time; provenance references; optional verified HP decrement bounded to currently known HP, never invent HP from unknown. The event type is only a proposal until full trust validation is specified.
+- `RecoveryStarted`: valid injured subject + real caregiver/self + real location, active injury, available slot and positive duration; records a scheduled action and resource/effort reservation if specified.
+- `RecoveryCompleted`: issued only for the exact eligible scheduled action at or after due time; can reduce severity only by an explicitly defined, bounded rule; cannot resolve another injury.
+- `InjuryStatusChanged`: separate transition to recovered only when deterministic criteria are satisfied. A character cannot self-authorize this event from an untrusted command.
+
+If reusing existing event families is safer, document the exact equivalence before implementation. All of these names are provisional and must not be emitted by current code.
+
+## Acceptance examples (5–7 characters, not 150)
+
+1. Nora is injured in a trusted scenario: HP and injury record are consistent where HP is known, event provenance exists, and persistence survives process restart.
+2. Basim tries to heal Nora from a different site: reject with **no mutation**.
+3. Salma starts a valid local recovery effort; before due time, no benefit; after exact completion, a deterministic bounded improvement occurs.
+4. Two caregivers attempt the same exclusive recovery slot concurrently: only one succeeds; losing command is rejected without duplicate healing.
+5. An invalid or spoofed source, negative duration, unknown HP, wrong injury ID, fabricated caregiver, duplicate ID, stale revision and conflicting queued work fail closed.
+6. A resting character's recovery does not cause food, copper, medicine, energy or XP to appear from nowhere.
+7. Simulate 600 seconds as one step vs ten 60-second steps: same accepted events and semantic state under equivalent event boundaries.
+8. Snapshot, full replay, SQLite reopen, backup-to-new-target and corruption rejection reproduce exactly.
+9. Entire regression suite + compatibility parity + adversarial checks on Python 3.10 and 3.13 pass on the **final implementation SHA**.
+10. Player observation returns no hidden injury details for NPCs out of sight.
+
+## Implementation sequence (provisional)
+- 03-A1: precise audit of RPG profile events, state validators and scheduling/replay; then choose the minimal compatible domain contract.
+- 03-A2: strict injury record (trusted/disposable) and deterministic projection with focused negative tests.
+- 03-A3: timed recovery with explicit cost/interruptions, co-location and resource requirements.
+- 03-A4: capability effects and visible symptoms through permission-filtered observation.
+- 03-A5: replay, parity, adversarial, backup/restore, exact-SHA CI and technical closure report.
+
+## Boundaries and live-world safety
+
+- No production or real-player save changes; no `main` change.
+- No permanent hidden regeneration from merely advancing wall clock.
+- No combat, death, criminal responsibility, courts or title effects.
+- Existing `RPGVitalAdjusted`-style test-only adjustments (exact name to be verified) must not be misrepresented as approved medical treatment.
+- `J1c2b-LAW-DRAFT` is still pending an independent verification task elsewhere; this document does not imply its completion.
+- This design is **not** an approved mechanics contract or tested code; an audit of actual event signatures is required before implementation.
+
+## Planning status
+
+The independent design outline is completed. 03-A1 implementation remains pending source audit and acceptance checks. Branch stays separate and must not be merged into the 04-A branch while concurrent changes are unverified.
