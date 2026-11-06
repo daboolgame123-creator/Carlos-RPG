@@ -99,3 +99,14 @@ This is a bounded independent 03-A7c slice, not parent completion.
 | 03-A7c-private-memory | Observer-scoped historical qualitative health claim | 03-A7c-medical-source and event/capability contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Must reject fabricated symptoms and preserve replay across SQLite reopen |
 
 The scene projection is not closure of the parent 03-A7c task.
+
+
+## 03-A7c conservative interpretation — 2026-11-07
+
+| ID | Title | Dependencies | Classification | Status | Evidence / next |
+|---|---|---|---|---|---|
+| 03-A7c-neutral-interpretation | Project a factually supported rest observation with explicitly unknown cause, identical for injured and healthy subjects | Verified 03-A7c local scene projector | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Code `e12a8221`, regression tests `4024d628`; require exact-final-SHA dual Python CI |
+| 03-A7c-subjective-interpretation | Explain individually different suspicion using only observer-owned proven memories | Trusted observer historical knowledge evidence and approved inference policy | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | No subjective guess may be persisted as a medical fact |
+
+This subtask does NOT implement durable symptom memory, an illness diagnosis or
+the complete 03-A7c feature. Parent 03-A remains OPEN.
