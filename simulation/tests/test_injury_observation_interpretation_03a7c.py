@@ -28,10 +28,10 @@ def test_same_observation_same_agnostic_interpretation(tmp_path, injury, fatigue
             "world", "nora", command_id="decide", expected_revision=db.load("world").revision)
         assert choice.action == "rest"
         action = NPCActionService(db, clock).start(
-            "world", "nora", "rest-nora", expected_revision=db.load("world").revision)
+            "world", "nora", "rest-nora", expected_revision=db.load("world").revision, activity_enabled=True)
         assert explain_visible_rest(action.state, "basim", "nora") is None
         recorded = movement.observe(
-            "world", "basim", command_id="look", expected_revision=action.state.revision)
+            "world", "basim", command_id="look", expected_revision=action.state.revision, activity_enabled=True)
         interpretation = explain_visible_rest(recorded, "basim", "nora")
         assert interpretation == {
             "subject_id": "nora", "sign": "visible_resting",
@@ -40,7 +40,8 @@ def test_same_observation_same_agnostic_interpretation(tmp_path, injury, fatigue
         }
         assert "nora-hidden-65" not in repr(interpretation)
         assert "65" not in repr(interpretation)
-        assert all(not profile["beliefs"] for profile in recorded.npcs.values())
+        assert recorded.npcs["nora"]["beliefs"] == {}
+        assert "visible-rest:nora:0" in recorded.npcs["basim"]["beliefs"]
         assert explain_visible_rest(recorded, "nora", "basim") is None
         assert db.verify("world").to_dict() == recorded.to_dict()
 
