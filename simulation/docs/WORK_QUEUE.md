@@ -155,3 +155,19 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
   at its own exact SHA; later pending-delivery and capacity changes must be
   tested independently.
 - No medical-sign producer or health diagnosis created. Parent 03-A7c OPEN.
+
+
+## 03-A7c memory integrity acceptance — 2026-11-07
+
+- `03-A7c-memory-capacity`: `CLOSED_TECHNICALLY` after GitHub Actions
+  `42307726165` on source-and-test SHA `8c3fc68165bb5f28548dfc07b150cbd14da5c519`:
+  Python 3.10 SUCCESS; Python 3.13 SUCCESS. This verifies 64 pending
+  deliveries do not admit a 65th forged direct delivery; the prior 65-tick
+  accepted-memory and nonblocking-observation test is green on
+  `9be0a4d0` run `42307467599` in both environments.
+- `03-A7c-activity-memory-integrity`: `CLOSED_TECHNICALLY` for the
+  tested behavior-only scope (not medical symptom detection).
+- `03-A7c-medical-symptom-source`: `BLOCKED_BY_DEPENDENCY`.
+  A numeric injury, fatigue, or rest is not ground truth for an externally
+  visible limp, wound, or collapse. Never fabricate a medical sign.
+- Parent `03-A7c` and `03-A` remain OPEN. No main merge.
