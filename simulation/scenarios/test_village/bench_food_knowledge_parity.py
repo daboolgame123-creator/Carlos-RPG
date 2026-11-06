@@ -92,6 +92,7 @@ def main():
                 )
             ]
             assert not snapshot.get("injuries", {}), "feature-off parity must contain no injuries"
+            assert not snapshot.get("treatments", {}), "feature-off parity must contain no treatments"
             return {
                 "npcs": len(outcome.state.npcs),
                 "time": outcome.state.time,
@@ -104,7 +105,7 @@ def main():
                 "rules_version": snapshot["rules_version"],
                 "state_digest": canonical_hash(snapshot),
                 "state_semantic_digest": canonical_hash({
-                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "injuries", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")
+                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "injuries", "treatments", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")
                 }),
                 "replay_equal": True,
             }
