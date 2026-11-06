@@ -50,3 +50,17 @@ A physical bread transaction (`MarketTradeExecuted`), taking (`PropertyTaken`), 
 ## Immediate next engineering action
 
 Perform a constrained audit of existing `market.py`, `rights.py`, `property.py`, `registered_claims.py`, and source-event schemas, then freeze a signed-off minimal normative jurisdiction and title representation contract. **Do not write binding title reducers or migrate Schema 28 / Rules 36 until normative rules are explicitly chosen and verified not to contradict world governance.**
+
+
+## Initial source-contract audit (2026-11-06)
+
+Read the actual current engine modules `market.py`, `rights.py`, `property.py`, and `registered_claims.py` on the J1 branch:
+
+| Module | Verified contract | Title implication |
+|---|---|---|
+| `market.py` | Local offers and atomic physical goods/payment balance transfer; site stewards represent the **site's** stock | Payment and receipt are evidence of transaction only; do not determine legally valid title |
+| `rights.py` | Trusted time-zero historical original claim, bounded by known registered stock, explicitly `historical_origin_only` | Does not establish contemporary title |
+| `property.py` | Physically conserved non-consensual taking requiring an internal capability; no automatic guilt or confiscation | Changes possession, not legal status |
+| `registered_claims.py` | Bounded recorded-claim balances, local offer/accept/cancel handshake and provenance | Transfers registered historical claim only, no physical or legal-title movement |
+
+**Audit conclusion:** It would be an unsound implementation to auto-issue `CurrentLegalTitleTransferred` on any of these existing events. The first safe J1c2b implementation cannot be chosen until an explicit law authority, prospective effect, reliable lot identification and evidence/consent representation are fixed. The status is **DESIGN_IN_PROGRESS**, not code-complete; no unresolved audit item is hidden.
