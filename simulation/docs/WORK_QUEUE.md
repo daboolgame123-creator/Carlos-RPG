@@ -271,3 +271,24 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
 - `03-A7c` parent and `03-A` remain `OPEN`, no merge to `main`.
   Do not claim symptom observation or full gate closure on the basis of
   behavioral memory coverage.
+
+
+## 03-A7c rest-sighting same-tick integrity (2026-11-07)
+
+- `03-A7c-rest-scene-ordering`: `VERIFICATION_PENDING`.
+  A plain `NPCObserved` only recorded occupants and a tick; it could
+  falsely imply that the witness saw a rest action which started later
+  in the same tick. The pure `observed_resting_activity` projector now
+  also requires that observer's verified `visible-rest` first-hand
+  belief minted by explicit `observe(activity_enabled=True)` while
+  rest was actually running (`99a3f141`). The event-store append gate
+  requires first-hand rest evidence to follow the same observer's
+  `NPCObserved` inside one atomic command (`c36e5ebb`).
+  Old read-only scene tests were updated to opt in to actual witness
+  evidence; regressions include same-tick rest starting after a look,
+  pending-delivery first-hand provenance, and time-bound replay
+  (`709df6d9`). The changed observable-scene contract is opt-in and
+  must pass Python 3.10 and 3.13 on exact final SHA.
+- Strictly do not equate recorded rest with a physical injury symptom.
+  The trusted visible limp/wound/collapse source remains
+  `BLOCKED_BY_DEPENDENCY`; parent `03-A7c` and `03-A` remain OPEN.
