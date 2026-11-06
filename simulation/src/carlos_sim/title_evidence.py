@@ -163,3 +163,35 @@ def property_claim_audit_packet(state: WorldState, claim_id: str) -> dict[str, A
         "guilt_determined": False,
         "audience": "trusted_internal_audit_only",
     }
+
+
+def property_claim_context_packet(state: WorldState, claim_id: str) -> dict[str, Any]:
+    """Trusted-only comparison of statements sharing a site and resource.
+
+    Co-location and matching resource are merely search criteria. They do NOT
+    establish identical goods, the same incident, corroboration or conflict
+    about a legally identified object. This is not an NPC/player view.
+    """
+    selected = property_claim_audit_packet(state, claim_id)
+    related = [
+        {"claim_id": ident, "claimant_id": row["claimant_id"],
+         "claim_kind": row["claim_kind"], "alleged_subject_id": row["subject_id"],
+         "quantity": row["quantity"], "filed_at": row["filed_at"],
+         "basis": row["basis"], "taking_id": row["taking_id"],
+         "comparison_basis": "same_site_and_resource_only",
+         "same_physical_incident_established": False,
+         "same_registered_origin_established": False}
+        for ident, row in state.property_claims.items()
+        if ident != claim_id and row["site_id"] == selected["site_id"]
+        and row["resource"] == selected["resource"]
+    ]
+    related.sort(key=lambda item: (item["filed_at"], item["claim_id"]))
+    return {
+        "selected_claim": selected,
+        "potentially_related_statements": related,
+        "comparison_scope": "same_site_and_resource_only",
+        "conflict_determined": False,
+        "legal_title_status": "undetermined",
+        "legally_enforceable_owner": None,
+        "audience": "trusted_internal_audit_only",
+    }
