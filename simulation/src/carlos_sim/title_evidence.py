@@ -195,3 +195,51 @@ def property_claim_context_packet(state: WorldState, claim_id: str) -> dict[str,
         "legally_enforceable_owner": None,
         "audience": "trusted_internal_audit_only",
     }
+
+
+def physical_incident_audit_packet(state: WorldState, taking_id: str) -> dict[str, Any]:
+    """Internal-only incident evidence, grouped by one immutable taking ID.
+
+    Shared exact taking IDs establish a reference to the SAME physical event,
+    never truth of a separate assertion, criminal guilt, or legal title.
+    """
+    if type(taking_id) is not str or not taking_id:
+        raise ValueError("nonempty taking ID required")
+    taking = state.property_takings.get(taking_id)
+    if taking is None:
+        raise ValueError("physical taking not found")
+    eyewitnesses = [
+        {"witness_id": row["witness_id"], "seen_at": row["seen_at"],
+         "sighting_id": key, "evidence_scope": "physical_taking_only"}
+        for key, row in state.property_sightings.items()
+        if row["taking_id"] == taking_id
+    ]
+    eyewitnesses.sort(key=lambda row: (row["seen_at"], row["sighting_id"]))
+    cited_claims = [
+        {"claim_id": key, "claimant_id": row["claimant_id"],
+         "claim_kind": row["claim_kind"], "alleged_subject_id": row["subject_id"],
+         "basis": row["basis"], "filed_at": row["filed_at"],
+         "claim_status": row["status"],
+         "same_physical_incident_established": True,
+         "legal_conclusion_established": False}
+        for key, row in state.property_claims.items()
+        if row["taking_id"] == taking_id
+    ]
+    cited_claims.sort(key=lambda row: (row["filed_at"], row["claim_id"]))
+    return {
+        "taking_id": taking_id,
+        "physical_actor_id": taking["actor_id"],
+        "source_owner_id": taking["source_owner_id"],
+        "site_id": taking["site_id"],
+        "resource": taking["resource"],
+        "quantity": taking["quantity"],
+        "taken_at": taking["taken_at"],
+        "eyewitness_records": eyewitnesses,
+        "claims_explicitly_citing_event": cited_claims,
+        "uncited_claims_attributed_to_event": False,
+        "registered_origin_id": None,
+        "legal_title_status": "undetermined",
+        "legally_enforceable_owner": None,
+        "guilt_determined": False,
+        "audience": "trusted_internal_audit_only",
+    }
