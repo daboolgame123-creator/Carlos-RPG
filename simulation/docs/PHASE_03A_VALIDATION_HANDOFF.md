@@ -21,3 +21,15 @@ Schema/Rules still 29/37; no durable injury event was enabled.
 ## Decision gate
 
 Do **not** begin durable `InjuryRecorded`/SQLite persistence or change schema/rules before **both** the new focused tests and the complete regression suite are green at the final code SHA. When they are, plan a separate branch/commit series for trust-source provenance, dedicated command capability, versioned NPC injury collection, and replay/corruption tests. No NPC player-status leakage. The unapproved `J1c2b-LAW` branch remains untouched.
+
+## CI incident and corrective evidence — 2026-11-06
+
+The draft PR [#6](https://github.com/daboolgame123-creator/Carlos-RPG/pull/6) triggered GitHub Actions run [42260046143](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42260046143). The run exposed a **real source syntax error**: source and test patches contained literal `\\n` tokens instead of physical newlines. Both interpreter jobs failed at the `compileall` step, before pytest began. This is a confirmed failure, not a passing test.
+
+Fixed both files on the same isolated verification branch:
+- `simulation/src/carlos_sim/injury_source_gate.py`: commit `1e08d63dd3a06a0916d3e080f6aa77304a2d78e4`
+- `simulation/tests/test_injury_source_gate_03a.py`: commit `efeb4a0f12f5cdd151a41cfbd72928f6c33e36bc`
+
+New PR-triggered run [42260232264](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42260232264) started on commit `efeb4a0f12f5cdd151a41cfbd72928f6c33e36bc`. On last checked status, both Python 3.10/3.13 jobs were **in progress, in the Install test dependency step**; no overall pass/fail has been established. Do not mark this stage closed unless both complete successfully at final implementation SHA, including all smoke/parity steps. If errors appear, read the specific GitHub Actions job logs and correct the root cause before extending the world schema.
+
+No persistent injury reducer, event authorization, recovery scheduler or SQLite change has been added.
