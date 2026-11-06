@@ -59,5 +59,5 @@ For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-1
 
 | ID | Title | Dependencies | Classification | Status | Evidence | Next |
 |---|---|---|---|---|---|---|
-| 03-A7c1 | Read-only candidate visible-symptom interpretation; three-character tests | 03-A8a verified code, explicit owner policy | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | `simulation/docs/PHASE_03A7C_OBSERVATION_CONTRACT.md`; candidate only, no event grant | Verify final SHA on both Pythons, then build trusted symptom observation source |
+| 03-A7c1 | Read-only candidate visible-symptom interpretation; three-character tests | 03-A8a verified code, explicit owner policy | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | Code SHA `b31adffc728eaebea38155b1ee73626588f09c53`; full CI `42292653631`: 1135 passed on Python 3.10 and 3.13; candidate only, no event grant | Next 03-A7c2: trust-bound event and knowledge integration, parent remains OPEN |
 | 03-A7c2 | Persist source-authenticated observations/knowledge with replay and no forged diagnosis | 03-A7c1, approved observation trigger and event authority | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | No authorized injury symptom signal or event projection yet | Define observable event source and strictly validate at append/replay; test on NPCs |
