@@ -57,3 +57,23 @@ def test_bootstrap_injury_does_not_change_resources_or_player_vitals(tmp_path):
         assert after.rpg_profiles == before.rpg_profiles
         assert after.time == before.time
         assert db.verify("v").to_dict() == after.to_dict()
+
+
+def test_previous_03a4_schema_30_rules_38_rejected_without_change(tmp_path):
+    """The new SQLite commands column requires a distinct schema identity."""
+    path = tmp_path / "previous-03a4.sqlite"
+    with SQLiteEventStore(path) as db:
+        village(db)
+        db.db.execute(
+            "UPDATE worlds SET schema_version=30, rules_version=38 WHERE id='v'"
+        )
+        rows_before = db.db.execute("SELECT * FROM worlds WHERE id='v'").fetchall()
+        events_before = db.db.execute(
+            "SELECT seq, command_id, payload, hash FROM events WHERE world_id='v' ORDER BY seq"
+        ).fetchall()
+        with pytest.raises(UnsupportedVersion):
+            db.load("v")
+        assert db.db.execute("SELECT * FROM worlds WHERE id='v'").fetchall() == rows_before
+        assert db.db.execute(
+            "SELECT seq, command_id, payload, hash FROM events WHERE world_id='v' ORDER BY seq"
+        ).fetchall() == events_before

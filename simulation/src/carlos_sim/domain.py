@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 30
-RULES_VERSION = 38
+SCHEMA_VERSION = 31
+RULES_VERSION = 39
 
 
 def _thaw(value: Any) -> Any:
@@ -345,7 +345,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -468,8 +468,11 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         from .environment import configure_environment_cycle
         configure_environment_cycle(d, e, bootstrap=bootstrap)
     elif kind == "InjuryRecorded":
-        from .injury_events import project_bootstrap_injury
-        project_bootstrap_injury(d, e, bootstrap=bootstrap)
+        from .injury_events import project_bootstrap_injury, project_exhaustion_injury
+        if bootstrap:
+            project_bootstrap_injury(d, e, bootstrap=True)
+        else:
+            project_exhaustion_injury(d, e, injury_authorized=injury_authorized)
     elif kind in ("PlayerRPGInitialized", "PlayerVitalChanged"):
         from .rpg_state import project_rpg_event
         project_rpg_event(d, e, bootstrap=bootstrap, rpg_authorized=rpg_authorized)
