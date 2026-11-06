@@ -81,3 +81,15 @@ Tests: `simulation/tests/test_title_evidence_04a_j1c2b.py` (original registratio
 - When the existing J1b custody reducer marks fungible units as `unresolved_quantity`, the packet reports `provenance_certainty="partial_or_unknown"`, never guesses who physically has the specific origin item. `exited_quantity` is separately counted.
 - It preserves physical movement audit provenance but exposes the packet **only to trusted internal auditors**; it is forbidden as a direct response to player/NPC/LLM/untrusted interfaces without a knowledge-filtered authorized adapter.
 - Three tests cover historical claimant versus real physical holder, mixed/uncertain physical provenance, and replay equivalence/read-only behavior, at test-code commit `15608bf0477babeefa203531f4012a8a837dd50a`. CI requires exact-commit verification. Schema/Rules remain 28/36; no legal title write commands or legislation exist.
+
+
+## Read-only evidence hardening (2026-11-06)
+
+Three additional regression probes were added in commit `f40917d92781d1eb1e9f9490c3f0fa268940865d`:
+1. A once-open offer whose simulated expiry passes is omitted from **active** evidence without rewriting the historical record or creating a legal owner.
+2. Mutating returned evidence dictionaries/lists cannot mutate the frozen world, its persistent log or subsequent evidence results.
+3. Two origins whose registered quantities share one physical stock source are reported separately; neither generates an enforceable legal owner.
+
+The previous five tests passed as part of the 910/910 full CI for Python 3.10 and 3.13 on code commit `df86a0953fb9ddf53791b77c6a160bb708b92d38` ([CI 42210094258](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42210094258)); adversarial and recovery checks passed as well ([CI 42210094189](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42210094189)). The **three new probes require fresh exact-commit CI**, and must not be called successful before observed.
+
+The remaining normative decision is **not** an implementation bug: local legal rules/authority, item provenance and disposition of contested legal title have intentionally not been defined. J1c2b remains OPEN.
