@@ -55,3 +55,25 @@ gateway must not receive that private record.
 
 No 03-A7c closure, production readiness or independent audit is claimed
 by the guard tests. Do not merge to `main` or the 04-A institution branch.
+
+
+## Verified-activity observation slice (implementation candidate)
+
+Commit `67af6c2a` introduces the pure `observed_resting_activity` projector.
+It recognizes only the actual ongoing `rest` action previously accepted by
+the event-sourced action reducer and a locally recorded current-tick sighting.
+The result is `visible_resting`, **not a medical symptom or injury inference**.
+An uninjured exhausted NPC and an injured NPC must project the same sign,
+while the private injury ledger stays inaccessible in the output.
+
+The guard does not persist any new NPC health belief, automatic disclosure or
+new world event. It changes no Schema/Rules version and leaves original
+`witnessed_peer_here` semantics intact. The old event-backed observation
+is still explicitly scoped to the present logical time. Tests also enforce
+post-snapshot SQLite reopening and invalidate the sign after time passes.
+
+**Important:** a running rest action is only one deterministic visible
+activity. It does not prove a limp, collapse, diagnosis, health condition,
+cause or medical necessity. The broader 03-A7c symptom source and receiver-
+scoped knowledge events remain open pending a separately justified physical
+sign event. Never silently reinterpret `visible_resting` as an injury code.
