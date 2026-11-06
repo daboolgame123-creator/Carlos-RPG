@@ -71,7 +71,7 @@ def decide(db, clock, who, ident):
 
 
 def test_schema_and_default_off_is_exact_legacy_choice(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (32, 41)  # 02-F adds opt-in routine schema
+    assert (SCHEMA_VERSION, RULES_VERSION) == (32, 42)  # 02-F adds opt-in routine schema
     with SQLiteEventStore(tmp_path / "off.sqlite") as db:
         setup(db, configured=False, members=("basim", "nora"))
         clock = TimeEngine(db)
