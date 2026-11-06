@@ -150,3 +150,48 @@ def test_no_rest_cannot_mint_visible_rest_memory(tmp_path):
         )
         assert recall_rest_activity(state, "basim") == ()
         assert db.verify("world").to_dict() == state.to_dict()
+
+
+def test_seven_npc_village_each_witness_keeps_own_memory(tmp_path):
+    from test_property_02h1 import village
+    path = tmp_path / "seven-witnesses.sqlite"
+    with SQLiteEventStore(path) as db:
+        village(db)
+        before = db.load("v")
+        db.append("v", "injury", before.revision, [
+            DomainEvent("InjuryRecorded", None, "trusted time-zero injury", 0, {
+                "injury_id": "secret-nora", "subject_id": "nora",
+                "severity": 65, "source": "trusted_test_bootstrap",
+            })], bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("v")
+        NPCService(db, clock).decide(
+            "v", "nora", command_id="rest-choice",
+            expected_revision=db.load("v").revision)
+        NPCActionService(db, clock).start(
+            "v", "nora", "rest", expected_revision=db.load("v").revision)
+        movement = NPCMovementService(db, clock)
+        basim = movement.observe(
+            "v", "basim", command_id="basimlook",
+            expected_revision=db.load("v").revision,
+            activity_enabled=True)
+        assert len(recall_rest_activity(basim, "basim")) == 1
+        for who in ("nora", "salma", "adel", "huda", "omar", "layla"):
+            assert recall_rest_activity(basim, who) == ()
+        salma = movement.observe(
+            "v", "salma", command_id="salmalook",
+            expected_revision=basim.revision,
+            activity_enabled=True)
+        assert recall_rest_activity(salma, "salma") == recall_rest_activity(salma, "basim")
+        assert recall_rest_activity(salma, "adel") == ()
+        assert recall_rest_activity(salma, "huda") == ()
+        assert recall_rest_activity(salma, "omar") == ()
+        assert db.verify("v").to_dict() == salma.to_dict()
+        db.snapshot("v")
+        original = salma.to_dict()
+    with SQLiteEventStore(path) as db:
+        assert db.load("v").to_dict() == original
+        assert db.verify("v").to_dict() == original
+        assert len(recall_rest_activity(db.load("v"), "basim")) == 1
+        assert len(recall_rest_activity(db.load("v"), "salma")) == 1
+        assert recall_rest_activity(db.load("v"), "omar") == ()
