@@ -46,3 +46,10 @@ For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-1
 | 03-A7a | Self-only, read-only injury decision advisory | Verified 03-A6 `2ca67e83` (Schema32/Rules40) | `CHAT_EXECUTABLE` | `IN_PROGRESS` | New independent `simulation-engine-phase-03a-injury-behavior` branch | Implement pure policy from own persisted injuries, reject cross-NPC leakage, run dual-Python full CI |
 | 03-A7b | Integrate own-injury effect into deterministic NPC decision/event replay | 03-A7a exact-SHA green and planned replay contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Requires verified 03-A7a read-only policy | Review NPCService/LivingWorldEngine/forage parity and version bump before editing |
 | 03-A7c | Observations and disclosure of another NPC's visible injury | knowledge observation provenance + approved visibility contract | `DECISION_REQUIRED` | `WAITING_DECISION` | No general diagnosis or omniscient observer | Define observable symptoms and what NPC can infer |
+
+## 03-A8a — health recovery reservation integrity (2026-11-06)
+
+| ID | Task | Dependencies | Classification | Status | Evidence | Next |
+|---|---|---|---|---|---|---|
+| 03-A8a | Reject paid recovery without matching durable schedule at atomic append/replay boundaries | Verified 03-A6 and 03-A7b | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | `simulation-engine-phase-03a-treatment-integrity`, Rules42 and `test_treatment_reservations_03a.py` | Run complete Python 3.10 / 3.13 GitHub Actions on exact final SHA; fix any failed checks before closure |
+| 03-A7c | Cross-NPC visible symptoms and disclosure contract | Explicit observation/knowledge policy | `DECISION_REQUIRED` | `WAITING_DECISION` | Current engine does not establish diagnosis or peer knowledge | Do not implement auto-disclosure until visible symptom rules are adopted |
