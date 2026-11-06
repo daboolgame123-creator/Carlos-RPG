@@ -5,6 +5,7 @@ import pytest
 from carlos_sim import SQLiteEventStore, TimeEngine, NPCRegisteredClaimService
 from carlos_sim.backup import create_backup_bundle, verify_backup_bundle, restore_backup_bundle, BackupError
 from carlos_sim.store import InvalidEvent
+from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
 from test_property_02h1 import village
 from test_rights_04a_j1a import origin, register
 
@@ -44,7 +45,7 @@ def test_backup_restores_open_and_accepted_registered_claims_without_teleporting
         bundle = tmp_path / "known-good"
         manifest = create_backup_bundle(db, "v", bundle, code_commit=CODE_SHA)
         assert verify_backup_bundle(bundle) == manifest
-        assert manifest["schema"] == 28 and manifest["rules"] == 36
+        assert manifest["schema"] == SCHEMA_VERSION and manifest["rules"] == RULES_VERSION
         assert manifest["worlds"][0]["state_sha256"]
         # Source changes *after* backup; the frozen bundle must not change.
         svc.cancel("v", "adel", "pending-offer", expected_revision=_revision(db))
