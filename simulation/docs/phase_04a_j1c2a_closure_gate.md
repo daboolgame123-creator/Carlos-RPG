@@ -38,3 +38,14 @@
 **J1c2a: OPEN / TECHNICALLY_VALIDATED / EXTERNAL_REVIEW_DEFERRED / P0 OPEN.** No claim of full completion; do not start J1c2b, J1c3 or judiciary implementation. A user saying “continue” means continue working on these closure tasks, not bypassing the gate.
 
 **No invented reviewer or recovery sign-off.** An unresolved check remains open until its own evidence exists.
+
+## Exact-HEAD CI verification after atomic backup publication fix (2026-11-06)
+
+- **Reviewed code HEAD:** `fcde52a2a40940930f23cd5ee541f79d155332bc`. Verified that the branch pointed to this commit at the time of the check.
+- **Full regression workflow:** [42199572367](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572367) — Python 3.10 **905/905 passed**, Python 3.13 **905/905 passed**; both jobs completed SUCCESS.
+- **Adversarial and backup workflow:** [42199572310](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572310) — both Python 3.10 and Python 3.13 jobs completed SUCCESS. Its dedicated adversarial, recovery/restore protection and full regression steps all succeeded; the full suite was **905/905** on each Python version.
+- The fix uses Linux `renameat2(RENAME_NOREPLACE)` for backup bundle publication instead of a racy `os.rename` over an existing empty directory; other platforms fail closed unless their no-overwrite primitive is known. The new regression uses a deterministic concurrent destination creation interleaving.
+- **Meaning:** internal automated verification gate now PASSES on the referenced code SHA. This remains **internal automated evidence**, not the demanded independent reviewer sign-off or independent P0 operational disaster-recovery acceptance.
+- **Remaining closure blockers:** separately executed and documented non-production offline recovery drill with independent verification and owner P0 approval; independent adversarial review with explicit sign-off. Trusted internal actor identity remains a mandatory boundary for any future untrusted interface.
+
+**Decision: J1c2a remains OPEN, no J1c2b implementation.**
