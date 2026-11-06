@@ -64,3 +64,12 @@ Read the actual current engine modules `market.py`, `rights.py`, `property.py`, 
 | `registered_claims.py` | Bounded recorded-claim balances, local offer/accept/cancel handshake and provenance | Transfers registered historical claim only, no physical or legal-title movement |
 
 **Audit conclusion:** It would be an unsound implementation to auto-issue `CurrentLegalTitleTransferred` on any of these existing events. The first safe J1c2b implementation cannot be chosen until an explicit law authority, prospective effect, reliable lot identification and evidence/consent representation are fixed. The status is **DESIGN_IN_PROGRESS**, not code-complete; no unresolved audit item is hidden.
+
+
+## Initial non-normative implementation slice (2026-11-06)
+
+A first **read-only provenance inventory** was introduced without defining a jurisdiction, court, binding title or new legal event: `simulation/src/carlos_sim/title_evidence.py`. It accepts only a trusted engine `WorldState` and an existing J1a registered origin, returning historical registered balances, accepted assignments and live open offers. The fields `legal_title_status="undetermined"`, `legally_enforceable_owner=None`, and `legal_rule_applied=None` **must never be interpreted as a judicial finding**. It must not be sent unfiltered to a player's interface, because this internal object may disclose records outside their knowledge.
+
+Tests: `simulation/tests/test_title_evidence_04a_j1c2b.py` (original registration, consensual reassignment, physical taking and resale, missing origin, snapshot/replay consistency). They verify read-only behavior and no accidental legal-title inference. Commit introducing tests: `df86a0953fb9ddf53791b77c6a160bb708b92d38`. CI results must be verified on this exact code commit before marking these tests passed.
+
+**Remaining unresolved scope:** prospective law and political authority, lawful transfer semantics, mixed-lot provenance and contested claims. Binding legal-title state/events remain intentionally unimplemented. Schema 28 / Rules 36 unchanged. This does not close J1c2b.
