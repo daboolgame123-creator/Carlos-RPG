@@ -87,3 +87,77 @@ def test_snapshot_and_replay_parity_without_any_persistent_law(scene):
     assert db.verify("v").to_dict() == initial
     draft["next_prerequisites"].clear()
     assert len(proposal(db.load("v"))["next_prerequisites"]) == 4
+
+
+def test_local_charter_nominee_is_not_automatically_an_officer(scene):
+    from carlos_sim.title_law_draft import prepare_local_institution_charter_draft
+    db, clock = scene
+    before = db.verify("v").to_dict()
+    charter = prepare_local_institution_charter_draft(
+        db.load("v"), institution_id="local-council-a", site_id="bakery",
+        officer_id="adel", authority_model="local_council", effective_from=1)
+    assert charter["officer_id_nominated"] == "adel"
+    assert charter["institution_registered"] is False
+    assert charter["appointed_officer_id"] is None
+    assert charter["nominee_consent_recorded"] is False
+    assert not charter["can_decide_title"]
+    assert not charter["can_seize_property"]
+    assert not charter["can_delegate_authority"]
+    assert db.verify("v").to_dict() == before
+
+
+@pytest.mark.parametrize("changes", [
+    {"institution_id": ""}, {"institution_id": "bad id"},
+    {"officer_id": "ghost"}, {"officer_id": None},
+    {"officer_id": "omar"}, {"site_id": "unregistered"},
+    {"authority_model": "king_of_everywhere"},
+    {"effective_from": 0},
+    {"effective_from": True},
+])
+def test_local_charter_rejects_invalid_role_site_nominee_and_timing(scene, changes):
+    from carlos_sim.title_law_draft import prepare_local_institution_charter_draft
+    db, clock = scene
+    kwargs = dict(institution_id="council1", site_id="bakery",
+                  officer_id="adel", authority_model="local_council",
+                  effective_from=1)
+    kwargs.update(changes)
+    before = db.load("v").to_dict()
+    with pytest.raises(ValueError):
+        prepare_local_institution_charter_draft(db.load("v"), **kwargs)
+    assert db.verify("v").to_dict() == before
+
+
+def test_local_charter_remains_only_an_offledger_draft_across_replay(scene):
+    from carlos_sim.title_law_draft import prepare_local_institution_charter_draft
+    db, clock = scene
+    before = db.verify("v").to_dict()
+    kwargs = dict(institution_id="council1", site_id="bakery",
+                  officer_id="adel", authority_model="customary_assembly",
+                  effective_from=1)
+    result = prepare_local_institution_charter_draft(db.load("v"), **kwargs)
+    db.snapshot("v")
+    assert prepare_local_institution_charter_draft(db.verify("v"), **kwargs) == result
+    assert prepare_local_institution_charter_draft(
+        db.load("v", use_snapshot=False), **kwargs) == result
+    result["next_prerequisites"].clear()
+    assert len(prepare_local_institution_charter_draft(
+        db.load("v"), **kwargs)["next_prerequisites"]) == 4
+    assert db.verify("v").to_dict() == before
+
+
+def test_local_charter_rejects_nominee_traveling_not_magically_present(scene):
+    from carlos_sim.title_law_draft import prepare_local_institution_charter_draft
+    from carlos_sim import DomainEvent, NPCMovementService
+    db, clock = scene
+    db.append("v", "charter-route", db.load("v").revision, [
+        DomainEvent("RouteCreated", None, "road", 0, {
+            "id": "charter-bakery-square", "a": "bakery", "b": "square",
+            "seconds": 50})], bootstrap=True)
+    NPCMovementService(db, clock).start(
+        "v", "adel", "charter-bakery-square", "leave-charter",
+        expected_revision=db.load("v").revision)
+    with pytest.raises(ValueError, match="present"):
+        prepare_local_institution_charter_draft(
+            db.load("v"), institution_id="council1", site_id="bakery",
+            officer_id="adel", authority_model="local_council",
+            effective_from=1)
