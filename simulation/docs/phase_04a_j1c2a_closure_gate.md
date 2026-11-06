@@ -20,6 +20,12 @@
 
 **Tracked blocking external review:** [GitHub Issue #5 — J1c2a independent review and P0 recovery](https://github.com/daboolgame123-creator/Carlos-RPG/issues/5). Issue creation is a request, NOT external sign-off or completion of P0; its checklist remains open until separately documented evidence and approval. Latest checked docs-only HEAD `f22ddd5686145532279c4426c8ab96240f1ba16b` [CI 42139494294](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42139494294) SUCCESS.
 
+## Follow-up same-tick adversarial test evidence (2026-11-06)
+
+- [CI 42140310497](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42140310497) **901/901 passed per Python 3.10 and 3.13**, with the dedicated five adversarial probes passing on each interpreter.
+- Two extra tests at code commit `318a7388bbee2d621baa0b6cbaff6863d499c207` verify that two concurrently reserved offers accepted in reverse order cannot overallocate registered claim units, and cancellation during the same logical tick permanently blocks acceptance even if the balance is later reserved for someone else.
+- These are extra **internal automated regression probes**, not external independent sign-off. Issue [#5](https://github.com/daboolgame123-creator/Carlos-RPG/issues/5) remains OPEN; production P0 and external reviewer approval remain blockers.
+
 ## Pending work WITHOUT opening a new stage
 
 1. **Independent reviewer:** use a different human or genuinely independent review agent/environment than the implementing/reviewing author, verify HEAD source and rerun independent attack tests, produce a dated report listing reviewed SHA, test outputs, findings, severity, remediation and explicit approval or rejection. Do not relabel self-review external.
