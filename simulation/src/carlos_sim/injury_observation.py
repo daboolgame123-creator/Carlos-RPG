@@ -229,7 +229,14 @@ def make_rest_activity_events(state: WorldState, observer_id: str,
     if not _present(raw, observer_id, site):
         raise ValueError("unavailable observer")
     results = []
+    recorded_count = sum(k.startswith(ACTIVITY_PREFIX)
+                         for k in state.npcs[observer_id]["beliefs"])
+    reserved_count = sum(item["key"].startswith(ACTIVITY_PREFIX)
+                         for item in state.npcs[observer_id]["inbox"].values())
+    remaining = max(0, MAX_REST_MEMORIES - recorded_count - reserved_count)
     for subject in _visible(raw, site):
+        if remaining <= 0:
+            break
         if subject == observer_id or subject not in state.npcs:
             continue
         if not any(a["npc_id"] == subject and a["action"] == "rest"
@@ -247,6 +254,7 @@ def make_rest_activity_events(state: WorldState, observer_id: str,
             "confidence": 90,
         }
         delivery_id = f"rest-obs:{observer_id}:{subject}:{state.time}:{command_id}"
+        remaining -= 1
         results.extend([
             DomainEvent("NPCInformationDelivered", observer_id,
                         "explicit local resting activity", state.time,
