@@ -83,3 +83,31 @@ def observed_resting_activity(state: WorldState, observer_id: str,
         "site_id": site,
         "observed_at": state.time,
     }
+
+
+def observed_local_activities(state: WorldState, observer_id: str) -> tuple[dict[str, object], ...]:
+    """Bounded read-only local scene evidence for one NPC, never diagnosis.
+
+    A peer's current rest is visible only through the observer's own recorded
+    same-tick NPCObserved snapshot and the persisted ongoing action. No
+    omniscient per-tick scan grants knowledge or invents a health conclusion.
+    """
+    if type(state) is not WorldState:
+        raise ValueError("validated WorldState required")
+    if type(observer_id) is not str or observer_id not in state.npcs:
+        return ()
+    site = state.entities[observer_id]["location_id"]
+    raw = state.to_dict()
+    if not _present(raw, observer_id, site):
+        return ()
+    sighting = state.observations.get(observer_id, {}).get(site)
+    if sighting is None or sighting["at"] != state.time:
+        return ()
+    if observer_id not in sighting["occupants"]:
+        return ()
+    results = []
+    for subject_id in sighting["occupants"]:
+        result = observed_resting_activity(state, observer_id, subject_id)
+        if result is not None:
+            results.append(result)
+    return tuple(results)
