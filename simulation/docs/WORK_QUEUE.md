@@ -61,3 +61,19 @@ For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-1
 - **Classification / status:** `DECISION_REQUIRED / WAITING_DECISION`; parent `03-A` still open.
 - **Proposal:** [PHASE_03A7C_OBSERVATION_DECISION_DRAFT.md](PHASE_03A7C_OBSERVATION_DECISION_DRAFT.md) distinguishes optional, explicit local qualitative symptom observations from private injury truth and diagnosis. Owner has **not** approved the proposed defaults.
 - **Next:** obtain owner choice between limited symptom observation and deferral; only then plan implementation, versioning, character adversarial tests, full dual-Python CI and exact-SHA verification. No injury disclosure code implemented by this documentation task.
+
+## 03-A7c continuation — limited visible symptoms (2026-11-07)
+
+Owner's "تابع" following the limited observation recommendation authorizes
+the **qualitative local observation principle**, not a fabricated symptom
+producer. See [implementation gate](PHASE_03A7C_IMPLEMENTATION_GATE.md).
+
+| ID | Title | Dependencies | Execution classification | Status | Evidence / next step |
+|---|---|---|---|---|---|
+| 03-A7c-guard | Non-disclosure / SQLite reopen regression baseline | 03-A8a green | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Branch `simulation-engine-phase-03a7c-observation-contract`, tests at `f4121af6`; check final SHA dual-Python CI |
+| 03-A7c-source | Trustworthy visible symptom provenance | Supported physical action/outcome source | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Do not derive limp/collapse from injury severity alone |
+| 03-A7c-observe | Explicit observer-scoped local knowledge event | 03-A7c-source | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Deterministic visibility and trusted provenance required |
+| 03-A7c-replay | Full adversarial/snapshot/replay/parity acceptance | 03-A7c-observe | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | NPC scenarios + Python 3.10/3.13 exact-SHA CI |
+
+The earlier `DECISION_REQUIRED` entry is a dated historical gate, not a claim
+that 03-A7c was implemented or closed. Parent 03-A stays OPEN.
