@@ -454,3 +454,54 @@ def observed_supportive_care(state: WorldState, observer_id: str,
                 "sign": "visible_supportive_care", "site_id": site,
                 "observed_at": state.time, "medical_conclusion": None}
     return None
+
+
+def recall_supportive_care(state: WorldState, observer_id: str) -> tuple[dict[str, object], ...]:
+    """Observer-owned historical caregiving observations, never diagnoses.
+
+    This strictly reads validated first-hand belief records emitted by an
+    ordered atomic observation. The subject's current injury or treatment
+    state is intentionally irrelevant: an old observation remains historical.
+    """
+    if type(state) is not WorldState:
+        raise ValueError("validated WorldState required")
+    if type(observer_id) is not str or observer_id not in state.npcs:
+        return ()
+    from .injury_transitions import _ident
+    result = []
+    for key, claim in state.npcs[observer_id]["beliefs"].items():
+        if type(key) is not str or not key.startswith(CARE_PREFIX):
+            continue
+        parts = key[len(CARE_PREFIX):].split(":")
+        if len(parts) != 3:
+            continue
+        subject, caregiver, raw_tick = parts
+        if (not _ident(subject) or not _ident(caregiver)
+                or not raw_tick.isascii() or not raw_tick.isdecimal()
+                or len(raw_tick) > 19):
+            continue
+        tick = int(raw_tick)
+        if tick > state.time or key != care_memory_key(subject, caregiver, tick):
+            continue
+        if (claim["text"] !=
+                f"visible-supportive-care; caregiver={caregiver}; observed_at={tick}"
+                or claim["received_at"] != tick
+                or claim["confidence"] != 90
+                or type(claim["source"]) is not str
+                or not claim["source"].startswith("observation:")):
+            continue
+        site = claim["source"][len("observation:"):]
+        if site not in state.locations:
+            continue
+        result.append({
+            "subject_id": subject,
+            "caregiver_id": caregiver,
+            "sign": "visible_supportive_care",
+            "site_id": site,
+            "observed_at": tick,
+            "interpretation": "cause_unknown",
+            "medical_conclusion": None,
+        })
+    return tuple(sorted(result, key=lambda row: (
+        row["observed_at"], row["subject_id"], row["caregiver_id"]
+    )))
