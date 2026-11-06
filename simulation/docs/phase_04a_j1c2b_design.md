@@ -111,3 +111,13 @@ Added `property_claim_audit_packet(state, claim_id)` in `title_evidence.py`. Thi
 **Important provenance limitation:** existing `property_claims` have no `origin_id`. The auditor must **not** associate a claim with a specific registered provenance lot just because the site, resource or time appears similar. The explicit return is `registered_origin_id=None`, `origin_linkage="not_established"`, `legally_enforceable_owner=None`, `guilt_determined=False`. A missing claim is rejected without mutation. Results stay restricted to trusted internal audit; they are not player/LLM/public views.
 
 Code commit `9fa113a191ab724df4bc2a46c3d766777421d022`; four additional tests commit `09b0f8a4892d6280397186aa7b841c85710ceb9d` (false accusation, actual witnessed taking only, unknown IDs, read-only snapshots/full replay). New CI must pass before this slice is marked verified. No Schema/Rules changes; binding legal-title and local law remain undefined. Stage J1c2b stays OPEN.
+
+
+## Local comparison of unproven property statements (2026-11-06)
+
+Added `property_claim_context_packet` to the trusted-only read-only audit layer. It accepts an **existing claim ID**, displays its already filed statement and lists other claims filed about the same **site and resource**, ordered deterministically by filing time and claim ID. **Shared site and resource are search filters, not evidence of the same object, incident, contradiction, culpability or legal ownership.** Output explicitly marks each possible comparison with `same_physical_incident_established=False`, `same_registered_origin_established=False` and `conflict_determined=False`.
+
+- No data migration, simulated action or legal rule was added. The auditor reports only facts available to the trusted engine, not knowledge available to a character.
+- Code `b8ce3865fb9ba952b089260fd27d16d0930513ff`; four additional tests `93c82401d66e3f694f9168bd7e77130bef3e7b5a` cover apparent competing claims, different filing times, unrelated resource exclusion and immutable replay.
+- **Do not claim the additional tests passed until GitHub Actions results on the exact code SHA are verified.** Earlier 924/924 suites on code `09b0f8a4892d6280397186aa7b841c85710ceb9d` finished SUCCESS on Python 3.10 and 3.13 ([CI 42217038655](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42217038655)).
+- Binding legal-title adjudication still requires a separately defined local law, validated source evidence and explicit authority. J1c2b remains OPEN.
