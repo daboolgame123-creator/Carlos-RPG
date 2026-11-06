@@ -104,3 +104,14 @@ The pure module validates strictly bounded injury IDs, severity, onset/change ti
 **Local test evidence:** the same pure implementation, with a stand-alone import adjusted for the isolated local test directory, passed `22 passed` in pytest. This is **not** proof of full project integration, event persistence, or GitHub Actions. The committed package-import tests and complete Python 3.10/3.13 suites remain **VERIFICATION_PENDING**.
 
 **Important:** No new DomainEvent has been authorized or registered; `WorldState`, SQLite schema, rules version, and `PlayerGateway` were deliberately untouched. A returned recovered record is **not an actual healed NPC**. Integration, trust checks, real recovery scheduling, inventory/energy costs, and full replay remain for later 03-A substeps.
+
+## 03-A3 local recovery readiness — development slice (2026-11-06)
+
+- Implementation: `simulation/src/carlos_sim/recovery_readiness.py`, code commit `09098f96`.
+- Focused tests: `simulation/tests/test_recovery_readiness_03a.py`, test commit `654a4850`.
+
+The new `assess_npc_recovery_readiness` checks actual NPC presence and availability using the existing `market._present` contract (which excludes travel, running actions and production). It rejects wrong/unknown caregiver, non-NPC subject, invalid logical duration/effect, future injury and recovered injury, and computes a future proposed due time. The function is read-only and never creates a schedule, reserves resources, authenticates an injury's source, or commits treatment. Its output explicitly sets all authority and persistence flags to false.
+
+**Verification status: PENDING.** These committed project tests have not yet been observed passing in pytest or CI on their final SHA. A real injured-NPC ledger, source authentication, service authorization, therapeutic resources, scheduler integration and time-based completion are all still unimplemented. The existing pure transition helper is not a substitute for approved gameplay healing.
+
+**Next step:** verify this independent branch's targeted tests and full regression on exact SHA. If red, fix before committing any world-state/schema integration. Once green, design the separate trusted InjuryRecorded event and versioned persistent injury ledger without inferring HP for NPCs.
