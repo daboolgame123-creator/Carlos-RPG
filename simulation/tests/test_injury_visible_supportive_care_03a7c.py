@@ -76,3 +76,60 @@ def test_forged_world_cannot_be_used_as_care_sighting(tmp_path):
             observed_supportive_care(begun.to_dict(), "basim", "nora")
     finally:
         db.close()
+
+
+def test_caregiver_departs_so_supportive_care_is_not_visible(tmp_path):
+    """A still-pending appointment alone cannot put Adel at the bakery."""
+    from carlos_sim import DomainEvent
+    db, clock, service = scene(tmp_path)
+    try:
+        before = db.load("v")
+        db.append("v", "route-for-caregiver", before.revision, [
+            DomainEvent("RouteCreated", None, "physical bakery to square road",
+                        before.time, {"id": "care-route", "a": "bakery",
+                                      "b": "square", "seconds": 50})
+        ], bootstrap=True)
+        started = begin(db, service)
+        movement = NPCMovementService(db, clock)
+        departing = movement.start(
+            "v", "adel", "care-route", "caregiver-departs",
+            expected_revision=started.revision)
+        sight = movement.observe(
+            "v", "basim", command_id="watch-departed",
+            expected_revision=departing.state.revision)
+        assert sight.treatments["care-one"]["status"] == "pending"
+        assert observed_supportive_care(sight, "basim", "nora") is None
+        assert sight.injuries["nora-fatigue"]["severity"] == 25
+        assert db.verify("v").to_dict() == sight.to_dict()
+    finally:
+        db.close()
+
+
+def test_care_is_visible_only_to_present_witness_after_snapshot_reopen(tmp_path):
+    path = tmp_path / "care.sqlite"
+    db, clock, service = scene(tmp_path)
+    try:
+        started = begin(db, service)
+        movement = NPCMovementService(db, clock)
+        observed = movement.observe(
+            "v", "basim", command_id="seen-before-close",
+            expected_revision=started.revision)
+        evidence = observed_supportive_care(observed, "basim", "nora")
+        assert evidence is not None
+        assert observed_supportive_care(observed, "salma", "nora") is None
+        db.snapshot("v")
+        original = observed.to_dict()
+    finally:
+        db.close()
+    with SQLiteEventStore(path) as reopened:
+        loaded = reopened.load("v")
+        assert loaded.to_dict() == original
+        assert reopened.verify("v").to_dict() == original
+        assert observed_supportive_care(loaded, "basim", "nora") == evidence
+        clock = TimeEngine(reopened)
+        clock.open_session("v")
+        later = clock.advance(
+            "v", seconds=1, command_id="tick-after-restart",
+            expected_revision=loaded.revision).state
+        assert observed_supportive_care(later, "basim", "nora") is None
+        assert reopened.verify("v").to_dict() == later.to_dict()
