@@ -387,3 +387,11 @@
 - Evidence: [CI 42199572310](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572310) and [42199572367](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42199572367): 905 full regression tests passed each Python 3.10/3.13; [offline recovery 42201414528](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42201414528): disposable 7-person / 37-event world passed restore and resume both versions. See [closure gate](phase_04a_j1c2a_closure_gate.md) and [external validation ledger](EXTERNAL_VALIDATION_LEDGER.md).
 - **04-A/J1c2b = ANALYSIS / DESIGN IN PROGRESS**, [design](phase_04a_j1c2b_design.md). Do not silently conflate recorded historical claims with binding legal title. No new legal-title events or version migration until local normative title/jurisdiction contract is fixed.
 - External review remains deferred, production P0 remains not approved; document any required actual-device test, do not claim it passed. `main` and original story untouched.
+
+
+### J1c2b implementation update — 2026-11-06
+
+- New **persisted trusted founding-only local institution record** `LocalInstitutionRegistered`; records an existing site's institution and real contact representative at trusted world bootstrap. This is **not** a court, enacted law or ownership title. Schema **29**, Rules **37**, no migration.
+- Independent offline seven-actor recovery with 38 events, including the registered institution, **PASSED** on Python 3.10 and 3.13 at code `617b931da5cc3b433525ae6410f5e878dfc87012`; verifies replay, integrity, resumed simulation and no overwrite.
+- An initial test pass on old version-number assertions **failed**; repaired the legacy test expectations to current versions and retained a synthetic prior-SQLite refusal test. Full regression/adversarial CI on final SHA is **pending**, not approved.
+- J1c2b remains **OPEN**; additional legal authority, explicit consent/law adoption and title state are not built. Outside-environment review/P0 remains deferred/unapproved, respectively. See [design log](phase_04a_j1c2b_design.md) and [validation ledger](EXTERNAL_VALIDATION_LEDGER.md).
