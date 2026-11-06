@@ -270,4 +270,5 @@
 - **Cause:** Schema 29 added the empty `local_institutions` collection, but three cross-version parity benches did not strip it from their semantic projection. Event log and every shared semantic field were identical; only the empty new key differed.
 - **Fix:** extend the three strip lists and add a regression guard in `test_knowledge_compatibility.py`. No expected digest was replaced and no parity assertion was disabled.
 - **Local evidence:** 976 passed / 1 skipped on Python 3.10 and 3.13; 01-T/01-U/01-V/02-F/02-G/01-R parity restored.
-- **Second stale pin:** pushed CI `42244658986` passed pytest and adversarial jobs but failed the 01-U gate on a hardcoded candidate Rules 36 assertion. Updated 01-U/01-V pins to 37 and added a guard test tied to `RULES_VERSION`. Exact-SHA CI remains required before technical closure.
+- **Second stale pin:** pushed CI `42244658986` passed pytest and adversarial jobs but failed the 01-U gate on a hardcoded candidate Rules 36 assertion. Updated 01-U/01-V pins to 37 and added a guard test tied to `RULES_VERSION`.
+- **Closed technically:** full CI `42246881990` and adversarial `42246881991` passed on `88c110e1` for Python 3.10/3.13. A genuine 28/36 world was refused unchanged, and a local 7-actor/38-event recovery drill passed. J1c2b-LAW, independent review and production P0 remain open.
