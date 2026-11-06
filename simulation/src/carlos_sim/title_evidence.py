@@ -41,6 +41,19 @@ def historical_title_evidence(state: WorldState, origin_id: str) -> dict[str, An
         and value["expires_at"] > state.time
     ]
     pending.sort(key=lambda item: item["offer_id"])
+    offer_history = [
+        {"offer_id": key, "from_account": value["from_account"],
+         "recipient_id": value["recipient_id"], "quantity": value["quantity"],
+         "opened_at": value["opened_at"], "expires_at": value["expires_at"],
+         "recorded_status": value["status"],
+         "effective_status": ("expired" if value["status"] == "open"
+                              and value["expires_at"] <= state.time
+                              else value["status"]),
+         "resolved_at": value["resolved_at"]}
+        for key, value in state.registered_claim_offers.items()
+        if value["origin_id"] == origin_id
+    ]
+    offer_history.sort(key=lambda item: (item["opened_at"], item["offer_id"]))
     return {
         "origin_id": origin_id,
         "resource": origin["resource"],
@@ -50,6 +63,7 @@ def historical_title_evidence(state: WorldState, origin_id: str) -> dict[str, An
         "current_recorded_claim_balances": dict(sorted(balances.items())),
         "accepted_historical_assignments": assignments,
         "open_historical_assignment_offers": pending,
+        "historical_assignment_offer_history": offer_history,
         "legal_title_status": "undetermined",
         "legally_enforceable_owner": None,
         "legal_rule_applied": None,
