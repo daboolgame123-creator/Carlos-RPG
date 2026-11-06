@@ -183,3 +183,23 @@ has completed successfully**.
 Existing events, version numbers and world state remain unchanged by the
 follow-up. This test slice MUST NOT grant a medical source, infer motive or
 create autonomous social sharing.
+
+
+## Memory-capacity nonblocking observation — 2026-11-07
+
+The resting-memory projector maintains a bounded `MAX_REST_MEMORIES=64`
+per observer. Previously, when this limit was reached, a new trusted
+`observe(activity_enabled=True)` could generate a delivery that the
+reducer rejected, rolling back the *entire* observation. The generator now
+accounts for both accepted beliefs **and pending inbox deliveries** before
+drafting further memory pairs, and stops at zero remaining capacity.
+The character remains able to record `NPCObserved` for the current
+location even when no more resting memories fit.
+
+The multi-tick integration regression executes 65 explicit sightings of
+the same genuinely resting NPC, each at a distinct logical second,
+then checks memory stays at exactly 64 without a failed 65th look.
+SQL replay/verification must match; capacity overflow must not erase
+prior memories, create diagnoses, or silently start a new action.
+Commits: producer `61d8510a`, regression `1b7bf9af`.
+**Verification pending exact SHA dual-Python CI.**
