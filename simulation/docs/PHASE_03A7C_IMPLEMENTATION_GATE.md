@@ -252,3 +252,30 @@ and multi-NPC tests. Do not solve this by assigning a fictitious earlier
 clock time. Until then do NOT describe scene-only projectors as
 fully temporally proven; they are same-tick snapshots without order
 evidence. The separate physical medical symptom source remains blocked.
+
+
+## 03-A7c ordered care witnessing correction — 2026-11-07
+
+A same-tick sequence gap was found in the original pure `observed_supportive_care`
+projector: a witness could look before `RecoveryStarted` yet infer having
+seen the new care because both had the same simulation second. Corrective
+implementation on commits `467b1fef`, `41016531`, `794dd725` and
+`26abe8f1` now requires a validated `visible-care:<subject>:<caregiver>:<tick>`
+first-hand claim in the OBSERVER's own beliefs, derived only by explicit
+`NPCMovementService.observe(..., care_enabled=True)` while care is in
+progress. The atomic command appends `NPCObserved` followed by the
+knowledge delivery and acknowledgment. Store append rejects care deliveries
+without a preceding same-command `NPCObserved` for that observer, even
+when caller supplies NPC and movement flags; reducer revalidates the
+actual paid and pending treatment, available participants, site, strict
+text/source/time, and sighted identities at projection time.
+
+Passive `observe` does not retain or confirm care; previous same-tick
+look cannot be upgraded after care starts. No clinical diagnosis, injury ID,
+severity, treatment efficacy, or resource quantity is exposed. Existing
+Schema 32 / Rules 42 remain unchanged. Tests in
+`test_injury_visible_supportive_care_03a7c.py` updated for the new
+opt-in contract and include look-before-care in same tick, attempted
+direct forgery, caregiver's departure, treatment completion, and SQLite
+reopen. Final acceptance remains **VERIFICATION_PENDING** until both
+Python 3.10 and 3.13 suites complete successfully at the exact final SHA.
