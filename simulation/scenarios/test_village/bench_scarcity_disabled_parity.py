@@ -93,7 +93,7 @@ def main():
                     "ORDER BY seq"
                 )
             ]
-            assert not snapshot["injuries"], "feature-off parity must contain no injuries"
+            assert not snapshot.get("injuries", {}), "feature-off parity must contain no injuries"
             return {
                 "npcs": len(outcome.state.npcs),
                 "time": outcome.state.time,
