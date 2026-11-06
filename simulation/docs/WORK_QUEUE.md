@@ -171,3 +171,17 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
   A numeric injury, fatigue, or rest is not ground truth for an externally
   visible limp, wound, or collapse. Never fabricate a medical sign.
 - Parent `03-A7c` and `03-A` remain OPEN. No main merge.
+
+
+## 03-A7c visible supportive-care follow-up — 2026-11-07
+
+- `03-A7c-care-sighting` — `VERIFICATION_PENDING`: current read-only
+  grounded projection `d97f39cd`; tests for actual funded Adel→Nora care
+  `6f8f0813` (at that exact SHA, GitHub CI success), followed by new
+  regressions `4ddc2eb1` for Adel departing while appointment remains
+  pending, and snapshot/SQLite reopen without leaking care to Salma.
+  Recheck final SHA dual Python CI before closing this narrow subtask.
+- `03-A7c-physical-injury-sign` — `BLOCKED_BY_DEPENDENCY`: pending
+  supportive care is *not* proof of a physical symptom or diagnosis.
+  There is no trusted producer for limp/wound/collapse.
+- `03-A7c` parent and `03-A` are OPEN; `main` unchanged.
