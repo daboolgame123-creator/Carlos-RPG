@@ -264,3 +264,9 @@
 - J1c2a engineering closed for disposable trusted-world development based on **905/905 full tests** in each Python 3.10/3.13 and successful additional adversarial/backup jobs in Actions 42199572310/42199572367. A separate, non-pytest 7-actor, 37-event SQLite backup/restore experiment passed both versions in Actions 42201414528.
 - Production P0 and untrusted-access AuthN/AuthZ remain unapproved/blocked, tracked in [EXTERNAL_VALIDATION_LEDGER.md](EXTERNAL_VALIDATION_LEDGER.md). Existing real bugs must still be fixed; deferral only changes review scheduling.
 - J1c2b opened for **analysis/design only** with explicit law/jurisdiction/lot-provenance dependencies. [Design and source audit](phase_04a_j1c2b_design.md). No code/version migration, `main` or narrative change.
+
+### G-2026-11-06-J1C2B-CI — cross-version parity projection repair
+- **Problem:** full CI `42229493643` on `617b931d` passed 976 pytest tests but failed the 01-T `legacy_semantic_digest` gate.
+- **Cause:** Schema 29 added the empty `local_institutions` collection, but three cross-version parity benches did not strip it from their semantic projection. Event log and every shared semantic field were identical; only the empty new key differed.
+- **Fix:** extend the three strip lists and add a regression guard in `test_knowledge_compatibility.py`. No expected digest was replaced and no parity assertion was disabled.
+- **Local evidence:** 976 passed / 1 skipped on Python 3.10 and 3.13; 01-T/01-U/01-V/02-F/02-G/01-R parity restored. Exact-SHA CI remains required before technical closure.

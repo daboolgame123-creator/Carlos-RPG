@@ -78,3 +78,23 @@ def test_parity_bench_strip_list_unchanged():
     assert "'market_stalls'" in text and "'market_offers'" in text and "'market_trades'" in text
     assert "'loan_contracts'" in text and "'loan_repayments'" in text
     assert "'npc_temperaments'" in text
+    assert "'local_institutions'" in text
+
+
+def test_all_cross_version_parity_benches_strip_local_institutions():
+    """J1c2b added an empty ``local_institutions`` collection.
+
+    Every cross-version parity probe that compares a semantic state digest
+    against a pre-Schema29 baseline must ignore that empty collection, or the
+    legacy digest changes for schema-only reasons. Guard all three benches so
+    the same omission cannot silently reappear.
+    """
+    root = Path(__file__).parent.parent / "scenarios" / "test_village"
+    benches = (
+        "bench_event_parity.py",
+        "bench_food_knowledge_parity.py",
+        "bench_scarcity_disabled_parity.py",
+    )
+    for name in benches:
+        text = (root / name).read_text()
+        assert "'local_institutions'" in text or '"local_institutions"' in text, name

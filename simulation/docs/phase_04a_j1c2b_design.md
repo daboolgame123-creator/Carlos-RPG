@@ -186,3 +186,20 @@ Following 962/962 verified full regressions each on Python 3.10/3.13 for the off
 - Extended the independent-process `j1c2a_offline_recovery_drill.py` to include a genuinely persisted `LocalInstitutionRegistered` record in the seven-NPC world; script explicitly verifies no court power pre-backup and after restore, commit `0652e639bc5b1df71fff29b39a872368392b118c`.
 - Hardened malformed institution model-type rejection, commit `617b931da5cc3b433525ae6410f5e878dfc87012`. New exact-commit full regression, dedicated adversarial and standalone recovery CI on Python 3.10/3.13 were queued at documentation time. **Do not mark J1c2b validated until all required jobs succeed.**
 - The external independent reviewer is deferred by owner. Production-specific P0 remains unapproved. This registered institution is a **founding existence record only**, with no authority to validate ownership, judge, seize, punish, or bind parties.
+
+
+## Cross-version parity regression remediation — local evidence (2026-11-06)
+
+The exact-commit full CI on `617b931da5cc3b433525ae6410f5e878dfc87012` (run `42229493643`) passed pytest (`976 passed`) but failed the Phase 01-T flag-off parity gate on `legacy_semantic_digest`.
+
+**Root cause:** adding the empty `local_institutions` collection for Schema 29 changed the semantic-state projection used by cross-version parity benches. The strip lists in those benches enumerate every collection added after the frozen baseline, but `local_institutions` had not been added. A field-by-field comparison under genuine 01-S and current code confirmed:
+
+- identical `events_digest` (`e4414d12…`) and event count (51);
+- identical values for every shared semantic field;
+- one additional key only, `local_institutions == {}`.
+
+This is a test-projection omission, not a behavioral regression.
+
+**Fix:** add `local_institutions` to the semantic projection of `bench_event_parity.py`, `bench_food_knowledge_parity.py`, and `bench_scarcity_disabled_parity.py`; extend `test_knowledge_compatibility.py` with a guard covering all three benches. No expected hash was replaced and no event-integrity or parity assertion was removed.
+
+**Local verification (Windows, Python 3.13 and 3.10):** full suite `976 passed, 1 skipped` on each; 01-T digest restored to `7d2be0d6c63594aaf7d6aa60f03be97a9c01747a7606931c66b2cc91c710bdf9`; 01-U `e2fa8107…`, 01-V `ef830145…`, and 02-F/02-G/01-R parity checks all equal. Exact-SHA GitHub Actions remains required before closure; this section does **not** claim J1c2b validated or independent review.
