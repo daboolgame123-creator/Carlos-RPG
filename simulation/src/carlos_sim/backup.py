@@ -7,12 +7,15 @@ migration tools, and an existing target is never overwritten.
 from __future__ import annotations
 
 from contextlib import closing
+import ctypes
+import errno
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkdtemp, mkstemp
 import json
 import os
+import sys
 import re
 import shutil
 import sqlite3
@@ -118,6 +121,41 @@ def _validate_database_against_manifest(db_path: Path, payload: dict) -> None:
         raise BackupError('backup world replay/manifest mismatch')
 
 
+def _publish_directory_no_replace(source: Path, destination: Path) -> None:
+    """Atomically publish a complete directory only if destination is absent.
+
+    An earlier path existence check cannot protect against a concurrent creator.
+    Never fall back to ordinary POSIX os.rename(), which may replace a directory.
+    """
+    if sys.platform.startswith('linux'):
+        libc = ctypes.CDLL(None, use_errno=True)
+        try:
+            renameat2 = libc.renameat2
+        except AttributeError as exc:
+            raise BackupError('atomic no-replace directory publish unavailable') from exc
+        renameat2.argtypes = [
+            ctypes.c_int, ctypes.c_char_p, ctypes.c_int,
+            ctypes.c_char_p, ctypes.c_uint,
+        ]
+        renameat2.restype = ctypes.c_int
+        # Linux renameat2(AT_FDCWD, old, AT_FDCWD, new, RENAME_NOREPLACE).
+        if renameat2(-100, os.fsencode(source), -100,
+                     os.fsencode(destination), 1) == 0:
+            return
+        error = ctypes.get_errno()
+        if error == errno.EEXIST:
+            raise FileExistsError(error, os.strerror(error), str(destination))
+        if error in (errno.ENOSYS, errno.EINVAL, errno.ENOTSUP):
+            raise BackupError('atomic no-replace directory publish unavailable')
+        raise OSError(error, os.strerror(error), str(destination))
+    if os.name == 'nt':
+        # Windows os.rename fails if destination exists.
+        os.rename(source, destination)
+        return
+    # Unknown platforms must fail closed until a no-replace primitive is verified.
+    raise BackupError('atomic no-replace directory publish unsupported on this platform')
+
+
 def create_backup_bundle(store: SQLiteEventStore, world_id: str,
                          bundle_dir: str | Path, *,
                          code_commit: str) -> dict:
@@ -158,7 +196,7 @@ def create_backup_bundle(store: SQLiteEventStore, world_id: str,
             out.write('\n')
         _manifest_checked(manifest)
         _require_new_path(target)
-        os.rename(scratch, target)
+        _publish_directory_no_replace(scratch, target)
         published = True
         return manifest
     finally:
