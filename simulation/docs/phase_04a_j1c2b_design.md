@@ -132,3 +132,20 @@ The packet explicitly **excludes uncited allegations** (even about the same reso
 New code commit `80c6e8cda04b8bc3219c59fe73e228e540523ce9`, four regression tests commit `7730f49b7908769ad1d0c150d565ca6376f56aab`: multi-witness and referenced claims (with unrelated false accusation), unseen action, unknown IDs, immutable snapshots/full replay. **Await exact-commit GitHub Actions to mark passing**.
 
 **Stage scope still OPEN:** legal jurisdiction, formal right creation and contested-title resolution require approved prospective normative rules. No court, ruling, sanction, world migration or production authorization has been added.
+
+
+## Proposed local-title law contract — guarded draft only (2026-11-06)
+
+After verifying **932/932 full regressions on each Python 3.10 and 3.13** at code commit `7730f49b7908769ad1d0c150d565ca6376f56aab` ([CI 42225392959](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42225392959)), the next scoped step was to create a **non-binding prospective local-law draft validator**, not a jurisdiction or legal-title engine.
+
+### Explicit decisions in this provisional contract
+
+1. A proposed law applies to **one existing location**, with **simulated effective time strictly in the future** (no retrospective change).
+2. Possible authority models for later political design are `customary_assembly`, `local_council`, or `lordly_authority`. The string is **a proposal, never a credential or installed institution**.
+3. The only supported draft transfer condition is `requires_preexisting_verified_title_and_mutual_consent`. Bare possession, a sale receipt or a registered historical claim cannot establish an enforceable legal title.
+4. Four explicit prerequisites remain unmet: approve institution/scope; verify prior title; identify goods and conflict procedure; implement audited versioned event authorization/replay. The function returns `review_status="unapproved_draft"`, `jurisdiction_effective=False`, `authorized_institution_id=None` and `legally_enforceable_owner=None`.
+5. No legal event, court, title ledger or migration is added. Schema 28 / Rules 36 remain unchanged; the draft is intentionally **off-ledger**, has no effect on an NPC or the world's resources, and is restricted to trusted internal design evaluation.
+
+**Implementation:** `simulation/src/carlos_sim/title_law_draft.py` (commit `383ca096a85dee498f3294ddc5328b98411931a0`). **Tests:** `simulation/tests/test_title_law_draft_04a_j1c2b.py` (commit `ab7a5a00afe3b38fbb75aa07caa740a4f2b4b006`) verify valid proposals remain powerless; invalid sites/authorities/retroactive and boolean times/possession-based title fail closed; proposed authority grants no privileges; logical time and replay/snapshot invariants.
+
+**Status:** Implementation complete as a **non-binding draft validation slice**, CI pending on the new exact code SHA. This does NOT select a political ruler, establish enforceable law or close J1c2b. The later choice of normative institution/title provenance remains explicit and separately testable. Independent review deferred by owner, production P0 and network authorization remain unapproved as tracked in `EXTERNAL_VALIDATION_LEDGER.md`.
