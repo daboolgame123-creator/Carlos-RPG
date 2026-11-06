@@ -93,3 +93,12 @@ Three additional regression probes were added in commit `f40917d92781d1eb1e9f949
 The previous five tests passed as part of the 910/910 full CI for Python 3.10 and 3.13 on code commit `df86a0953fb9ddf53791b77c6a160bb708b92d38` ([CI 42210094258](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42210094258)); adversarial and recovery checks passed as well ([CI 42210094189](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42210094189)). The **three new probes require fresh exact-commit CI**, and must not be called successful before observed.
 
 The remaining normative decision is **not** an implementation bug: local legal rules/authority, item provenance and disposition of contested legal title have intentionally not been defined. J1c2b remains OPEN.
+
+
+## Historical offer audit completeness (2026-11-06)
+
+- The read-only historical evidence function now emits `historical_assignment_offer_history` for **all** registered offers associated with the selected origin. It retains source account, recipient, quantity, creation, expiry and resolution times plus both `recorded_status` and `effective_status`.
+- A logically expired `open` offer is labeled `effective_status="expired"` **without rewriting the event record or stored status**; accepted offers do not become expired afterward, and cancelled offers remain cancelled. `open_historical_assignment_offers` continues to mean strictly still-active offers.
+- These observations are an internal auditor-only history and do not infer legal title, change actual goods/claims or grant the player omniscient knowledge.
+- Code commit `2afa8ce35896ab8eead9ffd414d0476b7256d925`; four new targeted historical integrity probes at `e425322780dd071bbb4c758f51e884205efc83f1`. The previous exact-code CI [42213953492](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42213953492) completed **916/916** on 3.10/3.13 and companion [42213953544](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42213953544) completed SUCCESS; **new feature verification must use new SHA results**.
+- The J1c2b binding legal-title, jurisdiction and adjudication decisions remain UNSPECIFIED; read-only evidence is not adjudication. Do not label entire J1c2b complete.
