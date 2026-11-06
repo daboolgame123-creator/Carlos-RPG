@@ -18,7 +18,7 @@ def evaluate_injury_source(state: WorldState, *, subject_id: str,
     WARNING: even a well-formed DomainEvent is caller-constructible and does
     not prove SQLite provenance. This helper never grants event authority.
     """
-    if type(subject_id) is not str or not subject_id or subject_id not in state.entities:
+    if type(state) is not WorldState:\n        raise ValueError("trusted world state is required")\n    if type(subject_id) is not str or not subject_id or subject_id not in state.entities:
         raise ValueError("injury subject must exist")
     if type(source_event) is not DomainEvent:
         raise ValueError("source must be a domain event")
