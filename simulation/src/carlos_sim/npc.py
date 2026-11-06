@@ -191,7 +191,10 @@ def project_npc_event(state: dict[str, Any], event: DomainEvent, *, bootstrap: b
             raise ValueError("invalid decision contents")
         if not _integer(p["next_decision_at"], maximum=2**63-1) or p["next_decision_at"] < state["time"] + MIN_DECISION_COOLDOWN:
             raise ValueError("next decision must be in future")
-        if forage_policy:
+        injury_decision = _injury_rest_decision(state["injuries"], ident)
+        if injury_decision is not None:
+            expected = injury_decision
+        elif forage_policy:
             from .foraging import choose_local_foraging
             site = state["entities"][ident]["location_id"]
             choice = choose_local_foraging(ident, npc, site, state["resources"])
@@ -216,6 +219,20 @@ class Decision:
     action: str
     score: int
     reason: str
+
+
+def _injury_rest_decision(injuries: Mapping[str, Mapping[str, Any]],
+                          npc_id: str) -> Decision | None:
+    """Self-only severe injury overrides effort, not the recovery rules."""
+    from .injury_behavior import SELF_CARE_THRESHOLD
+    severity = max((r["severity"] for r in injuries.values()
+                    if r["subject_id"] == npc_id and r["status"] == "active"),
+                   default=0)
+    if severity < SELF_CARE_THRESHOLD:
+        return None
+    score = 200 + severity
+    return Decision(npc_id, "rest", score,
+                    f"self_active_injury_rest; severity={severity}; npc={npc_id}")
 
 
 def _score_choice(npc: Mapping[str, Any], npc_id: str, *, survival_active: bool = False,
@@ -265,6 +282,9 @@ def choose_action(state: WorldState, npc_id: str, *, survival_enabled: bool = Fa
         return None
     if state.time < npc["next_decision_at"]:
         return None
+    self_injury = _injury_rest_decision(state.injuries, npc_id)
+    if self_injury is not None:
+        return self_injury
     if foraging_enabled:
         from .foraging import choose_local_foraging
         site = state.entities[npc_id]["location_id"]
