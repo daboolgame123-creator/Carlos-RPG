@@ -22,15 +22,17 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
     scene = gateway.inspect()
     status = gateway.status()
     memory = gateway.recall()
-    if not all(type(row) is PlayerCommandResult for row in (scene, status, memory)):
+    supplies = gateway.supplies()
+    if not all(type(row) is PlayerCommandResult for row in (scene, status, memory, supplies)):
         raise ValueError("invalid player projection")
     versions = {(row.world_id, row.time, row.revision)
-                for row in (scene, status, memory)}
+                for row in (scene, status, memory, supplies)}
     if len(versions) != 1:
         raise RuntimeError("player view changed during handoff")
     if (scene.status not in ("present", "traveling")
             or status.status not in ("rpg_status", "rpg_uninitialized")
-            or memory.status != "memory"):
+            or memory.status != "memory"
+            or supplies.status != "supplies"):
         raise ValueError("unexpected player view")
     return {
         "format": "carlos-player-handoff-v1",
@@ -42,4 +44,5 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
         "scene": {"status": scene.status, "details": scene.details},
         "player_status": {"status": status.status, "details": status.details},
         "player_memory": memory.details,
+        "player_supplies": supplies.details,
     }
