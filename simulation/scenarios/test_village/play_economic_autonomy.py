@@ -59,6 +59,13 @@ def run_economic_village(path: str | Path, *, grain: int = 1,
             _resources(db.load(WORLD), seeded_grain=grain,
                        seeded_copper=buyer_copper)
         final = db.load(WORLD)
+        if final.production_jobs:
+            bakery_job = next(j for j in final.production_jobs.values()
+                              if j['npc_id'] == 'basim')
+            # No simultaneous baking and eating at the start of the shift.
+            assert all(m['consumed_at'] >= bakery_job['due']
+                       for m in final.consumptions.values()
+                       if m['npc_id'] == 'basim')
         assert db.verify(WORLD).to_dict() == final.to_dict()
         db.snapshot(WORLD)
         assert db.verify(WORLD).to_dict() == final.to_dict()
