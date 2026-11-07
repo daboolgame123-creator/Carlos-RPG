@@ -10,6 +10,7 @@ from typing import Any
 
 from .domain import DomainEvent, _thaw
 from .player_perception import recall_player_events
+from .player_activity_scene import visible_player_activities
 from .living_world import LivingWorldEngine
 from .movement import player_travel_signal, _in_transit
 from .social import NPCSocialService, KINDS
@@ -98,9 +99,7 @@ class PlayerGateway:
             'occupants': present, 'exits': exits,
             # Present-only, qualitative behavior: never NPC intentions or
             # hidden medical facts. This is not a persistent player sighting.
-            'activities': __import__(
-                'carlos_sim.player_activity_scene', fromlist=['visible_player_activities']
-            ).visible_player_activities(state, self.player_id),
+            'activities': visible_player_activities(state, self.player_id),
         })
 
     def observe(self, *, command_id: str,
