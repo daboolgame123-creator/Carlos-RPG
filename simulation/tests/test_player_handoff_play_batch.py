@@ -13,7 +13,7 @@ import sys
 
 import pytest
 
-from carlos_sim import SQLiteEventStore, PlayerGateway, TimeEngine
+from carlos_sim import DomainEvent, SQLiteEventStore, PlayerGateway, TimeEngine
 from carlos_sim.player_gateway import PlayerCommandResult
 from carlos_sim.player_handoff import player_handoff
 from carlos_sim.resumable_play import ResumableTestSession
@@ -169,3 +169,45 @@ def test_resumable_cli_handoff_and_scene_do_not_create_extra_checkpoints(tmp_pat
     ) as session:
         assert session.store.verify("demo").to_dict() == session.store.load("demo").to_dict()
         assert json.loads(json.dumps(session.handoff())) == views[1]
+
+
+def test_player_handoff_never_exposes_noras_private_injury_even_after_look(tmp_path):
+    with SQLiteEventStore(tmp_path / "private-injury.sqlite") as db:
+        setup_player_demo_world(db)
+        initial = db.load("world")
+        db.append("world", "nora-injury-test", initial.revision, [
+            DomainEvent("InjuryRecorded", None, "trusted private fixture", 0, {
+                "injury_id": "nora-confidential-wound",
+                "subject_id": "nora",
+                "severity": 77,
+                "source": "trusted_test_bootstrap",
+            }),
+        ], bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("world")
+        gw = PlayerGateway(db, clock, world_id="world", player_id="carlos")
+        before = db.load("world").to_dict()
+        for view in (player_handoff(gw),):
+            public = json.dumps(view)
+            assert "nora-confidential-wound" not in public
+            assert '"injuries"' not in public
+            assert '"severity"' not in public
+        assert db.load("world").to_dict() == before
+        gw.observe(command_id="carlos-looks-at-nora",
+                   expected_revision=before["revision"])
+        after = json.dumps(player_handoff(gw))
+        assert "nora-confidential-wound" not in after
+        assert '"severity"' not in after
+        assert "nora" in after  # identity is visible, private diagnosis is not
+        assert db.verify("world").to_dict() == db.load("world").to_dict()
+
+
+def test_player_handoff_denies_raw_world_state_as_input(tmp_path):
+    with SQLiteEventStore(tmp_path / "reject-raw.sqlite") as db:
+        setup_player_demo_world(db)
+        before = db.load("world")
+        with pytest.raises(TypeError, match="PlayerGateway"):
+            player_handoff(before)
+        with pytest.raises(TypeError, match="PlayerGateway"):
+            player_handoff(before.to_dict())
+        assert db.verify("world").to_dict() == before.to_dict()
