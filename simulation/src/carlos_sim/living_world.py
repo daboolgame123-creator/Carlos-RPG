@@ -511,10 +511,11 @@ class LivingWorldEngine:
                     if decision is None:
                         continue
                     verb = decision.action
-                if (self.routines_enabled and verb == 'work'
-                        and not routine_allows_work(current, npc_id)):
-                    # No paid work or physical labor at home/after closing. The
-                    # character stays free to reconsider on a future shift tick.
+                if (verb == 'work' and not routine_allows_work(current, npc_id)):
+                    # The strict action reducer checks configured work shifts even
+                    # when autonomous routine/navigation planning is disabled.
+                    # Mirror that invariant here to avoid aborting a whole
+                    # atomic world advance for an otherwise harmless choice.
                     continue
                 # The deterministic ID may not be reused, even after completion.
                 action_id = f'auto:{npc_id}:{current.time}'
