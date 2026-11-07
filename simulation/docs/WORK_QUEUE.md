@@ -704,11 +704,11 @@ This batch depends on PLAY-06 green SHA and is independent of 03-A7c/P0.
 
 | Task | Scope and prerequisites | Route | Status |
 |---|---|---|---|
-| PLAY-07a | New atomic conserved gift event, separate recorded authorization and replay; based on PLAY-06 | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-07b | Trusted player-bound give command with exact revision and dedup ID; depends on 07a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-07c | CLI give in temporary/restartable village; depends on 07b | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-07d | NPC behavior, privacy, attempts/forgery, conservation, duplicate, route/time and snapshot/reopen CLI tests; 07a–c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-07e | Windows guide and exact full dual-Python CI closure; depends on 07d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-07a | New atomic conserved gift event, separate recorded authorization and replay; based on PLAY-06 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07b | Trusted player-bound give command with exact revision and dedup ID; depends on 07a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07c | CLI give in temporary/restartable village; depends on 07b | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07d | NPC behavior, privacy, attempts/forgery, conservation, duplicate, route/time and snapshot/reopen CLI tests; 07a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07e | Windows guide and exact full dual-Python CI closure; depends on 07d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Security/validation gates:** Python 3.10 and 3.13 full CI on final code SHA,
 fixed balances for donor/recipient, deny NPC impersonation and unauthorized
@@ -716,3 +716,28 @@ replay, no hidden NPC inventory exposed and no new arbitrary legal authority.
 Gift transfer is a deliberate player action only, never an automatic hunger
 or medical cure. P0 production remains NOT_APPROVED; independent review deferred;
 03-A7c and parent 03-A remain OPEN. Do not merge to main.
+
+### PLAY-07 verified technical closure (2026-11-07)
+
+PLAY-07a–PLAY-07e all **CLOSED_TECHNICALLY** against exact final
+code-and-tests SHA `989cee8d21c4e91c917fb2d68b788cfd778bd0f4`.
+[GitHub Actions run 42354191763](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42354191763)
+is **SUCCESS** with **1,293 passed on Python 3.10** and
+**1,293 passed on Python 3.13**. Both jobs also passed all existing smoke,
+compatibility/parity, historical saved-world rejection and replay checks.
+
+The first completed trial exposed 18 *test/CI-only outdated current-version
+pins* (32/42); after investigating the precise failures, 22 targeted updates
+in 16 tests/workflow files synchronized the active expected version to
+Schema 33 / Rules 43 while retaining historical frozen-version assertions.
+The final green SHA above is authoritative; earlier red SHA runs were not used
+as proof. Dedicated SQLite gift authorization survives replay, rejected/remote
+NPC gifts do not create resources, duplicates and stale commands are blocked,
+and all original market/survival assertions remain green.
+
+**Not approved for production:** P0_PRODUCTION_NOT_APPROVED.
+**External review:** EXTERNAL_REVIEW_DEFERRED_BY_OWNER.
+**Parent injuries:** 03-A7c and 03-A still OPEN; neither closed by this batch.
+No main merge, original story mutation, player combat or player hunger logic.
+This docs-only closure commit follows the verified test SHA and is not a
+new code test result.
