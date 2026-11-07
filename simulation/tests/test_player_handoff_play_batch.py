@@ -168,4 +168,4 @@ def test_resumable_cli_handoff_and_scene_do_not_create_extra_checkpoints(tmp_pat
         filename, "demo", "carlos", disposable_test=True
     ) as session:
         assert session.store.verify("demo").to_dict() == session.store.load("demo").to_dict()
-        assert session.handoff() == views[1]
+        assert json.loads(json.dumps(session.handoff())) == views[1]
