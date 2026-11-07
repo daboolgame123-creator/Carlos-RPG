@@ -9,6 +9,9 @@ Long-lived saves are forbidden while P0 backup/restore is open.
 from __future__ import annotations
 
 import shlex
+import json
+
+from carlos_sim.player_handoff import player_handoff
 from tempfile import TemporaryDirectory
 from pathlib import Path
 
@@ -74,7 +77,7 @@ def render(result):
 
 def main():
     print("CARLOS / 01-Y local disposable world — fictional sample HP/ST; no permanent save")
-    print("Commands: look | remember | status | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
+    print("Commands: scene | look | remember | status | handoff | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
     print("Talk kinds: greeting, offer_help, request_help, threat")
     with TemporaryDirectory(prefix="carlos-01w-") as folder:
         with SQLiteEventStore(Path(folder) / "world.sqlite") as db:
@@ -101,10 +104,16 @@ def main():
                 if verb in ("quit", "exit"):
                     break
                 if verb == "help":
-                    print("look | remember | status | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
+                    print("scene | look | remember | status | handoff | move <route-id> | wait <seconds> | talk <npc> <kind> <words> | quit")
                     continue
                 try:
-                    if verb == "look" and not args:
+                    if verb == "scene" and not args:
+                        result = gateway.inspect()
+                    elif verb == "handoff" and not args:
+                        print(json.dumps(player_handoff(gateway),
+                                         ensure_ascii=False, sort_keys=True))
+                        continue
+                    elif verb == "look" and not args:
                         counter += 1
                         result = gateway.observe(
                             command_id=f"cmd-{counter}",
