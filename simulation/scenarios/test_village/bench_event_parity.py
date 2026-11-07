@@ -51,6 +51,7 @@ def audit(count: int) -> dict:
                                ('parity-world',)).fetchall()
         verified = db.verify('parity-world')
         assert verified.to_dict() == result.state.to_dict()
+        assert not verified.to_dict().get('player_needs', {}), 'legacy NPC parity cannot hide configured player needs'
         assert not verified.to_dict().get('injuries', {}), 'feature-off parity must contain no injuries'
         assert not verified.to_dict().get('treatments', {}), 'feature-off parity must contain no treatments'
         return {
@@ -65,7 +66,7 @@ def audit(count: int) -> dict:
             # state hash separately for same-version audits.
             'legacy_semantic_digest': canonical_hash({
                 k: v for k, v in verified.to_dict().items()
-                if k not in ('schema_version','rules_version','foraging_attempts','rpg_profiles','injuries','treatments','environment_cycles','production_recipes','production_jobs','market_stalls','market_offers','market_trades','loan_contracts','loan_repayments','npc_temperaments','npc_routines','rumor_deliveries','property_takings','property_sightings','property_claims','local_institutions','complaint_desks','property_complaints','property_title_origins','property_custody_lots','property_custody_moves','property_permissions','registered_claim_balances','registered_claim_offers','registered_claim_transfers')
+                if k not in ('schema_version','rules_version','foraging_attempts','rpg_profiles','player_needs','injuries','treatments','environment_cycles','production_recipes','production_jobs','market_stalls','market_offers','market_trades','loan_contracts','loan_repayments','npc_temperaments','npc_routines','rumor_deliveries','property_takings','property_sightings','property_claims','local_institutions','complaint_desks','property_complaints','property_title_origins','property_custody_lots','property_custody_moves','property_permissions','registered_claim_balances','registered_claim_offers','registered_claim_transfers')
             }),
             'replay_equal': True,
         }
