@@ -532,7 +532,8 @@ class PlayerGateway:
             raise ValueError('wait seconds must be a positive integer')
         result = self.engine.advance(
             self.world_id, seconds=seconds, command_id='player-wait:' + cid,
-            expected_revision=expected_revision)
+            expected_revision=expected_revision,
+            player_observer_id=self.player_id)
         now = result.state
         transit = player_travel_signal(now, self.player_id)
         still_foraging = player_forage_signal(now, self.player_id)
