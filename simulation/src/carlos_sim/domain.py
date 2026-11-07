@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 32
-RULES_VERSION = 42
+SCHEMA_VERSION = 33
+RULES_VERSION = 43
 
 
 def _thaw(value: Any) -> Any:
@@ -349,7 +349,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False, recovery_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False, recovery_authorized: bool = False, gift_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -462,6 +462,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "MarketOfferClosed":
         from .market import close_offer
         close_offer(d, e, market_authorized=market_authorized)
+    elif kind == "PlayerGiftDelivered":
+        from .player_gifts import deliver_player_gift
+        deliver_player_gift(d, e, gift_authorized=gift_authorized)
     elif kind == "ProductionRecipeConfigured":
         from .production import configure_recipe
         configure_recipe(d, e, bootstrap=bootstrap)
