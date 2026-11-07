@@ -137,6 +137,8 @@ def project_movement_event(state: dict[str, Any], event: DomainEvent, *,
         nav = state['navigation'].get(npc_id)
         if nav is not None and data['route_id'] not in nav['known_routes']:
             raise ValueError('NPC cannot traverse a route it has not learned')
+        from .supply import check_leg
+        check_leg(state, npc_id, data['route_id'], data['origin'], data['destination'])
         if (state['entities'][npc_id]['location_id'] != data['origin']
                 or type(data['due']) is not int or data['due'] != state['time'] + route['seconds']
                 or data['schedule_id'] != 'npc-travel:' + ident):
@@ -179,6 +181,8 @@ def complete_travel(state: dict[str, Any], travel_id: str, schedule_id: str, tim
     state['entities'][who]['location_id'] = travel['destination']
     travel['status'] = 'arrived'
     travel['arrived_at'] = time
+    from .supply import complete_courier_leg
+    complete_courier_leg(state, who, travel['route_id'], travel['destination'], time)
     _observe(state, who, time)
 
 
