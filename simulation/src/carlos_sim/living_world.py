@@ -336,6 +336,13 @@ class LivingWorldEngine:
                 # An actual meal debits food and relieves that NPC's hunger in
                 # one event. Do not mistake inventory ownership for eating.
                 for npc_id in sorted(current.npcs):
+                    # A worker cannot eat during the very production job that
+                    # physically occupies them in this opt-in economic mode.
+                    # Older survival worlds keep their existing decision order.
+                    if self.economic_enabled and any(
+                            job['npc_id'] == npc_id and job['status'] == 'running'
+                            for job in current.production_jobs.values()):
+                        continue
                     quantity = choose_food_consumption(current, npc_id)
                     if quantity is None:
                         continue
