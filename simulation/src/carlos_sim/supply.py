@@ -168,6 +168,13 @@ def choose_cargo(state: WorldState, who: str) -> str | None:
     if cargo is not None:
         return ("SupplyCargoDelivered"
                 if here == cargo["destination"] else None)
+    # A courier too hungry or exhausted to walk must not reserve a new
+    # parcel and block the well or bakery indefinitely.
+    npc = state.npcs[who]
+    if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 70
+            or npc["needs"]["safety"] >= 75
+            or _injury_rest_decision(state.injuries, who) is not None):
+        return None
     lane = _lane(record)
     if (lane is not None and here == lane[0]
             and _quantity(state.resources.get(here, {}).get(lane[2]))

@@ -282,3 +282,14 @@ def test_two_real_runs_match_byte_for_byte_and_restart(tmp_path):
                           expected_revision=states[0]["revision"] - 1)
         finally:
             clock.close_session(WORLD)
+
+
+def test_hungry_courier_cannot_eat_consigned_customer_food(tmp_path):
+    outcome = run_physical_supply(tmp_path / "honest-courier.sqlite",
+                                  courier_hunger=80)
+    stats = outcome["private_test_audit_only"]
+    assert stats["bakes"] == 2
+    assert stats["trades"] == 1
+    assert stats["deliveries"] >= 6
+    assert stats["food_equivalent"] == stats["grown"] == 2
+    assert outcome["verified_replay"]

@@ -30,7 +30,8 @@ PEOPLE = (
 
 def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          hoe: int = 1, sickle: int = 1,
-                         courier: bool = True, buyer_copper: int = 2) -> None:
+                         courier: bool = True, buyer_copper: int = 2,
+                         courier_hunger: int = 20) -> None:
     for key, value, valid in (
         ("water", water, (0, 1, 2)), ("seed", seed, (0, 1)),
         ("hoe", hoe, (0, 1)), ("sickle", sickle, (0, 1)),
@@ -40,6 +41,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             raise ValueError(f"{key} must be a known finite test choice")
     if type(courier) is not bool:
         raise ValueError("courier flag must be boolean")
+    if type(courier_hunger) is not int or not 0 <= courier_hunger < 90:
+        raise ValueError("courier hunger must be a bounded valid initial need")
 
     store.create_world(WORLD)
     def e(kind, data):
@@ -67,7 +70,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             }),
             e("NPCConfigured", {
                 "npc_id": who, "role": role,
-                "needs": {"hunger": hunger, "fatigue": fatigue, "safety": 0},
+                "needs": {"hunger": courier_hunger if who == "huda" else hunger,
+                          "fatigue": fatigue, "safety": 0},
                 "goals": {"earn": 0 if who == "basim" else 10,
                           "explore": 0 if who == "basim" else 10,
                           "survive": 30},
@@ -194,11 +198,12 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int) ->
 def run_physical_supply(path: str | Path, *, water: int = 2, seed: int = 1,
                         hoe: int = 1, sickle: int = 1, courier: bool = True,
                         buyer_copper: int = 2, metabolism: bool = False,
+                        courier_hunger: int = 20,
                         target: int = TARGET) -> dict:
     def setup(store):
         seed_physical_supply(store, water=water, seed=seed, hoe=hoe,
                              sickle=sickle, courier=courier,
-                             buyer_copper=buyer_copper)
+                             buyer_copper=buyer_copper, courier_hunger=courier_hunger)
     with ResumableTestSession.create(
         path, WORLD, PLAYER, setup, disposable_test=True,
     ) as session:
