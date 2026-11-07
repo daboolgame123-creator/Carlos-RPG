@@ -1,6 +1,6 @@
 # PLAY-20 — Village adversity and counterfactual survival: analysis and acceptance plan
 
-Date: 2026-11-07. Status: IN_PROGRESS / CHAT_EXECUTABLE.
+Date: 2026-11-07. Status: CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER.
 Base: simulation-engine-phase-play-19-integrated-village-journey @ 3a4b69e9ca8cd372063692e8d8dd4e8a185ab001.
 Working branch: simulation-engine-phase-play-20-village-adversity.
 Scope: disposable simulation world only; no original story files, main merge, schema or rules changes.
@@ -32,3 +32,6 @@ PLAY-19 uses ResumableTestSession, seven NPCs and living_player_gateway. Its tes
 ## Verification / closure gate
 
 Start with focused PLAY-20 tests, then run whole repository suite on the final code commit for both Python versions and check GitHub Actions conclusions. Update evidence and only then set CLOSED_TECHNICALLY. Otherwise keep OPEN / VERIFICATION_PENDING with exact failed checks.
+## Closure evidence (2026-11-07)
+
+Verified code/test SHA: `cf9654b9017117397d4f03751e174a7a31bd8d76`. Full CI run [42400314460](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42400314460) = 1,470 passed per Python 3.10/3.13. Targeted run [42400314534](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42400314534) = 67 passed per version, including two real one-hour runs. See [PLAY-20 actual report](PLAY_20_ADVERSITY_REPORT.md). Production P0 and external review remain unapproved/deferred.
