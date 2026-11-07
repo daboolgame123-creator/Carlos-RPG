@@ -71,7 +71,8 @@ def _known(value: object) -> bool:
     return type(value) is int and 0 <= value <= MAX_AMOUNT
 
 
-def choose_local_production(state: WorldState, npc_id: str) -> ProductionIntent | None:
+def choose_local_production(state: WorldState, npc_id: str, *,
+                            agriculture_enabled: bool = False) -> ProductionIntent | None:
     """Baker voluntarily starts a physically possible batch during a real shift."""
     if not _free(state, npc_id):
         return None
@@ -99,6 +100,13 @@ def choose_local_production(state: WorldState, npc_id: str) -> ProductionIntent 
         remaining_shift = (profile["work_end"] - state.time % DAY_SECONDS) % DAY_SECONDS
         if recipe["duration_seconds"] > remaining_shift:
             continue
+        if recipe["input_resource"] == "seed":
+            field = state.farm_plots.get(here)
+            resources = state.resources.get(here, {})
+            if (not agriculture_enabled or field is None or field["status"] != "idle"
+                    or resources.get("crop_ready") != 0
+                    or resources.get("water", 0) < 1):
+                continue
         stock = state.resources.get(here, {})
         input_amount = stock.get(recipe["input_resource"])
         output_amount = stock.get(recipe["output_resource"])

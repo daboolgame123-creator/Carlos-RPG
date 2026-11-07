@@ -21,6 +21,7 @@ from .knowledge import make_observation_events, choose_food_sharing_round, known
 from .food_navigation import choose_food_route
 from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
 from .rumors import choose_rumor_round
+from .agriculture import choose_local_growth
 from .economic_autonomy import (choose_local_production, choose_local_food_offer,
                                 choose_local_food_purchase, TEST_FOOD_PRICE_COPPER)
 
@@ -66,7 +67,9 @@ class LivingWorldEngine:
                  scarcity_enabled: bool = False,
                  routines_enabled: bool = False,
                  rumors_enabled: bool = False,
-                 economic_enabled: bool = False):
+                 economic_enabled: bool = False,
+                 agriculture_enabled: bool = False,
+                 economy_only_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -133,6 +136,12 @@ class LivingWorldEngine:
         if type(economic_enabled) is not bool:
             raise ValueError('economic_enabled must be boolean')
         self.economic_enabled = economic_enabled
+        if type(agriculture_enabled) is not bool or (agriculture_enabled and not economic_enabled):
+            raise ValueError("agriculture_enabled requires boolean economic_enabled=True")
+        if type(economy_only_enabled) is not bool or (economy_only_enabled and not agriculture_enabled):
+            raise ValueError("economy_only_enabled requires agriculture_enabled")
+        self.agriculture_enabled = agriculture_enabled
+        self.economy_only_enabled = economy_only_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int,
@@ -181,7 +190,8 @@ class LivingWorldEngine:
                    consumption_capability: bool = False,
                    survival_capability: bool = False,
                    production_capability: bool = False,
-                   market_capability: bool = False) -> None:
+                   market_capability: bool = False,
+                   agriculture_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
@@ -194,7 +204,8 @@ class LivingWorldEngine:
                                       consumption_authorized=consumption_capability,
                                       survival_authorized=survival_capability,
                                       production_authorized=production_capability,
-                                      market_authorized=market_capability)
+                                      market_authorized=market_capability,
+                                      agriculture_authorized=agriculture_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -269,7 +280,8 @@ class LivingWorldEngine:
                 # capabilities as explicit local production and market commands.
                 # Each pass sees only state already changed by previous events.
                 for worker_id in sorted(current.npcs):
-                    intent = choose_local_production(current, worker_id)
+                    intent = choose_local_production(current, worker_id,
+                                                     agriculture_enabled=self.agriculture_enabled)
                     if intent is None:
                         continue
                     append(DomainEvent('ProductionStarted', worker_id,
@@ -279,6 +291,13 @@ class LivingWorldEngine:
                                         'npc_id': worker_id}), production_capability=True)
                     economic_jobs.append(intent.job_id)
                     busy.add(worker_id)
+                if self.agriculture_enabled:
+                    for site in sorted(current.farm_plots):
+                        if choose_local_growth(current, site):
+                            append(DomainEvent("CropGrowthStarted", None,
+                                "local seedling grows using finite water and time",
+                                current.time, {"site_id": site}),
+                                agriculture_capability=True)
                 for keeper_id in sorted(current.npcs):
                     quote = choose_local_food_offer(current, keeper_id)
                     if quote is None:
@@ -389,6 +408,8 @@ class LivingWorldEngine:
                     append(event, social_capability=True)
             # Deterministic tie breaking between independently eligible NPCs.
             for npc_id in sorted(current.npcs):
+                if self.economy_only_enabled:
+                    break  # Focused economic endurance, not full village life.
                 if npc_id in busy:
                     continue
                 existing = current.npcs[npc_id]['last_decision']
@@ -552,14 +573,15 @@ class LivingWorldEngine:
             # Schedule both completed actions and re-evaluations of idle NPCs.
             next_ticks = [target]
             next_ticks.extend(item['due'] for item in current.scheduled.values())
-            if self.routines_enabled:
+            if self.routines_enabled or self.agriculture_enabled:
                 next_boundary = next_routine_boundary(current)
                 if next_boundary is not None:
                     next_ticks.append(next_boundary)
-            next_ticks.extend(profile['next_decision_at'] for npc_id, profile
-                              in current.npcs.items()
-                              if npc_id not in busy
-                              and profile['next_decision_at'] > current.time)
+            if not self.economy_only_enabled:
+                next_ticks.extend(profile['next_decision_at'] for npc_id, profile
+                                  in current.npcs.items()
+                                  if npc_id not in busy
+                                  and profile['next_decision_at'] > current.time)
             next_tick = min(t for t in next_ticks if t > current.time)
             append(DomainEvent('TimeAdvanced', None, 'authorized player time',
                                next_tick, {'from': current.time, 'to': next_tick}),
@@ -575,7 +597,8 @@ class LivingWorldEngine:
                                       consumption_authorized=self.consumption_enabled,
                                       survival_authorized=self.survival_enabled,
                                       production_authorized=self.economic_enabled,
-                                      market_authorized=self.economic_enabled)
+                                      market_authorized=self.economic_enabled,
+                                      agriculture_authorized=self.agriculture_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
