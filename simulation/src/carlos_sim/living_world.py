@@ -22,6 +22,7 @@ from .food_navigation import choose_food_route
 from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
+from .supply import choose_cargo, choose_courier_leg, next_courier_departure
 from .economic_autonomy import (choose_local_production, choose_local_food_offer,
                                 choose_local_food_purchase, TEST_FOOD_PRICE_COPPER)
 
@@ -69,7 +70,8 @@ class LivingWorldEngine:
                  rumors_enabled: bool = False,
                  economic_enabled: bool = False,
                  agriculture_enabled: bool = False,
-                 economy_only_enabled: bool = False):
+                 economy_only_enabled: bool = False,
+                 supply_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -142,6 +144,9 @@ class LivingWorldEngine:
             raise ValueError("economy_only_enabled requires agriculture_enabled")
         self.agriculture_enabled = agriculture_enabled
         self.economy_only_enabled = economy_only_enabled
+        if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
+            raise ValueError("supply_enabled requires opt-in agriculture_enabled")
+        self.supply_enabled = supply_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int,
@@ -191,7 +196,8 @@ class LivingWorldEngine:
                    survival_capability: bool = False,
                    production_capability: bool = False,
                    market_capability: bool = False,
-                   agriculture_capability: bool = False) -> None:
+                   agriculture_capability: bool = False,
+                   supply_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
@@ -205,7 +211,8 @@ class LivingWorldEngine:
                                       survival_authorized=survival_capability,
                                       production_authorized=production_capability,
                                       market_authorized=market_capability,
-                                      agriculture_authorized=agriculture_capability)
+                                      agriculture_authorized=agriculture_capability,
+                                      supply_authorized=supply_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -275,6 +282,54 @@ class LivingWorldEngine:
                         if t['status'] == 'traveling')
             busy.update(j['npc_id'] for j in current.production_jobs.values()
                         if j['status'] == 'running')
+            if self.supply_enabled:
+                # A courier may transfer exactly one local unit at an authentic
+                # stop and then traverse a physically configured adjacent road.
+                for courier in sorted(current.supply_circuits):
+                    for _ in range(2):
+                        act = choose_cargo(current, courier)
+                        if act is None:
+                            break
+                        rec = current.supply_circuits[courier]
+                        if act == "SupplyCargoDelivered":
+                            resource = rec["carry"]["resource"]
+                        else:
+                            resource = {0:"water", 1:"grain", 2:"food"}[rec["index"]]
+                        append(DomainEvent(act, courier,
+                                           "courier physically transfers known local owned cargo",
+                                           current.time,
+                                           {"courier_id": courier,
+                                            "resource": resource}),
+                               supply_capability=True)
+                    journey = choose_courier_leg(current, courier)
+                    if journey is None:
+                        continue
+                    if needs_survey(current, courier):
+                        append(DomainEvent("NPCNavigationSurveyed", courier,
+                            "courier learns locally adjacent professional road",
+                            current.time, {"npc_id": courier}),
+                            movement_capability=True)
+                        journey = choose_courier_leg(current, courier)
+                        if journey is None:
+                            continue
+                    rid, origin, destination, due_at = journey
+                    tid = f"supply-trip:{courier}:{current.time}"
+                    sid = "npc-travel:" + tid
+                    if tid in current.travels or sid in current.scheduled:
+                        raise InvalidEvent("duplicate professional cargo journey")
+                    append(DomainEvent("ScheduledEventCreated", None,
+                        "authentic scheduled courier arrival", current.time,
+                        {"id": sid, "due": due_at,
+                         "order": current.next_schedule_order, "kind": "signal",
+                         "payload": {"__npc_travel_id": tid},
+                         "interrupt": False}), movement_capability=True)
+                    append(DomainEvent("NPCTravelStarted", courier,
+                        "courier traverses one surveyed adjacent road", current.time,
+                        {"id": tid, "npc_id": courier,
+                         "route_id": rid, "origin": origin,
+                         "destination": destination, "due": due_at,
+                         "schedule_id": sid}), movement_capability=True)
+                    busy.add(courier)
             if self.economic_enabled:
                 # PLAY-24: pure NPC proposals, executed through the SAME reducer
                 # capabilities as explicit local production and market commands.
@@ -573,6 +628,10 @@ class LivingWorldEngine:
             # Schedule both completed actions and re-evaluations of idle NPCs.
             next_ticks = [target]
             next_ticks.extend(item['due'] for item in current.scheduled.values())
+            if self.supply_enabled:
+                resume = next_courier_departure(current)
+                if resume is not None:
+                    next_ticks.append(resume)
             if self.routines_enabled or self.agriculture_enabled:
                 next_boundary = next_routine_boundary(current)
                 if next_boundary is not None:
@@ -591,14 +650,15 @@ class LivingWorldEngine:
         committed = self.store.append(world_id, command_id, expected_revision, events,
                                       clock_authorized=True, npc_authorized=True,
                                       action_authorized=True,
-                                      movement_authorized=(self.navigation_enabled or recorded_player_sighting),
+                                      movement_authorized=(self.navigation_enabled or self.supply_enabled or recorded_player_sighting),
                                       social_authorized=(self.social_enabled or self.rumors_enabled),
                                       assistance_authorized=self.assistance_enabled,
                                       consumption_authorized=self.consumption_enabled,
                                       survival_authorized=self.survival_enabled,
                                       production_authorized=self.economic_enabled,
                                       market_authorized=self.economic_enabled,
-                                      agriculture_authorized=self.agriculture_enabled)
+                                      agriculture_authorized=self.agriculture_enabled,
+                                      supply_authorized=self.supply_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
