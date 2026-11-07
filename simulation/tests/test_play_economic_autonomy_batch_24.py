@@ -287,3 +287,28 @@ def test_economic_gate_only_accepts_boolean(tmp_path):
     finally:
         clock.close_session(WORLD)
         db.close()
+
+
+@pytest.mark.parametrize("grain,copper,expected_jobs,expected_offers,expected_trades", [
+    (1, 2, 1, 1, 1),
+    (1, 1, 1, 1, 0),
+    (0, 2, 0, 0, 0),
+])
+def test_real_seven_npc_village_runs_without_scripted_market_orders(
+        tmp_path, grain, copper, expected_jobs, expected_offers, expected_trades):
+    sys.path.insert(0, str(SIM / "scenarios" / "test_village"))
+    from play_economic_autonomy import run_economic_village
+    result = run_economic_village(tmp_path / "village.sqlite",
+                                  grain=grain, buyer_copper=copper)
+    assert result["logical_seconds"] == 180
+    assert result["verified_replay"] is True
+    audit = result["private_test_audit_only"]
+    assert audit["npcs"] == 7
+    assert audit["finished_jobs"] == expected_jobs
+    assert audit["offers"] == expected_offers
+    assert audit["trades"] == expected_trades
+    assert audit["buyers"] == (["adel"] if expected_trades else [])
+    assert audit["autonomous_actions"] >= 6
+    assert audit["player_commanded_npc_actions"] == 0
+    assert audit["copper_total"] == 10 + copper
+    assert audit["final_food_and_coins"]["copper_total"] == 10 + copper
