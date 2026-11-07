@@ -255,3 +255,31 @@ def test_resumable_cli_current_actions_same_after_pause_and_read_only_export(tmp
     assert len(backups_list(backups)) == count
     with SQLiteEventStore(db_path) as db:
         assert db.verify(WORLD).to_dict() == frozen
+
+
+def test_foraging_is_visible_only_for_genuine_running_local_actions(tmp_path):
+    from carlos_sim import LivingWorldEngine
+    from test_gathering_autonomy import make_world
+    with SQLiteEventStore(tmp_path / "forage.sqlite") as db:
+        make_world(db)
+        db.append("r", "carlos-at-grove", db.load("r").revision, [
+            DomainEvent("EntityCreated", None, "local player", 0, {
+                "id": "carlos", "name": "Carlos",
+                "location_id": "grove", "controller": "player",
+            })
+        ], bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("r")
+        gw = PlayerGateway(db, clock, world_id="r", player_id="carlos")
+        assert gw.inspect().details["activities"] == ()
+        result = LivingWorldEngine(db, clock, foraging_enabled=True).advance(
+            "r", seconds=1, command_id="actual-forage",
+            expected_revision=db.load("r").revision)
+        witnessed = gw.inspect().details["activities"]
+        assert {x["actor_id"] for x in witnessed
+                if x["activity"] == "foraging"} == {
+            "adel", "basim", "nora", "salma"}
+        assert "omar" not in repr(witnessed)
+        assert result.state.resources["grove"]["wild_food"] == 2
+        assert '"wild_food"' not in json.dumps(player_handoff(gw))
+        assert db.verify("r").to_dict() == result.state.to_dict()
