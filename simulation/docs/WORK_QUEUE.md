@@ -665,3 +665,6 @@ Do not expose other buyers, NPC balance ledgers or private before/after
 numbers; don't create resources, read-side events or checkpoints. No
 schema/rules bump, original story change or main merge. 03-A7c/03-A, P0 and
 independent-review gates remain open. Don't declare closure without CI proof.
+
+Verification branch: simulation-engine-phase-play-06-receipts (triggers the
+full matrix on push). This task remains open until its exact run is checked.
