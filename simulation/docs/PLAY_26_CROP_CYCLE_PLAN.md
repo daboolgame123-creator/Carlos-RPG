@@ -1,6 +1,6 @@
 # PLAY-26 — bounded seed → timed crop → harvest → bread cycle (implementation plan)
 
-**Status:** IN_PROGRESS / NOT_CLOSED (2026-11-08). **Parent:** PLAY-25 technical closure `1443f7b5e7ec4a35f1c99e5122e9d6beb628ebf0`.
+**Status:** CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER (2026-11-08). **Parent:** PLAY-25 technical closure `1443f7b5e7ec4a35f1c99e5122e9d6beb628ebf0`.
 **Branch:** `simulation-engine-phase-play-26-crop-cycle`. No `main` or canonical story modifications, no P0 approval or outside review.
 
 ## Verified problem and constraints
@@ -18,3 +18,12 @@ PLAY-25 harvested **finite pre-ripened** `crop_ready`, but cannot plant seed or 
 ## Resource logic and boundaries
 
 One seed and one water are *debited* at planting+growth; after one full day, a mature crop is made via soil/sunlight/water and a seed is recovered through plant reproduction. The growth is documented, not an uncaused reset. **Water is finite**, and dry land stops planting; this proves at most a few harvests, NOT an indefinitely sustainable economy. No weather simulation, rainfall, free water, wages, dynamic prices, intersite cargo, starvation death or full multi-day NPC-survival proof in this batch. Those require follow-on stages and their own tests.
+
+## Technical closure gate — verified 2026-11-08
+
+**Decision:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`; P0 remains NOT APPROVED. **Tested source SHA:** `c4c0638d24658df24288a95554aa5b0fec70ed21`. Documentation-only closure commit is later and is not the tested SHA.
+
+- [PLAY-26 targeted CI 42422616448](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42422616448) = `completed/success`; **127 passed on Python 3.10 and 127 on Python 3.13**, plus five actual seven-NPC crop counterfactuals over 173300 logical seconds.
+- [Full simulation CI 42422616440](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42422616440) = `completed/success`; **1,565 passed on Python 3.10 and 1,565 on Python 3.13**, zero failures; genuine predecessor parity gates all green. Same tested SHA for BOTH workflows.
+- Protected FarmPlotConfigured/CropGrowthStarted/scheduled maturation and append replay provenance, 35/47 schema/rules, fail-closed old saves, deterministic replay, real finite water, independent farmer/baker/seller/buyer, atomic rollbacks and privacy verified. The frozen predecessor parity probes exclude the *empty* opt-out farm_plots collection only after asserting it is empty, so actual crop behavior cannot be hidden.
+- Scope boundary: this focused experiment suppresses generic NPC actions and hunger-over-time for multi-day economic endurance. It does **NOT** prove that seven NPC survive several days with full needs, transport or food supply. Rain/refill/irrigation, weather, intersite logistics, starvation effects, wages and genuine indefinite sustainability are absent. See [closure report](PLAY_26_CROP_CYCLE_REPORT.md).
