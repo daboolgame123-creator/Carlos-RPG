@@ -1174,27 +1174,27 @@ The present doc-only closure commit follows the exactly CI-tested code SHA.
 **Analysis before changes:** PLAY-14g (numeric player hunger, energy and
 health effects) is explicitly DECISION_REQUIRED/BLOCKED and **not** a
 prerequisite for existing tested NPC hunger/consumption functionality.
-NPC \`survival.py\` and \`consumption.py\` already implement a deterministic
+NPC `survival.py` and `consumption.py` already implement a deterministic
 finite-food policy and food debit, but the default PLAY village deliberately
 disables the feature. Reuse these proven rules in a **new, opt-in disposable
 NPC-survival demo**. Basim and Nora start with exactly one initialized
-owned \`food\` each and the other five NPCs start at known zero; hunger
+owned `food` each and the other five NPCs start at known zero; hunger
 starts at 80 in this *test-only* fixture, with no player health or hunger
-effects. All NPC eating occurs only after explicit player \`wait\`, not
+effects. All NPC eating occurs only after explicit player `wait`, not
 in offline wall-clock time. No new domain event, Schema 34 / Rules 46.
 
 | Task | Deliverable | Route | State |
 |---|---|---|---|
-| PLAY-15a | Independent NPC hunger/policy reuse, keep PLAY-14g blocked and player unknowns | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-15b | Isolated seven-NPC opt-in finite food fixture; preserve standard fixture | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-15c | Trusted gateway enables NPC consumption/metabolism only on fixture marker | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-15d | Human at the scene sees only co-located eating events during explicit wait | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-15e | Both CLIs opt-in, resume must preserve scenario policy and reject mismatch without mutation | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-15f | NPC autonomy, privacy, gifts vs food, non-minting, replay/snapshot and CLI adversarial tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-15g | Guide, whole-matrix exact-SHA Python 3.10 and 3.13 CI and technical closure | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-15a | Independent NPC hunger/policy reuse, keep PLAY-14g blocked and player unknowns | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-15b | Isolated seven-NPC opt-in finite food fixture; preserve standard fixture | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-15c | Trusted gateway enables NPC consumption/metabolism only on fixture marker | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-15d | Human at the scene sees only co-located eating events during explicit wait | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-15e | Both CLIs opt-in, resume must preserve scenario policy and reject mismatch without mutation | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-15f | NPC autonomy, privacy, gifts vs food, non-minting, replay/snapshot and CLI adversarial tests | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-15g | Guide, whole-matrix exact-SHA Python 3.10 and 3.13 CI and technical closure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
-**No unauthorized nutritional claims:** NPCs only eat \`food\` already
-initialized and owned; NPC \`bread\` is not converted to food without a
+**No unauthorized nutritional claims:** NPCs only eat `food` already
+initialized and owned; NPC `bread` is not converted to food without a
 new recipe/policy. A meal witnessed during a wait projects **only** NPC ID,
 observable eating activity, and logical time if Carlos was *not travelling*
 and stood at the recorded consumption site throughout the wait.
@@ -1204,8 +1204,51 @@ meter, HP/ST/MP changes, XP or any ability. Saved demo mode is bound
 to exact bootstrap command ID and must be reaffirmed at resume;
 no production migration or silent gameplay policy flip.
 
-**Dependency gates:** \`PLAY-14g\` OPEN DECISION_REQUIRED,
-\`03-A7c\` and parent \`03-A\` OPEN,
-\`P0_PRODUCTION_NOT_APPROVED\`,
-\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\`. No main merge or canonical story
+**Dependency gates:** `PLAY-14g` OPEN DECISION_REQUIRED,
+`03-A7c` and parent `03-A` OPEN,
+`P0_PRODUCTION_NOT_APPROVED`,
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. No main merge or canonical story
 edits. Don't close this batch without full exact SHA CI green.
+
+
+### PLAY-15 exact-SHA verified technical closure (2026-11-07)
+
+**PLAY-15a–PLAY-15g CLOSED_TECHNICALLY** on the exact code-and-test
+SHA `908e22f675641620d73f40f357b7264aa2997a33`. [GitHub Actions run 42381742262](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42381742262)
+completed **SUCCESS** with **1,432 passed on Python 3.10** and
+**1,432 passed on Python 3.13**, including historic schema/rules
+compatibility, verified SQLite replay, snapshot/reopen, multiple
+autonomous NPCs, resource integrity and both real CLIs.
+
+- The regular disposable village stays unchanged and does NOT activate
+  NPC hunger/consumption automatically.
+- An explicit `--npc-survival-demo` option initializes only the special
+  test world with seven real NPC agents and finite known food stock
+  (one owned by Basim, one by Nora, five known zero). Existing, trusted
+  NPC decision rules drive food consumption and baseline metabolism
+  only during explicit player `wait`. Real autonomous work/rest can
+  additionally increase NPC hunger.
+- Player `wait` reveals only eating activity **actually co-located**
+  with a stationary human during that wait, not remote NPC food,
+  hunger levels, private knowledge or inventories. Player hunger
+  remains `not_modeled`; HP/ST/MP are unchanged.
+- Persistent CLI resume validates the exact opt-in fixture bootstrap
+  command and rejects a mismatched `--npc-survival-demo` flag before
+  allowing any gameplay or writing checkpoints.
+- No new event type, Schema 34 / Rules 46 unchanged. No cannon story
+  mutation, new player hunger, automatic player actions or P0 approval.
+
+**First candidate** `7f41d0e3c5a5ffea1b331841eb3d638128540278`
+had one test failure (1,431 passed, one failed on Python 3.13):
+the test incorrectly expected Salma's hunger to be exactly 81 after
+301s, ignoring the already-authorized additional hunger cost of NPC
+work. The corrected expectation checks an honest lower bound instead
+of asserting NPCs did no work. Both final SHA CI matrices passed.
+
+**Open:** `PLAY-14g` (numerical *player* hunger and medical
+effects) remains `DECISION_REQUIRED / BLOCKED_BY_DEPENDENCY`;
+`03-A7c` and `03-A` OPEN;
+`P0_PRODUCTION_NOT_APPROVED`;
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`.
+The following documentation-only closure SHA is distinct from the
+exact green code/test SHA above, and `main` is not merged.
