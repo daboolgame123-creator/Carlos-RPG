@@ -27,7 +27,7 @@ from living_player_fixture import (
     WORLD, PLAYER, setup_living_foraging_world, living_player_gateway,
 )
 
-HELP = ("scene | look | remember | status | handoff | move <road> "
+HELP = ("scene | look | remember | status | needs | handoff | move <road> "
         "| wait <seconds> | offers | supplies | purchases | gifts | meals | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
@@ -130,6 +130,8 @@ def main() -> None:
                     result = gateway.recall()
                 elif verb == "status" and not rest:
                     result = gateway.status()
+                elif verb == "needs" and not rest:
+                    result = gateway.needs()
                 elif verb == "supplies" and not rest:
                     result = gateway.supplies()
                 elif verb == "offers" and not rest:

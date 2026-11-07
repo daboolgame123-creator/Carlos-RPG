@@ -17,7 +17,7 @@ from carlos_sim.store import DuplicateCommand, InvalidEvent, RevisionConflict
 from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 from living_player_fixture import WORLD, living_player_gateway, setup_living_foraging_world
 
-HELP = ("scene | look | status | remember | handoff | move <road> "
+HELP = ("scene | look | status | needs | remember | handoff | move <road> "
         "| wait <seconds> | offers | supplies | purchases | gifts | meals | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
@@ -68,6 +68,8 @@ def main() -> None:
                         result = gateway.recall()
                     elif verb == "status" and not args:
                         result = gateway.status()
+                    elif verb == "needs" and not args:
+                        result = gateway.needs()
                     elif verb == "supplies" and not args:
                         result = gateway.supplies()
                     elif verb == "offers" and not args:

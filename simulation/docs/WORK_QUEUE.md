@@ -1099,3 +1099,43 @@ smoke tests, SQLite replay/snapshots, and real restartable world checks.
 **Closure mechanics:** This is a following **documentation-only**
 commit; its SHA is distinct from the tested code-and-tests SHA above,
 so the cited CI is not attributed to the documentation commit.
+
+
+## PLAY-14 — Evidence-only hunger/energy boundary (2026-11-07)
+
+**Analysis (before implementation):** NPC survival already models hunger at
+300 simulated seconds/point, fatigue at 600 seconds/point and NPC meals
+reducing hunger by 25. These rules are for NPC profiles, not human players.
+Carlos has an independent RPG ledger with HP/ST/MP (and unknown-safe values)
+but no authorized player hunger state, metabolism, fatigue/rest recovery,
+starvation severity, nutrition or injury interaction. Blindly copying NPC
+rules or declaring restored HP/ST would create unsupported physical facts
+and may conflict with open 03-A7c/03-A.
+
+**Safe independent vertical slice:** \`needs\` presents an integrity-verified
+player-own **latest meal timestamp** and **elapsed *simulation* seconds since
+that meal** (unknown without an actual meal); the already configured
+player RPG ST current/max; and the player's own
+available/travelling/foraging status. Hunger is explicitly marked
+\`not_modeled\`, and ST explicitly \`rpg_st_only\`. No stats, world resources,
+clock, event log, NPC needs or canonical state change. Handoff uses the
+existing same-world/time/revision coherence checks. Both CLIs support
+read-only \`needs\`, with no new snapshots/checkpoints. As this is a
+projection only: **Schema 34 / Rules 46 remain unchanged**.
+
+| Task | Dependency and deliverable | Route | State |
+|---|---|---|---|
+| PLAY-14a | Analyze NPC metabolism, player RPG vitals, injury and nourishment boundaries after PLAY-13 | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14b | Verified player-only latest-meal elapsed-time/unknown-safe ST/activity projection | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14c | Add \`needs\` command to two CLIs, and same-revision narrator handoff without private data | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14d | Adversarial inputs, no false hunger, NPC autonomy, travel, forage, real elapsed time, snapshot and CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14e | Decision log, dual-Python full CI at exact code SHA and technical closure | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Deferred explicitly, NOT CLOSED:** Numeric player hunger and hunger-rate
+calibration (starting hunger unknown), eating-to-hunger effects, fatigue
+semantics, resting-to-ST/HP changes, starvation/weakness, metabolism and
+injury interaction. These require explicit game-rule ownership decisions
+and tests, and must not silently reuse NPC rates or fabricate player
+vitals. Track as PLAY-14-FUTURE / DECISION_REQUIRED, and medical-dependent
+parts as BLOCKED_BY_DEPENDENCY \`03-A7c\`/\`03-A\`. No P0 authorization,
+external-review completion, \`main\` merge or canonical story edits.

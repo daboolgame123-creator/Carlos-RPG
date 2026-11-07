@@ -141,6 +141,18 @@ class PlayerGateway:
                                    'rpg_status', {'configured': True,
                                                   'profile': _thaw(profile)})
 
+    def needs(self) -> PlayerCommandResult:
+        """Evidence-only personal meal interval and existing ST, not hunger."""
+        from .player_needs_evidence import personal_needs_evidence
+        state = self._state()
+        meals = self.meals(limit=1)
+        if (state.world_id, state.time, state.revision) != (
+                meals.world_id, meals.time, meals.revision):
+            raise RuntimeError('personal needs changed during projection')
+        details = personal_needs_evidence(state, self.player_id, meals.details)
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'needs_evidence', details)
+
     def supplies(self) -> PlayerCommandResult:
         """Show only initialized, entity-owned goods/money of this player.
 
