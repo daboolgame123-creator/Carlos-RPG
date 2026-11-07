@@ -654,11 +654,11 @@ on the blocked medical observation producer or production P0.
 
 | Task | Dependency and scope | Route | State |
 |---|---|---|---|
-| PLAY-06a | PLAY-05 green SHA; player-only bounded receipts | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-06b | PLAY-06a; coherent handoff includes five own receipts | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-06c | PLAY-06a; temporary/restartable CLI purchases command | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-06d | PLAY-06a–c; Basim trade privacy, Carlos travel/duplicate, readonly, adversarial limits, replay/reopen, CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-06e | PLAY-06a–d; guide, final SHA/dual-Python CI and technical closure | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-06a | PLAY-05 green SHA; player-only bounded receipts | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06b | PLAY-06a; coherent handoff includes five own receipts | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06c | PLAY-06a; temporary/restartable CLI purchases command | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06d | PLAY-06a–c; Basim trade privacy, Carlos travel/duplicate, readonly, adversarial limits, replay/reopen, CLI tests | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06e | PLAY-06a–d; guide, final SHA/dual-Python CI and technical closure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Acceptance:** exact final code SHA must pass full Python 3.10/3.13 matrix.
 Do not expose other buyers, NPC balance ledgers or private before/after
@@ -668,3 +668,25 @@ independent-review gates remain open. Don't declare closure without CI proof.
 
 Verification branch: simulation-engine-phase-play-06-receipts (triggers the
 full matrix on push). This task remains open until its exact run is checked.
+
+### PLAY-06 technical closure (2026-11-07)
+
+All five tasks PLAY-06a–PLAY-06e are CLOSED_TECHNICALLY.
+The full dual-Python suite passed on **exact code-and-test SHA**
+25fdbf5e30dd23f0471d4287cfa7585a47484545 in
+[Actions run 42352820512](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42352820512):
+**1,270 passed on Python 3.10** and **1,270 passed on Python 3.13**.
+Both matrix jobs ended in SUCCESS, with compileall, regression, parity,
+historic baselines, SQLite/replay and scenario smoke checks green.
+
+Eight additional PLAY-06 tests include real Basim NPC buying before Carlos,
+private receipt filtering, fraud rejection, player travel visibility, no
+read-side mutation, mixed-revision handoff detection, SQLite snapshot/reopen,
+temporary CLI, and checkpoint-preserving two-process resumable CLI.
+
+The history carries **only owned player receipts** (up to 20, most recent
+five in handoff); it neither fabricates goods nor exposes the full NPC market
+ledger. Schema 32 / Rules 42 unchanged. This documentation-only closure
+commit follows the tested SHA and is not a claim of new post-commit CI.
+Parent 03-A/03-A7c still OPEN, external review deferred, production P0
+unapproved, and main/original story untouched.
