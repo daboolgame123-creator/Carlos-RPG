@@ -1,6 +1,6 @@
 # PLAY-22 — Finite-food endurance, replay and bounded cost
 
-Date: 2026-11-07. Status: IN_PROGRESS / CI_PENDING.
+Date: 2026-11-07. Status: CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER.
 Base: PLAY-21 technical documentation HEAD `5f84b72da6c52eaa429b832468dd53dac49a5728`.
 Branch: `simulation-engine-phase-play-22-ecology-endurance`.
 This is a disposable-test-only branch, not a canonical story import or production approval.
@@ -22,3 +22,11 @@ This is a disposable-test-only branch, not a canonical story import or productio
 
 ## Safety and scope
 No extra starting food beyond PLAY-21; no new schema/rules, engine policy changes, NPC personality or medical mechanics. Each wait is <=120 world seconds, local snapshots are replay accelerators only. For a longer horizon, test the actual number before describing it as successful. PLAY-14g, 03-A7c, 03-A, P0 and external review all remain OPEN until independently addressed.
+
+## Verified closure evidence (2026-11-07)
+
+- **Final code/test SHA:** `2639d61437e7086a9ac1223a17789f43b29d2fee`. Schema 34 / Rules 46 unchanged.
+- **Full [run 42405841422](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42405841422):** `completed/success`, 1,493 passed in Python 3.10 (755.98s) and 1,493 passed in Python 3.13 (666.15s).
+- **Targeted [run 42405841495](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42405841495):** `completed/success`, 34 passed per Python version, plus **two genuine 3,600-second worlds** on each version, with identical deterministic private audit results.
+- At t=600 all **8** starting natural/personal food units were consumed or held by Carlos. At t=1,800 all seven NPC hunger values were >=90 in both worlds; there is NO NPC starvation-death mechanic. Under observation NPCs ate 8 meals, compared with 7 when Carlos foraged one unit first. There was no generated stock.
+- The complete report is [PLAY_22_ENDURANCE_REPORT.md](PLAY_22_ENDURANCE_REPORT.md). The closest next milestone is a separately designed bounded production/market/ownership-to-meal chain, not an assumption of sustainability. All earlier open health, P0 and review gates remain OPEN.
