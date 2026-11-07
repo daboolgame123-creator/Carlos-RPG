@@ -1,7 +1,7 @@
 # PLAY-25 — finite harvest-to-bread supply (plan)
 
-**Status:** IN_PROGRESS / GATE_OPEN (2026-11-08). **Base:** PLAY-24 `386c6714d28819e1a7d84c6c768c005520be7768`.
-**Branch:** `simulation-engine-phase-play-25-finite-harvest`. Never change `main`, canonical story, production schemas or global NPC defaults.
+**Status:** CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER (2026-11-08); P0 remains open. **Base:** PLAY-24 `386c6714d28819e1a7d84c6c768c005520be7768`.
+**Branch:** `simulation-engine-phase-play-25-finite-harvest`. Tested source SHA: `2b468a5aab1ee3e3f747ecb31de6c8c6f57b4c1d`; [targeted CI 42416063725](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42416063725) = 108 passed per Python 3.10/3.13 and four live seven-NPC scenarios; [full CI 42416063670](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42416063670) = 1,546 passed per Python 3.10/3.13. Documentation-only closure commit follows tested SHA. Never change `main`, canonical story, production schemas or global NPC defaults.
 
 ## Baseline and objective
 
@@ -13,6 +13,10 @@ PLAY-24's opt-in economy can bake, offer, buy and eat but relies on one initiall
 2. Exercise existing pure economic decision selector and event reducers in a single opt-in `LivingWorldEngine`. For a harvest recipe `crop_ready:1 -> grain:1`, a finite sickle and 60-second work slot are required. The baker consumes `grain:1 -> food:1` using the oven in 90 seconds. Test negative worlds: no crop, no sickle, farmer unavailable/off shift, baker absent/off shift, buyer without money. Compare actual events and resulting owner balances.
 3. Include multi-batch finite-resource exhaustion, zero grain at bootstrap, conservation invariant `crop_ready + grain + food + consumed food`, copper conservation, exact elapsed clock, job due times, SQLite verify/snapshot/reopen, deterministic world replay, stale/duplicate and max-event rollback, player handoff privacy, and opt-out regression.
 4. Add workflow targeting Python 3.10 and 3.13 with scenario + focused tests. Require successful targeted **and full simulation test** runs on the same code SHA before marking this phase technically closed. Only after evidence, update `WORK_QUEUE.md`, `ROADMAP.md`, report and phase status. No production approval implied.
+
+## Closure
+
+All planned targeted, rollback, persistence, and full regression checks passed on the code SHA above. The concrete planner/reducer mismatch about worksite/shift was fixed in `living_world.py`. This closure is technical only; not P0 authorization or independent external review. See [PLAY-25 report](PLAY_25_FINITE_HARVEST_REPORT.md).
 
 ## Strict limitations
 
