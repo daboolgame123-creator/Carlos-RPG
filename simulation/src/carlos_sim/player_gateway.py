@@ -561,6 +561,22 @@ class PlayerGateway:
                     })
             if local_meals:
                 details['nearby_meals'] = tuple(local_meals)
+            # Expose only qualitative *local* NPC-to-NPC speaking, never the
+            # private message text, topic, trust delta or hidden intentions.
+            nearby_talk = []
+            for message_id in result.social_message_ids:
+                message = now.social_messages.get(message_id)
+                if (message is not None and message['sender'] in now.npcs
+                        and message['recipient'] in now.npcs
+                        and message['location_id'] == witnessed_at
+                        and before.time <= message['sent_at'] <= now.time):
+                    nearby_talk.append({
+                        'sender_id': message['sender'],
+                        'recipient_id': message['recipient'],
+                        'activity': 'talking', 'at': message['sent_at'],
+                    })
+            if nearby_talk:
+                details['nearby_conversations'] = tuple(nearby_talk)
         if foraging_before is not None:
             ident, _schedule, payload = foraging_before
             if ident in result.fired_ids:

@@ -336,6 +336,24 @@ class LivingWorldEngine:
                         message_id = f'auto-social:{npc_id}:{current.time}'
                         if message_id in current.social_messages:
                             raise InvalidEvent('autonomous social message ID collision')
+                        # PLAY-18: the waiting human witnesses only that two
+                        # physically nearby NPCs spoke, never their words,
+                        # intentions or private relationship changes.
+                        if player_observer_id is not None:
+                            from .movement import _in_transit, _visible
+                            visible_state = current.to_dict()
+                            place = visible_state['entities'][player_observer_id]['location_id']
+                            if (not _in_transit(visible_state, player_observer_id)
+                                    and not _in_transit(visible_state, npc_id)
+                                    and not _in_transit(visible_state, intent.recipient_id)
+                                    and place == visible_state['entities'][npc_id]['location_id']
+                                    == visible_state['entities'][intent.recipient_id]['location_id']):
+                                append(DomainEvent('PlayerObserved', player_observer_id,
+                                    'player witnessed nearby NPCs speaking', current.time,
+                                    {'location_id': place,
+                                     'occupants': _visible(visible_state, place)}),
+                                    movement_capability=True)
+                                recorded_player_sighting = True
                         append(DomainEvent('SocialMessageSent', npc_id,
                             f'autonomous social initiative: {intent.reason}', current.time,
                             {'id': message_id, 'recipient': intent.recipient_id,

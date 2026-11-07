@@ -89,7 +89,7 @@ def recall_player_events(store: SQLiteEventStore, state: WorldState,
     for raw, command_id in rows:
         obj = json.loads(raw)
         if obj.get('event_type') not in ('PlayerObserved', 'PlayerHearsayReceived',
-                                         'NPCFoodConsumed'):
+                                         'NPCFoodConsumed', 'SocialMessageSent'):
             pending_witness = None
             continue
         evt = DomainEvent.from_dict(obj)
@@ -107,6 +107,30 @@ def recall_player_events(store: SQLiteEventStore, state: WorldState,
                         'location_id': meal['location_id'], 'at': evt.time,
                     })
                     # Only the most recent 20 local memories are projected.
+                    if len(witnessed) > 20:
+                        witnessed.pop(0)
+            pending_witness = None
+            continue
+        if evt.event_type == 'SocialMessageSent':
+            if pending_witness is not None and pending_witness[0] == command_id:
+                observed = pending_witness[1]
+                message = state.social_messages.get(evt.data['id'])
+                if (observed.cause == 'player witnessed nearby NPCs speaking'
+                        and message is not None and message['status'] == 'received'
+                        and message['sender'] == evt.actor_id
+                        and message['recipient'] == evt.data['recipient']
+                        and evt.actor_id in state.npcs
+                        and message['recipient'] in state.npcs
+                        and evt.actor_id in observed.data['occupants']
+                        and message['recipient'] in observed.data['occupants']
+                        and message['location_id'] == observed.data['location_id']
+                        and message['sent_at'] == evt.time == observed.time):
+                    witnessed.append({
+                        'actor_id': evt.actor_id,
+                        'recipient_id': message['recipient'],
+                        'activity': 'talking',
+                        'location_id': message['location_id'], 'at': evt.time,
+                    })
                     if len(witnessed) > 20:
                         witnessed.pop(0)
             pending_witness = None
@@ -135,7 +159,8 @@ def recall_player_events(store: SQLiteEventStore, state: WorldState,
                     if len(witnessed) > 20:
                         witnessed.pop(0)
             if (command_id.startswith('player-wait:')
-                    and evt.cause == 'player witnessed a nearby NPC eating'):
+                    and evt.cause in ('player witnessed a nearby NPC eating',
+                                      'player witnessed nearby NPCs speaking')):
                 pending_witness = (command_id, evt)
         elif (evt.event_type == 'PlayerHearsayReceived'
               and evt.data['player_id'] == player_id):
