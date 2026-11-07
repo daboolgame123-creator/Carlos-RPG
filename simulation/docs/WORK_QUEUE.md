@@ -577,11 +577,11 @@ allow a player to spend an NPC's funds.
 
 | Task | Scope and strict dependency | Route | State |
 |---|---|---|---|
-| PLAY-05a | Extend validated MarketTradeExecuted for a physically present human buyer, and preserve existing NPC seller/stock ownership and conservation; existing NPCMarketService.buy must stay NPC-only | CHAT_EXECUTABLE | PLANNED |
-| PLAY-05b | Trusted `PlayerGateway.offers`, `supplies`, and `buy`: only local public quote, own initialized balances, bounded quantity/price, no in-transit exchange, exact revision and dedup ID | CHAT_EXECUTABLE | PLANNED |
-| PLAY-05c | Add a small finite bread-and-copper test market to disposable seven-NPC fixture, clearly marked as demo setup; `offers/supplies/buy` in both temporary and restartable CLIs | CHAT_EXECUTABLE | PLANNED |
-| PLAY-05d | Integration/adversarial NPC and player tests: Basim/Salma seller/local witness, Nora/Huda remote isolation, inventory conservation, price bait, stock depletion, busy/stale/travel/duplicate/replay/reopen | CHAT_EXECUTABLE | PLANNED |
-| PLAY-05e | Windows guide: identify distinct entity-owned resources vs unimplemented RPG inventory; exact CI matrix on final code SHA and no parent-phase premature closure | CHAT_EXECUTABLE | PLANNED |
+| PLAY-05a | Extend validated MarketTradeExecuted for a physically present human buyer, and preserve existing NPC seller/stock ownership and conservation; existing NPCMarketService.buy must stay NPC-only | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05b | Trusted `PlayerGateway.offers`, `supplies`, and `buy`: only local public quote, own initialized balances, bounded quantity/price, no in-transit exchange, exact revision and dedup ID | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05c | Add a small finite bread-and-copper test market to disposable seven-NPC fixture, clearly marked as demo setup; `offers/supplies/buy` in both temporary and restartable CLIs | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05d | Integration/adversarial NPC and player tests: Basim/Salma seller/local witness, Nora/Huda remote isolation, inventory conservation, price bait, stock depletion, busy/stale/travel/duplicate/replay/reopen | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05e | Windows guide: identify distinct entity-owned resources vs unimplemented RPG inventory; exact CI matrix on final code SHA and no parent-phase premature closure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Security:** A purchased resource is real on `state.resources[carlos]`, NOT
 yet `rpg_profiles[carlos].inventory`. No user-supplied actor identity on
@@ -593,3 +593,53 @@ command rejects without changing state. No schema migration, main merge,
 original story import, medical symptom producer, automatic currency minting,
 production P0 authorization or background play. Full GitHub Actions
 Python 3.10 + 3.13 required at exact code SHA to close tasks.
+
+## PLAY-05 — verified technical closure of Carlos's finite market purchases (2026-11-07)
+
+All five owner-approved tasks `PLAY-05a`–`PLAY-05e`
+**CLOSED_TECHNICALLY** at exact code SHA
+`d3e90f68f68b5a376bf976a866649ac6e1ca12f8`.
+GitHub Actions [run 42329804953](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42329804953):
+**1,262 passed on Python 3.10 and 1,262 passed on Python 3.13**,
+both jobs SUCCESS including all historic parity and regression gates.
+
+- PLAY-05a: `MarketTradeExecuted` now supports a human-controlled buyer
+  only when physically present, not in transit and backed by an exact
+  authorized local purchase. All offers remain NPC-posted and backed by
+  finite real owner stock; ledger validation permits real player buyers
+  without weakening transfer conservation. `NPCMarketService.buy` is
+  explicitly still NPC-only; human orders go through `PlayerGateway`.
+- PLAY-05b: new `PlayerGateway.supplies`, `offers` and `buy` project
+  only Carlos's known owned resource balances, actionable **local**
+  public quotes, and trusted price-locked transactions. Exact revisions,
+  bounded inputs and durable command IDs reject double spends or stale
+  orders. `player_handoff` now includes bounded `player_supplies`
+  with the same revision, not an NPC's wallet or secret inventory.
+- PLAY-05c: **opt-in disposable** `setup_living_market_world` adds Salma
+  with 3 own bread, 0 copper, Carlos with 10 copper, 0 bread and an
+  NPC-posted 2-copper bread quote. In-world trade conserves exactly
+  3 loaves and 10 copper; the original bare seven-NPC fixture remains
+  unchanged. Both living CLI variants implement `offers`, `supplies`
+  and `buy` with a checkpoint only after successful mutations.
+- PLAY-05d: independent NPC/player tests exercise Salma busy, Basim
+  co-location, Nora/Huda/Omar/Layla remote secrecy, invalid or changed
+  price/quantity, overselling, denied NPC-service impersonation,
+  no untrusted event capability, player travel, stale revision,
+  repeated request IDs, SQLite snapshot/reopen and real two-process
+  CLI stop/resume. All pass on the accepted code SHA.
+- PLAY-05e: Windows tutorial and strict ownership distinction documented
+  in [PLAYABLE_BATCH_05_MARKET.md](PLAYABLE_BATCH_05_MARKET.md).
+  Earlier intermediary CI had a **test-only** failure expecting
+  a Python dict repr in the CLI receipt instead of `total_paid: 4`;
+  fixed in the exact green SHA and no accounting bug established.
+
+**Limits remain:** `state.resources[carlos]` is a resource owner ledger,
+not the unimplemented RPG `inventory` or `equipment`. Do not
+fabricate combat, food consumption by player, experience points, items
+or money outside initialized source/atomic transfers.
+`03-A7c` and parent `03-A` remain OPEN, physical medical sign source
+blocked, `P0_PRODUCTION_NOT_APPROVED`,
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. No Schema/Rules bump,
+canonical story mutation, `main` merge, remote API or unattended play.
+This closure documentation commit is subsequent to the accepted green
+code SHA and may have its own CI run.
