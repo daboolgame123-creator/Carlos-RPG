@@ -370,3 +370,23 @@ SQLite resume/replay, and regression/parity gates.
   `P0_PRODUCTION_NOT_APPROVED`, independent review deferred by owner.
   No Schema/Rules version bump, `main` merge or original story edits.
 
+
+## PLAY-02 — seven-NPC autonomous offline scene (2026-11-07)
+
+Batch analysis/plan before code, independent of the blocked 03-A7c physical
+symptom source. **Priority: a playable living test-world instead of more
+isolated engine services.** No change to the canonical Carlos story.
+
+| ID | Scope | Dependencies | Classification | Initial status | Acceptance |
+|---|---|---|---|---|---|
+| PLAY-02a | Trusted disposable multi-location 7-NPC + Carlos setup with initialized action counters | Schema32/Rules42 and existing player gateway | CHAT_EXECUTABLE | PLANNED | Seven named NPCs, actual roads and simulated travel; no invented private NPC memory, no unbacked stock |
+| PLAY-02b | Explicit wait advances self-directed NPC schedules while Carlos remains player-controlled | PLAY-02a + LivingWorldEngine | CHAT_EXECUTABLE | PLANNED | At least two NPC actions progress, player never auto-acts, atomic event replay and deterministic time |
+| PLAY-02c | New self-contained local living-world CLI with scene, look, status, remember, handoff, talk, move, wait | PLAY-02a–b, PLAY-01a | CHAT_EXECUTABLE | PLANNED | No model API, no automatic world-time progress while paused; player-only handoff |
+| PLAY-02d | Multi-NPC integration tests including forbidden remote talk, travel, privacy, NPC autonomy, replay, and real CLI subprocess | PLAY-02a–c | CHAT_EXECUTABLE | PLANNED | Full final-SHA Python 3.10/3.13 CI success; no default fixture changes |
+| PLAY-02e | Human-readable Windows trial guide and safety limits | PLAY-02c | CHAT_EXECUTABLE | PLANNED | Clear run commands, explicitly disposable, P0 unchanged |
+
+**Dependency gates:** all PLAY-02 tasks are independent of 03-A7c medical
+symptom provenance; do not change `main` or `AGENTS.md` here. Gate closure
+on the exact final SHA, not an earlier green test run. Distinguish NPC
+autonomy from narrative authorship: only actual engine events advance
+the characters and the human decides Carlos's actions.
