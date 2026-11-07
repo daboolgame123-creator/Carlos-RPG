@@ -13,7 +13,7 @@ from .domain import WorldState
 from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present
 from .npc import _injury_rest_decision
 from .production import MAX_QUANTITY as PRODUCTION_MAX
-from .routines import routine_allows_work
+from .routines import DAY_SECONDS, routine_allows_work
 
 BUY_HUNGER_THRESHOLD = 70
 MAX_WORK_HUNGER = 89
