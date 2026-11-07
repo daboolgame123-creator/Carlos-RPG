@@ -690,3 +690,29 @@ ledger. Schema 32 / Rules 42 unchanged. This documentation-only closure
 commit follows the tested SHA and is not a claim of new post-commit CI.
 Parent 03-A/03-A7c still OPEN, external review deferred, production P0
 unapproved, and main/original story untouched.
+
+## PLAY-07 — Player-to-NPC finite gifts and independently chosen receipt (2026-11-07)
+
+**Preimplementation analysis:** A market trade already conserves finite resources,
+but NPC assistance is NPC-to-NPC and a social `offer_help` is only speech, not
+a transfer. Therefore using either as a player gift would misstate ownership.
+A new `PlayerGiftDelivered` reducer and dedicated durable gift_authorized
+command capability are required, with Schema 33 / Rules 43 explicit versioning.
+A nearby NPC's existing deterministic acceptance of help offers controls
+whether the gift can complete; no automatic gratitude, hunger relief or RPG XP.
+This batch depends on PLAY-06 green SHA and is independent of 03-A7c/P0.
+
+| Task | Scope and prerequisites | Route | Status |
+|---|---|---|---|
+| PLAY-07a | New atomic conserved gift event, separate recorded authorization and replay; based on PLAY-06 | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-07b | Trusted player-bound give command with exact revision and dedup ID; depends on 07a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-07c | CLI give in temporary/restartable village; depends on 07b | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-07d | NPC behavior, privacy, attempts/forgery, conservation, duplicate, route/time and snapshot/reopen CLI tests; 07a–c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-07e | Windows guide and exact full dual-Python CI closure; depends on 07d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Security/validation gates:** Python 3.10 and 3.13 full CI on final code SHA,
+fixed balances for donor/recipient, deny NPC impersonation and unauthorized
+replay, no hidden NPC inventory exposed and no new arbitrary legal authority.
+Gift transfer is a deliberate player action only, never an automatic hunger
+or medical cure. P0 production remains NOT_APPROVED; independent review deferred;
+03-A7c and parent 03-A remain OPEN. Do not merge to main.
