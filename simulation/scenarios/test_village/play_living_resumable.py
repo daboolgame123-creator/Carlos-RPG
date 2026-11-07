@@ -24,7 +24,7 @@ from carlos_sim.store import DuplicateCommand, InvalidEvent, RevisionConflict
 from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 
 from living_player_fixture import (
-    WORLD, PLAYER, setup_living_player_world, living_player_gateway,
+    WORLD, PLAYER, setup_living_market_world, living_player_gateway,
 )
 
 HELP = ("scene | look | remember | status | handoff | move <road> "
@@ -58,7 +58,7 @@ def main() -> None:
 
     session = (
         ResumableTestSession.create(
-            args.db, WORLD, PLAYER, setup_living_player_world,
+            args.db, WORLD, PLAYER, setup_living_market_world,
             disposable_test=True)
         if args.new else ResumableTestSession.resume(
             args.db, WORLD, PLAYER, disposable_test=True)
@@ -130,6 +130,10 @@ def main() -> None:
                     result = gateway.recall()
                 elif verb == "status" and not rest:
                     result = gateway.status()
+                elif verb == "supplies" and not rest:
+                    result = gateway.supplies()
+                elif verb == "offers" and not rest:
+                    result = gateway.offers()
                 elif verb == "look" and not rest:
                     result = gateway.observe(command_id=cid, expected_revision=rev)
                     changed = True
@@ -140,6 +144,11 @@ def main() -> None:
                 elif verb == "wait" and len(rest) == 1:
                     result = gateway.wait(int(rest[0]), command_id=cid,
                                           expected_revision=rev)
+                    changed = True
+                elif verb == "buy" and len(rest) == 3:
+                    result = gateway.buy(
+                        rest[0], int(rest[1]), int(rest[2]),
+                        command_id=cid, expected_revision=rev)
                     changed = True
                 elif verb == "talk" and len(rest) >= 3:
                     result = gateway.interact(
