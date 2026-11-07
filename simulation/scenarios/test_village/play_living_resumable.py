@@ -53,6 +53,8 @@ def main() -> None:
         ap.error("code-commit must be a genuine full lowercase 40-hex Git SHA")
     if not args.backups.is_dir() or args.backups.is_symlink():
         ap.error("pre-existing non-symlink backups directory is required")
+    if args.new and any(args.backups.glob("living-test-rev-*")):
+        ap.error("--new requires an empty dedicated living-test checkpoint directory")
 
     session = (
         ResumableTestSession.create(
@@ -62,7 +64,7 @@ def main() -> None:
             args.db, WORLD, PLAYER, disposable_test=True)
     )
 
-    def checkpoint() -> None:
+    def checkpoint(*, initial: bool = False) -> None:
         current = session.store.verify(WORLD)
         target = args.backups / f"living-test-rev-{current.revision:010d}"
         if target.exists():
@@ -75,6 +77,9 @@ def main() -> None:
                     or world["state_sha256"] != canonical_hash(current.to_dict())):
                 raise RuntimeError("existing checkpoint does not match this world/revision")
         else:
+            if initial and args.resume:
+                raise RuntimeError(
+                    "resume requires an existing verified checkpoint for the saved revision")
             session.checkpoint(target, code_commit=args.code_commit)
         print(f"checkpoint: {target.name}, revision={current.revision}")
 
@@ -83,7 +88,7 @@ def main() -> None:
         session.bind_gateway(living_player_gateway(session.store, session.clock))
         # A resumed world must match any existing checkpoint at the same revision
         # before the player is offered a mutating command.
-        checkpoint()
+        checkpoint(initial=True)
         print("CARLOS — seven-NPC LIVING TEST WORLD, not canonical, P0 OPEN")
         print("Only explicit wait advances NPC autonomy and simulation time.")
         print(HELP)
