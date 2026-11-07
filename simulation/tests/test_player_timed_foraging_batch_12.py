@@ -22,8 +22,8 @@ def wait(db, gateway, seconds, cid="wait"):
 
 
 def test_new_rules_without_changing_schema_or_unknown_resources():
-    assert SCHEMA_VERSION == 34
-    assert RULES_VERSION == 46
+    assert SCHEMA_VERSION == 35
+    assert RULES_VERSION == 47
     assert FORAGE_SECONDS == 60
 
 
