@@ -83,8 +83,8 @@ def test_injury_cannot_materialize_after_logical_time_zero(tmp_path):
 
 def test_strict_world_schema_and_invalid_injury_collection():
     base = WorldState("v").to_dict()
-    assert base["schema_version"] == SCHEMA_VERSION == 32
-    assert base["rules_version"] == RULES_VERSION == 42
+    assert base["schema_version"] == SCHEMA_VERSION == 33
+    assert base["rules_version"] == RULES_VERSION == 43
     assert base["injuries"] == {}
     missing = dict(base)
     missing.pop("injuries")
