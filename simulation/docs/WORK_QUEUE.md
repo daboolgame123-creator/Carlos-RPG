@@ -754,11 +754,11 @@ event type and is independent of the open 03-A7c physical injury source.
 
 | Task | Scope / dependency | Route | State |
 |---|---|---|---|
-| PLAY-08a | Verified event-only own gift receipts, max 20, newest-first; PLAY-07 | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-08b | Five owned receipts in revision-coherent narrator handoff; PLAY-08a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-08c | Read-only \`gifts\` in temporary and resumable CLIs; PLAY-08a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-08d | Tests for Basim/Nora/Salma privacy, rejected gifts, duplicate, tamper, SQLite reopen, two CLIs; PLAY-08a-c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-08e | Player guide, dual-Python exact-SHA CI and closure report; PLAY-08a-d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-08a | Verified event-only own gift receipts, max 20, newest-first; PLAY-07 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08b | Five owned receipts in revision-coherent narrator handoff; PLAY-08a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08c | Read-only \`gifts\` in temporary and resumable CLIs; PLAY-08a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08d | Tests for Basim/Nora/Salma privacy, rejected gifts, duplicate, tamper, SQLite reopen, two CLIs; PLAY-08a-c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08e | Player guide, dual-Python exact-SHA CI and closure report; PLAY-08a-d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 Security: only accepted events by the bound actual player, no internal NPC
 balances or private state; no read-side command, checkpoint or time advancement.
@@ -766,3 +766,27 @@ A failed event integrity verification must fail closed. Schema 33 / Rules 43
 unchanged. No \`main\` merge, canonical story modification, automatic NPC
 gratitude, or production P0 authorization. Pending GitHub Actions verification
 on Python 3.10 and 3.13; do not claim task closure yet.
+
+### PLAY-08 verified technical closure (2026-11-07)
+
+**PLAY-08a–PLAY-08e CLOSED_TECHNICALLY** at final code-and-test SHA
+`7308cff7409f959221f62782c4ddc3b6491054c0`.
+[GitHub Actions run 42355553139](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42355553139)
+completed SUCCESS: **1,303 passed on Python 3.10 and 1,303 passed on Python 3.13**,
+including all existing compatibility, replay, smoke and historical gates.
+Ten additional PLAY-08 tests cover bounded empty history, exact delivered gifts,
+same-tick receipts, failed/duplicate/travel attempts, player-bound identity,
+revision-coherent handoff, event tamper rejection, SQLite snapshot/reopen,
+and temporary plus two-process resumable CLI behavior.
+
+An initial CI run on `fdc10e46` failed on a **CLI indentation syntax error**.
+This was fixed on the exact verified SHA above; no earlier failing run was
+used as closure evidence. Read-only gifts do not mutate the world, create
+resources, add medical facts, or interpret NPC gratitude. Schema 33 and Rules
+43 unchanged, no new migration or outside authorization.
+
+This documentation-only technical-closure commit succeeds the verified code SHA
+and must not be described as having passed the cited earlier CI itself.
+`03-A7c` and `03-A` remain OPEN; `P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. No change to `main` or
+canonical Carlos story files.
