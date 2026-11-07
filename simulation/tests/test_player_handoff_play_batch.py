@@ -17,6 +17,7 @@ from carlos_sim import DomainEvent, SQLiteEventStore, PlayerGateway, TimeEngine
 from carlos_sim.player_gateway import PlayerCommandResult
 from carlos_sim.player_handoff import player_handoff
 from carlos_sim.resumable_play import ResumableTestSession
+from carlos_sim.store import InvalidEvent
 from test_player_gateway import setup_player_demo_world
 
 
@@ -249,7 +250,7 @@ def test_seven_independent_npcs_only_local_characters_appear_in_player_handoff(t
         for distant in ("sara", "huda", "omar"):
             assert distant not in json.dumps(view)
         assert view["player_memory"] == {"observations": (), "hearsay": ()}
-        with pytest.raises(Exception):
+        with pytest.raises(InvalidEvent):
             gw.interact("huda", kind="greeting", text="Hello",
                         command_id="cannot-talk-across-forest",
                         expected_revision=roster.revision)
