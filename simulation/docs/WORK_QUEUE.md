@@ -803,11 +803,11 @@ blocked 03-A7c medical symptom source and requires no schema/rules change.
 
 | Task | Scope and dependency | Route | Status |
 |---|---|---|---|
-| PLAY-09a | Player-owned, received-only conversation history, ordered by event sequence, max 20; PLAY-08 green | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-09b | Revision-consistent narrator handoff: last five authentic conversations; PLAY-09a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-09c | \`conversations\` read-only command on both disposable CLIs; PLAY-09a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-09d | NPC privacy/independent reactions/invalid attempts/duplicates/travel/tamper/reopen and CLI tests; PLAY-09a-c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-09e | Guide and exact-SHA dual-Python full CI technical closure; PLAY-09d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-09a | Player-owned, received-only conversation history, ordered by event sequence, max 20; PLAY-08 green | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09b | Revision-consistent narrator handoff: last five authentic conversations; PLAY-09a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09c | \`conversations\` read-only command on both disposable CLIs; PLAY-09a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09d | NPC privacy/independent reactions/invalid attempts/duplicates/travel/tamper/reopen and CLI tests; PLAY-09a-c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09e | Guide and exact-SHA dual-Python full CI technical closure; PLAY-09d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Guardrails:** No invented NPC dialogue or objective trust report; only
 the player's own authored text and proven reaction categories. No raw NPC
@@ -815,4 +815,29 @@ message ledger, hidden NPC motives, hearsay reclassification, speculative
 knowledge, new world events or read-side checkpoints. State.revision must
 match verified replay; store gate remains local and trusted (P0 OPEN).
 Schema 33 / Rules 43, 03-A7c/03-A OPEN, external review deferred.
-No \`main\` merge or canonical story modifications. Pending CI verification.
+No \`main\` merge or canonical story modifications. Dual-Python CI verified on the exact code SHA below.
+
+### PLAY-09 verified technical closure (2026-11-07)
+
+All five tasks PLAY-09a–PLAY-09e are **CLOSED_TECHNICALLY** at the exact
+code-and-test SHA `40ea48770e5daec6cb81ce406a302dd0f0fd6dd9`.
+[GitHub Actions 42356386832](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42356386832)
+concluded **SUCCESS**: **1,316 passed on Python 3.10** and **1,316 passed
+on Python 3.13**, including the comprehensive historical parity, replay,
+saved-world compatibility, CLI smoke and integration gates.
+
+Thirteen new PLAY-09 tests cover Basim/Salma/Adel recorded reactions; remote
+Nora/Huda/Omar/Layla isolation; duplicates, invalid speech, same-tick order,
+stale/mixed-revision handoff rejection, command privacy, travel, tamper
+rejection, SQLite snapshot/reopen, and both temporary/resumable real CLIs.
+
+Only player-authored delivered text and the NPC's recorded response **category**
+are exposed. No NPC dialogue is fabricated; no NPC private trust, hidden
+motives, third-party messages, resources or game-world time change due to
+reading history. Schema 33 / Rules 43 unchanged, no migrations.
+
+The documentation-only closure commit follows the **verified code SHA** and
+is not represented by the same CI check. Phase 03-A7c/03-A remain OPEN;
+`P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain unchanged. No `main` merge
+or canonical story changes.
