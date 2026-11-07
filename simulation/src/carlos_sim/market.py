@@ -58,6 +58,22 @@ def _present(state: dict[str, Any], npc_id: str, site: str) -> bool:
                     for a in state["actions"].values()))
 
 
+def _buyer_present(state: dict[str, Any], buyer: str, site: str) -> bool:
+    """Physical, available buyer; NPC behavior and human commands stay separate.
+
+    A player has no NPC profile or implicit market authority. This helper
+    validates only event-layer co-presence; PlayerGateway separately binds
+    the real human identity to the trusted command.
+    """
+    if buyer in state["npcs"]:
+        return _present(state, buyer, site)
+    person = state["entities"].get(buyer)
+    if person is None or person["controller"] != "player":
+        return False
+    from .movement import _in_transit
+    return person["location_id"] == site and not _in_transit(state, buyer)
+
+
 def _owner_controls(state: dict[str, Any], seller: str, owner: str,
                     site: str) -> bool:
     if owner == seller:
@@ -136,7 +152,7 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
     if (offer is None or offer["status"] != "open"
             or not _id(buyer) or event.actor_id != buyer
             or buyer == offer["seller_id"] or buyer == offer["stock_owner_id"]
-            or not _present(state, buyer, offer["site_id"])
+            or not _buyer_present(state, buyer, offer["site_id"])
             or not _present(state, offer["seller_id"], offer["site_id"])
             or not _positive(p["quantity"], MAX_QUANTITY)
             or p["quantity"] > offer["remaining"]
@@ -231,6 +247,8 @@ def validate_market(state: dict[str, Any]) -> None:
             raise ValueError("invalid market trade record")
         o = offers[t["offer_id"]]
         if (t["buyer_id"] not in state["npcs"]
+                and (t["buyer_id"] not in state["entities"]
+                     or state["entities"][t["buyer_id"]]["controller"] != "player")
                 or t["buyer_id"] == o["seller_id"] or t["buyer_id"] == o["stock_owner_id"]
                 or any(t[k] != o[k] for k in (
                     "seller_id", "stock_owner_id", "site_id", "resource",
@@ -296,6 +314,12 @@ class NPCMarketService:
     def buy(self, world_id: str, buyer_id: str, trade_id: str, offer_id: str,
             quantity: int, expected_unit_price: int, *,
             expected_revision: int) -> MarketResult:
+        # Preserve the legacy NPC-only command boundary. Human purchases
+        # must come through the player-bound PlayerGateway, never by passing
+        # an arbitrary human ID to the NPC market service.
+        self.clock._require_session(world_id)
+        if buyer_id not in self.store.load(world_id).npcs:
+            raise PermissionError("NPCMarketService.buy requires a real NPC buyer")
         return self._append(world_id, "sale:" + trade_id, expected_revision,
                             "MarketTradeExecuted", buyer_id,
                             {"id": trade_id, "buyer_id": buyer_id,
