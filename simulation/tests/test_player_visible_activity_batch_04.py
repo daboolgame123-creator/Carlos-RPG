@@ -213,3 +213,45 @@ def test_activity_scene_survives_sqlite_snapshot_and_reopen_without_time_progres
                       expected_revision=db.load("world").revision)
         assert gw.inspect().details["activities"] == ()
         assert db.verify("world").to_dict() == db.load("world").to_dict()
+
+
+def test_local_cli_showcases_real_actions_without_changing_scene(tmp_path):
+    from test_play_living_village_batch_02 import _cli, _json_handoffs
+    # t=1: NPCs start actual action/travel lifecycles, then two identical
+    # handoffs must not cause an action, time step or new player memory.
+    output = _cli("wait 1\\nscene\\nhandoff\\nscene\\nhandoff\\nquit\\n")
+    handoffs = _json_handoffs(output.stdout)
+    assert len(handoffs) == 2
+    assert handoffs[0] == handoffs[1]
+    visible = handoffs[0]["scene"]["details"]["activities"]
+    assert handoffs[0]["time"] == 1
+    assert handoffs[0]["player_memory"]["observations"] == []
+    assert all(set(x) == {"actor_id", "activity"} for x in visible)
+    assert all(x["actor_id"] in ("basim", "salma", "adel") for x in visible)
+    assert '"npcs"' not in json.dumps(handoffs)
+    assert '"injuries"' not in json.dumps(handoffs)
+
+
+def test_resumable_cli_current_actions_same_after_pause_and_read_only_export(tmp_path):
+    from test_play_living_resumable_batch_03 import (
+        run_cli, saved_states, backups_list,
+    )
+    db_path = tmp_path / "real-save.sqlite"
+    backups = tmp_path / "backups"
+    backups.mkdir()
+    new = run_cli("wait 1\\nhandoff\\nquit\\n", db_path, backups, "--new",
+                  extra=("--disposable-test",))
+    first = saved_states(new.stdout)
+    assert len(first) == 1 and first[0]["time"] == 1
+    count = len(backups_list(backups))
+    assert count == 2  # initialization, one explicit wait
+    saved_view = first[0]
+    with SQLiteEventStore(db_path) as db:
+        frozen = db.verify(WORLD).to_dict()
+    resume = run_cli("scene\\nhandoff\\nhandoff\\nquit\\n", db_path,
+                     backups, "--resume", extra=("--disposable-test",))
+    after = saved_states(resume.stdout)
+    assert after == [saved_view, saved_view]
+    assert len(backups_list(backups)) == count
+    with SQLiteEventStore(db_path) as db:
+        assert db.verify(WORLD).to_dict() == frozen
