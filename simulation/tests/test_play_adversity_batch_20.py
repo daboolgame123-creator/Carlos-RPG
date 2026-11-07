@@ -151,13 +151,13 @@ def test_exhausted_autonomy_event_budget_rolls_back_without_partial_tick(tmp_pat
         )
         with pytest.raises(AdvanceLimitExceeded):
             bounded.advance(
-                WORLD, seconds=201, command_id='over-budget',
+                WORLD, seconds=201, command_id='player-wait:over-budget',
                 expected_revision=before['revision'], player_observer_id=PLAYER,
             )
         assert db.verify(WORLD).to_dict() == before
         assert db.db.execute(
             'SELECT COUNT(*) FROM commands WHERE world_id=? AND command_id=?',
-            (WORLD, 'over-budget')).fetchone()[0] == 0
+            (WORLD, 'player-wait:over-budget')).fetchone()[0] == 0
         # A fresh legitimate command succeeds after the rejected attempt.
         advanced = session.gateway.wait(
             1, command_id='valid-after-over-budget',
