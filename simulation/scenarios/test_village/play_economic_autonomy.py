@@ -56,7 +56,7 @@ def run_economic_village(path: str | Path, *, grain: int = 1,
                 90, command_id=f"play24-wait-{tick}",
                 expected_revision=db.load(WORLD).revision)
             assert result.time == tick
-            _resources(result, seeded_grain=grain,
+            _resources(db.load(WORLD), seeded_grain=grain,
                        seeded_copper=buyer_copper)
         final = db.load(WORLD)
         assert db.verify(WORLD).to_dict() == final.to_dict()
