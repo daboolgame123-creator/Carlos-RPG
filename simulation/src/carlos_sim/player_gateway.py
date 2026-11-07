@@ -113,11 +113,15 @@ class PlayerGateway:
         from .movement import _visible
         location = state.entities[self.player_id]['location_id']
         occupants = _visible(state.to_dict(), location)
+        evidence = {'location_id': location, 'occupants': occupants}
+        # Only an explicit `look` records the visible activity at this tick.
+        # A plain scene/handoff never creates historical player memory.
+        activities = visible_player_activities(state, self.player_id)
+        if activities:
+            evidence['activities'] = activities
         event = DomainEvent('PlayerObserved', self.player_id,
                             'player deliberately looked around locally',
-                            state.time, {
-            'location_id': location, 'occupants': occupants,
-        })
+                            state.time, evidence)
         self.store.append(self.world_id, 'player-observe:' + cid,
                           expected_revision, [event], movement_authorized=True)
         return self.inspect()
