@@ -321,3 +321,21 @@ No cross-branch merge and no closure of parent 03-A7c / 03-A.
   action-result producer, rigorous event provenance and local
   qualitative witness pipeline remain prerequisites.
 - Neither `main` nor schema/rules versions are changed.
+
+## First playable-first batch — BATCH-PLAY-01 (2026-11-07, planned before code)
+
+Independent of blocked `03-A7c` physical symptom producer; only the existing
+trusted local-player gateway and disposable test session are used. **No
+canonical story import, HTTP exposure or production permission.**
+
+| ID | Deliverable | Dependencies | Classification | Status | Acceptance |
+|---|---|---|---|---|---|
+| PLAY-01a | Player-only, read-only JSON narrative handoff | Verified PlayerGateway / SQLite, no health dependency | CHAT_EXECUTABLE | PLANNED | Only scene + player's own RPG status + player's recorded memory, coherent revision; never raw WorldState/NPC ledger |
+| PLAY-01b | Local temporary demo `scene` and `handoff` commands | PLAY-01a; existing demo | CHAT_EXECUTABLE | PLANNED | Read-only, no character auto-decision, no hidden nearby NPC beliefs; command IDs unaffected |
+| PLAY-01c | Disposable resumable demo `scene` and `handoff` commands | PLAY-01a; backup P0 gate stays open | CHAT_EXECUTABLE | PLANNED | Does not create a new checkpoint / advance time; fresh restart yields consistent safe projection |
+| PLAY-01d | NPC, end-to-end CLI, privacy, save/replay tests | PLAY-01a–c | CHAT_EXECUTABLE | PLANNED | Nora/Basim/remote Sara, travel, look, wait, forged input; dual Python 3.10/3.13 entire workflow green on final SHA |
+
+This batch is an **offline playable vertical-slice improvement**, not an
+implementation or closure of the physical symptom subphase. Verify end-to-end
+CI at the final commit before declaring anything `CLOSED_TECHNICALLY`.
+
