@@ -208,6 +208,17 @@ class SQLiteEventStore:
                 raise InvalidEvent("loan agreements require trusted loan capability")
             if world_id not in self._active_worlds:
                 raise InvalidEvent("loan agreements require active play session")
+        # PLAY-17 activity memory is exclusively an explicit human look.
+        # The reducer also revalidates every reported local activity against
+        # real physical actions at that event's own logical time. Do not
+        # accept fabricated memory attached to a clock, foraging or NPC command.
+        if any(e.event_type == "PlayerObserved" and "activities" in e.data
+               for e in events):
+            if (not movement_authorized or not command_id.startswith("player-observe:")
+                    or len(events) != 1 or events[0].event_type != "PlayerObserved"
+                    or events[0].cause != "player deliberately looked around locally"
+                    or world_id not in self._active_worlds):
+                raise InvalidEvent("historical activity evidence requires a dedicated active look")
         for idx, event in enumerate(events):
             payload = event.data.get("payload", {})
             if (event.event_type != "ScheduledEventCreated"
