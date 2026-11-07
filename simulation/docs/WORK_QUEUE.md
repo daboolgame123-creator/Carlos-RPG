@@ -855,11 +855,11 @@ A finite test-only food fixture creates observable evidence, not free player foo
 
 | Task | Scope / dependency | Route | Status |
 |---|---|---|---|
-| PLAY-10a | Atomic player question and conditional NPC response using existing social + hearsay events; PLAY-09 green | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-10b | Seed truly initialized local \`wild_food\` and valid Basim/Omar sightings in isolated market demo only; 10a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-10c | \`askfood <npc> <site>\` in disposable temporary and resumable CLI; 10a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-10d | NPC independent choices, privacy, nonexistent/remote/unknown claims, dedup, forged hearing, replay and save tests; 10a–c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-10e | Guide, full exact-SHA Python 3.10 + 3.13 matrix and closure; 10a–d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-10a | Atomic player question and conditional NPC response using existing social + hearsay events; PLAY-09 green | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10b | Seed truly initialized local \`wild_food\` and valid Basim/Omar sightings in isolated market demo only; 10a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10c | \`askfood <npc> <site>\` in disposable temporary and resumable CLI; 10a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10d | NPC independent choices, privacy, nonexistent/remote/unknown claims, dedup, forged hearing, replay and save tests; 10a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10e | Guide, full exact-SHA Python 3.10 + 3.13 matrix and closure; 10a–d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Security/causality:** A valid site name alone provides zero world truth.
 NPC's own known fact, proper direct or non-instantly re-shared source, and
@@ -868,3 +868,35 @@ no RPG inventory/XP, no narrator omniscience, no hidden needs/trust exposed,
 no time advance from speech, no main/story edits. Open 03-A7c/03-A,
 P0_PRODUCTION_NOT_APPROVED and EXTERNAL_REVIEW_DEFERRED_BY_OWNER remain.
 All tasks require exact final code SHA dual-Python CI before technical closure.
+
+### PLAY-10 verified technical closure (2026-11-07)
+
+**PLAY-10a–PLAY-10e CLOSED_TECHNICALLY** at exact code-and-test SHA
+`1b4d60c301be4c158f4405dad52515c9092ac616`. [GitHub Actions run 42357107282](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42357107282)
+concluded **SUCCESS**, with **1,339 passed on Python 3.10** and
+**1,339 passed on Python 3.13**. All existing smoke, historic compatibility,
+semantic parity and SQLite/replay gates also succeeded. This increases the
+prior accepted suite of 1,316 tests by 23 parameterized PLAY-10 cases.
+
+- A player-only `ask_food` executes one atomic `request_help` social exchange.
+  The NPC's independent, prior-trust reaction determines whether its own
+  direct or valid non-instantly relayed food belief is voluntarily shared.
+- Only `unverified` hearsay is delivered into the player's durable memory;
+  the narrator never receives remote resource totals, NPC hidden beliefs,
+  goals, numerical trust or fabricated NPC speech.
+- The opt-in disposable market fixture has exact finite square/woods food
+  stocks (2 and 4) and two witnessed observations by physically present
+  Basim/Omar; Salma has no inferred food memory. No resources are granted
+  to Carlos or automatically consumed.
+- Both real disposable CLIs implement `askfood <npc> <site>`, with
+  explicit command-ID deduplication and restartable checkpoints.
+- Tests cover voluntary refusal after a threat, several independent
+  characters, co-location, knowledge boundaries, malformed input,
+  failed/stale/duplicate operations, tampered provenance, SQLite
+  snapshot/reopen and two-process CLI resume.
+
+**Scope limitations:** Schema 33 / Rules 43 unchanged. No `main` merge,
+canonical story mutation, extra player RPG powers or network authorization.
+`03-A7c` and `03-A` remain **OPEN**; `P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. The documentation-only closure
+commit follows the tested SHA and is not itself the quoted code CI run.
