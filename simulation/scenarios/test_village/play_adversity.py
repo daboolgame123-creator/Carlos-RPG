@@ -133,6 +133,12 @@ def run_adversity(path: str | Path, decision: str = 'stockpile',
         denials['fifth_meal'] = _must_reject(
             session, decision + '-empty-meal', (ValueError,), g.eat, 'food')
 
+        # Snapshot after the finite-food sequence. Snapshots are purely
+        # replay accelerators, not a different source of world truth.
+        checkpoint = db.load(WORLD).to_dict()
+        db.snapshot(WORLD)
+        assert db.load(WORLD).to_dict() == checkpoint
+
         # Split long time: LivingWorldEngine aborts atomically at its event
         # budget; no manual NPC action injection or accelerated fake clock.
         intervals = 0
@@ -144,6 +150,13 @@ def run_adversity(path: str | Path, decision: str = 'stockpile',
             assert next_step.time == state.time + elapsed
             _conservation(db.load(WORLD), decision, 4)
             intervals += 1
+            if intervals % 3 == 0:
+                # Prevent repeatedly replaying the entire growing world
+                # for each short wait; still verify the complete event
+                # chain from genesis at the final acceptance gate.
+                checkpoint = db.load(WORLD).to_dict()
+                db.snapshot(WORLD)
+                assert db.load(WORLD).to_dict() == checkpoint
         final = db.verify(WORLD).to_dict()
         assert final == db.load(WORLD).to_dict()
         assert final['time'] == horizon_seconds
