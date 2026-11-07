@@ -565,3 +565,31 @@ wound/limp producer is implemented. `P0_PRODUCTION_NOT_APPROVED` and
 no migration, `main` merge or canonical story modification.
 This closing documentation commit is subsequent to the independently
 verified code SHA and has its own CI status.
+
+## PLAY-05 — Player market purchasing and personal supply ledger (planned 2026-11-07)
+
+**Analysis before implementation:** Local NPC market already has posted offers,
+finite stock, trusted price matching, exact recorded transfers and durable
+event replay. Carlos presently cannot buy; player-only RPG `inventory` domain
+is intentionally unimplemented. Scope this batch strictly to **initialized
+entity-owned resource balances** for Carlos, never fabricate RPG equipment or
+allow a player to spend an NPC's funds.
+
+| Task | Scope and strict dependency | Route | State |
+|---|---|---|---|
+| PLAY-05a | Extend validated MarketTradeExecuted for a physically present human buyer, and preserve existing NPC seller/stock ownership and conservation; existing NPCMarketService.buy must stay NPC-only | CHAT_EXECUTABLE | PLANNED |
+| PLAY-05b | Trusted `PlayerGateway.offers`, `supplies`, and `buy`: only local public quote, own initialized balances, bounded quantity/price, no in-transit exchange, exact revision and dedup ID | CHAT_EXECUTABLE | PLANNED |
+| PLAY-05c | Add a small finite bread-and-copper test market to disposable seven-NPC fixture, clearly marked as demo setup; `offers/supplies/buy` in both temporary and restartable CLIs | CHAT_EXECUTABLE | PLANNED |
+| PLAY-05d | Integration/adversarial NPC and player tests: Basim/Salma seller/local witness, Nora/Huda remote isolation, inventory conservation, price bait, stock depletion, busy/stale/travel/duplicate/replay/reopen | CHAT_EXECUTABLE | PLANNED |
+| PLAY-05e | Windows guide: identify distinct entity-owned resources vs unimplemented RPG inventory; exact CI matrix on final code SHA and no parent-phase premature closure | CHAT_EXECUTABLE | PLANNED |
+
+**Security:** A purchased resource is real on `state.resources[carlos]`, NOT
+yet `rpg_profiles[carlos].inventory`. No user-supplied actor identity on
+PlayerGateway buys, no unofficial HTTP client exposure; NPCMarketService
+must not gain the right to purchase as a human. A trade cannot be remote
+or during physical travel, needs a present/unoccupied real seller and
+initialized buyer pay/goods balances. Any input failure or stale
+command rejects without changing state. No schema migration, main merge,
+original story import, medical symptom producer, automatic currency minting,
+production P0 authorization or background play. Full GitHub Actions
+Python 3.10 + 3.13 required at exact code SHA to close tasks.
