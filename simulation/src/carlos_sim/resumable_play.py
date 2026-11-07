@@ -113,6 +113,12 @@ class ResumableTestSession:
             'memory': self.gateway.recall(),
         }
 
+    def handoff(self) -> dict[str, object]:
+        """Copyable, player-only view for offline narration; never a raw save."""
+        self._require_open()
+        from .player_handoff import player_handoff
+        return player_handoff(self.gateway)
+
     def checkpoint(self, new_bundle_dir: str | Path, *,
                    code_commit: str) -> dict:
         self._require_open()
