@@ -330,12 +330,43 @@ canonical story import, HTTP exposure or production permission.**
 
 | ID | Deliverable | Dependencies | Classification | Status | Acceptance |
 |---|---|---|---|---|---|
-| PLAY-01a | Player-only, read-only JSON narrative handoff | Verified PlayerGateway / SQLite, no health dependency | CHAT_EXECUTABLE | PLANNED | Only scene + player's own RPG status + player's recorded memory, coherent revision; never raw WorldState/NPC ledger |
-| PLAY-01b | Local temporary demo `scene` and `handoff` commands | PLAY-01a; existing demo | CHAT_EXECUTABLE | PLANNED | Read-only, no character auto-decision, no hidden nearby NPC beliefs; command IDs unaffected |
-| PLAY-01c | Disposable resumable demo `scene` and `handoff` commands | PLAY-01a; backup P0 gate stays open | CHAT_EXECUTABLE | PLANNED | Does not create a new checkpoint / advance time; fresh restart yields consistent safe projection |
-| PLAY-01d | NPC, end-to-end CLI, privacy, save/replay tests | PLAY-01a–c | CHAT_EXECUTABLE | PLANNED | Nora/Basim/remote Sara, travel, look, wait, forged input; dual Python 3.10/3.13 entire workflow green on final SHA |
+| PLAY-01a | Player-only, read-only JSON narrative handoff | Verified PlayerGateway / SQLite, no health dependency | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Only scene + player's own RPG status + player's recorded memory, coherent revision; never raw WorldState/NPC ledger |
+| PLAY-01b | Local temporary demo `scene` and `handoff` commands | PLAY-01a; existing demo | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Read-only, no character auto-decision, no hidden nearby NPC beliefs; command IDs unaffected |
+| PLAY-01c | Disposable resumable demo `scene` and `handoff` commands | PLAY-01a; backup P0 gate stays open | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Does not create a new checkpoint / advance time; fresh restart yields consistent safe projection |
+| PLAY-01d | NPC, end-to-end CLI, privacy, save/replay tests | PLAY-01a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Nora/Basim/remote Sara, travel, look, wait, forged input; dual Python 3.10/3.13 entire workflow green on final SHA |
 
 This batch is an **offline playable vertical-slice improvement**, not an
 implementation or closure of the physical symptom subphase. Verify end-to-end
 CI at the final commit before declaring anything `CLOSED_TECHNICALLY`.
+
+
+## BATCH-PLAY-01 — Technical closure verified (2026-11-07)
+
+**Accepted code SHA:** `45b876f237fac483842e702bf9c5dd6fb4f81ab8`.
+**Exact-SHA full GitHub Actions:** [run 42316561009](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42316561009) —
+Python 3.10 SUCCESS and Python 3.13 SUCCESS, including the CLI subprocesses,
+the 7-NPC privacy scene, independent local evidence, read-only handoff,
+SQLite resume/replay, and regression/parity gates.
+
+- `PLAY-01a` `CLOSED_TECHNICALLY`: `player_handoff()` emits a
+  JSON-compatible scene/status/memory envelope solely from the player's
+  trusted `PlayerGateway`. Rejects `WorldState`/plain dicts, refuses
+  mismatched revisions, exposes no remote facts or other NPC clinical data.
+- `PLAY-01b` `CLOSED_TECHNICALLY`: `scene` and `handoff` work in
+  the existing offline temporary CLI without moving Carlos, writing an
+  observation, advancing time or changing command IDs.
+- `PLAY-01c` `CLOSED_TECHNICALLY`: identical functionality in the
+  existing opt-in **disposable** resumable demo. No new checkpoint on a
+  read-only command, no bypass of `--disposable-test` or backup P0.
+- `PLAY-01d` `CLOSED_TECHNICALLY`: end-to-end tests exercise
+  Carlos, Nora, Basim, Sara, Adel, Salma, Huda and Omar as independent
+  actors, reject remote interaction with Huda and ensure the player's
+  remembered observation excludes remote NPCs and private injury data.
+  The real CLI parser's `carlos> ` prompt prefix is handled explicitly.
+- User-facing invocation instructions: [PLAYABLE_BATCH_01_GUIDE.md](PLAYABLE_BATCH_01_GUIDE.md).
+- This is an incremental **offline playable test slice**, not the complete
+  Carlos story, automatic narration, external authentication, a production
+  save, or a medical symptom source. `03-A7c` and `03-A` remain OPEN,
+  `P0_PRODUCTION_NOT_APPROVED`, independent review deferred by owner.
+  No Schema/Rules version bump, `main` merge or original story edits.
 
