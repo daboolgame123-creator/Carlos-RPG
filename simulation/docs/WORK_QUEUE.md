@@ -741,3 +741,28 @@ and all original market/survival assertions remain green.
 No main merge, original story mutation, player combat or player hunger logic.
 This docs-only closure commit follows the verified test SHA and is not a
 new code test result.
+
+
+## PLAY-08 — Verified player gift history (planned 2026-11-07)
+
+**Analysis before implementation:** PLAY-07 reliably transfers finite goods
+and records an authorized \`PlayerGiftDelivered\` event, but the player cannot
+review past delivered gifts after leaving the village. Unlike NPC gossip or
+unaccepted offers, the player's own accepted gifts are firsthand history.
+A bounded read-only projection of verified events requires no new schema or
+event type and is independent of the open 03-A7c physical injury source.
+
+| Task | Scope / dependency | Route | State |
+|---|---|---|---|
+| PLAY-08a | Verified event-only own gift receipts, max 20, newest-first; PLAY-07 | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-08b | Five owned receipts in revision-coherent narrator handoff; PLAY-08a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-08c | Read-only \`gifts\` in temporary and resumable CLIs; PLAY-08a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-08d | Tests for Basim/Nora/Salma privacy, rejected gifts, duplicate, tamper, SQLite reopen, two CLIs; PLAY-08a-c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-08e | Player guide, dual-Python exact-SHA CI and closure report; PLAY-08a-d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+Security: only accepted events by the bound actual player, no internal NPC
+balances or private state; no read-side command, checkpoint or time advancement.
+A failed event integrity verification must fail closed. Schema 33 / Rules 43
+unchanged. No \`main\` merge, canonical story modification, automatic NPC
+gratitude, or production P0 authorization. Pending GitHub Actions verification
+on Python 3.10 and 3.13; do not claim task closure yet.

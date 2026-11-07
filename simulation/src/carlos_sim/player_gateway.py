@@ -184,6 +184,20 @@ class PlayerGateway:
                                    'purchases', {'total': len(own),
                                                  'recent': recent})
 
+    def gifts(self, limit: int = 20) -> PlayerCommandResult:
+        """Read only verified, bounded records of this player's delivered gifts.
+
+        Never disclose another donor's transactions or the recipient's
+        balances, private needs, relations or internal NPC decisions.
+        """
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError('gift history limit must be an integer from 1 to 20')
+        state = self._state()
+        from .player_gift_history import player_gift_receipts
+        details = player_gift_receipts(self.store, state, self.player_id, limit)
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'gifts', details)
+
     def offers(self) -> PlayerCommandResult:
         """Show only physically actionable, posted, local public quotes."""
         state = self._state()
