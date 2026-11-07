@@ -154,6 +154,36 @@ class PlayerGateway:
                          if type(qty) is int and qty >= 0},
         })
 
+    def purchases(self, limit: int = 20) -> PlayerCommandResult:
+        """Return a bounded history of this player's own executed purchases.
+
+        Completed receipts remain known after leaving a market; present-only
+        offers do not. This is deliberately not the NPC trade ledger: private
+        balances, other buyers and individual resource before/after values
+        must never cross the player boundary.
+        """
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError('purchase history limit must be an integer from 1 to 20')
+        state = self._state()
+        own = [(trade['executed_at'], ident, trade)
+               for ident, trade in state.market_trades.items()
+               if trade['buyer_id'] == self.player_id]
+        # Use only persistent fields; equal-tick tie-breaking by ID is stable
+        # after JSON snapshots and replay, not a claim of intra-tick order.
+        own.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        recent = tuple({
+            'trade_id': ident, 'offer_id': trade['offer_id'],
+            'seller_id': trade['seller_id'], 'site_id': trade['site_id'],
+            'resource': trade['resource'], 'quantity': trade['quantity'],
+            'unit_price': trade['unit_price'],
+            'payment_resource': trade['payment_resource'],
+            'total_paid': trade['total_paid'],
+            'executed_at': tick,
+        } for tick, ident, trade in own[:limit])
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'purchases', {'total': len(own),
+                                                 'recent': recent})
+
     def offers(self) -> PlayerCommandResult:
         """Show only physically actionable, posted, local public quotes."""
         state = self._state()
