@@ -35,6 +35,8 @@ def project_player_food_eaten(state: dict[str, Any], event: DomainEvent, *,
     if type(balance) is not int or balance < 1:
         raise ValueError("eating requires positive initialized player ownership")
     state["resources"][who][item] = balance - 1
+    from .player_needs import apply_player_meal
+    apply_player_meal(state, who)
 
 
 def player_meal_history(store, state: WorldState, player_id: str,

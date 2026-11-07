@@ -48,6 +48,11 @@ def setup_living_player_world(store) -> None:
     events.append(_fixture("PlayerRPGInitialized", {
         "player_id": PLAYER, "profile": sample,
     }))
+    # Opt-in bounded daily needs for disposable village ONLY, not canonical
+    # player HP/ST/MP and not the NPC survival-progress subsystem.
+    events.append(_fixture("PlayerNeedsInitialized", {
+        "player_id": PLAYER, "hunger": 25, "fatigue": 10,
+    }))
     for who, site, role, fatigue, earn, explore in PEOPLE:
         events.extend((
             _fixture("EntityCreated", {

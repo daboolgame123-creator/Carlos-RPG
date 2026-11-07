@@ -141,6 +141,20 @@ class PlayerGateway:
                                    'rpg_status', {'configured': True,
                                                   'profile': _thaw(profile)})
 
+    def needs(self) -> PlayerCommandResult:
+        """Only this player's opted-in ordinary hunger/fatigue (not HP or ST)."""
+        state = self._state()
+        own = state.player_needs.get(self.player_id)
+        if own is None:
+            details = {'configured': False, 'hunger': None,
+                       'fatigue': None, 'health_effect': 'not_modeled'}
+        else:
+            details = {'configured': True, 'hunger': own['hunger'],
+                       'fatigue': own['fatigue'],
+                       'health_effect': 'not_modeled'}
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'needs', details)
+
     def supplies(self) -> PlayerCommandResult:
         """Show only initialized, entity-owned goods/money of this player.
 

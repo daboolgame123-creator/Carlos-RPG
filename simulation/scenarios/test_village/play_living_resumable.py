@@ -28,7 +28,7 @@ from living_player_fixture import (
 )
 
 HELP = ("scene | look | remember | status | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | gifts | meals | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | needs | purchases | gifts | meals | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -132,6 +132,8 @@ def main() -> None:
                     result = gateway.status()
                 elif verb == "supplies" and not rest:
                     result = gateway.supplies()
+                elif verb == "needs" and not rest:
+                    result = gateway.needs()
                 elif verb == "offers" and not rest:
                     result = gateway.offers()
                 elif verb == "purchases" and not rest:

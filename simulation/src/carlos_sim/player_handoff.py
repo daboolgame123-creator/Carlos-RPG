@@ -21,6 +21,7 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
         raise TypeError("trusted local PlayerGateway required")
     scene = gateway.inspect()
     status = gateway.status()
+    needs = gateway.needs()
     memory = gateway.recall()
     supplies = gateway.supplies()
     purchases = gateway.purchases(limit=5)
@@ -28,14 +29,15 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
     meals = gateway.meals(limit=5)
     conversations = gateway.conversations(limit=5)
     local_food = gateway.check_food()
-    if not all(type(row) is PlayerCommandResult for row in (scene, status, memory, supplies, purchases, gifts, meals, conversations, local_food)):
+    if not all(type(row) is PlayerCommandResult for row in (scene, status, needs, memory, supplies, purchases, gifts, meals, conversations, local_food)):
         raise ValueError("invalid player projection")
     versions = {(row.world_id, row.time, row.revision)
-                for row in (scene, status, memory, supplies, purchases, gifts, meals, conversations, local_food)}
+                for row in (scene, status, needs, memory, supplies, purchases, gifts, meals, conversations, local_food)}
     if len(versions) != 1:
         raise RuntimeError("player view changed during handoff")
     if (scene.status not in ("present", "traveling")
             or status.status not in ("rpg_status", "rpg_uninitialized")
+            or needs.status != "needs"
             or memory.status != "memory"
             or supplies.status != "supplies"
             or purchases.status != "purchases"
@@ -53,6 +55,7 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
         "revision": scene.revision,
         "scene": {"status": scene.status, "details": scene.details},
         "player_status": {"status": status.status, "details": status.details},
+        "player_needs": needs.details,
         "player_memory": memory.details,
         "player_supplies": supplies.details,
         "player_purchases": purchases.details,

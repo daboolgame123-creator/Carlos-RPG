@@ -1099,3 +1099,48 @@ smoke tests, SQLite replay/snapshots, and real restartable world checks.
 **Closure mechanics:** This is a following **documentation-only**
 commit; its SHA is distinct from the tested code-and-tests SHA above,
 so the cited CI is not attributed to the documentation commit.
+
+
+## PLAY-14 — Opt-in player hunger/fatigue without medical coupling (2026-11-07)
+
+**Planning and dependency analysis (before code):** PLAY-13 added verified
+\`PlayerFoodEaten\` with real resource debit, but player hunger/fatigue are
+still unknown. The engine ALREADY supports NPC daily needs with a strictly
+separate hunger/fatigue meter (one point per 300/600 **simulated** seconds),
+and real owned meals relieve NPC hunger by 25. Meanwhile Carlos's RPG
+\`hp\`/\`st\`/\`mp\` ledger has NO authorized survival, injury or healing
+policy, and 03-A7c/03-A remain OPEN. Therefore reuse the conservative
+NPC *time/meal constants* but NEVER reuse NPC private needs, medical
+events, or the combat ST ledger.
+
+Implementation: add a dedicated \`player_needs\` state map, populated only
+by trusted time-zero \`PlayerNeedsInitialized\` per player. Values hunger
+and fatigue are bounded 0–100, with replay-safe 300/600-second remainders.
+Only opt-in players accumulate need pressure on actual \`TimeAdvanced\`;
+the ordinary clock capability already guards time. A verified
+\`PlayerFoodEaten\` continues to debit one real owned food/bread; only
+then does it relieve configured **ordinary hunger by 25**, clamped to zero.
+A meal never reduces fatigue or changes HP/ST/MP, XP, skills, injuries,
+NPC states, death, or any medical rule. \`needs\` and narrator handoff show
+the player's own two pressures; missing setup means **unknown**, not zero.
+Demo-only start hunger 25/fatigue 10 is an explicit test-world choice,
+NOT a canonical Carlos fact. New state field and event/rules mean
+**Schema 35 / Rules 47**, with older saves rejected, not migrated.
+
+| Task | Scope and dependencies | Route | State |
+|---|---|---|---|
+| PLAY-14a | PLAY-13 green; strict opt-in player-needs schema/reducer and trusted initialization | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14b | Bounded, split-step deterministic simulated hunger/fatigue pressure; no wall-clock movement | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14c | Real owned food/bread consumption relieves player hunger only; no HP/ST/medical effect | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14d | Player-bound \`needs\`, coherent narration handoff, both disposable/resumable CLIs | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14e | Multiple NPC/player, missing initialization, forged events, tampered states, saving/replay/CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14f | Document limits/version pins and exact-code-SHA full Python 3.10 and 3.13 CI | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Out of scope / OPEN:** Fatigue is NOT player combat stamina
+(\`ST\`); health penalties, starvation, fatigue disabling actions, recovery,
+injury causation, combat, healing, rest and food nutrition quality all need
+separately reviewed policies. \`03-A7c\` and \`03-A\` remain OPEN,
+\`P0_PRODUCTION_NOT_APPROVED\`,
+\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\`. No \`main\` merge, no canonical story edits,
+no automatic player command or remote private state revelation. Full CI is
+mandatory before technical closure.

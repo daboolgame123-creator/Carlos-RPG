@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 34
-RULES_VERSION = 46
+SCHEMA_VERSION = 35
+RULES_VERSION = 47
 
 
 def _thaw(value: Any) -> Any:
@@ -84,6 +84,7 @@ class WorldState:
     gatherings: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     foraging_attempts: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     survival_progress: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
+    player_needs: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
     rpg_profiles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     injuries: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     treatments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
@@ -130,6 +131,7 @@ class WorldState:
         object.__setattr__(self, "gatherings", _freeze(_json_copy(self.gatherings)))
         object.__setattr__(self, "foraging_attempts", _freeze(_json_copy(self.foraging_attempts)))
         object.__setattr__(self, "survival_progress", _freeze(_json_copy(self.survival_progress)))
+        object.__setattr__(self, "player_needs", _freeze(_json_copy(self.player_needs)))
         object.__setattr__(self, "rpg_profiles", _freeze(_json_copy(self.rpg_profiles)))
         object.__setattr__(self, "injuries", _freeze(_json_copy(self.injuries)))
         object.__setattr__(self, "treatments", _freeze(_json_copy(self.treatments)))
@@ -176,6 +178,7 @@ class WorldState:
                            "consumptions": self.consumptions, "gatherings": self.gatherings,
                            "foraging_attempts": self.foraging_attempts,
                            "survival_progress": self.survival_progress,
+                           "player_needs": self.player_needs,
                            "rpg_profiles": self.rpg_profiles, "injuries": self.injuries, "treatments": self.treatments,
                            "environment_cycles": self.environment_cycles,
                            "production_recipes": self.production_recipes,
@@ -217,7 +220,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "player_needs", "rpg_profiles", "injuries", "treatments", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -225,7 +228,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "player_needs", "rpg_profiles", "injuries", "treatments", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -305,6 +308,8 @@ class WorldState:
         validate_routines(d)
         from .rpg_state import validate_rpg_profiles
         validate_rpg_profiles(d)
+        from .player_needs import validate_player_needs
+        validate_player_needs(d)
         from .injury_events import validate_injury_state
         validate_injury_state(d)
         from .recovery_events import validate_treatment_state
@@ -475,6 +480,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         from .player_eating import project_player_food_eaten
         project_player_food_eaten(d, e, bootstrap=bootstrap,
                                   consumption_authorized=consumption_authorized)
+    elif kind == "PlayerNeedsInitialized":
+        from .player_needs import project_player_needs_initialized
+        project_player_needs_initialized(d, e, bootstrap=bootstrap)
     elif kind == "ProductionRecipeConfigured":
         from .production import configure_recipe
         configure_recipe(d, e, bootstrap=bootstrap)
@@ -651,6 +659,11 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if survival_authorized:
             from .survival import apply_survival_elapsed
             apply_survival_elapsed(d, p["to"] - p["from"])
+        # Player needs have an independent opt-in record. Never couple them
+        # to the NPC survival feature flag or the combat ST/HP/MP ledger.
+        if d["player_needs"]:
+            from .player_needs import apply_player_needs_elapsed
+            apply_player_needs_elapsed(d, p["to"] - p["from"])
     else:
         raise ValueError(f"unknown event type: {kind}")
     # Reconcile every material stock delta against opt-in traceable lots.
