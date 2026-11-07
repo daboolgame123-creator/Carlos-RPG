@@ -207,6 +207,21 @@ class SQLiteEventStore:
                 raise InvalidEvent("loan agreements require trusted loan capability")
             if world_id not in self._active_worlds:
                 raise InvalidEvent("loan agreements require active play session")
+        if any(e.event_type == "PlayerFoodCollected" for e in events):
+            if not action_authorized or world_id not in self._active_worlds:
+                raise InvalidEvent("player food collection requires a trusted action capability and active session")
+            for idx, event in enumerate(events):
+                if event.event_type != "PlayerFoodCollected":
+                    continue
+                if idx == 0:
+                    raise InvalidEvent("food pickup requires an immediately preceding local observation")
+                sight = events[idx - 1]
+                if (sight.event_type != "PlayerObserved"
+                        or sight.actor_id != event.actor_id
+                        or sight.time != event.time
+                        or sight.data.get("location_id") != event.data.get("site_id")
+                        or not movement_authorized):
+                    raise InvalidEvent("food pickup requires a matching trusted local observation")
         if any(e.event_type == "PlayerGiftDelivered" for e in events):
             if not gift_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("player gift requires dedicated capability and active session")

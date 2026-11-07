@@ -900,3 +900,33 @@ canonical story mutation, extra player RPG powers or network authorization.
 `03-A7c` and `03-A` remain **OPEN**; `P0_PRODUCTION_NOT_APPROVED` and
 `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. The documentation-only closure
 commit follows the tested SHA and is not itself the quoted code CI run.
+
+
+## PLAY-11 — Physically local food survey and finite pickup (2026-11-07)
+
+**Analysis before implementation:** PLAY-10 made food beliefs meaningful but
+Carlos could not physically validate a claim or collect existing natural food.
+The pre-existing NPC investigation/gathering event is NOT a player action.
+PLAY-11 adds qualitative on-site survey and a player-bound one-unit pickup
+of visible finite \`wild_food\` into explicitly initialized owner \`food\`.
+The gateway groups a local player observation and pickup in one atomic
+SQLite command; no hidden NPC inventory, hunger cure, XP, or food minting.
+The new persisted event requires Schema **34** / Rules **44**. Independent of
+03-A7c and production P0.
+
+| Task | Scope and dependency | Route | State |
+|---|---|---|---|
+| PLAY-11a | Existing PLAY-10 green; present-only, qualitative local food check | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-11b | One-unit PlayerFoodCollected reducer, active local player and source conservation | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-11c | Opt-in fixture initializes player food=0, leaves older fixtures untouched | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-11d | CLI checkfood/forage and revision-coherent narrator handoff | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-11e | Many-NPC, anti-remote, anti-forgery, conservation, SQLite and two-CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-11f | User guide and exact-SHA full dual-Python CI, compatibility version pins | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Limits:** visible, immediately pickable food only; timed searching/hunting
+and player hunger relief are NOT implemented. No natural regeneration,
+automatic player actions, remote location knowledge or RPG inventory.
+No main merge or original story mutation. \`03-A7c\` / \`03-A\` OPEN;
+\`P0_PRODUCTION_NOT_APPROVED\` and
+\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\` remain. Do not close until exact
+code SHA passes full Python 3.10 + 3.13 matrix.

@@ -24,11 +24,11 @@ from carlos_sim.store import DuplicateCommand, InvalidEvent, RevisionConflict
 from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 
 from living_player_fixture import (
-    WORLD, PLAYER, setup_living_market_world, living_player_gateway,
+    WORLD, PLAYER, setup_living_foraging_world, living_player_gateway,
 )
 
 HELP = ("scene | look | remember | status | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | checkfood | forage | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -140,10 +140,15 @@ def main() -> None:
                     result = gateway.gifts()
                 elif verb == "conversations" and not rest:
                     result = gateway.conversations()
+                elif verb == "checkfood" and not rest:
+                    result = gateway.check_food()
                 elif verb == "askfood" and len(rest) == 2:
                     result = gateway.ask_food(rest[0], rest[1],
                                               command_id=cid,
                                               expected_revision=rev)
+                    changed = True
+                elif verb == "forage" and not rest:
+                    result = gateway.forage(command_id=cid, expected_revision=rev)
                     changed = True
                 elif verb == "look" and not rest:
                     result = gateway.observe(command_id=cid, expected_revision=rev)

@@ -123,3 +123,18 @@ def setup_living_market_world(store) -> None:
             expected_revision=store.load(WORLD).revision)
     finally:
         clock.close_session(WORLD)
+
+
+
+def setup_living_foraging_world(store) -> None:
+    """PLAY-11 opt-in: food initially owned by Carlos is verified zero.
+
+    Keep the original plain/market fixtures and their unknown balances intact.
+    """
+    setup_living_market_world(store)
+    current = store.load(WORLD)
+    store.append(WORLD, "living-forage-initialize-owned-food",
+                 current.revision, [_fixture("ResourceChanged", {
+        "owner_id": PLAYER, "resource": "food", "previous": None,
+        "current": 0, "source": "initialization",
+    })], bootstrap=True)

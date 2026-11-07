@@ -310,6 +310,42 @@ class PlayerGateway:
              'quantity': quantity},
         )
 
+    def check_food(self) -> PlayerCommandResult:
+        """See only a qualitative food source at the player's actual site."""
+        state = self._state()
+        from .player_foraging import local_food_view
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'local_food', local_food_view(state, self.player_id))
+
+    def forage(self, *, command_id: str, expected_revision: int) -> PlayerCommandResult:
+        """Physically pick one known existing wild-food unit, no magical food."""
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        from .player_foraging import local_food_view
+        view = local_food_view(state, self.player_id)
+        if view['status'] == 'traveling':
+            raise ValueError('cannot forage while travelling')
+        if view['status'] != 'present':
+            raise ValueError('no initialized, visible wild food to collect here')
+        from .movement import _visible
+        place = view['location_id']
+        events = [
+            DomainEvent('PlayerObserved', self.player_id,
+                        'player checked the physical source', state.time,
+                        {'location_id': place,
+                         'occupants': _visible(state.to_dict(), place)}),
+            DomainEvent('PlayerFoodCollected', self.player_id,
+                        'one finite unit of wild food picked locally', state.time,
+                        {'site_id': place, 'quantity': 1}),
+        ]
+        saved = self.store.append(
+            self.world_id, 'player-forage:' + cid, expected_revision,
+            events, movement_authorized=True, action_authorized=True)
+        return PlayerCommandResult(saved.world_id, saved.time, saved.revision,
+                                   'foraged', {'site_id': place, 'resource': 'food',
+                                               'quantity': 1,
+                                               'owned_food': saved.resources[self.player_id]['food']})
+
     def ask_food(self, recipient_id: str, site_id: str, *,
                  command_id: str, expected_revision: int) -> PlayerCommandResult:
         """Ask a present NPC about a known food site without forcing an answer.

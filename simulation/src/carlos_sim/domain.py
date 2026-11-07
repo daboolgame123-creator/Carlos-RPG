@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 33
-RULES_VERSION = 43
+SCHEMA_VERSION = 34
+RULES_VERSION = 44
 
 
 def _thaw(value: Any) -> Any:
@@ -465,6 +465,10 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "PlayerGiftDelivered":
         from .player_gifts import deliver_player_gift
         deliver_player_gift(d, e, gift_authorized=gift_authorized)
+    elif kind == "PlayerFoodCollected":
+        from .player_foraging import project_player_food_collected
+        project_player_food_collected(
+            d, e, action_authorized=action_authorized, bootstrap=bootstrap)
     elif kind == "ProductionRecipeConfigured":
         from .production import configure_recipe
         configure_recipe(d, e, bootstrap=bootstrap)
