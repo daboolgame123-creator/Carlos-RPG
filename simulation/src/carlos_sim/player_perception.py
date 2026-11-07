@@ -22,11 +22,23 @@ def validate_player_perception_event(state: dict[str, Any], event: DomainEvent,
         place = state['entities'][who]['location_id']
         if _in_transit(state, who):
             raise ValueError('cannot observe while travelling')
-        if (set(p) != {'location_id', 'occupants'}
+        fields = set(p)
+        if (fields not in ({'location_id', 'occupants'},
+                           {'location_id', 'occupants', 'activities'})
                 or p['location_id'] != place
                 or not isinstance(p['occupants'], (list, tuple))
                 or list(p['occupants']) != _visible(state, place)):
             raise ValueError('player observation must match actual local presence')
+        if 'activities' in p:
+            # Physical proof is computed from the same validated world tick,
+            # not inferred later from an NPC's secret needs or intention.
+            from .player_activity_scene import visible_activity_rows
+            expected = visible_activity_rows(state, who)
+            if (event.cause != 'player deliberately looked around locally'
+                    or not isinstance(p['activities'], (list, tuple))
+                    or not expected
+                    or list(p['activities']) != list(expected)):
+                raise ValueError('activity memory must match current local visible action')
     elif event.event_type == 'PlayerHearsayReceived':
         speaker = event.actor_id
         if not social_authorized or speaker not in state['npcs']:
@@ -58,7 +70,7 @@ def validate_player_perception_event(state: dict[str, Any], event: DomainEvent,
 
 def recall_player_events(store: SQLiteEventStore, state: WorldState,
                          player_id: str) -> dict[str, Any]:
-    """Read-only verified sightings, hearsay and bounded witnessed meals.
+    """Read-only verified sightings, hearsay and bounded witnessed activities.
 
     A meal requires the immediately preceding, actor-bound PlayerObserved
     in the SAME authorized wait command at the SAME physical site/tick.
@@ -109,6 +121,19 @@ def recall_player_events(store: SQLiteEventStore, state: WorldState,
                     'id': who, 'name': state.entities[who]['name']}
                     for who in evt.data['occupants']),
             }
+            # PLAY-17: copy the precisely validated qualitative local
+            # evidence, never re-query the current world to rewrite history.
+            if (command_id.startswith('player-observe:')
+                    and evt.cause == 'player deliberately looked around locally'
+                    and 'activities' in evt.data):
+                for action in evt.data['activities']:
+                    witnessed.append({
+                        'actor_id': action['actor_id'],
+                        'activity': action['activity'],
+                        'location_id': place, 'at': evt.time,
+                    })
+                    if len(witnessed) > 20:
+                        witnessed.pop(0)
             if (command_id.startswith('player-wait:')
                     and evt.cause == 'player witnessed a nearby NPC eating'):
                 pending_witness = (command_id, evt)
