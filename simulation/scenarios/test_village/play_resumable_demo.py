@@ -13,6 +13,7 @@ must already exist; each changing command creates a distinct checkpoint.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import shlex
 
@@ -69,7 +70,7 @@ def main():
     with session:
         checkpoint()  # backup the verified starting/resumed position
         print("01-Z TEST WORLD (not canonical Carlos, P0 independent review OPEN)")
-        print("Commands: look | remember | status | move <road> | wait <seconds> "
+        print("Commands: scene | look | remember | status | handoff | move <road> | wait <seconds> "
               "| talk <npc> <kind> <words> | quit")
         print("Prefix mutating command with: id <request-id> <command> ...")
         render(session.gateway.inspect())
@@ -89,7 +90,7 @@ def main():
             if verb in ('quit', 'exit'):
                 break
             if verb == 'help':
-                print("look | remember | status | move <road> | wait <seconds> "
+                print("scene | look | remember | status | handoff | move <road> | wait <seconds> "
                       "| talk <npc> <kind> <words> | quit")
                 continue
             if verb == 'id' and len(args_) >= 2:
@@ -99,7 +100,13 @@ def main():
                 cid = 'cli-' + str(session.store.load('demo').revision)
             try:
                 changed = False
-                if verb == 'look' and not args_:
+                if verb == 'scene' and not args_:
+                    result = session.gateway.inspect()
+                elif verb == 'handoff' and not args_:
+                    print(json.dumps(session.handoff(),
+                                     ensure_ascii=False, sort_keys=True))
+                    continue
+                elif verb == 'look' and not args_:
                     print('request_id:', cid)
                     result = session.gateway.observe(
                         command_id=cid,
