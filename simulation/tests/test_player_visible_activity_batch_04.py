@@ -232,7 +232,15 @@ def test_local_cli_showcases_real_actions_without_changing_scene(tmp_path):
     visible = handoffs[0]["scene"]["details"]["activities"]
     assert visible  # a real nearby NPC began a visible action during wait
     assert handoffs[0]["time"] == 1
-    assert handoffs[0]["player_memory"]["observations"] == []
+    # PLAY-18: a real nearby NPC conversation can be witnessed during wait.
+    # Repeating scene/handoff must NEVER create additional observations.
+    memories = handoffs[0]["player_memory"]
+    assert "nearby_conversations" in output.stdout
+    assert memories["witnessed_events"]
+    assert all(row["activity"] == "talking"
+               for row in memories["witnessed_events"])
+    assert all(row["location_id"] == "square" and row["observed_at"] == 0
+               for row in memories["observations"])
     assert all(set(x) == {"actor_id", "activity"} for x in visible)
     assert all(x["actor_id"] in ("basim", "salma", "adel") for x in visible)
     assert '"npcs"' not in json.dumps(handoffs)
