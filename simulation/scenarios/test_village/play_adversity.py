@@ -71,6 +71,7 @@ def run_adversity(path: str | Path, decision: str = 'stockpile',
             session.store, session.clock, npc_survival_demo=True))
         db, g = session.store, session.gateway
         state = db.load(WORLD)
+        profile_at_start = g.status().details
         assert state.time == 0
         assert len(state.npcs) == 7
         assert state.resources['salma']['bread'] == 3
@@ -148,7 +149,6 @@ def run_adversity(path: str | Path, decision: str = 'stockpile',
         assert final['time'] == horizon_seconds
         assert len(final['consumptions']) == 2
         assert len(final['actions']) >= 7
-        initial_profile = g.status().details
         assert g.needs().details['hunger'] == 'not_modeled'
         # Player status still reflects explicit player actions only: there
         # are no silent HP/ST/MP edits from autonomous NPC hunger.
@@ -179,7 +179,7 @@ def run_adversity(path: str | Path, decision: str = 'stockpile',
             'denials_without_state_mutation': denials,
             'explicit_wait_chunks': intervals,
             'player_profile_unchanged_by_npc_tick': (
-                initial_profile == g.status().details),
+                profile_at_start == g.status().details),
         }
 
     # Open the very same file from scratch and prove no time/revision drift.
