@@ -35,8 +35,10 @@ def _cli(script: str, *, commands: str, argv: tuple[str, ...] = ()):
 
 
 def _envelopes(stdout: str) -> list[dict]:
-    return [json.loads(line) for line in stdout.splitlines()
-            if line.startswith('{"canonical_story":')]
+    # input("carlos> ") prints a prompt on the *same line* as the JSON.
+    prefix = '{"canonical_story":'
+    return [json.loads(line[line.index(prefix):])
+            for line in stdout.splitlines() if prefix in line]
 
 
 def test_player_handoff_hides_private_npc_state_and_never_writes(tmp_path):
