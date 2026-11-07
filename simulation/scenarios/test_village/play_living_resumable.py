@@ -28,7 +28,7 @@ from living_player_fixture import (
 )
 
 HELP = ("scene | look | remember | status | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | buy <offer> <qty> <price> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -150,6 +150,11 @@ def main() -> None:
                 elif verb == "buy" and len(rest) == 3:
                     result = gateway.buy(
                         rest[0], int(rest[1]), int(rest[2]),
+                        command_id=cid, expected_revision=rev)
+                    changed = True
+                elif verb == "give" and len(rest) == 3:
+                    result = gateway.give(
+                        rest[0], rest[1], int(rest[2]),
                         command_id=cid, expected_revision=rev)
                     changed = True
                 elif verb == "talk" and len(rest) >= 3:
