@@ -490,3 +490,34 @@ This closure records the verified code SHA; the commit containing the
 documentation-only status update needs its own CI observation if exact-HEAD
 status is later requested. Do not equate this technical closure with
 production restoration authorization.
+
+## PLAY-04 — current player-visible NPC activity scene (planned 2026-11-07)
+
+Analysis: PLAY-03 saves and continues a living village, but `scene` and
+`handoff` currently show only occupants and roads: Carlos cannot see
+nearby NPCs **doing** anything. A safe incremental slice is read-only
+current visible behavior, not guessed motives, medical signs, diagnoses,
+secret tasks or a retrospective observation memory. No new event, schema
+migration, auto-player or unapproved production save is needed.
+
+| Task | Scope | Dependency | Route | Status |
+|---|---|---|---|---|
+| PLAY-04a | Pure `WorldState`-only co-located visible-activity projector for running rest/work/forage and real local production | Existing validated event-sourced actions, movement and production | CHAT_EXECUTABLE | PLANNED |
+| PLAY-04b | Wire bounded output to `PlayerGateway.inspect` and hence `player_handoff` (only when player physically present; no change to player-in-transit view) | PLAY-04a, PLAY-01 | CHAT_EXECUTABLE | PLANNED |
+| PLAY-04c | Multi-person adversarial and lifecycle tests: Carlos, Nora, Basim, Adel, Salma, Huda, Omar, Layla; remote privacy, no diagnoses, current only, exact due tick, replay and SQLite reopen | PLAY-04a/b | CHAT_EXECUTABLE | PLANNED |
+| PLAY-04d | Real local AND resumable CLI / JSON handoff regressions and read-only idempotence | PLAY-04b, PLAY-02/03 | CHAT_EXECUTABLE | PLANNED |
+| PLAY-04e | Instructions clarifying a visible action does not establish motivation, cause, past knowledge or medical symptoms | PLAY-04b | CHAT_EXECUTABLE | PLANNED |
+
+Conservative visibility rules: player physically co-located **now**, NPC
+not traveling, action truly running at current logical tick; expose
+`actor_id` and bounded activity label **only**. Never emit private
+needs, goals, injury, duration/due time, job recipe, wages, stock, action
+ID or NPC knowledge. Deliberate `look` still records identity only;
+`scene` is a read-only **current** projection, not persistent witnessing.
+During travel, no scene activities. Preserve previous saved worlds and
+existing `PlayerObserved` event contract: Schema32/Rules42 unchanged.
+Tests on exact final code SHA must succeed in Python 3.10 and 3.13.
+
+Note: `03-A7c` physical injury symptom producer remains blocked and
+is **not** implemented or completed by these activity labels; `main`
+and canonical story stay untouched, P0 production unapproved.
