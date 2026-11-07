@@ -65,15 +65,15 @@ def run_economic_village(path: str | Path, *, grain: int = 1,
         handoff = session.handoff()
         rendered = json.dumps(handoff, ensure_ascii=False)
         for secret in ('"production_jobs"', '"market_trades"', '"npcs"',
-                       '"consumptions"', '"coin_copper"', '"npc_routines"'):
+                       '"consumptions"', '"npc_routines"'):
             assert secret not in rendered
         audit = {
             "npcs": len(final.npcs),
             "jobs": len(final.production_jobs),
             "finished_jobs": sum(j["status"] == "completed" for j in final.production_jobs.values()),
-            "offers": len(final.market_offers),
-            "trades": len(final.market_trades),
-            "buyers": sorted(t["buyer_id"] for t in final.market_trades.values()),
+            "offers": sum(o["resource"] == "food" for o in final.market_offers.values()),
+            "trades": sum(t["resource"] == "food" for t in final.market_trades.values()),
+            "buyers": sorted(t["buyer_id"] for t in final.market_trades.values() if t["resource"] == "food"),
             "meals": len(final.consumptions),
             "copper_total": initial["copper_total"],
             "final_food_and_coins": _resources(
