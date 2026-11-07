@@ -16,7 +16,7 @@ from carlos_sim.resumable_play import ResumableTestSession
 WORLD = "play25-finite-field"
 PLAYER = "carlos"
 PEOPLE = (
-    ("basim", "baker", 20, 20),
+    ("basim", "baker", 0, 0),
     ("salma", "merchant", 20, 10),
     ("adel", "guard", 80, 10),
     ("nora", "farmer", 20, 5),
@@ -59,7 +59,7 @@ def seed_finite_field(store, *, crop: int = 1, buyer_copper: int = 2,
                                 "location_id": site, "controller": "npc"}),
             e("NPCConfigured", {"npc_id": who, "role": role,
                                 "needs": {"hunger": hunger, "fatigue": fatigue, "safety": 0},
-                                "goals": {"earn": 10, "explore": 10, "survive": 30}}),
+                                "goals": {"earn": 0 if who == "basim" else 10, "explore": 10, "survive": 30}}),
         ))
         for item in ("labor_units", "investigation_attempts", "food"):
             events.append(e("ResourceChanged", {
