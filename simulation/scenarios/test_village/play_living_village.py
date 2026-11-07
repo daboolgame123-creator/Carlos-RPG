@@ -6,6 +6,7 @@ The temporary SQLite database disappears on exit. No canonical story import.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import shlex
 from pathlib import Path
@@ -15,7 +16,10 @@ from carlos_sim import SQLiteEventStore, TimeEngine
 from carlos_sim.player_handoff import player_handoff
 from carlos_sim.store import DuplicateCommand, InvalidEvent, RevisionConflict
 from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
-from living_player_fixture import WORLD, living_player_gateway, setup_living_foraging_world
+from living_player_fixture import (
+    WORLD, living_player_gateway, setup_living_foraging_world,
+    setup_living_npc_survival_world,
+)
 
 HELP = ("scene | look | status | remember | handoff | move <road> "
         "| wait <seconds> | offers | supplies | purchases | gifts | meals | needs | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
@@ -28,15 +32,23 @@ def render(result) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Disposable Carlos village test")
+    parser.add_argument("--npc-survival-demo", action="store_true",
+                        help="opt-in finite NPC-owned food and existing NPC hunger/eating AI")
+    args = parser.parse_args()
     print("CARLOS — living disposable village (7 autonomous NPCs, non-canonical)")
+    if args.npc_survival_demo:
+        print("TEST ONLY: independent NPC hunger/food active; player hunger is NOT modeled.")
     print("NPCs act and travel only when you use wait; Carlos never moves himself.")
     print(HELP)
     with TemporaryDirectory(prefix="carlos-living-") as temp:
         with SQLiteEventStore(Path(temp) / "living.sqlite") as store:
-            setup_living_foraging_world(store)
+            (setup_living_npc_survival_world if args.npc_survival_demo
+             else setup_living_foraging_world)(store)
             clock = TimeEngine(store)
             clock.open_session(WORLD)
-            gateway = living_player_gateway(store, clock)
+            gateway = living_player_gateway(
+                store, clock, npc_survival_demo=args.npc_survival_demo)
             count = 0
             render(gateway.inspect())
             while True:

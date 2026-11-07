@@ -26,8 +26,10 @@ def _fixture(kind: str, payload: dict) -> DomainEvent:
     return DomainEvent(kind, None, "trusted disposable living-play fixture", 0, payload)
 
 
-def setup_living_player_world(store) -> None:
+def setup_living_player_world(store, *, npc_initial_hunger: int = 20) -> None:
     """Start a fresh world; never overwrite or migrate existing saves."""
+    if type(npc_initial_hunger) is not int or not 0 <= npc_initial_hunger <= 100:
+        raise ValueError("demo NPC hunger must be an integer from 0 to 100")
     store.create_world(WORLD)
     events = [
         _fixture("LocationCreated", {"id": "square", "name": "Town Square"}),
@@ -56,7 +58,7 @@ def setup_living_player_world(store) -> None:
             }),
             _fixture("NPCConfigured", {
                 "npc_id": who, "role": role,
-                "needs": {"fatigue": fatigue, "hunger": 20, "safety": 0},
+                "needs": {"fatigue": fatigue, "hunger": npc_initial_hunger, "safety": 0},
                 "goals": {"earn": earn, "explore": explore, "survive": 30},
             }),
         ))
@@ -68,18 +70,28 @@ def setup_living_player_world(store) -> None:
     store.append(WORLD, "living-fixture", 0, events, bootstrap=True)
 
 
-def living_player_gateway(store, clock) -> PlayerGateway:
-    """Give the human Carlos only; every NPC remains independently controlled."""
+def living_player_gateway(store, clock, *, npc_survival_demo: bool = False) -> PlayerGateway:
+    """Human-controlled Carlos; optional existing NPC hunger rules only.
+
+    The opt-in must match a verified world's bootstrap marker; cannot be
+    enabled on a normal/older save, and does not affect player RPG health.
+    """
+    if type(npc_survival_demo) is not bool:
+        raise ValueError("npc_survival_demo must be a boolean")
+    if npc_survival_demo != is_living_npc_survival_world(store):
+        raise ValueError("NPC survival mode must match the dedicated world bootstrap")
     return PlayerGateway(
         store, clock, world_id=WORLD, player_id=PLAYER,
         engine=LivingWorldEngine(
             store, clock, navigation_enabled=True,
             social_enabled=True,
+            consumption_enabled=npc_survival_demo,
+            survival_enabled=npc_survival_demo,
         ),
     )
 
 
-def setup_living_market_world(store) -> None:
+def setup_living_market_world(store, *, npc_initial_hunger: int = 20) -> None:
     """Opt-in, disposable physical market; preserve original plain fixture.
 
     Salma initially OWNS three test loaves, Carlos ten copper coins,
@@ -88,7 +100,7 @@ def setup_living_market_world(store) -> None:
     from an autonomous 'work' counter. This is not RPG equipment.
     """
     from carlos_sim import NPCMarketService, TimeEngine
-    setup_living_player_world(store)
+    setup_living_player_world(store, npc_initial_hunger=npc_initial_hunger)
     state = store.load(WORLD)
     assets = (
         (PLAYER, "coin_copper", 10), (PLAYER, "bread", 0),
@@ -126,15 +138,42 @@ def setup_living_market_world(store) -> None:
 
 
 
-def setup_living_foraging_world(store) -> None:
+def setup_living_foraging_world(store, *, npc_initial_hunger: int = 20) -> None:
     """PLAY-11 opt-in: food initially owned by Carlos is verified zero.
 
     Keep the original plain/market fixtures and their unknown balances intact.
     """
-    setup_living_market_world(store)
+    setup_living_market_world(store, npc_initial_hunger=npc_initial_hunger)
     current = store.load(WORLD)
     store.append(WORLD, "living-forage-initialize-owned-food",
                  current.revision, [_fixture("ResourceChanged", {
         "owner_id": PLAYER, "resource": "food", "previous": None,
         "current": 0, "source": "initialization",
     })], bootstrap=True)
+
+
+
+def setup_living_npc_survival_world(store) -> None:
+    """PLAY-15 opt-in real NPC feeding, separate from earlier fixtures.
+
+    Pre-existing NPC hunger rules start at 80 only in this disposable mode.
+    Two NPCs legitimately start with one owned food unit each; the other
+    five have explicit zero. No NPC may borrow Carlos's stock or steal it.
+    """
+    setup_living_foraging_world(store, npc_initial_hunger=80)
+    assets = tuple((npc_id, 1 if npc_id in ("basim", "nora") else 0)
+                   for npc_id, *_ in PEOPLE)
+    current = store.load(WORLD)
+    store.append(WORLD, "living-survival-owned-npc-food", current.revision,
+                 [_fixture("ResourceChanged", {
+                     "owner_id": npc, "resource": "food", "previous": None,
+                     "current": amount, "source": "initialization",
+                 }) for npc, amount in assets], bootstrap=True)
+
+
+def is_living_npc_survival_world(store) -> bool:
+    """Persistent exact fixture marker; opt-in never inferred from NPC stock."""
+    return store.db.execute(
+        "SELECT 1 FROM commands WHERE world_id=? AND command_id=?",
+        (WORLD, "living-survival-owned-npc-food"),
+    ).fetchone() is not None

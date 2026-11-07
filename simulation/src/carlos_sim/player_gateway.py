@@ -540,6 +540,22 @@ class PlayerGateway:
             'elapsed': result.elapsed_seconds, 'remaining': result.remaining_seconds,
             'interrupted': result.interrupted,
         }
+        # The human may witness an NPC eat only when physically present
+        # throughout this explicit wait. Never expose NPC hunger, quantities,
+        # food ledgers or any remote meal event.
+        if player_travel_signal(before, self.player_id) is None:
+            witnessed_at = before.entities[self.player_id]['location_id']
+            local_meals = []
+            for meal_id in result.meals_consumed:
+                meal = now.consumptions.get(meal_id)
+                if (meal is not None and meal['location_id'] == witnessed_at
+                        and before.time <= meal['consumed_at'] <= now.time):
+                    local_meals.append({
+                        'npc_id': meal['npc_id'], 'activity': 'eating',
+                        'at': meal['consumed_at'],
+                    })
+            if local_meals:
+                details['nearby_meals'] = tuple(local_meals)
         if foraging_before is not None:
             ident, _schedule, payload = foraging_before
             if ident in result.fired_ids:

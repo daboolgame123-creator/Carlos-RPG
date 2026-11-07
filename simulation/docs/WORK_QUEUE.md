@@ -1167,3 +1167,45 @@ interaction are explicitly resolved; it is NOT technically closed.
 03-A7c/03-A remain OPEN; P0_PRODUCTION_NOT_APPROVED and
 EXTERNAL_REVIEW_DEFERRED_BY_OWNER remain. No main merge/story edit.
 The present doc-only closure commit follows the exactly CI-tested code SHA.
+
+
+## PLAY-15 — Opt-in independent NPC hunger and visible local meals (2026-11-07)
+
+**Analysis before changes:** PLAY-14g (numeric player hunger, energy and
+health effects) is explicitly DECISION_REQUIRED/BLOCKED and **not** a
+prerequisite for existing tested NPC hunger/consumption functionality.
+NPC \`survival.py\` and \`consumption.py\` already implement a deterministic
+finite-food policy and food debit, but the default PLAY village deliberately
+disables the feature. Reuse these proven rules in a **new, opt-in disposable
+NPC-survival demo**. Basim and Nora start with exactly one initialized
+owned \`food\` each and the other five NPCs start at known zero; hunger
+starts at 80 in this *test-only* fixture, with no player health or hunger
+effects. All NPC eating occurs only after explicit player \`wait\`, not
+in offline wall-clock time. No new domain event, Schema 34 / Rules 46.
+
+| Task | Deliverable | Route | State |
+|---|---|---|---|
+| PLAY-15a | Independent NPC hunger/policy reuse, keep PLAY-14g blocked and player unknowns | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-15b | Isolated seven-NPC opt-in finite food fixture; preserve standard fixture | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-15c | Trusted gateway enables NPC consumption/metabolism only on fixture marker | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-15d | Human at the scene sees only co-located eating events during explicit wait | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-15e | Both CLIs opt-in, resume must preserve scenario policy and reject mismatch without mutation | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-15f | NPC autonomy, privacy, gifts vs food, non-minting, replay/snapshot and CLI adversarial tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-15g | Guide, whole-matrix exact-SHA Python 3.10 and 3.13 CI and technical closure | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**No unauthorized nutritional claims:** NPCs only eat \`food\` already
+initialized and owned; NPC \`bread\` is not converted to food without a
+new recipe/policy. A meal witnessed during a wait projects **only** NPC ID,
+observable eating activity, and logical time if Carlos was *not travelling*
+and stood at the recorded consumption site throughout the wait.
+Remote NPC meals, hidden hunger/food quantities, medical state and
+NPC knowledge remain private. The player receives no automatic hunger
+meter, HP/ST/MP changes, XP or any ability. Saved demo mode is bound
+to exact bootstrap command ID and must be reaffirmed at resume;
+no production migration or silent gameplay policy flip.
+
+**Dependency gates:** \`PLAY-14g\` OPEN DECISION_REQUIRED,
+\`03-A7c\` and parent \`03-A\` OPEN,
+\`P0_PRODUCTION_NOT_APPROVED\`,
+\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\`. No main merge or canonical story
+edits. Don't close this batch without full exact SHA CI green.

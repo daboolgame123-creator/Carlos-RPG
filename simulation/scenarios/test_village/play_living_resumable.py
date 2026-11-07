@@ -25,6 +25,7 @@ from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 
 from living_player_fixture import (
     WORLD, PLAYER, setup_living_foraging_world, living_player_gateway,
+    setup_living_npc_survival_world, is_living_npc_survival_world,
 )
 
 HELP = ("scene | look | remember | status | handoff | move <road> "
@@ -46,6 +47,8 @@ def main() -> None:
     selection.add_argument("--new", action="store_true")
     selection.add_argument("--resume", action="store_true")
     ap.add_argument("--disposable-test", action="store_true")
+    ap.add_argument("--npc-survival-demo", action="store_true",
+                    help="must also be supplied when resuming this opt-in NPC test world")
     args = ap.parse_args()
     if not args.disposable_test:
         ap.error("experimental disposable-test acknowledgement is required")
@@ -58,7 +61,9 @@ def main() -> None:
 
     session = (
         ResumableTestSession.create(
-            args.db, WORLD, PLAYER, setup_living_foraging_world,
+            args.db, WORLD, PLAYER,
+            (setup_living_npc_survival_world if args.npc_survival_demo
+             else setup_living_foraging_world),
             disposable_test=True)
         if args.new else ResumableTestSession.resume(
             args.db, WORLD, PLAYER, disposable_test=True)
@@ -84,8 +89,15 @@ def main() -> None:
         print(f"checkpoint: {target.name}, revision={current.revision}")
 
     with session:
-        # Only a gateway bound to the exact verified store/clock/player is accepted.
-        session.bind_gateway(living_player_gateway(session.store, session.clock))
+        # Ensure a resumed world cannot silently flip its autonomous NPC policy.
+        session.store.verify(WORLD)
+        actual_survival_mode = is_living_npc_survival_world(session.store)
+        if actual_survival_mode != args.npc_survival_demo:
+            raise ValueError(
+                "NPC survival mode mismatch: resume with the original "
+                "--npc-survival-demo flag (or omit it for the default world)")
+        session.bind_gateway(living_player_gateway(
+            session.store, session.clock, npc_survival_demo=actual_survival_mode))
         # A resumed world must match any existing checkpoint at the same revision
         # before the player is offered a mutating command.
         checkpoint(initial=True)
