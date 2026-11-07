@@ -127,10 +127,12 @@ def test_entire_chain_is_npc_autonomous_during_same_living_world_wait(tmp_path):
         assert final.production_jobs[result.economic_jobs[0]]["status"] == "completed"
         assert final.market_trades[result.economic_trades[0]]["buyer_id"] == "adel"
         assert final.market_trades[result.economic_trades[0]]["total_paid"] == 2
-        assert final.npcs["adel"]["needs"]["hunger"] == 55
+        assert final.npcs["adel"]["needs"]["hunger"] == 60  # 80 + 5 time hunger - 25 meal
         assert final.resources["adel"]["coin_copper"] == 0
         assert final.resources["square"]["coin_copper"] == 2
         assert totals(final) == (1, 2)
+        meal = next(iter(final.consumptions.values()))
+        assert (meal["hunger_before"], meal["hunger_after"]) == (85, 60)
         assert db.verify(WORLD).to_dict() == final.to_dict()
     finally:
         clock.close_session(WORLD)
