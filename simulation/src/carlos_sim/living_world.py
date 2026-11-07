@@ -21,6 +21,8 @@ from .knowledge import make_observation_events, choose_food_sharing_round, known
 from .food_navigation import choose_food_route
 from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
 from .rumors import choose_rumor_round
+from .economic_autonomy import (choose_local_production, choose_local_food_offer,
+                                choose_local_food_purchase, TEST_FOOD_PRICE_COPPER)
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,9 @@ class LivingAdvanceResult:
     meals_consumed: tuple[str, ...] = ()
     gathered_action_ids: tuple[str, ...] = ()
     knowledge_shares: tuple[str, ...] = ()
+    economic_jobs: tuple[str, ...] = ()
+    economic_offers: tuple[str, ...] = ()
+    economic_trades: tuple[str, ...] = ()
 
 
 class LivingWorldEngine:
@@ -60,7 +65,8 @@ class LivingWorldEngine:
                  food_navigation_enabled: bool = False,
                  scarcity_enabled: bool = False,
                  routines_enabled: bool = False,
-                 rumors_enabled: bool = False):
+                 rumors_enabled: bool = False,
+                 economic_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -124,6 +130,9 @@ class LivingWorldEngine:
         if type(rumors_enabled) is not bool:
             raise ValueError('rumors_enabled must be boolean')
         self.rumors_enabled = rumors_enabled
+        if type(economic_enabled) is not bool:
+            raise ValueError('economic_enabled must be boolean')
+        self.economic_enabled = economic_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int,
@@ -161,13 +170,18 @@ class LivingWorldEngine:
         recorded_player_sighting = False
         gathered_actions: list[str] = []
         knowledge_shares: list[str] = []
+        economic_jobs: list[str] = []
+        economic_offers: list[str] = []
+        economic_trades: list[str] = []
 
         def append(event: DomainEvent, *, action_capability: bool = False,
                    movement_capability: bool = False,
                    social_capability: bool = False,
                    assistance_capability: bool = False,
                    consumption_capability: bool = False,
-                   survival_capability: bool = False) -> None:
+                   survival_capability: bool = False,
+                   production_capability: bool = False,
+                   market_capability: bool = False) -> None:
             nonlocal current
             # Keep the entire high-level command fail-closed and bounded.
             if len(events) >= self.max_events_per_advance:
@@ -178,7 +192,9 @@ class LivingWorldEngine:
                                       social_authorized=social_capability,
                                       assistance_authorized=assistance_capability,
                                       consumption_authorized=consumption_capability,
-                                      survival_authorized=survival_capability)
+                                      survival_authorized=survival_capability,
+                                      production_authorized=production_capability,
+                                      market_authorized=market_capability)
             except (ValueError, TypeError) as exc:
                 raise InvalidEvent(str(exc)) from exc
             events.append(event)
@@ -248,6 +264,49 @@ class LivingWorldEngine:
                         if t['status'] == 'traveling')
             busy.update(j['npc_id'] for j in current.production_jobs.values()
                         if j['status'] == 'running')
+            if self.economic_enabled:
+                # PLAY-24: pure NPC proposals, executed through the SAME reducer
+                # capabilities as explicit local production and market commands.
+                # Each pass sees only state already changed by previous events.
+                for worker_id in sorted(current.npcs):
+                    intent = choose_local_production(current, worker_id)
+                    if intent is None:
+                        continue
+                    append(DomainEvent('ProductionStarted', worker_id,
+                                       'autonomous production: ' + intent.reason,
+                                       current.time,
+                                       {'id': intent.job_id, 'recipe_id': intent.recipe_id,
+                                        'npc_id': worker_id}), production_capability=True)
+                    economic_jobs.append(intent.job_id)
+                    busy.add(worker_id)
+                for keeper_id in sorted(current.npcs):
+                    quote = choose_local_food_offer(current, keeper_id)
+                    if quote is None:
+                        continue
+                    append(DomainEvent('MarketOfferPosted', keeper_id,
+                                       'autonomous market: ' + quote.reason,
+                                       current.time,
+                                       {'id': quote.offer_id, 'seller_id': keeper_id,
+                                        'stock_owner_id': quote.site_id,
+                                        'site_id': quote.site_id, 'resource': 'food',
+                                        'quantity': quote.quantity,
+                                        'payment_resource': 'coin_copper',
+                                        'unit_price': TEST_FOOD_PRICE_COPPER}),
+                           market_capability=True)
+                    economic_offers.append(quote.offer_id)
+                for buyer_id in sorted(current.npcs):
+                    purchase = choose_local_food_purchase(current, buyer_id)
+                    if purchase is None:
+                        continue
+                    append(DomainEvent('MarketTradeExecuted', buyer_id,
+                                       'autonomous purchase: ' + purchase.reason,
+                                       current.time,
+                                       {'id': purchase.trade_id,
+                                        'offer_id': purchase.offer_id,
+                                        'buyer_id': buyer_id, 'quantity': 1,
+                                        'expected_unit_price': purchase.price}),
+                           market_capability=True)
+                    economic_trades.append(purchase.trade_id)
             if self.assistance_enabled:
                 # The fixed passes are independent of lexical NPC ID ordering:
                 # settle old promises, then respond, request, and respond to
@@ -506,10 +565,14 @@ class LivingWorldEngine:
                                       social_authorized=(self.social_enabled or self.rumors_enabled),
                                       assistance_authorized=self.assistance_enabled,
                                       consumption_authorized=self.consumption_enabled,
-                                      survival_authorized=self.survival_enabled)
+                                      survival_authorized=self.survival_enabled,
+                                      production_authorized=self.economic_enabled,
+                                      market_authorized=self.economic_enabled)
         elapsed = committed.time - original.time
         return LivingAdvanceResult(committed, seconds, elapsed, seconds - elapsed,
                                    tuple(started), tuple(completed), tuple(fired),
                                    interrupted, len(events), tuple(social_messages),
                                    tuple(assistance_transitions), tuple(meals_consumed),
-                                   tuple(gathered_actions), tuple(knowledge_shares))
+                                   tuple(gathered_actions), tuple(knowledge_shares),
+                                   tuple(economic_jobs), tuple(economic_offers),
+                                   tuple(economic_trades))
