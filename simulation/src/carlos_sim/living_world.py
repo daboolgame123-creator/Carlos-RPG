@@ -126,7 +126,8 @@ class LivingWorldEngine:
         self.rumors_enabled = rumors_enabled
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
-                expected_revision: int) -> LivingAdvanceResult:
+                expected_revision: int,
+                player_observer_id: str | None = None) -> LivingAdvanceResult:
         self.clock._require_session(world_id)
         if type(seconds) is not int or seconds <= 0:
             raise ValueError('seconds must be a positive integer')
@@ -141,6 +142,12 @@ class LivingWorldEngine:
         if original.revision != expected_revision:
             from .store import RevisionConflict
             raise RevisionConflict(f'expected {expected_revision}, current {original.revision}')
+        if player_observer_id is not None:
+            if (type(player_observer_id) is not str
+                    or not command_id.startswith('player-wait:')
+                    or player_observer_id not in original.entities
+                    or original.entities[player_observer_id]['controller'] != 'player'):
+                raise PermissionError('witness must be an existing player during their wait')
         target = original.time + seconds
         current = original
         events: list[DomainEvent] = []
@@ -151,6 +158,7 @@ class LivingWorldEngine:
         social_messages: list[str] = []
         assistance_transitions: list[tuple[str, str]] = []
         meals_consumed: list[str] = []
+        recorded_player_sighting = False
         gathered_actions: list[str] = []
         knowledge_shares: list[str] = []
 
@@ -273,6 +281,22 @@ class LivingWorldEngine:
                     if quantity is None:
                         continue
                     meal_id = _meal_id(npc_id, current.time)
+                    # PLAY-16: record an adjacent verified sighting only when
+                    # a human player is actually present at this meal's tick.
+                    if player_observer_id is not None:
+                        from .movement import _in_transit, _visible
+                        visible_state = current.to_dict()
+                        place = visible_state['entities'][player_observer_id]['location_id']
+                        if (not _in_transit(visible_state, player_observer_id)
+                                and not _in_transit(visible_state, npc_id)
+                                and place == visible_state['entities'][npc_id]['location_id']):
+                            append(DomainEvent('PlayerObserved', player_observer_id,
+                                               'player witnessed a nearby NPC eating',
+                                               current.time,
+                                               {'location_id': place,
+                                                'occupants': _visible(visible_state, place)}),
+                                   movement_capability=True)
+                            recorded_player_sighting = True
                     append(DomainEvent('NPCFoodConsumed', npc_id,
                                        'NPC ate owned food to relieve personal hunger',
                                        current.time,
@@ -459,7 +483,8 @@ class LivingWorldEngine:
         # A complete unit of work: no partial SQLite commits for multiple NPCs.
         committed = self.store.append(world_id, command_id, expected_revision, events,
                                       clock_authorized=True, npc_authorized=True,
-                                      action_authorized=True, movement_authorized=self.navigation_enabled,
+                                      action_authorized=True,
+                                      movement_authorized=(self.navigation_enabled or recorded_player_sighting),
                                       social_authorized=(self.social_enabled or self.rumors_enabled),
                                       assistance_authorized=self.assistance_enabled,
                                       consumption_authorized=self.consumption_enabled,
