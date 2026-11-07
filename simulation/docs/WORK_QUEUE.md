@@ -790,3 +790,29 @@ and must not be described as having passed the cited earlier CI itself.
 `03-A7c` and `03-A` remain OPEN; `P0_PRODUCTION_NOT_APPROVED` and
 `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. No change to `main` or
 canonical Carlos story files.
+
+
+## PLAY-09 — Real player-to-NPC conversation journal (planned 2026-11-07)
+
+**Analysis before implementation:** The player's local social speech and
+NPC's deterministic recorded reaction already form a durable social-message
+ledger. The narrator currently receives no read-only history of those
+conversations, so it risks inventing dialogue continuity after travel or
+restart. A verified, player-bound event projection is independent of the
+blocked 03-A7c medical symptom source and requires no schema/rules change.
+
+| Task | Scope and dependency | Route | Status |
+|---|---|---|---|
+| PLAY-09a | Player-owned, received-only conversation history, ordered by event sequence, max 20; PLAY-08 green | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-09b | Revision-consistent narrator handoff: last five authentic conversations; PLAY-09a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-09c | \`conversations\` read-only command on both disposable CLIs; PLAY-09a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-09d | NPC privacy/independent reactions/invalid attempts/duplicates/travel/tamper/reopen and CLI tests; PLAY-09a-c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-09e | Guide and exact-SHA dual-Python full CI technical closure; PLAY-09d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Guardrails:** No invented NPC dialogue or objective trust report; only
+the player's own authored text and proven reaction categories. No raw NPC
+message ledger, hidden NPC motives, hearsay reclassification, speculative
+knowledge, new world events or read-side checkpoints. State.revision must
+match verified replay; store gate remains local and trusted (P0 OPEN).
+Schema 33 / Rules 43, 03-A7c/03-A OPEN, external review deferred.
+No \`main\` merge or canonical story modifications. Pending CI verification.

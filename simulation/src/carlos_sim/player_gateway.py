@@ -198,6 +198,20 @@ class PlayerGateway:
         return PlayerCommandResult(state.world_id, state.time, state.revision,
                                    'gifts', details)
 
+    def conversations(self, limit: int = 20) -> PlayerCommandResult:
+        """Only this player's completed, local speech and recorded NPC reaction.
+
+        An NPC's reaction is not a verbatim quotation, an objective statement
+        of trust, or access to the NPC's private beliefs or intentions.
+        """
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError('conversation history limit must be an integer from 1 to 20')
+        state = self._state()
+        from .player_conversations import player_conversation_history
+        details = player_conversation_history(self.store, state, self.player_id, limit)
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'conversations', details)
+
     def offers(self) -> PlayerCommandResult:
         """Show only physically actionable, posted, local public quotes."""
         state = self._state()
