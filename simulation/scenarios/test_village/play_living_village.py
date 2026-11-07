@@ -18,7 +18,7 @@ from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 from living_player_fixture import WORLD, living_player_gateway, setup_living_market_world
 
 HELP = ("scene | look | status | remember | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | buy <offer> <qty> <price> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -74,12 +74,13 @@ def main() -> None:
                         result = gateway.offers()
                     elif verb == "purchases" and not args:
                         result = gateway.purchases()
-                    elif verb in ("look", "move", "wait", "talk", "buy"):
+                    elif verb in ("look", "move", "wait", "talk", "buy", "give"):
                         if (verb == "look" and args or
                             verb == "move" and len(args) != 1 or
                             verb == "wait" and len(args) != 1 or
                             verb == "talk" and len(args) < 3 or
-                            verb == "buy" and len(args) != 3):
+                            verb == "buy" and len(args) != 3 or
+                            verb == "give" and len(args) != 3):
                             print("Invalid command arguments. Type help.")
                             continue
                         count += 1
@@ -98,6 +99,10 @@ def main() -> None:
                             result = gateway.buy(args[0], int(args[1]), int(args[2]),
                                                  command_id=cid,
                                                  expected_revision=revision)
+                        elif verb == "give":
+                            result = gateway.give(args[0], args[1], int(args[2]),
+                                                  command_id=cid,
+                                                  expected_revision=revision)
                         else:
                             result = gateway.interact(
                                 args[0], kind=args[1], text=" ".join(args[2:]),
