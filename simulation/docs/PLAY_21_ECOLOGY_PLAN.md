@@ -1,6 +1,6 @@
 # PLAY-21 — Food ecology: integrated NPC hunger, autonomous foraging and scarcity
 
-Date: 2026-11-07. Status: IN_PROGRESS / CI_PENDING.
+Date: 2026-11-07. Status: CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER.
 Base: PLAY-20 @ a0c091e36cb3e95ea41cd99218c8d74efec3fe91.
 Branch: `simulation-engine-phase-play-21-ecology`.
 Scope: disposable seven-NPC village only; no `main`, original story, schema/rules, production P0, or health/death mechanics.
@@ -20,3 +20,11 @@ NPC action duration is 120 logical seconds vs human forage 60 seconds; earlier p
 
 ## Gate
 Require a witnessed real autonomous forage outcome, actual NPC meals, finite conservation, two divergent player choices, persistent same-file restart and safe player projection. Dual Python CI success is the closure condition. All external review/P0, 03-A, 03-A7c and PLAY-14g remain open.
+
+## Verified technical closure
+
+- Tested code SHA: `0c4141ca09771033eee6e7b5f413e77f981a9bc8`.
+- [Full CI run 42402278581](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42402278581): 1,481 passed per Python 3.10/3.13; SUCCESS on the exact tested SHA.
+- [Targeted run 42402278675](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42402278675): 51 passed per Python version plus two real 360-second ecology paths; SUCCESS on the same SHA.
+- Real audit: observe = 4 NPC wild-food collections, 7 NPC meals, 0 failed collections; compete = 3 NPC collections, 6 NPC meals, 1 failed collection; 7 NPC trips and 7 help records in each run. Total finite food is conserved: 8 initial = consumed + owned + wild left.
+- Report: [PLAY_21_ECOLOGY_REPORT.md](PLAY_21_ECOLOGY_REPORT.md). Code unchanged after CI; remaining production P0, medical branches and independent external review remain open.
