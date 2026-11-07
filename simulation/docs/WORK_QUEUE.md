@@ -908,7 +908,7 @@ commit follows the tested SHA and is not itself the quoted code CI run.
 Carlos could not physically validate a claim or collect existing natural food.
 The pre-existing NPC investigation/gathering event is NOT a player action.
 PLAY-11 adds qualitative on-site survey and a player-bound one-unit pickup
-of visible finite \`wild_food\` into explicitly initialized owner \`food\`.
+of visible finite `wild_food` into explicitly initialized owner `food`.
 The gateway groups a local player observation and pickup in one atomic
 SQLite command; no hidden NPC inventory, hunger cure, XP, or food minting.
 The new persisted event requires Schema **34** / Rules **44**. Independent of
@@ -916,17 +916,53 @@ The new persisted event requires Schema **34** / Rules **44**. Independent of
 
 | Task | Scope and dependency | Route | State |
 |---|---|---|---|
-| PLAY-11a | Existing PLAY-10 green; present-only, qualitative local food check | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-11b | One-unit PlayerFoodCollected reducer, active local player and source conservation | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-11c | Opt-in fixture initializes player food=0, leaves older fixtures untouched | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-11d | CLI checkfood/forage and revision-coherent narrator handoff | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-11e | Many-NPC, anti-remote, anti-forgery, conservation, SQLite and two-CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-11f | User guide and exact-SHA full dual-Python CI, compatibility version pins | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-11a | Existing PLAY-10 green; present-only, qualitative local food check | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-11b | One-unit PlayerFoodCollected reducer, active local player and source conservation | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-11c | Opt-in fixture initializes player food=0, leaves older fixtures untouched | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-11d | CLI checkfood/forage and revision-coherent narrator handoff | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-11e | Many-NPC, anti-remote, anti-forgery, conservation, SQLite and two-CLI tests | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-11f | User guide and exact-SHA full dual-Python CI, compatibility version pins | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Limits:** visible, immediately pickable food only; timed searching/hunting
 and player hunger relief are NOT implemented. No natural regeneration,
 automatic player actions, remote location knowledge or RPG inventory.
-No main merge or original story mutation. \`03-A7c\` / \`03-A\` OPEN;
-\`P0_PRODUCTION_NOT_APPROVED\` and
-\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\` remain. Do not close until exact
+No main merge or original story mutation. `03-A7c` / `03-A` OPEN;
+`P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. Do not close until exact
 code SHA passes full Python 3.10 + 3.13 matrix.
+
+### PLAY-11 verified technical closure (2026-11-07)
+
+All six PLAY-11a–PLAY-11f tasks **CLOSED_TECHNICALLY** on exact final
+code-and-test SHA `ed1385f8c18123498a534b101ad268331eac9fbb`.
+[GitHub Actions run 42361210471](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42361210471)
+finished **SUCCESS**, with **1,356 passed on Python 3.10** and **1,356 passed
+on Python 3.13**. Compile, historical rules parity, prior saved-world
+rejection, CLI, snapshot/reopen and integrity gates all passed.
+
+The new `checkfood` action reveals only a qualitative on-site deposit;
+`forage` groups an authorized player observation with exactly one
+`PlayerFoodCollected` event, transferring one initialized natural food
+unit from the player's physical location to its initialized own `food`
+balance, atomically. There is no time cost, player hunger/health effect,
+regrowth, XP or automatic RPG inventory mapping. Remote site stock, private
+NPC resources and unknown balances remain inaccessible.
+
+The source-conserving reducer is replay-safe. Dedicated acceptance tests
+cover live Basim/Salma/Omar/Adel/Nora/Huda NPC coexistence, remote/false
+actor/quantity rejection, missing deposits, depleted stock, travel time,
+duplicate/stale commands, active-session/action capability, local observation
+precondition, SQLite snapshots and both real CLIs across process restart.
+
+Initial CI run 42360856576 on `3f19531d` **FAILED**: test expectations
+still pinned to Schema 33 / Rules 43 and both CLI bootstraps referenced an
+old fixture name. These were repaired across 18 files. No failing run was
+used as closure evidence. The accepted tested SHA above uses **Schema 34 /
+Rules 44**, and updates only *current* version assertions: all frozen
+historical compatibility gates remain.
+
+**Open:** `03-A7c`, parent `03-A`,
+`P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. No `main` merge or canonical story
+edits. The following documentation-only closure commit is distinct from
+the exact tested code SHA; it is not claimed CI-verified by that run.
