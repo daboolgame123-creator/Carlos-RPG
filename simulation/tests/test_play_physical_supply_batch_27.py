@@ -98,7 +98,17 @@ def test_grain_waits_at_farm_then_is_carried_to_bakery_before_baking(tmp_path):
         state = tick(db, engine, DAY + 200, "day-one").state
         assert state.farm_plots["farm"]["matured"] == 1
         assert state.resources["bakery"]["grain"] == 0
-        assert state.resources["farm"]["grain"] == 1, {"farm":state.resources["farm"],"plot":state.farm_plots["farm"],"jobs":dict(state.production_jobs),"courier":state.supply_circuits.get("huda"),"travels":dict(state.travels)}
+        if state.resources["farm"]["grain"] != 1:
+            import json
+            snap = state.to_dict()
+            pytest.fail("PLAY27_FARM_DIAGNOSTIC=" + json.dumps({
+                "farm": snap["resources"]["farm"],
+                "plot": snap["farm_plots"]["farm"],
+                "jobs": snap["production_jobs"],
+                "courier": snap["supply_circuits"]["huda"],
+                "huda": snap["npcs"]["huda"],
+                "travels": list(snap["travels"].values())[-8:],
+            }, sort_keys=True))
         assert not any(j["recipe_id"] == "grain-to-bread"
                        for j in state.production_jobs.values())
         assert db.verify(WORLD).to_dict() == state.to_dict()
@@ -134,9 +144,9 @@ def test_seven_characters_three_days_and_reality_counterfactuals(
     assert result["logical_seconds"] > 3 * DAY
     assert result["verified_replay"]
     assert stats["npcs"] == 7
-    assert stats["grown"] == grown, stats
+    assert stats["grown"] == grown, __import__("json").dumps(stats, sort_keys=True)
     assert stats["harvests"] == harvests
-    assert stats["bakes"] == bakes, stats
+    assert stats["bakes"] == bakes, __import__("json").dumps(stats, sort_keys=True)
     assert stats["copper"] == 12
     assert stats["player_issued_courier_orders"] == 0
     if opts == {}:
