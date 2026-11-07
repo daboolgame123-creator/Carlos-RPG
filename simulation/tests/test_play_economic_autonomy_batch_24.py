@@ -144,6 +144,7 @@ def test_entire_chain_is_npc_autonomous_during_same_living_world_wait(tmp_path):
     ({"copper": 1}, 1, 1, 0),
     ({"seller": False}, 1, 0, 0),
     ({"worker_shift": (200, 600)}, 0, 0, 0),
+    ({"worker_shift": (0, 60)}, 0, 0, 0),
     ({"worker_fatigue": 70}, 0, 0, 0),
     ({"seller_fatigue": 80}, 1, 0, 0),
     ({"buyer_site": "home"}, 1, 1, 0),
