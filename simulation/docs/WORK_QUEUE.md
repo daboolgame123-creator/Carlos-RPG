@@ -379,14 +379,50 @@ isolated engine services.** No change to the canonical Carlos story.
 
 | ID | Scope | Dependencies | Classification | Initial status | Acceptance |
 |---|---|---|---|---|---|
-| PLAY-02a | Trusted disposable multi-location 7-NPC + Carlos setup with initialized action counters | Schema32/Rules42 and existing player gateway | CHAT_EXECUTABLE | PLANNED | Seven named NPCs, actual roads and simulated travel; no invented private NPC memory, no unbacked stock |
-| PLAY-02b | Explicit wait advances self-directed NPC schedules while Carlos remains player-controlled | PLAY-02a + LivingWorldEngine | CHAT_EXECUTABLE | PLANNED | At least two NPC actions progress, player never auto-acts, atomic event replay and deterministic time |
-| PLAY-02c | New self-contained local living-world CLI with scene, look, status, remember, handoff, talk, move, wait | PLAY-02a–b, PLAY-01a | CHAT_EXECUTABLE | PLANNED | No model API, no automatic world-time progress while paused; player-only handoff |
-| PLAY-02d | Multi-NPC integration tests including forbidden remote talk, travel, privacy, NPC autonomy, replay, and real CLI subprocess | PLAY-02a–c | CHAT_EXECUTABLE | PLANNED | Full final-SHA Python 3.10/3.13 CI success; no default fixture changes |
-| PLAY-02e | Human-readable Windows trial guide and safety limits | PLAY-02c | CHAT_EXECUTABLE | PLANNED | Clear run commands, explicitly disposable, P0 unchanged |
+| PLAY-02a | Trusted disposable multi-location 7-NPC + Carlos setup with initialized action counters | Schema32/Rules42 and existing player gateway | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Seven named NPCs, actual roads and simulated travel; no invented private NPC memory, no unbacked stock |
+| PLAY-02b | Explicit wait advances self-directed NPC schedules while Carlos remains player-controlled | PLAY-02a + LivingWorldEngine | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | At least two NPC actions progress, player never auto-acts, atomic event replay and deterministic time |
+| PLAY-02c | New self-contained local living-world CLI with scene, look, status, remember, handoff, talk, move, wait | PLAY-02a–b, PLAY-01a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | No model API, no automatic world-time progress while paused; player-only handoff |
+| PLAY-02d | Multi-NPC integration tests including forbidden remote talk, travel, privacy, NPC autonomy, replay, and real CLI subprocess | PLAY-02a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Full final-SHA Python 3.10/3.13 CI success; no default fixture changes |
+| PLAY-02e | Human-readable Windows trial guide and safety limits | PLAY-02c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Clear run commands, explicitly disposable, P0 unchanged |
 
 **Dependency gates:** all PLAY-02 tasks are independent of 03-A7c medical
 symptom provenance; do not change `main` or `AGENTS.md` here. Gate closure
 on the exact final SHA, not an earlier green test run. Distinguish NPC
 autonomy from narrative authorship: only actual engine events advance
 the characters and the human decides Carlos's actions.
+
+## PLAY-02 — closure of disposable autonomous village batch (2026-11-07)
+
+**Five tasks `PLAY-02a`–`PLAY-02e` `CLOSED_TECHNICALLY`, code SHA
+`898bb448b7b6d25585df45b1a13e6a53efa78b97`.**
+Verified in [full GitHub Actions 42317917984](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42317917984):
+**1,218 passed on Python 3.10 and 1,218 passed on Python 3.13**;
+both matrix jobs SUCCESS. Full CI includes historic version/parity gates.
+
+- PLAY-02a: fresh, trusted, isolated, non-canonical local world with Carlos,
+  seven autonomous NPCs (Basim, Salma, Adel, Nora, Huda, Omar, Layla),
+  three sites, timed actual roads, only explicitly initialized abstract
+  action counters, and demonstrative RPG profile.
+- PLAY-02b: `PlayerGateway` drives `LivingWorldEngine` with opt-in
+  NPC navigation and local social autonomy when **Carlos's human chooses**
+  `wait`. NPCs can work/rest/travel independently; Carlos is never given
+  an autonomous NPC planner and elapsed world time never runs in background.
+- PLAY-02c: `play_living_village.py` presents `scene`, `look`,
+  `status`, `remember`, `handoff`, `move`, `talk` and `wait` in an
+  offline disposable terminal session. Player-only handoff remains factual
+  and cannot expose remote characters or NPC private medical/intent data.
+- PLAY-02d: seven integration tests verify physical road time, lack of
+  teleportation, player ownership, independent decisions, remote-talk
+  rejection, exact SQLite snapshot/reopening, deterministic two-file
+  simulation and real subprocess interaction. All in the final SHA's
+  1,218-test full regression.
+- PLAY-02e: [Windows hands-on guide](PLAYABLE_BATCH_02_LIVING_VILLAGE.md)
+  written, no API or provider connection required.
+
+**Explicit limits:** disposable experiment only; temporary SQLite is
+discarded when CLI exits. This is not original Carlos story import, nor
+production P0 restore approval, nor a medical observable symptom source.
+`03-A7c` / `03-A` remain OPEN, `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`
+and `P0_PRODUCTION_NOT_APPROVED`; `main` unchanged. No Schema or Rules
+version changes. Any future batch must classify independent work first,
+plan, execute, exercise NPC tests, and validate exact final SHA.
