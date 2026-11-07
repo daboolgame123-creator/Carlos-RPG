@@ -207,7 +207,8 @@ def test_history_only_actual_meals_and_readonly_handoff(tmp_path):
         assert view["player_meals"] == a
         assert view["player_supplies"]["balances"]["bread"] == 1
         assert "npc_temperaments" not in json.dumps(view)
-        assert "hunger" not in json.dumps(view)
+        assert view["player_needs"]["hunger"] == "not_modeled"
+        assert "hunger" not in json.dumps(view["player_status"])
         assert db.verify(WORLD).to_dict() == before
 
 

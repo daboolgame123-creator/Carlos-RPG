@@ -168,10 +168,16 @@ def test_live_production_is_visible_but_goods_recipe_and_private_npc_data_are_no
                       expected_revision=db.load("test").revision)
         seen = gw.inspect()
         assert seen.details["activities"] == ({"actor_id": "basim", "activity": "producing"},)
-        exposed = json.dumps(player_handoff(gw))
+        view = player_handoff(gw)
+        exposed = json.dumps(view)
         assert "producing" in exposed
+        assert view["player_needs"]["owned_edible"]["bread"] is None
+        # Reporting unknown own bread does not reveal NPC production output.
+        assert '"bread"' not in json.dumps({
+            key: value for key, value in view.items() if key != "player_needs"
+        })
         for private in ('"input_before"', '"output_amount"', '"recipe_id"',
-                        '"production_jobs"', '"grain"', '"oven"', '"bread"'):
+                        '"production_jobs"', '"grain"', '"oven"'):
             assert private not in exposed
         clock.advance("test", seconds=40, command_id="job-due",
                       expected_revision=db.load("test").revision)
