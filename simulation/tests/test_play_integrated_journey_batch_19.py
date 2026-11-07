@@ -10,8 +10,13 @@ import pytest
 
 from carlos_sim import SQLiteEventStore
 from carlos_sim.resumable_play import ResumableTestSession
-from living_player_fixture import WORLD, PLAYER, living_player_gateway
-from play_integrated_journey import run_integrated_journey
+
+# The full regression suite supplies src:tests only. Resolve the disposable
+# scenario by its checked-in path, not a workflow-specific PYTHONPATH.
+SIM = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(SIM / "scenarios" / "test_village"))
+from living_player_fixture import WORLD, PLAYER, living_player_gateway  # noqa: E402
+from play_integrated_journey import run_integrated_journey  # noqa: E402
 
 
 def _run(tmp_path, label="village"):
