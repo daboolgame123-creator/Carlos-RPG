@@ -37,3 +37,5 @@ jobs:
             tests/test_production_02b.py \
             tests/test_market_02c.py \
             tests/test_consumption.py
+      - name: Run real seven-NPC village trials
+        run: PYTHONPATH=src:scenarios/test_village python -u scenarios/test_village/play_economic_autonomy.py
