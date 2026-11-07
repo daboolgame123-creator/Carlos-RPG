@@ -115,6 +115,11 @@ def physical_totals(state) -> dict[str, int]:
               + stock["square"]["food"]
               + sum(stock[who]["food"] for who, *_ in PEOPLE)
               + sum(meal["quantity"] for meal in state.consumptions.values()))
+    # The production reducer consumes inputs at job START and delivers output
+    # at its scheduled completion. Count physically reserved in-flight stock.
+    edible += sum(state.production_recipes[job["recipe_id"]]["input_amount"]
+                  for job in state.production_jobs.values()
+                  if job["status"] == "running")
     copper = (stock["square"]["coin_copper"] + stock["adel"]["coin_copper"]
               + stock[PLAYER]["coin_copper"])
     return {"crop_food_equivalent": edible, "copper": copper}
