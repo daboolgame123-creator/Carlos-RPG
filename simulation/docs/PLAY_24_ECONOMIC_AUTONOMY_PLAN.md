@@ -1,6 +1,8 @@
 # PLAY-24 — autonomous local production and buying (implementation plan)
 
-**Status:** IN_PROGRESS / not technically closed. **Base:** PLAY-23 `aea55e50`.
+**Status:** CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER (verified 2026-11-07). **Base:** PLAY-23 `aea55e50`.
+**Validated source SHA:** `3772434491259610a373907db3acdae5bc36bb36`. Targeted CI: [42413896793](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42413896793) — 89 passed each Python; full CI: [42413896808](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42413896808) — 1,527 passed each Python.
+**Closure report:** [PLAY_24_ECONOMIC_AUTONOMY_REPORT.md](PLAY_24_ECONOMIC_AUTONOMY_REPORT.md). P0 and external review remain open.
 **Branch:** `simulation-engine-phase-play-24-economic-autonomy`. No changes to `main` or canonical story.
 
 ## Baseline / architecture
