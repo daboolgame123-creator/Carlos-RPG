@@ -77,3 +77,35 @@ def living_player_gateway(store, clock) -> PlayerGateway:
             social_enabled=True,
         ),
     )
+
+
+def setup_living_market_world(store) -> None:
+    """Opt-in, disposable physical market; preserve original plain fixture.
+
+    Salma initially OWNS three test loaves, Carlos ten copper coins,
+    and both ends of the atomic exchange have initialized zero balances.
+    Nothing is minted when the player buys, and nobody receives free wages
+    from an autonomous 'work' counter. This is not RPG equipment.
+    """
+    from carlos_sim import NPCMarketService, TimeEngine
+    setup_living_player_world(store)
+    state = store.load(WORLD)
+    assets = (
+        (PLAYER, "coin_copper", 10), (PLAYER, "bread", 0),
+        ("salma", "coin_copper", 0), ("salma", "bread", 3),
+    )
+    store.append(WORLD, "living-market-initial-balances", state.revision, [
+        _fixture("ResourceChanged", {
+            "owner_id": owner, "resource": item, "previous": None,
+            "current": qty, "source": "initialization",
+        }) for owner, item, qty in assets
+    ], bootstrap=True)
+    clock = TimeEngine(store)
+    clock.open_session(WORLD)
+    try:
+        NPCMarketService(store, clock).post(
+            WORLD, "salma", "salma", "square", "salma-bread",
+            "bread", 3, "coin_copper", 2,
+            expected_revision=store.load(WORLD).revision)
+    finally:
+        clock.close_session(WORLD)
