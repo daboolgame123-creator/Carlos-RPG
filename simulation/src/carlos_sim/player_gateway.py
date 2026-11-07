@@ -250,6 +250,38 @@ class PlayerGateway:
             'total_paid': receipt['total_paid'],
         })
 
+    def give(self, recipient_id: str, resource: str, quantity: int, *,
+             command_id: str, expected_revision: int) -> PlayerCommandResult:
+        """Offer a real owned resource to a nearby NPC who will accept it.
+
+        Acceptance uses the NPC's existing social response to help offers.
+        Neither trust nor health/hunger is changed by this transfer alone.
+        """
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot hand over goods while travelling')
+        from .market import _id, MAX_QUANTITY
+        if (not _id(recipient_id) or not _id(resource)
+                or type(quantity) is not int
+                or not 1 <= quantity <= MAX_QUANTITY):
+            raise ValueError('valid NPC, resource and quantity 1..1000 required')
+        committed = self.store.append(
+            self.world_id, 'player-gift:' + cid, expected_revision,
+            [DomainEvent(
+                'PlayerGiftDelivered', self.player_id,
+                'human deliberately offered a physical resource to a nearby NPC',
+                state.time, {
+                    'recipient_id': recipient_id, 'resource': resource,
+                    'quantity': quantity,
+                },
+            )], gift_authorized=True)
+        return PlayerCommandResult(
+            committed.world_id, committed.time, committed.revision, 'gifted',
+            {'recipient_id': recipient_id, 'resource': resource,
+             'quantity': quantity},
+        )
+
     def move(self, route_id: str, *, command_id: str,
              expected_revision: int) -> PlayerCommandResult:
         """Start an adjacent journey; arrival occurs only when its due event fires."""
