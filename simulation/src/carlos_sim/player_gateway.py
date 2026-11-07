@@ -140,6 +140,86 @@ class PlayerGateway:
                                    'rpg_status', {'configured': True,
                                                   'profile': _thaw(profile)})
 
+    def supplies(self) -> PlayerCommandResult:
+        """Show only initialized, entity-owned goods/money of this player.
+
+        The resource ledger is NOT the unimplemented RPG equipment/inventory
+        system. Missing owned quantities are unknown, not fabricated zero.
+        """
+        state = self._state()
+        own = state.resources.get(self.player_id, {})
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'supplies', {
+            'balances': {name: qty for name, qty in sorted(own.items())
+                         if type(qty) is int and qty >= 0},
+        })
+
+    def offers(self) -> PlayerCommandResult:
+        """Show only physically actionable, posted, local public quotes."""
+        state = self._state()
+        from .market import _balance, _present
+        from .movement import _in_transit
+        quotes = []
+        if player_travel_signal(state, self.player_id) is None:
+            site = state.entities[self.player_id]['location_id']
+            raw = state.to_dict()
+            for ident, o in sorted(state.market_offers.items()):
+                if (o['site_id'] != site or o['status'] != 'open'
+                        or not _present(raw, o['seller_id'], site)):
+                    continue
+                stock = state.resources.get(o['stock_owner_id'], {}).get(o['resource'])
+                available = min(o['remaining'], stock) if _balance(stock) else 0
+                if available > 0:
+                    quotes.append({
+                        'offer_id': ident, 'seller_id': o['seller_id'],
+                        'resource': o['resource'], 'available': available,
+                        'payment_resource': o['payment_resource'],
+                        'unit_price': o['unit_price'],
+                    })
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'offers', {'offers': tuple(quotes)})
+
+    def buy(self, offer_id: str, quantity: int, expected_unit_price: int, *,
+            command_id: str, expected_revision: int) -> PlayerCommandResult:
+        """Player-authorized, local, finite transfer from one posted NPC offer.
+
+        Require a genuine human-bound command and exact observed quote terms.
+        The event reducer enforces stock, coins, seller presence and conservation.
+        """
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot purchase while travelling')
+        from .market import MAX_QUANTITY, MAX_PRICE, _id
+        from hashlib import sha256
+        if (not _id(offer_id) or type(quantity) is not int
+                or not 1 <= quantity <= MAX_QUANTITY
+                or type(expected_unit_price) is not int
+                or not 1 <= expected_unit_price <= MAX_PRICE):
+            raise ValueError('valid offer, positive quantity and exact unit price required')
+        trade_id = 'player-' + sha256(
+            (self.player_id + ':' + cid).encode('utf-8')
+        ).hexdigest()[:40]
+        committed = self.store.append(
+            self.world_id, 'player-buy:' + cid, expected_revision,
+            [DomainEvent(
+                'MarketTradeExecuted', self.player_id,
+                'human player accepted a known local posted market offer',
+                state.time, {'id': trade_id, 'buyer_id': self.player_id,
+                             'offer_id': offer_id, 'quantity': quantity,
+                             'expected_unit_price': expected_unit_price},
+            )], market_authorized=True)
+        receipt = committed.market_trades[trade_id]
+        return PlayerCommandResult(committed.world_id, committed.time,
+                                   committed.revision, 'purchased', {
+            'trade_id': trade_id,
+            'offer_id': offer_id,
+            'resource': receipt['resource'],
+            'quantity': receipt['quantity'],
+            'payment_resource': receipt['payment_resource'],
+            'total_paid': receipt['total_paid'],
+        })
+
     def move(self, route_id: str, *, command_id: str,
              expected_revision: int) -> PlayerCommandResult:
         """Start an adjacent journey; arrival occurs only when its due event fires."""
