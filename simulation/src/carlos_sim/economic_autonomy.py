@@ -96,6 +96,9 @@ def choose_local_production(state: WorldState, npc_id: str) -> ProductionIntent 
     for recipe_id, recipe in sorted(state.production_recipes.items()):
         if recipe["site_id"] != here or recipe["role"] != npc["role"]:
             continue
+        remaining_shift = (profile["work_end"] - state.time % DAY_SECONDS) % DAY_SECONDS
+        if recipe["duration_seconds"] > remaining_shift:
+            continue
         stock = state.resources.get(here, {})
         input_amount = stock.get(recipe["input_resource"])
         output_amount = stock.get(recipe["output_resource"])
