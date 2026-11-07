@@ -70,16 +70,23 @@ def setup_living_player_world(store, *, npc_initial_hunger: int = 20) -> None:
     store.append(WORLD, "living-fixture", 0, events, bootstrap=True)
 
 
-def living_player_gateway(store, clock, *, npc_survival_demo: bool = False) -> PlayerGateway:
-    """Human-controlled Carlos; optional existing NPC hunger rules only.
+def living_player_gateway(store, clock, *, npc_survival_demo: bool = False,
+                          npc_ecology_demo: bool = False) -> PlayerGateway:
+    """Human-controlled Carlos; opt-in survival/food ecology from marked worlds.
 
-    The opt-in must match a verified world's bootstrap marker; cannot be
-    enabled on a normal/older save, and does not affect player RPG health.
+    Existing PLAY-15/20 survival mode remains identical when ecology is off.
+    Ecology combines already-existing NPC policies, never player RPG health.
     """
     if type(npc_survival_demo) is not bool:
         raise ValueError("npc_survival_demo must be a boolean")
     if npc_survival_demo != is_living_npc_survival_world(store):
         raise ValueError("NPC survival mode must match the dedicated world bootstrap")
+    if type(npc_ecology_demo) is not bool:
+        raise ValueError("npc_ecology_demo must be a boolean")
+    if npc_ecology_demo != is_living_npc_ecology_world(store):
+        raise ValueError("NPC ecology mode must match the dedicated world bootstrap")
+    if npc_ecology_demo and not npc_survival_demo:
+        raise ValueError("NPC ecology requires the survival mode")
     return PlayerGateway(
         store, clock, world_id=WORLD, player_id=PLAYER,
         engine=LivingWorldEngine(
@@ -87,6 +94,12 @@ def living_player_gateway(store, clock, *, npc_survival_demo: bool = False) -> P
             social_enabled=True,
             consumption_enabled=npc_survival_demo,
             survival_enabled=npc_survival_demo,
+            gathering_enabled=npc_ecology_demo,
+            foraging_enabled=npc_ecology_demo,
+            knowledge_enabled=npc_ecology_demo,
+            food_navigation_enabled=npc_ecology_demo,
+            scarcity_enabled=npc_ecology_demo,
+            assistance_enabled=npc_ecology_demo,
         ),
     )
 
@@ -176,4 +189,28 @@ def is_living_npc_survival_world(store) -> bool:
     return store.db.execute(
         "SELECT 1 FROM commands WHERE world_id=? AND command_id=?",
         (WORLD, "living-survival-owned-npc-food"),
+    ).fetchone() is not None
+
+
+def setup_living_npc_ecology_world(store) -> None:
+    """PLAY-21 experimental food ecology, separate from PLAY-15/20 worlds.
+
+    Bakery has an explicit EMPTY natural-food deposit, not an unknown balance.
+    The unique bootstrap command is the durable, test-only ecology mode marker.
+    No new food or copper is added, and old fixture modes are unaffected.
+    """
+    setup_living_npc_survival_world(store)
+    state = store.load(WORLD)
+    store.append(WORLD, "living-ecology-bakery-empty-food", state.revision,
+                 [_fixture("ResourceChanged", {
+                     "owner_id": "bakery", "resource": "wild_food",
+                     "previous": None, "current": 0,
+                     "source": "initialization",
+                 })], bootstrap=True)
+
+
+def is_living_npc_ecology_world(store) -> bool:
+    return store.db.execute(
+        "SELECT 1 FROM commands WHERE world_id=? AND command_id=?",
+        (WORLD, "living-ecology-bakery-empty-food"),
     ).fetchone() is not None
