@@ -207,7 +207,11 @@ def test_history_only_actual_meals_and_readonly_handoff(tmp_path):
         assert view["player_meals"] == a
         assert view["player_supplies"]["balances"]["bread"] == 1
         assert "npc_temperaments" not in json.dumps(view)
-        assert "hunger" not in json.dumps(view)
+        # PLAY-14 explicitly labels player hunger *not modeled*; this is
+        # not an NPC private need or a fabricated hunger value.
+        assert view["player_needs_evidence"]["hunger"]["mode"] == "not_modeled"
+        assert "hunger_seconds" not in json.dumps(view)
+        assert "npc_temperaments" not in json.dumps(view)
         assert db.verify(WORLD).to_dict() == before
 
 

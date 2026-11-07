@@ -82,15 +82,20 @@ def test_elapsed_time_is_world_time_not_wall_clock(tmp_path):
 def test_second_meal_restarts_timer_only_after_actual_consumption(tmp_path):
     db, clock, gateway = demo(tmp_path)
     with db:
-        buy_and_eat(db, gateway, "a")
+        # Buy both units while Salma is physically present at t=0.
+        # She is autonomous and may leave the market before t=70.
+        gateway.buy("salma-bread", 2, 2, command_id="buy-two",
+                    expected_revision=db.load(WORLD).revision)
+        assert gateway.meals().details["total"] == 0
+        gateway.eat("bread", command_id="eat-a",
+                    expected_revision=db.load(WORLD).revision)
         gateway.wait(70, command_id="advance",
                      expected_revision=db.load(WORLD).revision)
         previous = gateway.needs()
         assert previous.details["hunger"]["seconds_since_last_verified_meal"] == 70
-        # Buying alone does not imply a meal.
-        gateway.buy("salma-bread", 1, 2, command_id="buy-b",
-                    expected_revision=db.load(WORLD).revision)
-        assert gateway.needs().details["hunger"]["seconds_since_last_verified_meal"] == 70
+        # Possessing a second bought loaf doesn't imply it was eaten.
+        assert gateway.supplies().details["balances"]["bread"] == 1
+        assert gateway.meals().details["total"] == 1
         gateway.eat("bread", command_id="eat-b",
                     expected_revision=db.load(WORLD).revision)
         now = gateway.needs()
