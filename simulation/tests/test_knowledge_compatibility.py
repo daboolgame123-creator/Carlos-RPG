@@ -13,8 +13,8 @@ from test_gathering_autonomy import make_world, NAMES
 
 
 def test_schema_and_rules_versions():
-    assert SCHEMA_VERSION == 33
-    assert RULES_VERSION == 43
+    assert SCHEMA_VERSION == 34
+    assert RULES_VERSION == 44
 
 
 def test_flag_off_no_new_knowledge_events_in_rules_26(tmp_path):
@@ -27,8 +27,8 @@ def test_flag_off_no_new_knowledge_events_in_rules_26(tmp_path):
             "r", seconds=120, command_id="go",
             expected_revision=db.load("r").revision)
         s = result.state
-        assert s.rules_version == 43
-        assert s.schema_version == 33
+        assert s.rules_version == 44
+        assert s.schema_version == 34
         # No knowledge events were emitted (flag off).
         payloads = db.db.execute("SELECT payload FROM events WHERE world_id='r'").fetchall()
         for (payload,) in payloads:

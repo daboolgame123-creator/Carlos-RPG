@@ -33,7 +33,7 @@ def main() -> None:
     print(HELP)
     with TemporaryDirectory(prefix="carlos-living-") as temp:
         with SQLiteEventStore(Path(temp) / "living.sqlite") as store:
-            setup_living_market_world(store)
+            setup_living_foraging_world(store)
             clock = TimeEngine(store)
             clock.open_session(WORLD)
             gateway = living_player_gateway(store, clock)

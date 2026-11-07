@@ -58,7 +58,7 @@ def main() -> None:
 
     session = (
         ResumableTestSession.create(
-            args.db, WORLD, PLAYER, setup_living_market_world,
+            args.db, WORLD, PLAYER, setup_living_foraging_world,
             disposable_test=True)
         if args.new else ResumableTestSession.resume(
             args.db, WORLD, PLAYER, disposable_test=True)
