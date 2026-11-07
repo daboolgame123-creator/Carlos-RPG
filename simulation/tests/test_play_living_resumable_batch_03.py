@@ -279,7 +279,7 @@ def test_resume_requires_existing_checkpoint_for_same_revision(tmp_path):
         file, WORLD, PLAYER, setup_living_player_world, disposable_test=True
     ) as session:
         before = session.store.verify(WORLD).to_dict()
-    result = run_cli("quit\\n", file, backups, "--resume",
+    result = run_cli("quit\n", file, backups, "--resume",
                      extra=("--disposable-test",), ok=False)
     assert "existing verified checkpoint" in result.stderr
     with SQLiteEventStore(file) as store:
@@ -294,7 +294,7 @@ def test_new_world_refuses_reused_checkpoint_folder_before_creating_file(tmp_pat
     old = backups / "living-test-rev-0000000000"
     old.mkdir()
     (old / "keep").write_bytes(b"do not overwrite")
-    result = run_cli("quit\\n", file, backups, "--new",
+    result = run_cli("quit\n", file, backups, "--new",
                      extra=("--disposable-test",), ok=False)
     assert "empty dedicated" in result.stderr
     assert not file.exists()
@@ -305,7 +305,7 @@ def test_mismatched_or_corrupted_current_checkpoint_blocks_resume(tmp_path):
     file = tmp_path / "stopped.sqlite"
     backups = tmp_path / "backups"
     backups.mkdir()
-    run_cli("look\\nquit\\n", file, backups, "--new",
+    run_cli("look\nquit\n", file, backups, "--new",
             extra=("--disposable-test",))
     with SQLiteEventStore(file) as store:
         before = store.verify(WORLD).to_dict()
@@ -313,7 +313,7 @@ def test_mismatched_or_corrupted_current_checkpoint_blocks_resume(tmp_path):
     manifest_file = current / "manifest.json"
     original = manifest_file.read_bytes()
     manifest_file.write_bytes(original + b"garbage")
-    result = run_cli("quit\\n", file, backups, "--resume",
+    result = run_cli("quit\n", file, backups, "--resume",
                      extra=("--disposable-test",), ok=False)
     assert result.returncode != 0
     with SQLiteEventStore(file) as store:
