@@ -437,14 +437,56 @@ or undocumented production approval. Existing exact-green baseline
 
 | ID | Deliverable | Prerequisite | Classification | State / acceptance |
 |---|---|---|---|---|
-| PLAY-03a | Bind a *trusted same-session* NPC autonomous engine to `ResumableTestSession` | `PLAY-02`, `01-Z` | `CHAT_EXECUTABLE / PLANNED`: refuse forged gateway, mismatched world/player/store/clock, closed session; no world writes |
-| PLAY-03b | `play_living_resumable.py` local executable with `--new/--resume`, `--disposable-test`, explicit request IDs and immutable checkpoints | PLAY-03a | `CHAT_EXECUTABLE / PLANNED`: actual seven-NPC simulation after restart, `scene/handoff/remember` read-only, repeat commands rejected, unknown args do not change world |
-| PLAY-03c | Deterministic NPC + player multi-process smoke tests | PLAY-03a/b | `CHAT_EXECUTABLE / PLANNED`: Basim/Nora/Salma/Adel/Huda/Omar/Layla, mid-player-travel, no remote speech, SQLite verify/reopen, duplicate IDs, unchanged logical time after shutdown |
-| PLAY-03d | Fault/compatibility/authorization tests for new/resume/checkpoint | PLAY-03b | `CHAT_EXECUTABLE / PLANNED`: reject missing disposable opt-in, wrong save, old version, mismatched checkpoint SHA, no overwrites/no accidental reset; retain P0 gate |
-| PLAY-03e | Concise Windows copy/run/resume tutorial | PLAY-03b | `CHAT_EXECUTABLE / PLANNED`: user can complete real stop/restart with no API; distinguish experimental save from production |
+| PLAY-03a | Bind a *trusted same-session* NPC autonomous engine to `ResumableTestSession` | `PLAY-02`, `01-Z` | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: refuse forged gateway, mismatched world/player/store/clock, closed session; no world writes |
+| PLAY-03b | `play_living_resumable.py` local executable with `--new/--resume`, `--disposable-test`, explicit request IDs and immutable checkpoints | PLAY-03a | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: actual seven-NPC simulation after restart, `scene/handoff/remember` read-only, repeat commands rejected, unknown args do not change world |
+| PLAY-03c | Deterministic NPC + player multi-process smoke tests | PLAY-03a/b | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: Basim/Nora/Salma/Adel/Huda/Omar/Layla, mid-player-travel, no remote speech, SQLite verify/reopen, duplicate IDs, unchanged logical time after shutdown |
+| PLAY-03d | Fault/compatibility/authorization tests for new/resume/checkpoint | PLAY-03b | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: reject missing disposable opt-in, wrong save, old version, mismatched checkpoint SHA, no overwrites/no accidental reset; retain P0 gate |
+| PLAY-03e | Concise Windows copy/run/resume tutorial | PLAY-03b | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: user can complete real stop/restart with no API; distinguish experimental save from production |
   
 Acceptance: targeted scenarios and complete GitHub Actions matrix on **exact
 final implementation SHA**, Python 3.10 and 3.13, with SQLite replay and
 legacy parity gates; no invented success before the CI result. No dependency
 on an unimplemented visible-injury producer. Every new durable change is
 disposable-test only and must not silently allow production games.
+
+## PLAY-03 — verified technical closure of restartable seven-NPC batch (2026-11-07)
+
+All five tasks `PLAY-03a`–`PLAY-03e` are **CLOSED_TECHNICALLY**
+on exact tested SHA `e9706feda7d9c948e0f86599f60874d2284aafdb`.
+GitHub Actions [run 42326538567](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42326538567) is
+**SUCCESS in both Python 3.10 and 3.13** — `1,230 passed`
+in each; full workflow also checks backwards compatibility and semantic
+parity.
+
+- PLAY-03a: `ResumableTestSession.bind_gateway()` accepts only a
+  `PlayerGateway` bound to the identical active store, clock, world
+  and human player; rejects foreign identities and closed sessions.
+  Binding is read-only and retains the preexisting P0 test-only gate.
+- PLAY-03b: new `play_living_resumable.py` can create/resume the seven-NPC
+  living village. NPCs continue deterministic action/travel only during
+  a human-triggered wait; persisted command IDs prevent double actions.
+  A valid matching checkpoint at the saved revision is mandatory on
+  resume; new worlds reject existing same-prefix backup folders.
+- PLAY-03c: subprocess tests across actual separate Python processes
+  verify persistent memories, NPC schedules, Carlos's mid-route timing,
+  seven independent characters, no out-of-session simulation time,
+  and exact SQLite replay.
+- PLAY-03d: tests reject missing `--disposable-test`, invalid commit
+  shapes, missing backup folder/checkpoint, corrupt manifests, mismatched
+  commit provenance, stale database version, existing file overwrite,
+  forged gateway, and duplicate request IDs; failures leave saved world
+  intact.
+- PLAY-03e: user-ready Windows/PowerShell
+  [instructions](PLAYABLE_BATCH_03_RESUME.md) cover explicit create,
+  `id` commands, safe reading, quit and subsequent resume.
+- `main` and original Carlos story unmodified, Schema 32 / Rules 42
+  unchanged, **no API connection** and no background time. The new saved
+  world is **experimental and disposable-test only**, not an approved
+  canonical save. `P0_PRODUCTION_NOT_APPROVED` and
+  `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. `03-A7c` physical
+  symptom source and parent `03-A` still OPEN.
+
+This closure records the verified code SHA; the commit containing the
+documentation-only status update needs its own CI observation if exact-HEAD
+status is later requested. Do not equate this technical closure with
+production restoration authorization.
