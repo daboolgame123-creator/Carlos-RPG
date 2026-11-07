@@ -14,6 +14,7 @@ from carlos_sim.economic_autonomy import (
     choose_local_production, choose_local_food_offer, choose_local_food_purchase,
 )
 
+SIM = Path(__file__).resolve().parents[1]
 WORLD = "play24-physical-village"
 
 
