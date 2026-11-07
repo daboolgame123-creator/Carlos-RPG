@@ -104,6 +104,22 @@ class ResumableTestSession:
         if self._closed:
             raise PermissionError('play session was closed')
 
+    def bind_gateway(self, gateway: PlayerGateway) -> None:
+        """Use a trusted local player gateway with this exact saved session.
+
+        Enables an opt-in autonomous simulation policy for disposable test
+        play, including after resume. No event, tick or checkpoint is created
+        by binding. This is NOT an HTTP/client capability grant.
+        """
+        self._require_open()
+        if (type(gateway) is not PlayerGateway
+                or gateway.store is not self.store
+                or gateway.clock is not self.clock
+                or gateway.world_id != self.world_id
+                or gateway.player_id != self.player_id):
+            raise ValueError("gateway must belong to this exact player test session")
+        self.gateway = gateway
+
     def view(self) -> dict:
         """Only safe-by-construction projections for the bound human player."""
         self._require_open()
