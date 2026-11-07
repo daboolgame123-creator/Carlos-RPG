@@ -1,0 +1,38 @@
+name: PLAY-17 visible activity memory checks
+
+on:
+  push:
+    branches:
+      - simulation-engine-phase-play-17-visible-activity-memory
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  targeted:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Compile and regress bounded player perception
+        run: |
+          python -m compileall -q src tests
+          PYTHONPATH=src:scenarios/test_village:tests python -m pytest -q \
+            tests/test_player_visible_activity_memory_batch_17.py \
+            tests/test_player_visible_activity_batch_04.py \
+            tests/test_player_witnessed_memory_batch_16.py \
+            tests/test_player_perception.py \
+            tests/test_player_handoff_play_batch.py \
+            tests/test_player_gateway.py
