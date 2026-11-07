@@ -224,6 +224,7 @@ def test_local_cli_showcases_real_actions_without_changing_scene(tmp_path):
     assert len(handoffs) == 2
     assert handoffs[0] == handoffs[1]
     visible = handoffs[0]["scene"]["details"]["activities"]
+    assert visible  # a real nearby NPC began a visible action during wait
     assert handoffs[0]["time"] == 1
     assert handoffs[0]["player_memory"]["observations"] == []
     assert all(set(x) == {"actor_id", "activity"} for x in visible)
@@ -246,6 +247,7 @@ def test_resumable_cli_current_actions_same_after_pause_and_read_only_export(tmp
     count = len(backups_list(backups))
     assert count == 2  # initialization, one explicit wait
     saved_view = first[0]
+    assert saved_view["scene"]["details"]["activities"]
     with SQLiteEventStore(db_path) as db:
         frozen = db.verify(WORLD).to_dict()
     resume = run_cli("scene\nhandoff\nhandoff\nquit\n", db_path,
