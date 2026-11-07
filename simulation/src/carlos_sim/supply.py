@@ -31,8 +31,8 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
     if (type(who) is not str or who not in state["npcs"]
             or state["npcs"][who]["role"] != "courier"
             or who in state["supply_circuits"]
-            or type(stops) is not list or tuple(stops) != STOPS
-            or type(routes) is not list or len(routes) != len(stops) - 1
+            or not isinstance(stops, (list, tuple)) or tuple(stops) != STOPS
+            or not isinstance(routes, (list, tuple)) or len(routes) != len(stops) - 1
             or any(type(r) is not str for r in routes)
             or type(period) is not int or not 1800 <= period <= 86400
             or state["entities"][who]["location_id"] != stops[0]):
