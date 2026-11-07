@@ -643,3 +643,25 @@ blocked, `P0_PRODUCTION_NOT_APPROVED`,
 canonical story mutation, `main` merge, remote API or unattended play.
 This closure documentation commit is subsequent to the accepted green
 code SHA and may have its own CI run.
+
+## PLAY-06 — Player-owned market receipts (2026-11-07)
+
+**Analysis before implementation:** PLAY-05's existing MarketTradeExecuted
+ledger persists real trades with trusted buyer identity, price and resource
+conservation. A bounded read-only projection makes Carlos's own purchases
+visible across travel, save/reopen and narrator handoff. This does not depend
+on the blocked medical observation producer or production P0.
+
+| Task | Dependency and scope | Route | State |
+|---|---|---|---|
+| PLAY-06a | PLAY-05 green SHA; player-only bounded receipts | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-06b | PLAY-06a; coherent handoff includes five own receipts | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-06c | PLAY-06a; temporary/restartable CLI purchases command | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-06d | PLAY-06a–c; Basim trade privacy, Carlos travel/duplicate, readonly, adversarial limits, replay/reopen, CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-06e | PLAY-06a–d; guide, final SHA/dual-Python CI and technical closure | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Acceptance:** exact final code SHA must pass full Python 3.10/3.13 matrix.
+Do not expose other buyers, NPC balance ledgers or private before/after
+numbers; don't create resources, read-side events or checkpoints. No
+schema/rules bump, original story change or main merge. 03-A7c/03-A, P0 and
+independent-review gates remain open. Don't declare closure without CI proof.
