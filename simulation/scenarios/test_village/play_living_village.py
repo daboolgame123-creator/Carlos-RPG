@@ -15,7 +15,7 @@ from carlos_sim import SQLiteEventStore, TimeEngine
 from carlos_sim.player_handoff import player_handoff
 from carlos_sim.store import DuplicateCommand, InvalidEvent, RevisionConflict
 from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
-from living_player_fixture import WORLD, living_player_gateway, setup_living_player_world
+from living_player_fixture import WORLD, living_player_gateway, setup_living_market_world
 
 HELP = ("scene | look | status | remember | handoff | move <road> "
         "| wait <seconds> | talk <npc> <kind> <words> | quit")
@@ -33,7 +33,7 @@ def main() -> None:
     print(HELP)
     with TemporaryDirectory(prefix="carlos-living-") as temp:
         with SQLiteEventStore(Path(temp) / "living.sqlite") as store:
-            setup_living_player_world(store)
+            setup_living_market_world(store)
             clock = TimeEngine(store)
             clock.open_session(WORLD)
             gateway = living_player_gateway(store, clock)
@@ -68,11 +68,16 @@ def main() -> None:
                         result = gateway.recall()
                     elif verb == "status" and not args:
                         result = gateway.status()
-                    elif verb in ("look", "move", "wait", "talk"):
+                    elif verb == "supplies" and not args:
+                        result = gateway.supplies()
+                    elif verb == "offers" and not args:
+                        result = gateway.offers()
+                    elif verb in ("look", "move", "wait", "talk", "buy"):
                         if (verb == "look" and args or
                             verb == "move" and len(args) != 1 or
                             verb == "wait" and len(args) != 1 or
-                            verb == "talk" and len(args) < 3):
+                            verb == "talk" and len(args) < 3 or
+                            verb == "buy" and len(args) != 3):
                             print("Invalid command arguments. Type help.")
                             continue
                         count += 1
@@ -87,6 +92,10 @@ def main() -> None:
                         elif verb == "wait":
                             result = gateway.wait(int(args[0]), command_id=cid,
                                                   expected_revision=revision)
+                        elif verb == "buy":
+                            result = gateway.buy(args[0], int(args[1]), int(args[2]),
+                                                 command_id=cid,
+                                                 expected_revision=revision)
                         else:
                             result = gateway.interact(
                                 args[0], kind=args[1], text=" ".join(args[2:]),
