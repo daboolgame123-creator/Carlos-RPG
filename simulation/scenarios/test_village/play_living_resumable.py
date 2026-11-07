@@ -28,7 +28,7 @@ from living_player_fixture import (
 )
 
 HELP = ("scene | look | remember | status | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | checkfood | forage | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | checkfood | forage (60s, complete with wait) | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:

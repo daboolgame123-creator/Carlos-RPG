@@ -207,6 +207,22 @@ class SQLiteEventStore:
                 raise InvalidEvent("loan agreements require trusted loan capability")
             if world_id not in self._active_worlds:
                 raise InvalidEvent("loan agreements require active play session")
+        for idx, event in enumerate(events):
+            payload = event.data.get("payload", {})
+            if event.event_type != "ScheduledEventCreated" or "__player_forage" not in payload:
+                continue
+            if not action_authorized or not movement_authorized or world_id not in self._active_worlds:
+                raise InvalidEvent("timed forage requires trusted active action and local observation")
+            if idx == 0:
+                raise InvalidEvent("timed forage requires immediately preceding player observation")
+            sight = events[idx - 1]
+            fields = payload["__player_forage"]
+            if (not isinstance(fields, dict)
+                    or sight.event_type != "PlayerObserved"
+                    or sight.actor_id != fields.get("player_id")
+                    or sight.time != event.time
+                    or sight.data.get("location_id") != fields.get("site_id")):
+                raise InvalidEvent("timed forage requires matching same-command local observation")
         if any(e.event_type == "PlayerFoodCollected" for e in events):
             if not action_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("player food collection requires a trusted action capability and active session")

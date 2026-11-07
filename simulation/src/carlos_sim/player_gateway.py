@@ -107,6 +107,7 @@ class PlayerGateway:
         """Record explicitly chosen local sight; inspect stays read-only."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
+        self._deny_forage_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot observe while travelling')
         from .movement import _visible
@@ -218,7 +219,9 @@ class PlayerGateway:
         from .market import _balance, _present
         from .movement import _in_transit
         quotes = []
-        if player_travel_signal(state, self.player_id) is None:
+        from .player_foraging import player_forage_signal
+        if (player_travel_signal(state, self.player_id) is None
+                and player_forage_signal(state, self.player_id) is None):
             site = state.entities[self.player_id]['location_id']
             raw = state.to_dict()
             for ident, o in sorted(state.market_offers.items()):
@@ -246,6 +249,7 @@ class PlayerGateway:
         """
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
+        self._deny_forage_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot purchase while travelling')
         from .market import MAX_QUANTITY, MAX_PRICE, _id
@@ -287,6 +291,7 @@ class PlayerGateway:
         """
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
+        self._deny_forage_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot hand over goods while travelling')
         from .market import _id, MAX_QUANTITY
@@ -310,6 +315,11 @@ class PlayerGateway:
              'quantity': quantity},
         )
 
+    def _deny_forage_busy(self, state) -> None:
+        from .player_foraging import player_forage_signal
+        if player_forage_signal(state, self.player_id) is not None:
+            raise ValueError('player busy foraging; wait for completion')
+
     def check_food(self) -> PlayerCommandResult:
         """See only a qualitative food source at the player's actual site."""
         state = self._state()
@@ -318,33 +328,54 @@ class PlayerGateway:
                                    'local_food', local_food_view(state, self.player_id))
 
     def forage(self, *, command_id: str, expected_revision: int) -> PlayerCommandResult:
-        """Physically pick one known existing wild-food unit, no magical food."""
+        """Start a non-interrupting 60-second, location-locked food search.
+
+        No resource moves at start. A due signal resolves the physical source
+        at completion; conflicting NPC/player activity can exhaust it first.
+        """
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        from .player_foraging import local_food_view
+        if self.store.db.execute(
+                'SELECT 1 FROM commands WHERE world_id=? AND command_id=?',
+                (self.world_id, 'player-forage:' + cid)).fetchone():
+            raise DuplicateCommand('player foraging command already recorded')
+        from .player_foraging import local_food_view, FORAGE_SECONDS
         view = local_food_view(state, self.player_id)
         if view['status'] == 'traveling':
             raise ValueError('cannot forage while travelling')
+        if view['status'] == 'foraging':
+            raise ValueError('player already foraging')
         if view['status'] != 'present':
             raise ValueError('no initialized, visible wild food to collect here')
+        own = state.resources.get(self.player_id, {}).get('food')
+        if type(own) is not int or own < 0:
+            raise ValueError('player food must have an initialized balance')
         from .movement import _visible
-        place = view['location_id']
+        site = view['location_id']
+        due = state.time + FORAGE_SECONDS
+        if due > 2**63 - 1:
+            raise ValueError('world time would overflow')
+        schedule_id = 'player-forage:' + self.player_id + ':' + cid
         events = [
             DomainEvent('PlayerObserved', self.player_id,
-                        'player checked the physical source', state.time,
-                        {'location_id': place,
-                         'occupants': _visible(state.to_dict(), place)}),
-            DomainEvent('PlayerFoodCollected', self.player_id,
-                        'one finite unit of wild food picked locally', state.time,
-                        {'site_id': place, 'quantity': 1}),
+                        'player inspected the local source before working', state.time,
+                        {'location_id': site,
+                         'occupants': _visible(state.to_dict(), site)}),
+            DomainEvent('ScheduledEventCreated', None,
+                        'player started a sixty-second local forage', state.time,
+                        {'id': schedule_id, 'due': due,
+                         'order': state.next_schedule_order, 'kind': 'signal',
+                         'interrupt': False,
+                         'payload': {'__player_forage': {
+                             'player_id': self.player_id, 'site_id': site,
+                             'started_at': state.time}}}),
         ]
         saved = self.store.append(
             self.world_id, 'player-forage:' + cid, expected_revision,
             events, movement_authorized=True, action_authorized=True)
         return PlayerCommandResult(saved.world_id, saved.time, saved.revision,
-                                   'foraged', {'site_id': place, 'resource': 'food',
-                                               'quantity': 1,
-                                               'owned_food': saved.resources[self.player_id]['food']})
+                                   'foraging', {'site_id': site,
+                                                'remaining_seconds': FORAGE_SECONDS})
 
     def ask_food(self, recipient_id: str, site_id: str, *,
                  command_id: str, expected_revision: int) -> PlayerCommandResult:
@@ -357,6 +388,7 @@ class PlayerGateway:
         """
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
+        self._deny_forage_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot ask questions while travelling')
         if (not isinstance(recipient_id, str) or recipient_id not in state.npcs
@@ -410,6 +442,7 @@ class PlayerGateway:
         """Start an adjacent journey; arrival occurs only when its due event fires."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
+        self._deny_forage_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('player already travelling')
         if not isinstance(route_id, str) or route_id not in state.routes:
@@ -444,7 +477,9 @@ class PlayerGateway:
              expected_revision: int) -> PlayerCommandResult:
         """Advance NPC events and scheduled player arrival without an auto-player AI."""
         cid = self._command_id(command_id)
-        self._state(expected_revision)
+        before = self._state(expected_revision)
+        from .player_foraging import player_forage_signal
+        foraging_before = player_forage_signal(before, self.player_id)
         if type(seconds) is not int or seconds <= 0:
             raise ValueError('wait seconds must be a positive integer')
         result = self.engine.advance(
@@ -452,17 +487,34 @@ class PlayerGateway:
             expected_revision=expected_revision)
         now = result.state
         transit = player_travel_signal(now, self.player_id)
-        return PlayerCommandResult(now.world_id, now.time, now.revision,
-                                   'traveling' if transit is not None else 'ready', {
+        still_foraging = player_forage_signal(now, self.player_id)
+        details = {
             'elapsed': result.elapsed_seconds, 'remaining': result.remaining_seconds,
             'interrupted': result.interrupted,
-        })
+        }
+        if foraging_before is not None:
+            ident, _schedule, payload = foraging_before
+            if ident in result.fired_ids:
+                before_food = before.resources[self.player_id]['food']
+                after_food = now.resources[self.player_id]['food']
+                if after_food not in (before_food, before_food + 1):
+                    raise RuntimeError('unexpected player food change during search')
+                details['forage_result'] = (
+                    'collected' if after_food == before_food + 1 else 'depleted')
+                details['forage_site_id'] = payload['site_id']
+            elif still_foraging is not None:
+                details['forage_remaining_seconds'] = still_foraging[1]['due'] - now.time
+        return PlayerCommandResult(now.world_id, now.time, now.revision,
+                                   'traveling' if transit is not None else
+                                   'foraging' if still_foraging is not None else 'ready',
+                                   details)
 
     def interact(self, recipient_id: str, *, kind: str, text: str,
                  command_id: str, expected_revision: int) -> PlayerCommandResult:
         """Deliver only an explicit player speech act; NPC chooses its reaction."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
+        self._deny_forage_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot interact while travelling')
         if (not isinstance(recipient_id, str)

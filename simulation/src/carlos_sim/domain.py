@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 34
-RULES_VERSION = 44
+RULES_VERSION = 45
 
 
 def _thaw(value: Any) -> Any:
@@ -257,6 +257,8 @@ class WorldState:
         validate_movement(d)
         from .movement import validate_player_schedules
         validate_player_schedules(d)
+        from .player_foraging import validate_player_forage_schedules
+        validate_player_forage_schedules(d)
         from .navigation import validate_navigation
         validate_navigation(d)
         from .social import validate_social
@@ -466,9 +468,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         from .player_gifts import deliver_player_gift
         deliver_player_gift(d, e, gift_authorized=gift_authorized)
     elif kind == "PlayerFoodCollected":
-        from .player_foraging import project_player_food_collected
-        project_player_food_collected(
-            d, e, action_authorized=action_authorized, bootstrap=bootstrap)
+        # Rules 45: direct/instant pickup is obsolete. The verified due signal
+        # alone resolves a prepared, genuinely time-consuming player action.
+        raise ValueError("instant player food collection is disabled; start a timed forage")
     elif kind == "ProductionRecipeConfigured":
         from .production import configure_recipe
         configure_recipe(d, e, bootstrap=bootstrap)
@@ -561,6 +563,10 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             if (not movement_authorized or e.actor_id is not None
                     or set(p["payload"]) != {"__player_travel"} or p["interrupt"]):
                 raise ValueError("player travel requires trusted local movement capability")
+        if "__player_forage" in p["payload"]:
+            if (bootstrap or not action_authorized or e.actor_id is not None
+                    or set(p["payload"]) != {"__player_forage"} or p["interrupt"]):
+                raise ValueError("player foraging requires dedicated trusted runtime action")
         d["scheduled"][p["id"]] = {k: _thaw(p[k]) for k in ("due", "order", "kind", "payload", "interrupt")}
         d["next_schedule_order"] += 1
     elif kind == "ScheduledEventCancelled":
@@ -572,6 +578,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("cannot cancel an ongoing NPC travel; explicit cancellation is not supported")
         if "__player_travel" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel an active player journey without an explicit policy")
+        if "__player_forage" in d["scheduled"][p["id"]]["payload"]:
+            raise ValueError("cannot cancel a timed player forage without an explicit policy")
         if "__environment_cycle" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel an environmental renewal cycle")
         if "__production_job" in d["scheduled"][p["id"]]["payload"]:
@@ -599,6 +607,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if "__player_travel" in scheduled["payload"]:
             from .movement import complete_player_travel
             complete_player_travel(d, p["id"], scheduled["payload"]["__player_travel"], state.time)
+        if "__player_forage" in scheduled["payload"]:
+            from .player_foraging import complete_player_forage
+            complete_player_forage(d, p["id"], scheduled["payload"]["__player_forage"], state.time)
         if "__environment_cycle" in scheduled["payload"]:
             from .environment import complete_environment_cycle
             complete_environment_cycle(d, p["id"], scheduled["payload"], state.time)

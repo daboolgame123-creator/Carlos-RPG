@@ -966,3 +966,35 @@ historical compatibility gates remain.
 `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. No `main` merge or canonical story
 edits. The following documentation-only closure commit is distinct from
 the exact tested code SHA; it is not claimed CI-verified by that run.
+
+
+## PLAY-12 — Timed, source-competitive player forage (2026-11-07)
+
+**Analysis before implementation:** PLAY-11's immediate \`forage\` does not let
+the village live or its finite food supply change while Carlos works.
+Reuse the existing trusted \`ScheduledEventCreated\` / \`ScheduledEventFired\`
+mechanism with a reserved \`__player_forage\` payload. A verified 60-second
+due signal physically checks remaining local food *at completion* and
+transfers at most one unit; another real actor may take the last unit first.
+No time/event writes happen in the background. This changes event semantics:
+**Schema 34 unchanged, Rules 45** (old Rules 44 save rejected).
+No independent production/medical phase is touched.
+
+| Task | Dependency / result | Route | State |
+|---|---|---|---|
+| PLAY-12a | PLAY-11 green; start a genuine 60-second bounded scheduled activity | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-12b | Due-tick conservation and no-reward depletion; no instant pickup loophole | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-12c | Busy-player constraints; allow only waiting, reading own view and snapshot/resume | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-12d | Both real CLI workflows and coherent narrator-facing activity/results; 12a-c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-12e | Independent NPC time, multiple player competition, forged schedules, stale IDs, SQLite replay and adversarial tests; 12a-d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-12f | Guide, current-rules compatibility assertions, exact-code-SHA dual Python CI and technical close; 12e | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Safety constraints:** No automatic player decisions, real-time offline progress,
+unknown or remote resources, instant harvest, medical effects or RPG inventory
+conjuring. At the due moment, insufficient stock means **depleted**, no minted
+reward. Only a real human-controlled actor present throughout may start;
+\`move\`, \`give\`, \`buy\`, \`talk\`, \`askfood\`, \`look\` and another \`forage\`
+are denied during the timed action; \`wait\` advances NPC autonomous activity.
+A separately authorized player action cannot cancel or prematurely fire the
+reserved schedule. \`03-A7c\` / \`03-A\` remain OPEN, P0_PRODUCTION_NOT_APPROVED,
+EXTERNAL_REVIEW_DEFERRED_BY_OWNER. No \`main\` merge/story edits.

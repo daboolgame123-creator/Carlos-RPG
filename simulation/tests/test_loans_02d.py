@@ -89,7 +89,7 @@ def repay(db, svc, amount, pid, cid="loan", debtor="nora"):
 
 
 def test_opt_in_no_loan_state_and_version(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (34, 44)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (34, 45)
     with SQLiteEventStore(tmp_path / "off.sqlite") as db:
         prepare(db)
         clock = TimeEngine(db)

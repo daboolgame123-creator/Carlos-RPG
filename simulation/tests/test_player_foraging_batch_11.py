@@ -23,7 +23,7 @@ def take(db, gateway, ident="pick"):
 
 
 def test_version_and_local_survey_readonly(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (34, 44)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (34, 45)
     db, clock, g = demo(tmp_path)
     with db:
         before = db.load(WORLD).to_dict()
@@ -39,33 +39,43 @@ def test_atomic_pick_and_provenance_conserve_real_food(tmp_path):
     with db:
         initial = db.load(WORLD)
         out = take(db, g)
+        waiting = db.load(WORLD)
+        assert out.status == "foraging" and out.revision == initial.revision + 2
+        assert out.details == {"site_id": "square", "remaining_seconds": 60}
+        assert waiting.time == 0
+        assert waiting.resources["square"]["wild_food"] == 2
+        assert waiting.resources[PLAYER]["food"] == 0
+        assert g.check_food().details["status"] == "foraging"
+        kinds = [json.loads(p)["event_type"] for (p,) in db.db.execute(
+            "SELECT payload FROM events WHERE world_id=? AND command_id=? ORDER BY seq",
+            (WORLD, "player-forage:pick"))]
+        assert kinds == ["PlayerObserved", "ScheduledEventCreated"]
+        finished = g.wait(60, command_id="complete-pick",
+                          expected_revision=waiting.revision)
         now = db.load(WORLD)
-        assert out.status == "foraged" and out.revision == initial.revision + 2
-        assert out.details == {"site_id": "square", "resource": "food", "quantity": 1, "owned_food": 1}
+        assert finished.details["forage_result"] == "collected"
+        assert finished.details["forage_site_id"] == "square"
+        assert now.time == 60
         assert now.resources["square"]["wild_food"] == 1
         assert now.resources[PLAYER]["food"] == 1
         assert now.resources["woods"]["wild_food"] == 4
         assert now.resources["salma"]["bread"] == 3
         assert now.rpg_profiles[PLAYER]["inventory"] == {}
-        kinds = [json.loads(p)["event_type"] for (p,) in db.db.execute(
-            "SELECT payload FROM events WHERE world_id=? AND command_id=? ORDER BY seq",
-            (WORLD, "player-forage:pick"))]
-        assert kinds == ["PlayerObserved", "PlayerFoodCollected"]
         assert db.verify(WORLD).to_dict() == now.to_dict()
-
 
 def test_depleted_site_has_no_partial_observation_or_resource_creation(tmp_path):
     db, clock, g = demo(tmp_path)
     with db:
         take(db, g, "one")
+        g.wait(60, command_id="first-done", expected_revision=db.load(WORLD).revision)
         take(db, g, "two")
+        g.wait(60, command_id="second-done", expected_revision=db.load(WORLD).revision)
         assert g.check_food().details["status"] == "empty"
         before = db.load(WORLD).to_dict()
         with pytest.raises(ValueError, match="no initialized"):
             take(db, g, "three")
         assert db.verify(WORLD).to_dict() == before
         assert g.supplies().details["balances"]["food"] == 2
-
 
 def test_woods_needs_real_travel_and_time_not_rumor(tmp_path):
     db, clock, g = demo(tmp_path)
@@ -79,12 +89,15 @@ def test_woods_needs_real_travel_and_time_not_rumor(tmp_path):
         assert g.check_food().details == {"location_id": "woods", "status": "present"}
         before = db.load(WORLD)
         result = take(db, g, "woods")
+        assert result.status == "foraging"
+        assert db.load(WORLD).resources["woods"]["wild_food"] == before.resources["woods"]["wild_food"]
+        done = g.wait(60, command_id="woods-finish",
+                      expected_revision=db.load(WORLD).revision)
         after = db.load(WORLD)
-        assert result.details["site_id"] == "woods"
+        assert done.details["forage_result"] == "collected"
         assert after.resources["woods"]["wild_food"] == before.resources["woods"]["wild_food"] - 1
         assert after.resources[PLAYER]["food"] == before.resources[PLAYER]["food"] + 1
         assert db.verify(WORLD).to_dict() == after.to_dict()
-
 
 def test_plain_demo_preserves_unknown_food_not_zero(tmp_path):
     with SQLiteEventStore(tmp_path / "plain.sqlite") as db:
@@ -170,18 +183,24 @@ def test_snapshot_reopen_keeps_food_and_npcs(tmp_path):
         session.bind_gateway(living_player_gateway(session.store, session.clock))
         assert session.handoff() == view
         assert session.store.verify(WORLD).to_dict() == state
+        assert session.gateway.supplies().details["balances"]["food"] == 0
+        done = session.gateway.wait(60, command_id="resumed-completion",
+            expected_revision=session.store.load(WORLD).revision)
+        assert done.details["forage_result"] == "collected"
         assert session.gateway.supplies().details["balances"]["food"] == 1
-
 
 def test_temporary_cli_actual_food_and_no_third_pick():
     from test_play_living_village_batch_02 import _cli, _json_handoffs
-    output = _cli("checkfood\nforage\nforage\nforage\nsupplies\nhandoff\nquit\n").stdout
-    assert output.count("foraged") == 2
+    output = _cli(
+        "checkfood\nforage\nwait 60\nforage\nwait 60\n"
+        "forage\nsupplies\nhandoff\nquit\n"
+    ).stdout
+    assert output.count("foraging") >= 2
+    assert output.count("forage_result: collected") == 2
     assert "Rejected: no initialized" in output
     views = _json_handoffs(output)
     assert views[0]["player_local_food"]["status"] == "empty"
     assert views[0]["player_supplies"]["balances"]["food"] == 2
-
 
 def test_resumable_cli_rejects_duplicate_after_restart_without_checkpoint(tmp_path):
     from test_play_living_resumable_batch_03 import run_cli, saved_states, backups_list
@@ -190,7 +209,8 @@ def test_resumable_cli_rejects_duplicate_after_restart_without_checkpoint(tmp_pa
     first = run_cli("checkfood\nid pick1 forage\nhandoff\nquit\n",
                     file, backups, "--new", extra=("--disposable-test",))
     views = saved_states(first.stdout)
-    assert views[0]["player_supplies"]["balances"]["food"] == 1
+    assert views[0]["player_supplies"]["balances"]["food"] == 0
+    assert views[0]["player_local_food"]["status"] == "foraging"
     n = len(backups_list(backups))
     assert n == 2
     again = run_cli("checkfood\nid pick1 forage\nhandoff\nquit\n",
@@ -198,3 +218,8 @@ def test_resumable_cli_rejects_duplicate_after_restart_without_checkpoint(tmp_pa
     assert "Rejected:" in again.stdout
     assert saved_states(again.stdout) == views
     assert len(backups_list(backups)) == n
+    last = run_cli("id completion wait 60\nhandoff\nquit\n",
+                    file, backups, "--resume", extra=("--disposable-test",))
+    assert "forage_result: collected" in last.stdout
+    assert saved_states(last.stdout)[0]["player_supplies"]["balances"]["food"] == 1
+    assert len(backups_list(backups)) == n + 1
