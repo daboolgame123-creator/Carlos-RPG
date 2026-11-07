@@ -1104,24 +1104,24 @@ so the cited CI is not attributed to the documentation commit.
 ## PLAY-14 — Opt-in player hunger/fatigue without medical coupling (2026-11-07)
 
 **Planning and dependency analysis (before code):** PLAY-13 added verified
-\`PlayerFoodEaten\` with real resource debit, but player hunger/fatigue are
+`PlayerFoodEaten` with real resource debit, but player hunger/fatigue are
 still unknown. The engine ALREADY supports NPC daily needs with a strictly
 separate hunger/fatigue meter (one point per 300/600 **simulated** seconds),
 and real owned meals relieve NPC hunger by 25. Meanwhile Carlos's RPG
-\`hp\`/\`st\`/\`mp\` ledger has NO authorized survival, injury or healing
+`hp`/`st`/`mp` ledger has NO authorized survival, injury or healing
 policy, and 03-A7c/03-A remain OPEN. Therefore reuse the conservative
 NPC *time/meal constants* but NEVER reuse NPC private needs, medical
 events, or the combat ST ledger.
 
-Implementation: add a dedicated \`player_needs\` state map, populated only
-by trusted time-zero \`PlayerNeedsInitialized\` per player. Values hunger
+Implementation: add a dedicated `player_needs` state map, populated only
+by trusted time-zero `PlayerNeedsInitialized` per player. Values hunger
 and fatigue are bounded 0–100, with replay-safe 300/600-second remainders.
-Only opt-in players accumulate need pressure on actual \`TimeAdvanced\`;
+Only opt-in players accumulate need pressure on actual `TimeAdvanced`;
 the ordinary clock capability already guards time. A verified
-\`PlayerFoodEaten\` continues to debit one real owned food/bread; only
+`PlayerFoodEaten` continues to debit one real owned food/bread; only
 then does it relieve configured **ordinary hunger by 25**, clamped to zero.
 A meal never reduces fatigue or changes HP/ST/MP, XP, skills, injuries,
-NPC states, death, or any medical rule. \`needs\` and narrator handoff show
+NPC states, death, or any medical rule. `needs` and narrator handoff show
 the player's own two pressures; missing setup means **unknown**, not zero.
 Demo-only start hunger 25/fatigue 10 is an explicit test-world choice,
 NOT a canonical Carlos fact. New state field and event/rules mean
@@ -1129,18 +1129,64 @@ NOT a canonical Carlos fact. New state field and event/rules mean
 
 | Task | Scope and dependencies | Route | State |
 |---|---|---|---|
-| PLAY-14a | PLAY-13 green; strict opt-in player-needs schema/reducer and trusted initialization | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14b | Bounded, split-step deterministic simulated hunger/fatigue pressure; no wall-clock movement | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14c | Real owned food/bread consumption relieves player hunger only; no HP/ST/medical effect | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14d | Player-bound \`needs\`, coherent narration handoff, both disposable/resumable CLIs | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14e | Multiple NPC/player, missing initialization, forged events, tampered states, saving/replay/CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14f | Document limits/version pins and exact-code-SHA full Python 3.10 and 3.13 CI | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14a | PLAY-13 green; strict opt-in player-needs schema/reducer and trusted initialization | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14b | Bounded, split-step deterministic simulated hunger/fatigue pressure; no wall-clock movement | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14c | Real owned food/bread consumption relieves player hunger only; no HP/ST/medical effect | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14d | Player-bound `needs`, coherent narration handoff, both disposable/resumable CLIs | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14e | Multiple NPC/player, missing initialization, forged events, tampered states, saving/replay/CLI tests | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14f | Document limits/version pins and exact-code-SHA full Python 3.10 and 3.13 CI | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Out of scope / OPEN:** Fatigue is NOT player combat stamina
-(\`ST\`); health penalties, starvation, fatigue disabling actions, recovery,
+(`ST`); health penalties, starvation, fatigue disabling actions, recovery,
 injury causation, combat, healing, rest and food nutrition quality all need
-separately reviewed policies. \`03-A7c\` and \`03-A\` remain OPEN,
-\`P0_PRODUCTION_NOT_APPROVED\`,
-\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\`. No \`main\` merge, no canonical story edits,
+separately reviewed policies. `03-A7c` and `03-A` remain OPEN,
+`P0_PRODUCTION_NOT_APPROVED`,
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. No `main` merge, no canonical story edits,
 no automatic player command or remote private state revelation. Full CI is
 mandatory before technical closure.
+
+### PLAY-14 verified technical closure — 2026-11-07
+
+**PLAY-14a–PLAY-14f CLOSED_TECHNICALLY**, verified against exact final
+code-and-test SHA `2cd87ef94e4f9531d0f8181f3a25dcd6af7575cb`.
+[GitHub Actions run 42376599958](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42376599958)
+completed **SUCCESS**: **1,437 passed on Python 3.10**, **1,437 passed
+on Python 3.13**. All baseline predecessor, NPC feature-off parity,
+compatibility rejection, SQLite replay/snapshot, real two-CLI/saved
+session restart, and smoke gates passed on that SHA.
+
+- New Schema **35** / Rules **47** adds a strict `player_needs` state field
+  and trusted time-zero `PlayerNeedsInitialized` event, with separate
+  replay-safe hunger/fatigue second remainders. The previous Schema 34 /
+  Rules 46 is NOT silently loaded or migrated.
+- The **disposable test village ONLY** opts Carlos into hunger=25/100
+  and fatigue=10/100. The normal player without this initialized record
+  sees **UNKNOWN**, never fabricated zero.
+- Only explicit simulated TimeAdvanced increments daily hunger by
+  1 per 300 seconds and fatigue by 1 per 600 seconds. Verified
+  consumption of exactly one genuinely owned food/bread unit relieves
+  hunger by up to 25; it does not reduce fatigue or alter HP/ST/MP,
+  medical treatment, wounds, death, XP, or player control.
+- Player-only `needs` view is included with a revision-coherent
+  narrator handoff. It never exposes NPC private need values.
+- Tests cover split-step clock equivalence, capped 0–100 need
+  pressure without injury, multiple independent human players and
+  seven autonomous NPCs, unknown-safe opt-in, dup/forged/invalid
+  initialization, corrupt event/snapshot rejection, persisted
+  fractional seconds and two real CLIs across restart.
+- First attempted CI 42375271681: **1,436 passed, 1 old privacy
+  assertion failed per matrix**; test was corrected to allow the
+  player's OWN hunger, never NPC hunger. Second attempted CI
+  42375864319: **1,437 passed per matrix**, but frozen predecessor
+  semantic digest failed because a NEW, EMPTY `player_needs` map
+  was included. We fixed three cross-version probe scripts to
+  assert the optional collection is empty before excluding it
+  from a version-neutral comparison; they retain full event,
+  NPC, resource, and replay parity. **Only the third, fully green
+  run 42376599958 is used for acceptance.**
+
+**Still OPEN:** `03-A7c` and `03-A`;
+`P0_PRODUCTION_NOT_APPROVED`;
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. No merge into `main` and no
+canonical Carlos story edits. This closure commit is **documentation
+only** and must not be confused with the tested code SHA above.
