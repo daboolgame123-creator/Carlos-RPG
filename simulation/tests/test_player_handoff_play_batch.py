@@ -213,3 +213,51 @@ def test_player_handoff_denies_raw_world_state_as_input(tmp_path):
         with pytest.raises(TypeError, match="PlayerGateway"):
             player_handoff(before.to_dict())
         assert db.verify("world").to_dict() == before.to_dict()
+
+
+def test_seven_independent_npcs_only_local_characters_appear_in_player_handoff(tmp_path):
+    """Nora/Basim/Adel/Salma are nearby; Sara/Huda/Omar remain remote."""
+    filename = tmp_path / "seven-person-handoff.sqlite"
+    with SQLiteEventStore(filename) as db:
+        setup_player_demo_world(db)
+        before = db.load("world")
+        events = []
+        for npc, site in (("adel", "market"), ("salma", "market"),
+                          ("huda", "forest"), ("omar", "forest")):
+            events.extend((
+                DomainEvent("EntityCreated", None, "trusted test character", 0, {
+                    "id": npc, "name": npc, "controller": "npc",
+                    "location_id": site,
+                }),
+                DomainEvent("NPCConfigured", None, "trusted character profile", 0, {
+                    "npc_id": npc, "role": "resident",
+                    "needs": {"fatigue": 5, "hunger": 20, "safety": 0},
+                    "goals": {"earn": 15, "explore": 0, "survive": 15},
+                }),
+            ))
+        db.append("world", "add-test-npc-roster", before.revision, events,
+                  bootstrap=True)
+        clock = TimeEngine(db)
+        clock.open_session("world")
+        gw = PlayerGateway(db, clock, world_id="world", player_id="carlos")
+        roster = db.load("world")
+        assert set(roster.npcs) == {
+            "nora", "basim", "sara", "adel", "salma", "huda", "omar"}
+        view = player_handoff(gw)
+        nearby = {x["id"] for x in view["scene"]["details"]["occupants"]}
+        assert nearby == {"carlos", "nora", "basim", "adel", "salma"}
+        for distant in ("sara", "huda", "omar"):
+            assert distant not in json.dumps(view)
+        assert view["player_memory"] == {"observations": (), "hearsay": ()}
+        with pytest.raises(Exception):
+            gw.interact("huda", kind="greeting", text="Hello",
+                        command_id="cannot-talk-across-forest",
+                        expected_revision=roster.revision)
+        assert db.load("world").to_dict() == roster.to_dict()
+        gw.observe(command_id="local-seven-actor-look",
+                   expected_revision=roster.revision)
+        observed = player_handoff(gw)
+        memory_names = {x["id"] for x in
+                        observed["player_memory"]["observations"][0]["occupants"]}
+        assert memory_names == nearby
+        assert db.verify("world").to_dict() == db.load("world").to_dict()
