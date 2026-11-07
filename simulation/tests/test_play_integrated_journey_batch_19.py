@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -91,10 +92,15 @@ def test_journey_report_contains_no_private_npc_state_or_health_guess(tmp_path):
 def test_integration_script_prints_actual_machine_readable_outcomes(tmp_path):
     script = Path(__file__).resolve().parents[1] / (
         "scenarios/test_village/play_integrated_journey.py")
+    # The repo-wide pytest environment relies on pytest's pythonpath
+    # configuration; a child Python interpreter does not inherit it.
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(SIM / "src")
     output = subprocess.run(
         [sys.executable, str(script)], text=True,
-        capture_output=True, timeout=100, check=True,
+        capture_output=True, timeout=100, cwd=SIM, env=env,
     )
+    assert output.returncode == 0, output.stderr
     marker = "PLAY19_JSON="
     result = json.loads(next(x.split(marker, 1)[1] for x in
                              output.stdout.splitlines() if x.startswith(marker)))
