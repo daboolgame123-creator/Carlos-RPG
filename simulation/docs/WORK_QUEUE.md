@@ -502,11 +502,11 @@ migration, auto-player or unapproved production save is needed.
 
 | Task | Scope | Dependency | Route | Status |
 |---|---|---|---|---|
-| PLAY-04a | Pure `WorldState`-only co-located visible-activity projector for running rest/work/forage and real local production | Existing validated event-sourced actions, movement and production | CHAT_EXECUTABLE | PLANNED |
-| PLAY-04b | Wire bounded output to `PlayerGateway.inspect` and hence `player_handoff` (only when player physically present; no change to player-in-transit view) | PLAY-04a, PLAY-01 | CHAT_EXECUTABLE | PLANNED |
-| PLAY-04c | Multi-person adversarial and lifecycle tests: Carlos, Nora, Basim, Adel, Salma, Huda, Omar, Layla; remote privacy, no diagnoses, current only, exact due tick, replay and SQLite reopen | PLAY-04a/b | CHAT_EXECUTABLE | PLANNED |
-| PLAY-04d | Real local AND resumable CLI / JSON handoff regressions and read-only idempotence | PLAY-04b, PLAY-02/03 | CHAT_EXECUTABLE | PLANNED |
-| PLAY-04e | Instructions clarifying a visible action does not establish motivation, cause, past knowledge or medical symptoms | PLAY-04b | CHAT_EXECUTABLE | PLANNED |
+| PLAY-04a | Pure `WorldState`-only co-located visible-activity projector for running rest/work/forage and real local production | Existing validated event-sourced actions, movement and production | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04b | Wire bounded output to `PlayerGateway.inspect` and hence `player_handoff` (only when player physically present; no change to player-in-transit view) | PLAY-04a, PLAY-01 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04c | Multi-person adversarial and lifecycle tests: Carlos, Nora, Basim, Adel, Salma, Huda, Omar, Layla; remote privacy, no diagnoses, current only, exact due tick, replay and SQLite reopen | PLAY-04a/b | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04d | Real local AND resumable CLI / JSON handoff regressions and read-only idempotence | PLAY-04b, PLAY-02/03 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04e | Instructions clarifying a visible action does not establish motivation, cause, past knowledge or medical symptoms | PLAY-04b | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 Conservative visibility rules: player physically co-located **now**, NPC
 not traveling, action truly running at current logical tick; expose
@@ -521,3 +521,47 @@ Tests on exact final code SHA must succeed in Python 3.10 and 3.13.
 Note: `03-A7c` physical injury symptom producer remains blocked and
 is **not** implemented or completed by these activity labels; `main`
 and canonical story stay untouched, P0 production unapproved.
+
+## PLAY-04 — verified technical closure of current visible NPC activities (2026-11-07)
+
+**All five tasks `PLAY-04a`–`PLAY-04e` CLOSED_TECHNICALLY**
+at exact code SHA `35d963c0d21c3265ac6704aa4d7016a00dc9f514`.
+GitHub Actions [run 42328003868](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42328003868)
+**SUCCESS**: **1,240 passed on Python 3.10** and **1,240 passed on Python
+3.13**, including historic version/parity and all new NPC integration tests.
+
+- PLAY-04a: pure `visible_player_activities` accepts a validated
+  `WorldState` and real player ID. It projects only **current
+  co-located, nontravelling, actually running** `rest`, `work`,
+  `forage` or a genuine funded production job as the bounded labels
+  `resting/working/foraging/producing`. Nothing is inferred from private
+  injuries, intentions, profession alone or merely scheduled future work.
+- PLAY-04b: `PlayerGateway.inspect` includes `activities` only in
+  `present` scenes. A travelling Carlos receives the original
+  route/remaining-time view, with **no** remote activity data.
+  `player_handoff` carries the same bounded present observation and
+  remains revision-coherent, without a new event or command.
+- PLAY-04c: independent seven-NPC observations exercise Basim working,
+  Nora resting with/without a private injury, Adel/Salma/Huda/Omar/Layla
+  isolation, a physical bakery production job, actual seven-NPC
+  foraging, exact activity completion tick, SQLite snapshot/reopen,
+  and denial of forged world/nonplayer input.
+- PLAY-04d: real local and resume CLI subprocesses confirm new activity
+  visibility, unchanged time/memory/revision from repeated
+  `scene/handoff`, persisted activity through safe SQLite reopen and
+  unchanged checkpoint counts. Earlier intermediate CI failures came
+  exclusively from the test harness writing literal `\\n` instead of
+  actual command separators; corrected prior to verified green SHA.
+- PLAY-04e: see
+  [PLAYABLE_BATCH_04_VISIBLE_ACTIVITY.md](PLAYABLE_BATCH_04_VISIBLE_ACTIVITY.md)
+  for the distinction between **current visibility** and **durable
+  player memory**. `look` still records only nearby identities;
+  don't invent past actions in `remember`.
+
+**Explicit boundaries:** `03-A7c` and `03-A` remain OPEN; a visible
+rest is not a medical symptom or diagnosis and no trusted physical
+wound/limp producer is implemented. `P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. Schema 32, Rules 42;
+no migration, `main` merge or canonical story modification.
+This closing documentation commit is subsequent to the independently
+verified code SHA and has its own CI status.
