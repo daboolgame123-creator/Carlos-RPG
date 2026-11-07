@@ -1,0 +1,43 @@
+name: PLAY-27 true-road water and grain supply
+
+on:
+  push:
+    branches:
+      - simulation-engine-phase-play-27-physical-supply
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  courier-supply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Compile project, scenarios and tests
+        run: python -m compileall -q src scenarios/test_village tests
+      - name: Test physical courier flow and prior economic correctness
+        run: |
+          PYTHONPATH=src:tests:scenarios/test_village python -m pytest -q \
+            tests/test_play_physical_supply_batch_27.py \
+            tests/test_play_crop_cycle_batch_26.py \
+            tests/test_play_finite_harvest_batch_25.py \
+            tests/test_play_economic_autonomy_batch_24.py \
+            tests/test_play_food_chain_batch_23.py \
+            tests/test_production_02b.py \
+            tests/test_market_02c.py \
+            tests/test_consumption.py
+      - name: Run genuine seven-NPC well-to-farm-to-bakery-to-market endurance
+        run: PYTHONPATH=src:tests:scenarios/test_village python -u scenarios/test_village/play_physical_supply.py
