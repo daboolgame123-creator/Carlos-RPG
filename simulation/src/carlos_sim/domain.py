@@ -567,6 +567,20 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             if (bootstrap or not action_authorized or e.actor_id is not None
                     or set(p["payload"]) != {"__player_forage"} or p["interrupt"]):
                 raise ValueError("player foraging requires dedicated trusted runtime action")
+            reservation = p["payload"]["__player_forage"]
+            if (not isinstance(reservation, Mapping)
+                    or type(reservation.get("started_at")) is not int
+                    or reservation["started_at"] != state.time):
+                raise ValueError("player forage must start at the current world time")
+            who, site = reservation.get("player_id"), reservation.get("site_id")
+            if (not isinstance(who, str) or who not in d["entities"]
+                    or d["entities"][who]["controller"] != "player"
+                    or not isinstance(site, str) or site not in d["locations"]
+                    or d["entities"][who]["location_id"] != site
+                    or type(d["resources"].get(site, {}).get("wild_food")) is not int
+                    or d["resources"][site]["wild_food"] < 1
+                    or type(d["resources"].get(who, {}).get("food")) is not int):
+                raise ValueError("player forage needs known local source and owned food balance")
         d["scheduled"][p["id"]] = {k: _thaw(p[k]) for k in ("due", "order", "kind", "payload", "interrupt")}
         d["next_schedule_order"] += 1
     elif kind == "ScheduledEventCancelled":

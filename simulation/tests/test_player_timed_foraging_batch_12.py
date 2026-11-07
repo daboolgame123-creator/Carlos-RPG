@@ -10,10 +10,10 @@ from carlos_sim.player_handoff import player_handoff
 from carlos_sim.resumable_play import ResumableTestSession
 from carlos_sim.store import DuplicateCommand, IntegrityError, InvalidEvent
 from carlos_sim.player_foraging import FORAGE_SECONDS
+from test_player_foraging_batch_11 import demo, take
 from living_player_fixture import (
     WORLD, PLAYER, setup_living_foraging_world, living_player_gateway,
 )
-from test_player_foraging_batch_11 import demo, take
 
 
 def wait(db, gateway, seconds, cid="wait"):
@@ -288,3 +288,35 @@ def test_saved_cli_wait_resumes_and_finishes_without_extra_pick(tmp_path):
     assert "forage_result: collected" in after.stdout
     assert saved_states(after.stdout)[0]["player_supplies"]["balances"]["food"] == 1
     assert len(backups_list(backups)) == n + 1
+
+
+
+def test_prevent_backdated_shortcuts_at_schedule_creation(tmp_path):
+    from carlos_sim.movement import _visible
+    db, clock, gateway = demo(tmp_path)
+    with db:
+        wait(db, gateway, 100, "establish-world-time")
+        state = db.load(WORLD)
+        assert state.time == 100
+        instant = DomainEvent("ScheduledEventCreated", None,
+                              "fraudulent old start", state.time, {
+            "id": "player-forage:carlos:backdate",
+            "due": state.time + 10,
+            "order": state.next_schedule_order,
+            "kind": "signal", "interrupt": False,
+            "payload": {"__player_forage": {
+                "player_id": PLAYER, "site_id": "square",
+                "started_at": state.time - 50}},
+        })
+        with pytest.raises(ValueError, match="current world time"):
+            apply_event(state, instant, action_authorized=True)
+        prior = state.to_dict()
+        sight = DomainEvent("PlayerObserved", PLAYER, "local witness",
+                            state.time, {
+            "location_id": "square",
+            "occupants": _visible(state.to_dict(), "square")})
+        with pytest.raises(InvalidEvent, match="current world time"):
+            db.append(WORLD, "backdate-attempt", state.revision,
+                      [sight, instant], action_authorized=True,
+                      movement_authorized=True)
+        assert db.verify(WORLD).to_dict() == prior

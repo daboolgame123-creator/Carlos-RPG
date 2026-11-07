@@ -4,6 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 from typing import Sequence
+from collections.abc import Mapping
 from .domain import WorldState, DomainEvent, apply_event, canonical, canonical_hash, SCHEMA_VERSION, RULES_VERSION
 
 class RevisionConflict(Exception): pass
@@ -209,7 +210,9 @@ class SQLiteEventStore:
                 raise InvalidEvent("loan agreements require active play session")
         for idx, event in enumerate(events):
             payload = event.data.get("payload", {})
-            if event.event_type != "ScheduledEventCreated" or "__player_forage" not in payload:
+            if (event.event_type != "ScheduledEventCreated"
+                    or not isinstance(payload, Mapping)
+                    or "__player_forage" not in payload):
                 continue
             if not action_authorized or not movement_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("timed forage requires trusted active action and local observation")
@@ -217,7 +220,7 @@ class SQLiteEventStore:
                 raise InvalidEvent("timed forage requires immediately preceding player observation")
             sight = events[idx - 1]
             fields = payload["__player_forage"]
-            if (not isinstance(fields, dict)
+            if (not isinstance(fields, Mapping)
                     or sight.event_type != "PlayerObserved"
                     or sight.actor_id != fields.get("player_id")
                     or sight.time != event.time
