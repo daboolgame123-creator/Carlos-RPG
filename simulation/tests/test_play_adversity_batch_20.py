@@ -78,3 +78,89 @@ def test_adversity_rejects_invalid_horizon_or_choice_before_world_creation(
     with pytest.raises(ValueError):
         run_adversity(path, bad_choice, horizon_seconds=bad_seconds)
     assert not path.exists()
+
+
+
+def test_seven_npcs_can_leave_without_carlos_and_cannot_be_addressed_remotely(tmp_path):
+    """Contrast scarce-food mode with the existing normal-world travel policy."""
+    from carlos_sim.resumable_play import ResumableTestSession
+    from carlos_sim.store import InvalidEvent
+    from living_player_fixture import (
+        WORLD, PLAYER, PEOPLE, living_player_gateway,
+        setup_living_foraging_world,
+    )
+
+    with ResumableTestSession.create(
+        tmp_path / 'moving.sqlite', WORLD, PLAYER,
+        setup_living_foraging_world, disposable_test=True,
+    ) as session:
+        session.bind_gateway(living_player_gateway(session.store, session.clock))
+        db, gateway = session.store, session.gateway
+        start = db.load(WORLD)
+        assert len(start.npcs) == len(PEOPLE) == 7
+        before_location = {who: start.entities[who]['location_id']
+                           for who, *_ in PEOPLE}
+        advance = gateway.wait(201, command_id='npc-independent-travel',
+                               expected_revision=start.revision)
+        assert advance.time == 201
+        state = db.load(WORLD)
+        assert state.travels, 'normal village should contain autonomous NPC trips'
+        assert any(t['npc_id'] in before_location for t in state.travels.values())
+        for trip in state.travels.values():
+            route = state.routes[trip['route_id']]
+            assert {trip['origin'], trip['destination']} == {
+                route['a'], route['b']}
+            assert trip['due'] - trip['start'] == route['seconds']
+            if trip['status'] == 'traveling':
+                assert trip['arrived_at'] is None
+                assert state.entities[trip['npc_id']]['location_id'] == trip['origin']
+            else:
+                assert trip['status'] == 'arrived'
+                assert trip['arrived_at'] == trip['due']
+        scene = gateway.inspect()
+        local = {person['id'] for person in scene.details['occupants']}
+        remote = next(who for who in state.npcs if who not in local)
+        before = db.load(WORLD).to_dict()
+        with pytest.raises(InvalidEvent):
+            gateway.interact(remote, kind='greeting', text='Hello',
+                             command_id='cannot-talk-remote-npc',
+                             expected_revision=state.revision)
+        assert db.load(WORLD).to_dict() == before
+        assert db.verify(WORLD).to_dict() == before
+
+
+def test_exhausted_autonomy_event_budget_rolls_back_without_partial_tick(tmp_path):
+    """The command may not commit some NPC moves/actions and omit the rest."""
+    from carlos_sim import LivingWorldEngine
+    from carlos_sim.resumable_play import ResumableTestSession
+    from carlos_sim.time_engine import AdvanceLimitExceeded
+    from living_player_fixture import (
+        WORLD, PLAYER, living_player_gateway, setup_living_foraging_world,
+    )
+
+    with ResumableTestSession.create(
+        tmp_path / 'bounded.sqlite', WORLD, PLAYER,
+        setup_living_foraging_world, disposable_test=True,
+    ) as session:
+        session.bind_gateway(living_player_gateway(session.store, session.clock))
+        db = session.store
+        before = db.load(WORLD).to_dict()
+        bounded = LivingWorldEngine(
+            db, session.clock, max_events_per_advance=1,
+            navigation_enabled=True, social_enabled=True,
+        )
+        with pytest.raises(AdvanceLimitExceeded):
+            bounded.advance(
+                WORLD, seconds=201, command_id='over-budget',
+                expected_revision=before['revision'], player_observer_id=PLAYER,
+            )
+        assert db.verify(WORLD).to_dict() == before
+        assert db.db.execute(
+            'SELECT COUNT(*) FROM commands WHERE world_id=? AND command_id=?',
+            (WORLD, 'over-budget')).fetchone()[0] == 0
+        # A fresh legitimate command succeeds after the rejected attempt.
+        advanced = session.gateway.wait(
+            1, command_id='valid-after-over-budget',
+            expected_revision=before['revision'])
+        assert advanced.time == 1
+        assert db.verify(WORLD).to_dict() == db.load(WORLD).to_dict()
