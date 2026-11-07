@@ -301,17 +301,17 @@ class LivingWorldEngine:
                                            {"courier_id": courier,
                                             "resource": resource}),
                                supply_capability=True)
-                    journey = choose_courier_leg(current, courier)
-                    if journey is None:
-                        continue
+                    # Survey only the currently visible adjacent roads
+                    # BEFORE selecting the next leg. Otherwise an existing
+                    # navigation profile blocks discovery of the next road.
                     if needs_survey(current, courier):
                         append(DomainEvent("NPCNavigationSurveyed", courier,
                             "courier learns locally adjacent professional road",
                             current.time, {"npc_id": courier}),
                             movement_capability=True)
-                        journey = choose_courier_leg(current, courier)
-                        if journey is None:
-                            continue
+                    journey = choose_courier_leg(current, courier)
+                    if journey is None:
+                        continue
                     rid, origin, destination, due_at = journey
                     tid = f"supply-trip:{courier}:{current.time}"
                     sid = "npc-travel:" + tid
