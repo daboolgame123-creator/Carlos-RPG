@@ -74,8 +74,8 @@ def main() -> None:
                         result = gateway.offers()
                     elif verb == "purchases" and not args:
                         result = gateway.purchases()
-                elif verb == "gifts" and not args:
-                    result = gateway.gifts()
+                    elif verb == "gifts" and not args:
+                        result = gateway.gifts()
                     elif verb in ("look", "move", "wait", "talk", "buy", "give"):
                         if (verb == "look" and args or
                             verb == "move" and len(args) != 1 or
