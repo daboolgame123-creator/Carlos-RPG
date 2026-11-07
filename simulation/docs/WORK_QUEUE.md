@@ -1033,3 +1033,35 @@ healing, XP, equipment, canonical story edits or `main` merge.
 and `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain unchanged.
 This follow-up documentation-only closure commit is not the tested
 code SHA above.
+
+
+## PLAY-13 — Real player-owned meals, bounded meal history (2026-11-07)
+
+**Pre-implementation analysis:** PLAY-12 yields genuinely owned \`food\`
+from a finite 60-second forage. The market yields genuinely purchased
+\`bread\`. No current player hunger, health restoration, magical abilities,
+stamina recovery, XP or nutrition effects are modeled. To make eating a
+concrete voluntary player action without inventing medical mechanics,
+use a new \`PlayerFoodEaten\` event with existing trusted local
+\`consumption_authorized\` capability. It decrements *exactly one owned*
+food/bread and produces no other effects. The durable event log supports a
+verified personal meal history. Event semantics change, so keep
+**Schema 34 / Rules 46**; Rules 45 saves stay unsupported.
+
+| Task | Dependency and deliverable | Route | Status |
+|---|---|---|---|
+| PLAY-13a | PLAY-12 green; player-only bounded one-unit eat from initialized owned food/bread | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-13b | Dedicated replay-safe event and trusted active-session consumption capability, no simulated medical effects | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-13c | Verified capped personal \`meals\` history and same-revision narrator handoff; no NPC privacy leak | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-13d | Real disposable and resumable CLI \`eat <food|bread>\` and \`meals\` | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-13e | NPC autonomy, missing stock, duplicated/stale/fraud requests, transit/busy, tampered replay, SQLite and two CLIs | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-13f | Guide and current-version compatibility pins, full exact-SHA Python 3.10/3.13 CI, technical close | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Causal and scope constraints:** A meal is not a healing event or proof of
+hunger relief. No NPC food/hunger changes, distant food access, timed player
+auto-eating, free supply generation, player spellcasting, production
+authorization, P0 approval, \`main\` merge or canonical story mutation.
+No team may call these tasks closed until the full current-code SHA
+is green for both Python versions. Open: \`03-A7c\`, \`03-A\`,
+\`P0_PRODUCTION_NOT_APPROVED\`,
+\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\`.

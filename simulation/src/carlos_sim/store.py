@@ -241,6 +241,9 @@ class SQLiteEventStore:
                         or sight.data.get("location_id") != event.data.get("site_id")
                         or not movement_authorized):
                     raise InvalidEvent("food pickup requires a matching trusted local observation")
+        if any(e.event_type == "PlayerFoodEaten" for e in events):
+            if not consumption_authorized or world_id not in self._active_worlds:
+                raise InvalidEvent("player eating requires trusted consumption capability and active session")
         if any(e.event_type == "PlayerGiftDelivered" for e in events):
             if not gift_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("player gift requires dedicated capability and active session")

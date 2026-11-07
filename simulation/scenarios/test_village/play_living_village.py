@@ -18,7 +18,7 @@ from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 from living_player_fixture import WORLD, living_player_gateway, setup_living_foraging_world
 
 HELP = ("scene | look | status | remember | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | checkfood | forage (60s, complete with wait) | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | gifts | meals | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -76,6 +76,8 @@ def main() -> None:
                         result = gateway.purchases()
                     elif verb == "gifts" and not args:
                         result = gateway.gifts()
+                    elif verb == "meals" and not args:
+                        result = gateway.meals()
                     elif verb == "conversations" and not args:
                         result = gateway.conversations()
                     elif verb == "checkfood" and not args:
@@ -85,14 +87,15 @@ def main() -> None:
                         result = gateway.ask_food(args[0], args[1],
                                                   command_id=f"living-{count}",
                                                   expected_revision=store.load(WORLD).revision)
-                    elif verb in ("look", "move", "wait", "talk", "buy", "give", "forage"):
+                    elif verb in ("look", "move", "wait", "talk", "buy", "give", "forage", "eat"):
                         if (verb == "look" and args or
                             verb == "move" and len(args) != 1 or
                             verb == "wait" and len(args) != 1 or
                             verb == "talk" and len(args) < 3 or
                             verb == "buy" and len(args) != 3 or
                             verb == "give" and len(args) != 3 or
-                            verb == "forage" and args):
+                            verb == "forage" and args or
+                            verb == "eat" and len(args) != 1):
                             print("Invalid command arguments. Type help.")
                             continue
                         count += 1
@@ -100,6 +103,8 @@ def main() -> None:
                         revision = store.load(WORLD).revision
                         if verb == "forage":
                             result = gateway.forage(command_id=cid, expected_revision=revision)
+                        elif verb == "eat":
+                            result = gateway.eat(args[0], command_id=cid, expected_revision=revision)
                         elif verb == "look":
                             result = gateway.observe(
                                 command_id=cid, expected_revision=revision)

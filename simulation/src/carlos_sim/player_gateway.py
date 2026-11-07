@@ -185,6 +185,16 @@ class PlayerGateway:
                                    'purchases', {'total': len(own),
                                                  'recent': recent})
 
+    def meals(self, limit: int = 20) -> PlayerCommandResult:
+        """Only verified food actually consumed by this human player."""
+        if type(limit) is not int or not 1 <= limit <= 20:
+            raise ValueError('meal history limit must be an integer from 1 to 20')
+        state = self._state()
+        from .player_eating import player_meal_history
+        details = player_meal_history(self.store, state, self.player_id, limit)
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'meals', details)
+
     def gifts(self, limit: int = 20) -> PlayerCommandResult:
         """Read only verified, bounded records of this player's delivered gifts.
 
@@ -376,6 +386,36 @@ class PlayerGateway:
         return PlayerCommandResult(saved.world_id, saved.time, saved.revision,
                                    'foraging', {'site_id': site,
                                                 'remaining_seconds': FORAGE_SECONDS})
+
+    def eat(self, resource: str = 'food', *, command_id: str,
+            expected_revision: int) -> PlayerCommandResult:
+        """Explicitly consume one unit of owned food/bread; no RPG health effects."""
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if self.store.db.execute(
+                'SELECT 1 FROM commands WHERE world_id=? AND command_id=?',
+                (self.world_id, 'player-eat:' + cid)).fetchone():
+            from .store import DuplicateCommand
+            raise DuplicateCommand('player meal command already recorded')
+        self._deny_forage_busy(state)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot eat while travelling')
+        if type(resource) is not str or resource not in ('food', 'bread'):
+            raise ValueError('only owned food or bread may be eaten')
+        current = state.resources.get(self.player_id, {}).get(resource)
+        if type(current) is not int or current < 1:
+            raise ValueError('cannot eat absent, unknown or exhausted owned food')
+        done = self.store.append(
+            self.world_id, 'player-eat:' + cid, expected_revision,
+            [DomainEvent(
+                'PlayerFoodEaten', self.player_id,
+                'human explicitly consumed one own food unit with no assumed medical effect',
+                state.time, {'resource': resource, 'quantity': 1})],
+            consumption_authorized=True)
+        return PlayerCommandResult(done.world_id, done.time, done.revision,
+                                   'ate', {'resource': resource, 'quantity': 1,
+                                           'remaining_owned': done.resources[self.player_id][resource],
+                                           'health_effect': 'not_modeled'})
 
     def ask_food(self, recipient_id: str, site_id: str, *,
                  command_id: str, expected_revision: int) -> PlayerCommandResult:

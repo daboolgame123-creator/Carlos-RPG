@@ -28,7 +28,7 @@ from living_player_fixture import (
 )
 
 HELP = ("scene | look | remember | status | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | checkfood | forage (60s, complete with wait) | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | gifts | meals | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -138,6 +138,8 @@ def main() -> None:
                     result = gateway.purchases()
                 elif verb == "gifts" and not rest:
                     result = gateway.gifts()
+                elif verb == "meals" and not rest:
+                    result = gateway.meals()
                 elif verb == "conversations" and not rest:
                     result = gateway.conversations()
                 elif verb == "checkfood" and not rest:
@@ -149,6 +151,9 @@ def main() -> None:
                     changed = True
                 elif verb == "forage" and not rest:
                     result = gateway.forage(command_id=cid, expected_revision=rev)
+                    changed = True
+                elif verb == "eat" and len(rest) == 1:
+                    result = gateway.eat(rest[0], command_id=cid, expected_revision=rev)
                     changed = True
                 elif verb == "look" and not rest:
                     result = gateway.observe(command_id=cid, expected_revision=rev)

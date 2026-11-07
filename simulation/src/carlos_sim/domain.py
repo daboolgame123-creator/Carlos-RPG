@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 34
-RULES_VERSION = 45
+RULES_VERSION = 46
 
 
 def _thaw(value: Any) -> Any:
@@ -468,9 +468,13 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         from .player_gifts import deliver_player_gift
         deliver_player_gift(d, e, gift_authorized=gift_authorized)
     elif kind == "PlayerFoodCollected":
-        # Rules 45: direct/instant pickup is obsolete. The verified due signal
-        # alone resolves a prepared, genuinely time-consuming player action.
+        # Rules 45+: direct/instant pickup is obsolete. The verified due
+        # signal alone resolves a prepared, genuinely timed player action.
         raise ValueError("instant player food collection is disabled; start a timed forage")
+    elif kind == "PlayerFoodEaten":
+        from .player_eating import project_player_food_eaten
+        project_player_food_eaten(d, e, bootstrap=bootstrap,
+                                  consumption_authorized=consumption_authorized)
     elif kind == "ProductionRecipeConfigured":
         from .production import configure_recipe
         configure_recipe(d, e, bootstrap=bootstrap)
