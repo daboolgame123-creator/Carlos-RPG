@@ -18,7 +18,7 @@ from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 from living_player_fixture import WORLD, living_player_gateway, setup_living_market_world
 
 HELP = ("scene | look | status | remember | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | gifts | conversations | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -78,6 +78,11 @@ def main() -> None:
                         result = gateway.gifts()
                     elif verb == "conversations" and not args:
                         result = gateway.conversations()
+                    elif verb == "askfood" and len(args) == 2:
+                        count += 1
+                        result = gateway.ask_food(args[0], args[1],
+                                                  command_id=f"living-{count}",
+                                                  expected_revision=store.load(WORLD).revision)
                     elif verb in ("look", "move", "wait", "talk", "buy", "give"):
                         if (verb == "look" and args or
                             verb == "move" and len(args) != 1 or

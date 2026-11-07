@@ -310,6 +310,65 @@ class PlayerGateway:
              'quantity': quantity},
         )
 
+    def ask_food(self, recipient_id: str, site_id: str, *,
+                 command_id: str, expected_revision: int) -> PlayerCommandResult:
+        """Ask a present NPC about a known food site without forcing an answer.
+
+        This is a single atomic, player-authored request_help interaction.
+        Only the recipient's own prior belief can be shared, and only when
+        the existing NPC reaction would be 'considered'. The answer is
+        recorded as unverified hearsay, never a narrator assertion of fact.
+        """
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot ask questions while travelling')
+        if (not isinstance(recipient_id, str) or recipient_id not in state.npcs
+                or type(site_id) is not str or not 1 <= len(site_id) <= 80
+                or site_id not in state.locations):
+            raise ValueError('an existing NPC and known food site are required')
+        from .social import decision
+        from .knowledge import FOOD_KEY_PREFIX, parse_food_claim, is_observation_source
+        trust = state.relations.get(recipient_id, {}).get(self.player_id, 0)
+        reaction, _ = decision('request_help', trust)
+        key = FOOD_KEY_PREFIX + site_id
+        belief = state.npcs[recipient_id]['beliefs'].get(key)
+        can_share = (reaction == 'considered' and belief is not None
+                     and parse_food_claim(belief['text']) is not None
+                     and (is_observation_source(belief['source'])
+                          or belief['received_at'] < state.time))
+        message_id = 'player-ask-food-' + cid
+        events = [
+            DomainEvent('SocialMessageSent', self.player_id,
+                        'player asked a nearby NPC about food', state.time,
+                        {'id': message_id, 'recipient': recipient_id,
+                         'kind': 'request_help',
+                         'text': 'Have you seen food at ' + site_id + '?'}),
+            DomainEvent('SocialMessageReceived', recipient_id,
+                        'NPC independently interpreted the request', state.time,
+                        {'id': message_id}),
+        ]
+        if can_share:
+            events.append(DomainEvent(
+                'PlayerHearsayReceived', recipient_id,
+                'NPC shared its own existing food observation or hearsay',
+                state.time, {'player_id': self.player_id,
+                             'key': key, 'text': belief['text']}))
+        committed = self.store.append(
+            self.world_id, 'social:' + message_id, expected_revision,
+            events, social_authorized=True)
+        recorded = committed.social_messages[message_id]
+        if recorded['reaction'] != reaction:
+            raise RuntimeError('NPC reaction differed from committed decision')
+        details = {'recipient_id': recipient_id, 'site_id': site_id,
+                   'reaction': reaction, 'shared': bool(can_share)}
+        if can_share:
+            details['claim'] = {
+                'key': key, 'text': belief['text'], 'status': 'unverified',
+            }
+        return PlayerCommandResult(committed.world_id, committed.time,
+                                   committed.revision, 'asked_food', details)
+
     def move(self, route_id: str, *, command_id: str,
              expected_revision: int) -> PlayerCommandResult:
         """Start an adjacent journey; arrival occurs only when its due event fires."""

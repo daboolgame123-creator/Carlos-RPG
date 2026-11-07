@@ -841,3 +841,30 @@ is not represented by the same CI check. Phase 03-A7c/03-A remain OPEN;
 `P0_PRODUCTION_NOT_APPROVED` and
 `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain unchanged. No `main` merge
 or canonical story changes.
+
+
+## PLAY-10 — Player asks NPC about an evidenced food location (planned 2026-11-07)
+
+**Analysis before implementation:** PLAY-09 records actual social speech, while
+01-T/01-X already provide NPC-local food observations and replay-safe player
+hearsay. A trusted one-command interaction can combine the existing
+\`request_help\` reaction with an NPC's own evidenced belief, *only when* the
+character's independent response is \`considered\`. This does not invent
+dialogue, update medical observation contracts, or depend on P0 production.
+A finite test-only food fixture creates observable evidence, not free player food.
+
+| Task | Scope / dependency | Route | Status |
+|---|---|---|---|
+| PLAY-10a | Atomic player question and conditional NPC response using existing social + hearsay events; PLAY-09 green | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-10b | Seed truly initialized local \`wild_food\` and valid Basim/Omar sightings in isolated market demo only; 10a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-10c | \`askfood <npc> <site>\` in disposable temporary and resumable CLI; 10a | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-10d | NPC independent choices, privacy, nonexistent/remote/unknown claims, dedup, forged hearing, replay and save tests; 10a–c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-10e | Guide, full exact-SHA Python 3.10 + 3.13 matrix and closure; 10a–d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+
+**Security/causality:** A valid site name alone provides zero world truth.
+NPC's own known fact, proper direct or non-instantly re-shared source, and
+pre-request willingness must all hold. No change to schema 33/rules 43,
+no RPG inventory/XP, no narrator omniscience, no hidden needs/trust exposed,
+no time advance from speech, no main/story edits. Open 03-A7c/03-A,
+P0_PRODUCTION_NOT_APPROVED and EXTERNAL_REVIEW_DEFERRED_BY_OWNER remain.
+All tasks require exact final code SHA dual-Python CI before technical closure.

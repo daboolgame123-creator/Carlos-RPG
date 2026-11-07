@@ -93,6 +93,8 @@ def setup_living_market_world(store) -> None:
     assets = (
         (PLAYER, "coin_copper", 10), (PLAYER, "bread", 0),
         ("salma", "coin_copper", 0), ("salma", "bread", 3),
+        # Finite TEST-ONLY world resources, not player inventory or free food.
+        ("square", "wild_food", 2), ("woods", "wild_food", 4),
     )
     store.append(WORLD, "living-market-initial-balances", state.revision, [
         _fixture("ResourceChanged", {
@@ -103,6 +105,18 @@ def setup_living_market_world(store) -> None:
     clock = TimeEngine(store)
     clock.open_session(WORLD)
     try:
+        # Verified firsthand sightings, not fabricated omniscience. Basim
+        # observes only square; Omar observes only woods. Salma knows neither.
+        from carlos_sim.knowledge import make_observation_events
+        current = store.load(WORLD)
+        sightings = (
+            make_observation_events(current, "basim", "square", current.time,
+                                    "demo-10-square")
+            + make_observation_events(current, "omar", "woods", current.time,
+                                      "demo-10-woods")
+        )
+        store.append(WORLD, "living-market-true-food-sightings",
+                     current.revision, sightings, npc_authorized=True)
         NPCMarketService(store, clock).post(
             WORLD, "salma", "salma", "square", "salma-bread",
             "bread", 3, "coin_copper", 2,
