@@ -42,10 +42,14 @@ def test_local_witness_keeps_only_real_basims_meal(tmp_path):
         assert result.details["nearby_meals"] == (
             {"npc_id": "basim", "activity": "eating", "at": 0},)
         memory = gateway.recall().details["witnessed_events"]
-        assert memory == ({
+        # PLAY-18 independently adds nearby NPC speech, but must never
+        # invent a second meal or disclose Nora's remote consumption.
+        meals = tuple(item for item in memory if item["activity"] == "eating")
+        assert meals == ({
             "actor_id": "basim", "activity": "eating",
             "location_id": "square", "at": 0,
         },)
+        assert all(item["activity"] in ("eating", "talking") for item in memory)
         assert db.load(WORLD).revision > before.revision
         view = player_handoff(gateway)
         assert view["player_memory"]["witnessed_events"] == memory
@@ -140,6 +144,9 @@ def test_default_village_and_invalid_observer_do_not_write_memory(tmp_path):
                                    player_observer_id="nora")
         assert db.load(WORLD).to_dict() == old
         tick(db, gateway)
-        assert "witnessed_events" not in gateway.recall().details
+        # Default mode may now witness local conversations, but still
+        # cannot silently activate NPC hunger or eating.
+        assert all(row["activity"] != "eating"
+                   for row in gateway.recall().details.get("witnessed_events", ()))
         assert not db.load(WORLD).consumptions
         assert db.verify(WORLD).to_dict() == db.load(WORLD).to_dict()
