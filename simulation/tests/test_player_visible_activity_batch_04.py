@@ -219,7 +219,7 @@ def test_local_cli_showcases_real_actions_without_changing_scene(tmp_path):
     from test_play_living_village_batch_02 import _cli, _json_handoffs
     # t=1: NPCs start actual action/travel lifecycles, then two identical
     # handoffs must not cause an action, time step or new player memory.
-    output = _cli("wait 1\\nscene\\nhandoff\\nscene\\nhandoff\\nquit\\n")
+    output = _cli("wait 1\nscene\nhandoff\nscene\nhandoff\nquit\n")
     handoffs = _json_handoffs(output.stdout)
     assert len(handoffs) == 2
     assert handoffs[0] == handoffs[1]
@@ -239,7 +239,7 @@ def test_resumable_cli_current_actions_same_after_pause_and_read_only_export(tmp
     db_path = tmp_path / "real-save.sqlite"
     backups = tmp_path / "backups"
     backups.mkdir()
-    new = run_cli("wait 1\\nhandoff\\nquit\\n", db_path, backups, "--new",
+    new = run_cli("wait 1\nhandoff\nquit\n", db_path, backups, "--new",
                   extra=("--disposable-test",))
     first = saved_states(new.stdout)
     assert len(first) == 1 and first[0]["time"] == 1
@@ -248,7 +248,7 @@ def test_resumable_cli_current_actions_same_after_pause_and_read_only_export(tmp
     saved_view = first[0]
     with SQLiteEventStore(db_path) as db:
         frozen = db.verify(WORLD).to_dict()
-    resume = run_cli("scene\\nhandoff\\nhandoff\\nquit\\n", db_path,
+    resume = run_cli("scene\nhandoff\nhandoff\nquit\n", db_path,
                      backups, "--resume", extra=("--disposable-test",))
     after = saved_states(resume.stdout)
     assert after == [saved_view, saved_view]
