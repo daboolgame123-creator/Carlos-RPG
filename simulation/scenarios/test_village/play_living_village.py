@@ -18,7 +18,7 @@ from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 from living_player_fixture import WORLD, living_player_gateway, setup_living_foraging_world
 
 HELP = ("scene | look | status | remember | handoff | move <road> "
-        "| wait <seconds> | offers | supplies | purchases | gifts | meals | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
+        "| wait <seconds> | offers | supplies | purchases | gifts | meals | needs | conversations | checkfood | forage (60s, complete with wait) | eat <food|bread> | askfood <npc> <site> | buy <offer> <qty> <price> | give <npc> <item> <qty> | talk <npc> <kind> <words> | quit")
 
 
 def render(result) -> None:
@@ -78,6 +78,8 @@ def main() -> None:
                         result = gateway.gifts()
                     elif verb == "meals" and not args:
                         result = gateway.meals()
+                    elif verb == "needs" and not args:
+                        result = gateway.needs()
                     elif verb == "conversations" and not args:
                         result = gateway.conversations()
                     elif verb == "checkfood" and not args:

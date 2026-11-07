@@ -185,6 +185,14 @@ class PlayerGateway:
                                    'purchases', {'total': len(own),
                                                  'recent': recent})
 
+    def needs(self) -> PlayerCommandResult:
+        """Verified time since last real meal, without invented hunger or ST."""
+        state = self._state()
+        from .player_sustenance import player_sustenance_view
+        details = player_sustenance_view(self.store, state, self.player_id)
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   'needs', details)
+
     def meals(self, limit: int = 20) -> PlayerCommandResult:
         """Only verified food actually consumed by this human player."""
         if type(limit) is not int or not 1 <= limit <= 20:

@@ -26,12 +26,13 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
     purchases = gateway.purchases(limit=5)
     gifts = gateway.gifts(limit=5)
     meals = gateway.meals(limit=5)
+    needs = gateway.needs()
     conversations = gateway.conversations(limit=5)
     local_food = gateway.check_food()
-    if not all(type(row) is PlayerCommandResult for row in (scene, status, memory, supplies, purchases, gifts, meals, conversations, local_food)):
+    if not all(type(row) is PlayerCommandResult for row in (scene, status, memory, supplies, purchases, gifts, meals, needs, conversations, local_food)):
         raise ValueError("invalid player projection")
     versions = {(row.world_id, row.time, row.revision)
-                for row in (scene, status, memory, supplies, purchases, gifts, meals, conversations, local_food)}
+                for row in (scene, status, memory, supplies, purchases, gifts, meals, needs, conversations, local_food)}
     if len(versions) != 1:
         raise RuntimeError("player view changed during handoff")
     if (scene.status not in ("present", "traveling")
@@ -41,6 +42,7 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
             or purchases.status != "purchases"
             or gifts.status != "gifts"
             or meals.status != "meals"
+            or needs.status != "needs"
             or conversations.status != "conversations"
             or local_food.status != "local_food"):
         raise ValueError("unexpected player view")
@@ -58,6 +60,7 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
         "player_purchases": purchases.details,
         "player_gifts": gifts.details,
         "player_meals": meals.details,
+        "player_needs": needs.details,
         "player_conversations": conversations.details,
         "player_local_food": local_food.details,
     }

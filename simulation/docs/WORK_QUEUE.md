@@ -1099,3 +1099,35 @@ smoke tests, SQLite replay/snapshots, and real restartable world checks.
 **Closure mechanics:** This is a following **documentation-only**
 commit; its SHA is distinct from the tested code-and-tests SHA above,
 so the cited CI is not attributed to the documentation commit.
+
+
+## PLAY-14 — Player sustenance evidence without unjustified hunger/energy (2026-11-07)
+
+**Analysis before implementation:** NPC \`survival.py\` computes a trusted NPC
+hunger/fatigue meter, while player \`rpg_state.py\` only has HP/ST/MP
+with unknown-safe RPG values and no approved relationship to hunger,
+calories or medical injuries. PLAY-13 deliberately consumes physical
+owned food **without** changing a player hunger meter. Reusing NPC
+metabolism on the player or equating ST with hunger would silently invent
+a rule and could conflict with open injury 03-A7c/03-A. The safe playable
+extension is an *evidence-only* \`needs\` panel, derived from verified meal
+events, simulation time and initialized *player-owned* supplies. Unknown
+remains unknown; no thresholds, hunger rates or injury effects are guessed.
+No domain mutation -> **Schema 34 / Rules 46 unchanged**.
+
+| Task | Deliverable | Classification | Status |
+|---|---|---|---|
+| PLAY-14a | Current NPC/player metabolism comparison and dependency boundary | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14b | Verified last meal and elapsed simulated seconds, null when no event | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14c | Player-only initialized edible balances with explicit unknowns and no NPC privacy leak | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14d | Gateway \`needs\`, coherent narrator handoff and two real CLI routes | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14e | NPC autonomy, unknowns, replay/snapshot, no wall-clock aging, no stat mutation and CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14f | Full exact-source-SHA Python 3.10/3.13 CI and technical closure | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14g | Numeric hunger/fatigue, feeding rules, status penalties, injury integration | DECISION_REQUIRED / BLOCKED_BY_DEPENDENCY | OPEN |
+
+**No gameplay hunger meter claimed.** 14g is a *different future task*
+requiring an explicit game-design decision and assessment of incomplete
+03-A7c/03-A. This batch adds no effect to HP/ST/MP, NPC behavior or RPG
+progression. No production gate lifted; no \`main\` merge or canonical story
+mutation. \`P0_PRODUCTION_NOT_APPROVED\` and
+\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\` remain unchanged.
