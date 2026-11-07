@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 34
-RULES_VERSION = 46
+SCHEMA_VERSION = 35
+RULES_VERSION = 47
 
 
 def _thaw(value: Any) -> Any:
@@ -88,6 +88,7 @@ class WorldState:
     injuries: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     treatments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     environment_cycles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    farm_plots: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_recipes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_jobs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     market_stalls: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
@@ -134,6 +135,7 @@ class WorldState:
         object.__setattr__(self, "injuries", _freeze(_json_copy(self.injuries)))
         object.__setattr__(self, "treatments", _freeze(_json_copy(self.treatments)))
         object.__setattr__(self, "environment_cycles", _freeze(_json_copy(self.environment_cycles)))
+        object.__setattr__(self, "farm_plots", _freeze(_json_copy(self.farm_plots)))
         object.__setattr__(self, "production_recipes", _freeze(_json_copy(self.production_recipes)))
         object.__setattr__(self, "production_jobs", _freeze(_json_copy(self.production_jobs)))
         object.__setattr__(self, "market_stalls", _freeze(_json_copy(self.market_stalls)))
@@ -177,7 +179,7 @@ class WorldState:
                            "foraging_attempts": self.foraging_attempts,
                            "survival_progress": self.survival_progress,
                            "rpg_profiles": self.rpg_profiles, "injuries": self.injuries, "treatments": self.treatments,
-                           "environment_cycles": self.environment_cycles,
+                           "environment_cycles": self.environment_cycles, "farm_plots": self.farm_plots,
                            "production_recipes": self.production_recipes,
                            "production_jobs": self.production_jobs,
                            "market_stalls": self.market_stalls,
@@ -217,7 +219,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -225,7 +227,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -277,6 +279,8 @@ class WorldState:
         validate_foraging_attempts(d)
         from .environment import validate_environment_cycles
         validate_environment_cycles(d)
+        from .agriculture import validate_farm_plots
+        validate_farm_plots(d)
         from .production import validate_production_state
         validate_production_state(d)
         from .market import validate_market
@@ -351,7 +355,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False, recovery_authorized: bool = False, gift_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False, recovery_authorized: bool = False, gift_authorized: bool = False, agriculture_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -481,6 +485,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "ProductionStarted":
         from .production import start_production
         start_production(d, e, production_authorized=production_authorized)
+    elif kind == "FarmPlotConfigured":
+        from .agriculture import configure_plot
+        configure_plot(d, e, bootstrap=bootstrap)
+    elif kind == "CropGrowthStarted":
+        from .agriculture import start_crop_growth
+        start_crop_growth(d, e, agriculture_authorized=agriculture_authorized)
     elif kind == "EnvironmentalCycleConfigured":
         from .environment import configure_environment_cycle
         configure_environment_cycle(d, e, bootstrap=bootstrap)
@@ -552,7 +562,7 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("invalid due time or schedule order")
         if p["kind"] != "signal" or not isinstance(p["payload"], Mapping) or type(p["interrupt"]) is not bool:
             raise ValueError("unsupported scheduled action")
-        if any(k in p["payload"] for k in ("__environment_cycle", "__production_job", "__loan_due")):
+        if any(k in p["payload"] for k in ("__environment_cycle", "__production_job", "__loan_due", "__crop_growth")):
             raise ValueError("protected system appointment cannot be fabricated")
         if "__npc_recovery" in p["payload"]:
             from .recovery_events import validate_recovery_schedule
@@ -602,6 +612,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("cannot cancel an environmental renewal cycle")
         if "__production_job" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel a material-backed production job")
+        if "__crop_growth" in d["scheduled"][p["id"]]["payload"]:
+            raise ValueError("cannot cancel authenticated crop maturation")
         if "__loan_due" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel a legitimate loan deadline")
         if "__npc_recovery" in d["scheduled"][p["id"]]["payload"]:
@@ -634,6 +646,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if "__production_job" in scheduled["payload"]:
             from .production import finish_production
             finish_production(d, p["id"], scheduled["payload"]["__production_job"], state.time)
+        if "__crop_growth" in scheduled["payload"]:
+            from .agriculture import mature_crop
+            mature_crop(d, p["id"], scheduled["payload"], state.time)
         if "__loan_due" in scheduled["payload"]:
             from .loans import mark_due
             mark_due(d, p["id"], scheduled["payload"]["__loan_due"], state.time)
