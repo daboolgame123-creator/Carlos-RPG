@@ -243,7 +243,7 @@ def test_local_cli_buys_real_goods_and_reports_only_carlos_supplies():
     assert len(views) == 1
     assert views[0]["player_supplies"]["balances"]["bread"] == 2
     assert views[0]["player_supplies"]["balances"]["coin_copper"] == 6
-    assert "purchased" in output and "'total_paid': 4" in output
+    assert "purchased" in output and "total_paid: 4" in output
     assert "'available': 1" in output
     assert "nora" not in json.dumps(views)
 
