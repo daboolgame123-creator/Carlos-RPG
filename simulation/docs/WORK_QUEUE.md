@@ -1037,31 +1037,65 @@ code SHA above.
 
 ## PLAY-13 — Real player-owned meals, bounded meal history (2026-11-07)
 
-**Pre-implementation analysis:** PLAY-12 yields genuinely owned \`food\`
+**Pre-implementation analysis:** PLAY-12 yields genuinely owned `food`
 from a finite 60-second forage. The market yields genuinely purchased
-\`bread\`. No current player hunger, health restoration, magical abilities,
+`bread`. No current player hunger, health restoration, magical abilities,
 stamina recovery, XP or nutrition effects are modeled. To make eating a
 concrete voluntary player action without inventing medical mechanics,
-use a new \`PlayerFoodEaten\` event with existing trusted local
-\`consumption_authorized\` capability. It decrements *exactly one owned*
+use a new `PlayerFoodEaten` event with existing trusted local
+`consumption_authorized` capability. It decrements *exactly one owned*
 food/bread and produces no other effects. The durable event log supports a
 verified personal meal history. Event semantics change, so keep
 **Schema 34 / Rules 46**; Rules 45 saves stay unsupported.
 
 | Task | Dependency and deliverable | Route | Status |
 |---|---|---|---|
-| PLAY-13a | PLAY-12 green; player-only bounded one-unit eat from initialized owned food/bread | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-13b | Dedicated replay-safe event and trusted active-session consumption capability, no simulated medical effects | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-13c | Verified capped personal \`meals\` history and same-revision narrator handoff; no NPC privacy leak | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-13d | Real disposable and resumable CLI \`eat <food|bread>\` and \`meals\` | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-13e | NPC autonomy, missing stock, duplicated/stale/fraud requests, transit/busy, tampered replay, SQLite and two CLIs | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-13f | Guide and current-version compatibility pins, full exact-SHA Python 3.10/3.13 CI, technical close | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-13a | PLAY-12 green; player-only bounded one-unit eat from initialized owned food/bread | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-13b | Dedicated replay-safe event and trusted active-session consumption capability, no simulated medical effects | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-13c | Verified capped personal `meals` history and same-revision narrator handoff; no NPC privacy leak | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-13d | Real disposable and resumable CLI `eat <food|bread>` and `meals` | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-13e | NPC autonomy, missing stock, duplicated/stale/fraud requests, transit/busy, tampered replay, SQLite and two CLIs | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-13f | Guide and current-version compatibility pins, full exact-SHA Python 3.10/3.13 CI, technical close | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Causal and scope constraints:** A meal is not a healing event or proof of
 hunger relief. No NPC food/hunger changes, distant food access, timed player
 auto-eating, free supply generation, player spellcasting, production
-authorization, P0 approval, \`main\` merge or canonical story mutation.
+authorization, P0 approval, `main` merge or canonical story mutation.
 No team may call these tasks closed until the full current-code SHA
-is green for both Python versions. Open: \`03-A7c\`, \`03-A\`,
-\`P0_PRODUCTION_NOT_APPROVED\`,
-\`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\`.
+is green for both Python versions. Open: `03-A7c`, `03-A`,
+`P0_PRODUCTION_NOT_APPROVED`,
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`.
+
+### PLAY-13 verified technical closure — 2026-11-07
+
+**PLAY-13a–PLAY-13f CLOSED_TECHNICALLY** on exact final code-and-test
+SHA `24b2974599a213bada249d4781b64e55c5f96e39`. [GitHub Actions run 42373165522](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42373165522)
+finished **SUCCESS**, with **1,410 passed on Python 3.10** and
+**1,410 passed on Python 3.13**. Both matrices also passed historical
+schema/rules compatibility, previous saved-world rejection, two-CLI
+smoke tests, SQLite replay/snapshots, and real restartable world checks.
+
+- A player can consciously use `eat food` for previously gathered food
+  or `eat bread` for physically purchased bread. The dedicated
+  `PlayerFoodEaten` event consumes exactly one initialized, owned
+  unit without creating any substitute resources; no in-game time
+  passes for this simplified immediate physical meal.
+- The player-only gateway rejects unowned/unknown/empty food, nonfood
+  resources, travel, simultaneous timed forage, NPC impersonation,
+  unauthorized/off-session writes, forged/bad quantities and
+  duplicate/stale request IDs.
+- `meals` returns up to 20 event-sourced, integrity-verified
+  personal receipts. The narrator handoff contains the five latest
+  meal entries on the same world/revision as the other trusted player
+  projections; it never reveals NPC private needs or ledgers.
+- Existing NPC autonomy remains independent and untouched: there
+  is no implicit player hunger change, HP, ST, MP, medical healing,
+  XP, stat gain or NPC meal simulation change.
+- Rules **46**, Schema **34**. Rules 45 saves are not silently opened
+  under the new semantics. P0_PRODUCTION_NOT_APPROVED,
+  EXTERNAL_REVIEW_DEFERRED_BY_OWNER and 03-A7c/03-A remain OPEN.
+  Neither `main` nor the canonical Carlos story was modified.
+
+**Closure mechanics:** This is a following **documentation-only**
+commit; its SHA is distinct from the tested code-and-tests SHA above,
+so the cited CI is not attributed to the documentation commit.
