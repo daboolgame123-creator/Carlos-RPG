@@ -1117,12 +1117,12 @@ No domain mutation -> **Schema 34 / Rules 46 unchanged**.
 
 | Task | Deliverable | Classification | Status |
 |---|---|---|---|
-| PLAY-14a | Current NPC/player metabolism comparison and dependency boundary | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14b | Verified last meal and elapsed simulated seconds, null when no event | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14c | Player-only initialized edible balances with explicit unknowns and no NPC privacy leak | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14d | Gateway \`needs\`, coherent narrator handoff and two real CLI routes | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14e | NPC autonomy, unknowns, replay/snapshot, no wall-clock aging, no stat mutation and CLI tests | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-14f | Full exact-source-SHA Python 3.10/3.13 CI and technical closure | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-14a | Current NPC/player metabolism comparison and dependency boundary | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14b | Verified last meal and elapsed simulated seconds, null when no event | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14c | Player-only initialized edible balances with explicit unknowns and no NPC privacy leak | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14d | Gateway \`needs\`, coherent narrator handoff and two real CLI routes | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14e | NPC autonomy, unknowns, replay/snapshot, no wall-clock aging, no stat mutation and CLI tests | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-14f | Full exact-source-SHA Python 3.10/3.13 CI and technical closure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 | PLAY-14g | Numeric hunger/fatigue, feeding rules, status penalties, injury integration | DECISION_REQUIRED / BLOCKED_BY_DEPENDENCY | OPEN |
 
 **No gameplay hunger meter claimed.** 14g is a *different future task*
@@ -1131,3 +1131,39 @@ requiring an explicit game-design decision and assessment of incomplete
 progression. No production gate lifted; no \`main\` merge or canonical story
 mutation. \`P0_PRODUCTION_NOT_APPROVED\` and
 \`EXTERNAL_REVIEW_DEFERRED_BY_OWNER\` remain unchanged.
+
+
+### PLAY-14 verified technical closure — 2026-11-07
+
+PLAY-14a–PLAY-14f **CLOSED_TECHNICALLY** on exact code-and-tests
+SHA `1cf0aadced5061667c4b9efe9f279882a1eccaef`.
+[GitHub Actions run 42379710831](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42379710831)
+completed **SUCCESS**, with **1,420 passed on Python 3.10** and
+**1,420 passed on Python 3.13**, including historic Rules/Schema,
+snapshot replay, independent NPC activities, real disposable and resumable
+CLIs, and the new need-evidence tests.
+
+A first test run at `74e851fb3d54d2099984663e195f277bbfc9213a`
+failed two existing privacy assertions: a literal ban on the word
+"hunger", and a literal ban on "bread" that now appeared solely as
+**unknown player-owned bread** in the new evidence panel. No private
+NPC production amounts or actual NPC hunger were exposed. Tests were
+narrowly strengthened to assert `hunger == not_modeled` rather than
+forbid naming the unknown, and reject leaked bakery recipe/output while
+allowing an unknown player-owned bread label. The repaired source SHA
+passed both full CI matrices.
+
+The new read-only `needs` player command gives only physically owned
+initialized food/bread (unknown remains null), latest *verified* player
+meal receipt, and in-world elapsed seconds. It leaves player hunger,
+physical energy and links to RPG stamina explicitly **unmodeled**.
+It cannot silently advance offline time, mutate HP/ST/MP, create goods,
+or query private NPC needs. Narrator handoff is version-coherent.
+
+**No schema/rules change:** Schema 34 / Rules 46. The independent numeric
+hunger and effects task **PLAY-14g remains OPEN, DECISION_REQUIRED /
+BLOCKED_BY_DEPENDENCY**, until its game-design policy and injury
+interaction are explicitly resolved; it is NOT technically closed.
+03-A7c/03-A remain OPEN; P0_PRODUCTION_NOT_APPROVED and
+EXTERNAL_REVIEW_DEFERRED_BY_OWNER remain. No main merge/story edit.
+The present doc-only closure commit follows the exactly CI-tested code SHA.
