@@ -970,10 +970,10 @@ the exact tested code SHA; it is not claimed CI-verified by that run.
 
 ## PLAY-12 — Timed, source-competitive player forage (2026-11-07)
 
-**Analysis before implementation:** PLAY-11's immediate \`forage\` does not let
+**Analysis before implementation:** PLAY-11's immediate `forage` does not let
 the village live or its finite food supply change while Carlos works.
-Reuse the existing trusted \`ScheduledEventCreated\` / \`ScheduledEventFired\`
-mechanism with a reserved \`__player_forage\` payload. A verified 60-second
+Reuse the existing trusted `ScheduledEventCreated` / `ScheduledEventFired`
+mechanism with a reserved `__player_forage` payload. A verified 60-second
 due signal physically checks remaining local food *at completion* and
 transfers at most one unit; another real actor may take the last unit first.
 No time/event writes happen in the background. This changes event semantics:
@@ -982,19 +982,54 @@ No independent production/medical phase is touched.
 
 | Task | Dependency / result | Route | State |
 |---|---|---|---|
-| PLAY-12a | PLAY-11 green; start a genuine 60-second bounded scheduled activity | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-12b | Due-tick conservation and no-reward depletion; no instant pickup loophole | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-12c | Busy-player constraints; allow only waiting, reading own view and snapshot/resume | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-12d | Both real CLI workflows and coherent narrator-facing activity/results; 12a-c | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-12e | Independent NPC time, multiple player competition, forged schedules, stale IDs, SQLite replay and adversarial tests; 12a-d | CHAT_EXECUTABLE | VERIFICATION_PENDING |
-| PLAY-12f | Guide, current-rules compatibility assertions, exact-code-SHA dual Python CI and technical close; 12e | CHAT_EXECUTABLE | VERIFICATION_PENDING |
+| PLAY-12a | PLAY-11 green; start a genuine 60-second bounded scheduled activity | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-12b | Due-tick conservation and no-reward depletion; no instant pickup loophole | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-12c | Busy-player constraints; allow only waiting, reading own view and snapshot/resume | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-12d | Both real CLI workflows and coherent narrator-facing activity/results; 12a-c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-12e | Independent NPC time, multiple player competition, forged schedules, stale IDs, SQLite replay and adversarial tests; 12a-d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-12f | Guide, current-rules compatibility assertions, exact-code-SHA dual Python CI and technical close; 12e | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
 
 **Safety constraints:** No automatic player decisions, real-time offline progress,
 unknown or remote resources, instant harvest, medical effects or RPG inventory
 conjuring. At the due moment, insufficient stock means **depleted**, no minted
 reward. Only a real human-controlled actor present throughout may start;
-\`move\`, \`give\`, \`buy\`, \`talk\`, \`askfood\`, \`look\` and another \`forage\`
-are denied during the timed action; \`wait\` advances NPC autonomous activity.
+`move`, `give`, `buy`, `talk`, `askfood`, `look` and another `forage`
+are denied during the timed action; `wait` advances NPC autonomous activity.
 A separately authorized player action cannot cancel or prematurely fire the
-reserved schedule. \`03-A7c\` / \`03-A\` remain OPEN, P0_PRODUCTION_NOT_APPROVED,
-EXTERNAL_REVIEW_DEFERRED_BY_OWNER. No \`main\` merge/story edits.
+reserved schedule. `03-A7c` / `03-A` remain OPEN, P0_PRODUCTION_NOT_APPROVED,
+EXTERNAL_REVIEW_DEFERRED_BY_OWNER. No `main` merge/story edits.
+
+### PLAY-12 exact-SHA verified technical closure — 2026-11-07
+
+**PLAY-12a–PLAY-12f CLOSED_TECHNICALLY**, against final source and test
+SHA `fa935918ee7e9e5f8af60c1012c12f8826b04cae`. [GitHub Actions run 42366510974](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42366510974)
+completed **SUCCESS**, **1,371 passed on Python 3.10** and **1,371 passed
+on Python 3.13**, including extensive historical schema/rules parity, CLI
+smoke, SQLite replay/snapshot and true two-process resume checks.
+
+PLAY-12 changes `forage` into a genuine 60-simulated-second job. Player
+action starts an atomic witnessed, source-bound, due-signal schedule; no
+food is created or transferred on start. The world advances only by
+explicit `wait`, while independent NPCs pursue their own actions.
+At the signed due event, one unit is transferred from still-existing
+wild_food at that site to the player's known food balance, or zero
+units if the source was exhausted first. Concurrent player jobs resolve
+by persisted due/order deterministically. The direct instant-pickup
+event is disabled in Rules 45. Busy-player interactions, movement,
+forged cancellation, missing source, backdated starts and remote
+sources fail closed. Resuming an incomplete job does not advance
+paused real-world time.
+
+**Initial CI 42366073933 on 5e3f559b failed** (19 tests) because a strict
+`dict` type check rejected the immutable `Mapping` payloads of real
+DomainEvent objects. Corrected in the final SHA, plus a test-backed
+prohibition of backdated starts that could shortcut the duration.
+The failing run is not counted toward closure.
+
+**Persistence:** Schema 34, Rules 45; rules44 saves are not silently
+reinterpreted. No automatic NPC-to-player resource invention, hunger
+healing, XP, equipment, canonical story edits or `main` merge.
+`03-A7c` and `03-A` remain OPEN; `P0_PRODUCTION_NOT_APPROVED`
+and `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain unchanged.
+This follow-up documentation-only closure commit is not the tested
+code SHA above.
