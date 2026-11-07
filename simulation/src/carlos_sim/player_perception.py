@@ -58,20 +58,48 @@ def validate_player_perception_event(state: dict[str, Any], event: DomainEvent,
 
 def recall_player_events(store: SQLiteEventStore, state: WorldState,
                          player_id: str) -> dict[str, Any]:
-    """Return only evidenced player sightings and explicitly received hearsay."""
+    """Read-only verified sightings, hearsay and bounded witnessed meals.
+
+    A meal requires the immediately preceding, actor-bound PlayerObserved
+    in the SAME authorized wait command at the SAME physical site/tick.
+    A remote consumption is never memory merely because it exists in SQLite.
+    """
     verified = store.verify(state.world_id)
     if verified.revision != state.revision:
         raise ValueError('world changed while reading player memory')
     visited: dict[str, dict[str, Any]] = {}
     heard: list[dict[str, Any]] = []
+    witnessed: list[dict[str, Any]] = []
+    pending_witness: tuple[str, DomainEvent] | None = None
     rows = store.db.execute(
-        'SELECT payload FROM events WHERE world_id=? ORDER BY seq',
+        'SELECT payload, command_id FROM events WHERE world_id=? ORDER BY seq',
         (state.world_id,))
-    for (raw,) in rows:
+    for raw, command_id in rows:
         obj = json.loads(raw)
-        if obj.get('event_type') not in ('PlayerObserved', 'PlayerHearsayReceived'):
+        if obj.get('event_type') not in ('PlayerObserved', 'PlayerHearsayReceived',
+                                         'NPCFoodConsumed'):
+            pending_witness = None
             continue
         evt = DomainEvent.from_dict(obj)
+        if evt.event_type == 'NPCFoodConsumed':
+            if pending_witness is not None and pending_witness[0] == command_id:
+                observed = pending_witness[1]
+                meal = state.consumptions.get(evt.data['id'])
+                if (meal is not None and meal['npc_id'] == evt.actor_id
+                        and evt.actor_id == evt.data['npc_id']
+                        and meal['consumed_at'] == evt.time == observed.time
+                        and meal['location_id'] == observed.data['location_id']
+                        and evt.actor_id in observed.data['occupants']):
+                    witnessed.append({
+                        'actor_id': evt.actor_id, 'activity': 'eating',
+                        'location_id': meal['location_id'], 'at': evt.time,
+                    })
+                    # Only the most recent 20 local memories are projected.
+                    if len(witnessed) > 20:
+                        witnessed.pop(0)
+            pending_witness = None
+            continue
+        pending_witness = None
         if evt.event_type == 'PlayerObserved' and evt.actor_id == player_id:
             place = evt.data['location_id']
             visited[place] = {
@@ -81,6 +109,9 @@ def recall_player_events(store: SQLiteEventStore, state: WorldState,
                     'id': who, 'name': state.entities[who]['name']}
                     for who in evt.data['occupants']),
             }
+            if (command_id.startswith('player-wait:')
+                    and evt.cause == 'player witnessed a nearby NPC eating'):
+                pending_witness = (command_id, evt)
         elif (evt.event_type == 'PlayerHearsayReceived'
               and evt.data['player_id'] == player_id):
             heard.append({
@@ -89,6 +120,9 @@ def recall_player_events(store: SQLiteEventStore, state: WorldState,
                 'key': evt.data['key'], 'claim': evt.data['text'],
                 'heard_at': evt.time, 'status': 'unverified',
             })
-    return {'observations': tuple(sorted(
-                visited.values(), key=lambda x: (x['observed_at'], x['location_id']))),
-            'hearsay': tuple(heard)}
+    memory = {'observations': tuple(sorted(
+                  visited.values(), key=lambda x: (x['observed_at'], x['location_id']))),
+              'hearsay': tuple(heard)}
+    if witnessed:
+        memory['witnessed_events'] = tuple(witnessed)
+    return memory
