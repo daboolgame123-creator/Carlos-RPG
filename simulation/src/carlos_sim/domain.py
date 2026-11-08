@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 40
-RULES_VERSION = 54
+SCHEMA_VERSION = 41
+RULES_VERSION = 55
 
 
 def _thaw(value: Any) -> Any:
