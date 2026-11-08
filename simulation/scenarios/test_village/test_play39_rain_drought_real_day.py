@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from carlos_sim import DomainEvent, LivingWorldEngine, SQLiteEventStore, TimeEngine
+from carlos_sim import DomainEvent, InvalidEvent, LivingWorldEngine, SQLiteEventStore, TimeEngine
 from carlos_sim.hydrology import FiniteWaterService
 from test_play38_multi_farm_couriers import EAST, COURIER, WORLD, seed_two_field_world
 
@@ -225,14 +225,14 @@ def test_rain_source_rejects_forged_or_duplicate_receipt_and_replays(tmp_path):
             # Without an active explicit authority, a world command can
             # never declare weather by impersonating the observation system.
             old = db.load(WORLD)
-            with pytest.raises((ValueError, Exception)) as failure:
+            with pytest.raises(InvalidEvent) as failure:
                 db.append(
                     WORLD, "rain-forgery", old.revision,
                     [DomainEvent("RainWaterRecorded", None, "forged", 0,
                                  {"source_id": "well",
                                   "observation_id": "forged", "units": 2})],
                 )
-            assert "authorization" in str(failure.value).lower() or failure.value
+            assert failure.value
             assert db.verify(WORLD).to_dict() == old.to_dict()
             water = FiniteWaterService(db, clock)
             first = water.record(
@@ -240,7 +240,7 @@ def test_rain_source_rejects_forged_or_duplicate_receipt_and_replays(tmp_path):
                 command_id="real-attested-rain",
                 expected_revision=old.revision,
             ).state
-            with pytest.raises((ValueError, Exception)):
+            with pytest.raises(InvalidEvent):
                 water.record(
                     WORLD, "well", "gauge-0", 2,
                     command_id="replay-same-rain-with-different-command",
