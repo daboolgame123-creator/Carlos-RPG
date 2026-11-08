@@ -20,7 +20,8 @@ def test_real_three_day_endurance_and_conservation(tmp_path, personal_food):
         clock.open_session(WORLD)
         initial = db.load(WORLD)
         assert len(initial.npcs) == len(PEOPLE) == 7
-        assert all(initial.resources[who]["food"] == (0 if who == "huda" else personal_food)\n                   for who, *_ in PEOPLE)
+        assert all(initial.resources[who]["food"] == (0 if who == "huda" else personal_food)
+                   for who, *_ in PEOPLE)
         engine = LivingWorldEngine(
             db, clock, decision_cooldown=3600,
             max_events_per_advance=5000,
