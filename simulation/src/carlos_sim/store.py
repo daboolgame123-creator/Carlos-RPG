@@ -291,6 +291,12 @@ class SQLiteEventStore:
                 raise InvalidEvent("production and wages need trusted runtime capability")
             if world_id not in self._active_worlds:
                 raise InvalidEvent("production and wages require active play session")
+        if any(e.event_type == "WorkshopMaterialDeposited" for e in events):
+            if (bootstrap or not production_authorized or not market_authorized
+                    or world_id not in self._active_worlds):
+                raise InvalidEvent(
+                    "workshop deposit needs active trusted production and market capabilities"
+                )
         if any(e.event_type == 'PlayerVitalChanged' for e in events):
             if not rpg_authorized:
                 raise InvalidEvent('RPG vital changes require trusted RPG capability')
