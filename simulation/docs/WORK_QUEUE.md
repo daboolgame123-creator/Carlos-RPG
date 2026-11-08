@@ -1,5 +1,15 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## Latest verified milestone — PLAY-29 (2026-11-08)
+
+- **Technical decision:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`, **no self-sufficiency claim**. World version **Schema 39 / Rules 51**, disposable worlds; source `1a4a4021367c670781eea5dee030fe9d93e65f37`, seven-day test-only SHA `d67fefc09dddb17175e3799492167e4d4b03196c`.
+- [Full CI #42476104910](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42476104910): **1,670 green on Python 3.10 + 1,670 green on 3.13**; [controlled 72h A/B #42475946942](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42475946942) SUCCESS; [7-day CI #42476455377](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42476455377) SUCCESS on both.
+- **Measured outcomes:** at 72h, action-cost calibration reduced NPCs at hunger=100 from **7 to 0**. On day 7 with only initial finite rations and two water units, all **7 of 7 reach hunger 100**, personal food reaches 0, 43 meals consumed, crops mature **2**, deliveries **6**. This is a **structural supply failure**, not an engine integrity failure.
+- **Scope:** frozen, opt-in time-zero hunger clock and action-cost policy; no implicit resource creation; existing defaults and historical fail-closed behavior preserved.
+- **Next independently scoped task, PLAY-30 (analysis / evidence first):** improve physical crop yield/capacity, finite land/water/weather, paid ownership and distribution to NPCs; test hunger, replay, conservation and negative cases on real 7-NPC worlds. Do not declare long-term sustainability until reproducible trials prove it. P0 production and external review remain open; `main` untouched.
+- **Docs:** [final report](PLAY_29_FINAL_REPORT.md), [daily observation / acceptance](PLAY_29_ACCEPTANCE_GATE.md).
+
+
 ## آخر نقطة مؤكدة للاستئناف — PLAY-27 (8 نوفمبر 2026)
 
 - **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`؛ P0 غير معتمد، `main` والقصة الأصلية لم يمسّا.
