@@ -17,6 +17,21 @@ RESOURCES = ("water", "grain", "food")
 STOPS = ("well", "farm", "bakery", "market", "bakery", "farm", "well")
 
 
+def _validated_stops(stops: Any) -> bool:
+    """One real field per circuit; every other stop retains canonical roles.
+
+    Farm identity is a *persisted local route choice*, not remote stock access.
+    The original seven-stop circuit remains valid byte-for-byte.
+    """
+    return (type(stops) in (tuple, list) and len(stops) == 7
+            and all(type(site) is str and site for site in stops)
+            and stops[0] == stops[6] == "well"
+            and stops[2] == stops[4] == "bakery"
+            and stops[3] == "market"
+            and stops[1] == stops[5]
+            and stops[1] not in ("well", "bakery", "market"))
+
+
 def _quantity(v: Any) -> bool:
     return type(v) is int and 0 <= v <= MAX_STOCK
 
@@ -31,7 +46,7 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
     if (type(who) is not str or who not in state["npcs"]
             or state["npcs"][who]["role"] != "courier"
             or who in state["supply_circuits"]
-            or not isinstance(stops, (list, tuple)) or tuple(stops) != STOPS
+            or not _validated_stops(stops)
             or not isinstance(routes, (list, tuple)) or len(routes) != len(stops) - 1
             or any(type(r) is not str for r in routes)
             or type(period) is not int or not 1800 <= period <= 86400
@@ -45,13 +60,12 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
     if sum(state["routes"][r]["seconds"] for r in routes) >= period:
         raise ValueError("one courier tour must fit inside its real interval")
     stock = state["resources"]
-    for site in ("well", "farm", "bakery", "market"):
-        if site not in state["locations"]:
-            raise ValueError("courier logistics location unknown")
+    if any(site not in state["locations"] for site in stops):
+        raise ValueError("courier logistics location unknown")
     for source, destination, resource in (
-        ("well", "farm", "water"),
-        ("farm", "bakery", "grain"),
-        ("bakery", "market", "food"),
+        (stops[0], stops[1], "water"),
+        (stops[1], stops[2], "grain"),
+        (stops[2], stops[3], "food"),
     ):
         if not (_quantity(stock.get(source, {}).get(resource))
                 and _quantity(stock.get(destination, {}).get(resource))):
@@ -71,13 +85,10 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
 
 def _lane(record: Any) -> tuple[str, str, str] | None:
     idx = record["index"]
-    if idx == 0:
-        return ("well", "farm", "water")
-    if idx == 1:
-        return ("farm", "bakery", "grain")
-    if idx == 2:
-        return ("bakery", "market", "food")
-    return None
+    if idx not in (0, 1, 2):
+        return None
+    stops = record["stops"]
+    return (stops[idx], stops[idx + 1], RESOURCES[idx])
 
 
 def _physically_present(state: dict, who: str) -> bool:
@@ -252,7 +263,7 @@ def validate_supply_circuits(state: dict) -> None:
                 or type(rec) is not dict
                 or set(rec) != {"stops", "route_ids", "period_seconds", "index",
                                "rounds", "next_departure", "carry", "loads", "deliveries"}
-                or tuple(rec["stops"]) != STOPS
+                or not _validated_stops(rec["stops"])
                 or type(rec["route_ids"]) is not list or len(rec["route_ids"]) != 6
                 or type(rec["period_seconds"]) is not int
                 or not 1800 <= rec["period_seconds"] <= 86400
@@ -264,7 +275,7 @@ def validate_supply_circuits(state: dict) -> None:
             raise ValueError("invalid durable courier logistics state")
         for idx, rid in enumerate(rec["route_ids"]):
             route = state["routes"].get(rid)
-            if route is None or {route["a"], route["b"]} != {STOPS[idx], STOPS[idx+1]}:
+            if route is None or {route["a"], route["b"]} != {rec["stops"][idx], rec["stops"][idx+1]}:
                 raise ValueError("courier has nonphysical or changed route")
         if sum(state["routes"][rid]["seconds"] for rid in rec["route_ids"]) >= rec["period_seconds"]:
             raise ValueError("courier tour exceeds its finite period")
@@ -276,9 +287,9 @@ def validate_supply_circuits(state: dict) -> None:
             if (type(cargo) is not dict
                     or set(cargo) != {"source", "destination", "resource"}
                     or tuple(cargo[k] for k in ("source", "destination", "resource"))
-                       not in (("well", "farm", "water"),
-                               ("farm", "bakery", "grain"),
-                               ("bakery", "market", "food"))
+                       not in ((rec["stops"][0], rec["stops"][1], "water"),
+                               (rec["stops"][1], rec["stops"][2], "grain"),
+                               (rec["stops"][2], rec["stops"][3], "food"))
                     or not (here == cargo["source"] or here == cargo["destination"])):
                 raise ValueError("cargo not physically at its source or destination")
         for item in RESOURCES:
