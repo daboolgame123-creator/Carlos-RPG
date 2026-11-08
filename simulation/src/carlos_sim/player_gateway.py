@@ -159,6 +159,46 @@ class PlayerGateway:
                          if type(qty) is int and qty >= 0},
         })
 
+    def quests(self) -> PlayerCommandResult:
+        """Player-only, read-only quest availability and earned progress."""
+        from .player_quests import player_quest_view
+        state = self._state()
+        return PlayerCommandResult(state.world_id, state.time, state.revision,
+                                   "quests", {"quests": player_quest_view(state, self.player_id)})
+
+    def accept_quest(self, quest_id: str, *, command_id: str,
+                     expected_revision: int) -> PlayerCommandResult:
+        """Accept only a published scenario quest; no NPC actions are implied."""
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        self._deny_forage_busy(state)
+        committed = self.store.append(
+            self.world_id, "player-quest:accept:" + cid, expected_revision,
+            [DomainEvent("PlayerQuestAccepted", self.player_id,
+                         "human explicitly accepted a published quest",
+                         state.time, {"quest_id": quest_id})],
+            rpg_authorized=True)
+        return PlayerCommandResult(committed.world_id, committed.time,
+                                   committed.revision, "quest_accepted",
+                                   {"quest_id": quest_id})
+
+    def claim_quest(self, quest_id: str, *, command_id: str,
+                    expected_revision: int) -> PlayerCommandResult:
+        """Claim one reward, conserved by the event reducer at the actual stall."""
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        self._deny_forage_busy(state)
+        committed = self.store.append(
+            self.world_id, "player-quest:claim:" + cid, expected_revision,
+            [DomainEvent("PlayerQuestRewardClaimed", self.player_id,
+                         "human explicitly collected a funded local quest reward",
+                         state.time, {"quest_id": quest_id})],
+            rpg_authorized=True)
+        return PlayerCommandResult(committed.world_id, committed.time,
+                                   committed.revision, "quest_reward_claimed",
+                                   {"quest_id": quest_id, "resource": "coin_copper",
+                                    "quantity": 1})
+
     def purchases(self, limit: int = 20) -> PlayerCommandResult:
         """Return a bounded history of this player's own executed purchases.
 
