@@ -51,6 +51,13 @@ def test_seven_npcs_cannot_all_avoid_critical_hunger_for_72h_with_closed_stock(
         assert audit.minimum_meals_to_avoid_critical_hunger == expected_demand
         assert audit.minimum_food_shortfall == expected_deficit
         assert audit.minimum_food_shortfall > 0
+        assert audit.ideal_minimum_daily_meals_at_steady_state == (
+            81 if period == 300 else 7)
+        assert audit.ideal_max_field_loaves_per_day == 3
+        assert audit.ideal_max_market_delivery_loaves_per_day == 4
+        assert audit.ideal_max_local_market_loaves_per_day == 3
+        assert audit.ideal_daily_market_loaf_deficit == (
+            78 if period == 300 else 4)
         assert db.verify(WORLD).to_dict() == before
         assert state.to_dict() == before
 
