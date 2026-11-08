@@ -27,28 +27,4 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          python -m pytest -q \
-            tests/test_backup_resume.py::test_backup_live_wal_restore_frozen_state_and_resume \\
-            tests/test_environment_02a.py::test_opt_in_is_required_no_missing_stock_is_invented \\
-            tests/test_environment_02a.py::test_backup_restore_15_22_replay_remains_exact \\
-            tests/test_knowledge_compatibility.py::test_schema_and_rules_versions \\
-            tests/test_knowledge_compatibility.py::test_flag_off_no_new_knowledge_events_in_rules_26 \\
-            tests/test_knowledge_compatibility.py::test_ci_parity_gates_pin_current_rules_version \\
-            tests/test_loans_02d.py::test_opt_in_no_loan_state_and_version \\
-            tests/test_loans_02d_integration.py::test_restart_and_provenance_checked_backup_preserve_overdue_but_not_mint \\
-            tests/test_market_02c.py::test_opt_in_empty_market_and_schema \\
-            tests/test_market_02c_integrity.py::test_snapshot_reopen_and_isolated_backup_preserves_real_bakery_market \\
-            tests/test_persisted_injuries_03a.py::test_strict_world_schema_and_invalid_injury_collection \\
-            tests/test_play_crop_cycle_batch_26.py::test_seed_to_real_planting_job_then_exact_day_growth \\
-            tests/test_play_npc_survival_batch_15.py::test_new_npc_world_is_strict_optin_with_exact_known_stock \\
-            tests/test_play_physical_supply_batch_27.py::test_registered_four_sites_are_truly_separated_with_known_finite_stock \\
-            tests/test_player_eating_batch_13.py::test_rule_version_and_no_implicit_nutrition \\
-            tests/test_player_foraging_batch_11.py::test_version_and_local_survey_readonly \\
-            tests/test_player_rpg.py::test_01y_version_and_fresh_world_remains_unconfigured \\
-            tests/test_player_timed_foraging_batch_12.py::test_new_rules_without_changing_schema_or_unknown_resources \\
-            tests/test_production_02b.py::test_versions_and_no_recipe_cannot_produce \\
-            tests/test_production_02b_integrity.py::test_isolated_backup_restore_preserves_once_only_finished_product \\
-            tests/test_routines_02f.py::test_routine_is_opt_in_and_cannot_teleport_to_unlearned_workplace \\
-            tests/test_rumors_02g.py::test_genuine_player_utterance_becomes_uncertain_local_rumor \\
-            tests/test_temperament_02e.py::test_schema_and_default_off_is_exact_legacy_choice \\
-            tests/test_temperament_02e_integrity.py::test_memory_survives_snapshot_restore_and_matches_event_replay
+          python -m pytest -q tests/test_backup_resume.py::test_backup_live_wal_restore_frozen_state_and_resume tests/test_environment_02a.py::test_opt_in_is_required_no_missing_stock_is_invented tests/test_environment_02a.py::test_backup_restore_15_22_replay_remains_exact tests/test_knowledge_compatibility.py::test_schema_and_rules_versions tests/test_knowledge_compatibility.py::test_flag_off_no_new_knowledge_events_in_rules_26 tests/test_knowledge_compatibility.py::test_ci_parity_gates_pin_current_rules_version tests/test_loans_02d.py::test_opt_in_no_loan_state_and_version tests/test_loans_02d_integration.py::test_restart_and_provenance_checked_backup_preserve_overdue_but_not_mint tests/test_market_02c.py::test_opt_in_empty_market_and_schema tests/test_market_02c_integrity.py::test_snapshot_reopen_and_isolated_backup_preserves_real_bakery_market tests/test_persisted_injuries_03a.py::test_strict_world_schema_and_invalid_injury_collection tests/test_play_crop_cycle_batch_26.py::test_seed_to_real_planting_job_then_exact_day_growth tests/test_play_npc_survival_batch_15.py::test_new_npc_world_is_strict_optin_with_exact_known_stock tests/test_play_physical_supply_batch_27.py::test_registered_four_sites_are_truly_separated_with_known_finite_stock tests/test_player_eating_batch_13.py::test_rule_version_and_no_implicit_nutrition tests/test_player_foraging_batch_11.py::test_version_and_local_survey_readonly tests/test_player_rpg.py::test_01y_version_and_fresh_world_remains_unconfigured tests/test_player_timed_foraging_batch_12.py::test_new_rules_without_changing_schema_or_unknown_resources tests/test_production_02b.py::test_versions_and_no_recipe_cannot_produce tests/test_production_02b_integrity.py::test_isolated_backup_restore_preserves_once_only_finished_product tests/test_routines_02f.py::test_routine_is_opt_in_and_cannot_teleport_to_unlearned_workplace tests/test_rumors_02g.py::test_genuine_player_utterance_becomes_uncertain_local_rumor tests/test_temperament_02e.py::test_schema_and_default_off_is_exact_legacy_choice tests/test_temperament_02e_integrity.py::test_memory_survives_snapshot_restore_and_matches_event_replay
