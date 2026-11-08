@@ -108,6 +108,17 @@ def test_two_real_villages_audit_72h_material_and_personal_access(tmp_path):
                     "completed_bread_units", "trades", "traded_food_units",
                     "eaten_food_units", "courier_deliveries"):
             assert [t[key] for t in series] == sorted(t[key] for t in series)
+        # The harvest exists, but hungry workers cannot physically complete
+        # the next links: it is not a producer-credit or price-only problem.
+        assert series[3]["harvested_crop_lots"] == 1
+        assert series[3]["farm_crop_ready"] == 1
+        assert series[3]["completed_bread_batches"] == 0
+        assert series[-1]["bakery_grain"] == 0
+        assert series[-1]["courier_carry_resource"] == "water"
+        assert series[-1]["courier_leg_reason"] == "hunger_blocks_travel"
+        assert set(series[-1]["essential_workers_hunger_blocked"]) == {
+            "basim", "huda", "nora"
+        }
         assert series[-1]["harvested_crop_lots"] <= 2
         assert series[-1]["known_copper_total"] == 12
         assert all(len(t["hunger_at_cap"]) <= 7 for t in series)
