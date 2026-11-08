@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from carlos_sim import PlayerGateway, SQLiteEventStore, TimeEngine
+from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
 from carlos_sim.player_handoff import player_handoff
 from carlos_sim.resumable_play import ResumableTestSession
 from living_player_fixture import (
@@ -47,8 +48,8 @@ def test_new_npc_world_is_strict_optin_with_exact_known_stock(tmp_path):
     db, clock, g = village(tmp_path)
     with db:
         old = db.load(WORLD)
-        assert old.schema_version == 41
-        assert old.rules_version == 55
+        assert old.schema_version == SCHEMA_VERSION
+        assert old.rules_version == RULES_VERSION
         assert is_living_npc_survival_world(db)
         with pytest.raises(ValueError, match="bootstrap"):
             living_player_gateway(db, clock)
