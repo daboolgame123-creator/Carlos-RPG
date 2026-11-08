@@ -56,15 +56,15 @@ def test_keeper_prices_only_known_local_site_stock(tmp_path, stock, price):
     if proposed:
         assert proposed.quantity == stock
         assert proposed.reason.endswith("adaptive=True")
-    assert choose_local_food_offer(state, "salma") is None if stock == 0 else (
-        choose_local_food_offer(state, "salma").unit_price == TEST_FOOD_PRICE_COPPER)
+    legacy = choose_local_food_offer(state, "salma")
+    assert (legacy is None) if stock == 0 else (legacy.unit_price == TEST_FOOD_PRICE_COPPER)
     assert state.to_dict() == old
 
 
 def test_keeper_rejects_remote_inventory_and_non_stewards(tmp_path):
     state = _seeded_state(tmp_path)
     raw = state.to_dict()
-    raw["resources"]["home"]["food"] = 50
+    raw["resources"].setdefault("home", {})["food"] = 50
     state = WorldState.from_dict(raw)
     assert choose_local_food_offer(state, "salma", adaptive=True) is None
     assert choose_local_food_offer(state, "adel", adaptive=True) is None
