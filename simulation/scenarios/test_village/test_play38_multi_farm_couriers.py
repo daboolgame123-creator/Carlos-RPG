@@ -30,8 +30,11 @@ def seed_two_field_world(
     market_wallets=False, hungry_market_buyers=False,
     cash_return=False, waged_harvest=False,
     hungry_waged_farmer=False, harvest_wage_copper=1,
+    one_hungry_market_buyer=False,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
+    if type(one_hungry_market_buyer) is not bool:
+        raise ValueError('one_hungry_market_buyer must be a test-only boolean')
     if type(waged_harvest) is not bool or (waged_harvest and not cash_return):
         raise ValueError("waged_harvest requires funded cash-return contract")
     if (type(hungry_waged_farmer) is not bool
@@ -54,6 +57,7 @@ def seed_two_field_world(
         harvest_yield=3, personal_food=0,
         market_wallets=market_wallets,
         hungry_market_buyers=hungry_market_buyers,
+        one_hungry_market_buyer=one_hungry_market_buyer,
     )
     extra = [
         _event("LocationCreated", {"id": EAST, "name": "East field"}),
