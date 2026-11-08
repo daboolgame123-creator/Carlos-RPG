@@ -77,7 +77,8 @@ class LivingWorldEngine:
                  economy_only_enabled: bool = False,
                  shopping_routes_enabled: bool = False,
                  supply_enabled: bool = False,
-                 professional_procurement_enabled: bool = False):
+                 professional_procurement_enabled: bool = False,
+                 multi_professional_markets_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -168,6 +169,17 @@ class LivingWorldEngine:
                 "simulation, navigation, routines, and no concurrent hunger shopping"
             )
         self.professional_procurement_enabled = professional_procurement_enabled
+        if (type(multi_professional_markets_enabled) is not bool or
+                (multi_professional_markets_enabled and not (
+                    economic_enabled and agriculture_enabled and economy_only_enabled
+                    and navigation_enabled and routines_enabled
+                    and not shopping_routes_enabled
+                    and not professional_procurement_enabled))):
+            raise ValueError(
+                'multi_professional_markets_enabled requires focused economic '
+                'simulation and cannot share another professional/shopping planner'
+            )
+        self.multi_professional_markets_enabled = multi_professional_markets_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
@@ -368,8 +380,12 @@ class LivingWorldEngine:
                         "locally funded, one-time completed labor receipt",
                         current.time, {"job_id": job_id, "amount": wage}),
                         production_capability=True)
-                if self.professional_procurement_enabled:
+                if (self.professional_procurement_enabled or
+                        self.multi_professional_markets_enabled):
                     from .professional_trade import choose_workshop_input_deposit
+                    if self.multi_professional_markets_enabled:
+                        from .multi_professional_trade import (
+                            choose_workshop_material_deposit as choose_workshop_input_deposit)
                     # A purchased bag item is still private property until
                     # physically deposited; only then may ordinary production
                     # consume workshop-owned grain on the same local tick.
@@ -413,8 +429,12 @@ class LivingWorldEngine:
                                     'autonomous retired impossible quote: ' + stale.reason,
                                     current.time, {'id': stale.offer_id}),
                                     market_capability=True)
-                if self.professional_procurement_enabled:
+                if (self.professional_procurement_enabled or
+                        self.multi_professional_markets_enabled):
                     from .professional_trade import choose_local_grain_offer
+                    if self.multi_professional_markets_enabled:
+                        from .multi_professional_trade import (
+                            choose_local_material_offer as choose_local_grain_offer)
                     for keeper_id in sorted(current.npcs):
                         grain = choose_local_grain_offer(current, keeper_id)
                         if grain is None:
@@ -424,7 +444,9 @@ class LivingWorldEngine:
                             current.time,
                             {'id': grain.offer_id, 'seller_id': keeper_id,
                              'stock_owner_id': grain.site_id,
-                             'site_id': grain.site_id, 'resource': 'grain',
+                             'site_id': grain.site_id,
+                             'resource': (grain.resource if self.multi_professional_markets_enabled
+                                          else 'grain'),
                              'quantity': grain.quantity,
                              'payment_resource': 'coin_copper',
                              'unit_price': grain.unit_price}),
@@ -460,8 +482,12 @@ class LivingWorldEngine:
                                         'expected_unit_price': purchase.price}),
                            market_capability=True)
                     economic_trades.append(purchase.trade_id)
-                if self.professional_procurement_enabled:
+                if (self.professional_procurement_enabled or
+                        self.multi_professional_markets_enabled):
                     from .professional_trade import choose_local_grain_purchase
+                    if self.multi_professional_markets_enabled:
+                        from .multi_professional_trade import (
+                            choose_local_material_purchase as choose_local_grain_purchase)
                     for buyer_id in sorted(current.npcs):
                         grain_buy = choose_local_grain_purchase(current, buyer_id)
                         if grain_buy is None:
@@ -554,9 +580,14 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
-            if self.professional_procurement_enabled:
+            if (self.professional_procurement_enabled or
+                    self.multi_professional_markets_enabled):
                 from .professional_trade import (has_workshop_recipe,
                     choose_professional_known_road)
+                if self.multi_professional_markets_enabled:
+                    from .multi_professional_trade import (
+                        has_material_workshop_recipe as has_workshop_recipe,
+                        choose_material_known_road as choose_professional_known_road)
                 for buyer_id in sorted(current.npcs):
                     if buyer_id in busy or not has_workshop_recipe(current, buyer_id):
                         continue
