@@ -35,6 +35,7 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          harvest_yield: int = 1, market_wallets: bool = False,
                          initial_market_food: int = 0,
                          hungry_market_buyers: bool = False,
+                         staff_provisions: bool = False,
                          playable_demo: bool = False) -> None:
     if type(playable_demo) is not bool:
         raise ValueError('playable_demo must be a boolean trusted setup flag')
@@ -44,6 +45,13 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         raise ValueError('initial_market_food must be a bounded integer (0-3)')
     if type(hungry_market_buyers) is not bool:
         raise ValueError('hungry_market_buyers must be a boolean trusted setup flag')
+    if type(staff_provisions) is not bool:
+        raise ValueError('staff_provisions must be a boolean trusted setup flag')
+    # This is a time-zero ownership counterfactual, NOT a runtime allocation
+    # or a teleporting food courier. The initial three market loaves become
+    # three physically pre-positioned NPC loaves before logical time begins.
+    if staff_provisions and (initial_market_food != 3 or personal_food != 0):
+        raise ValueError('staff_provisions requires exactly 3 opening loaves and no personal_food')
     if type(personal_food) is not int or not 0 <= personal_food <= 20:
         raise ValueError('personal_food must be a finite nonnegative test allotment')
     # PLAY-30: this is a trusted test-world recipe choice, never a runtime yield cheat.
@@ -114,7 +122,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         for resource in ("labor_units", "investigation_attempts", "food"):
             events.append(e("ResourceChanged", {
                 "owner_id": who, "resource": resource, "previous": None,
-                "current": personal_food if resource == "food" else 0,
+                "current": (personal_food + int(staff_provisions and who in
+                           ("nora", "basim", "huda"))) if resource == "food" else 0,
                 "source": "initialization",
             }))
     stock = [
@@ -129,7 +138,7 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         ("bakery", "grain", 0),
         ("bakery", "oven", 1),
         ("bakery", "food", 0),
-        ("market", "food", initial_market_food),
+        ("market", "food", initial_market_food - (3 if staff_provisions else 0)),
         ("market", "coin_copper", 0),
         ("adel", "coin_copper", buyer_copper),
         (PLAYER, "coin_copper", 2 if market_wallets else 10),
