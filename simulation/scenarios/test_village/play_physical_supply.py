@@ -32,7 +32,9 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          hoe: int = 1, sickle: int = 1,
                          courier: bool = True, buyer_copper: int = 2,
                          courier_hunger: int = 20, personal_food: int = 0,
-                         harvest_yield: int = 1) -> None:
+                         harvest_yield: int = 1, market_wallets: bool = False) -> None:
+    if type(market_wallets) is not bool:
+        raise ValueError('market_wallets must be a boolean trusted setup flag')
     if type(personal_food) is not int or not 0 <= personal_food <= 20:
         raise ValueError('personal_food must be a finite nonnegative test allotment')
     # PLAY-30: this is a trusted test-world recipe choice, never a runtime yield cheat.
@@ -104,10 +106,15 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         ("market", "food", 0),
         ("market", "coin_copper", 0),
         ("adel", "coin_copper", buyer_copper),
-        (PLAYER, "coin_copper", 10),
+        (PLAYER, "coin_copper", 2 if market_wallets else 10),
         ("huda", "water", 0),
         ("huda", "grain", 0),
     ]
+    # In the budgeted *counterfactual* only, transfer eight of Carlos's
+    # pre-existing ten coins at bootstrap: four each to Omar and Layla.
+    # Original scenario is unchanged byte-for-byte when flag=False.
+    if market_wallets:
+        stock.extend((("omar", "coin_copper", 4), ("layla", "coin_copper", 4)))
     for owner, resource, amount in stock:
         events.append(e("ResourceChanged", {
             "owner_id": owner, "resource": resource,
@@ -195,8 +202,9 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
             + sum(rs[who]["food"] for who, *_ in PEOPLE)
             + sum(m["quantity"] for m in state.consumptions.values()))
     assert food == plot["matured"] * harvest_yield + len(PEOPLE) * personal_food
-    copper = (rs[PLAYER]["coin_copper"] + market["coin_copper"]
-              + rs["adel"]["coin_copper"])
+    # Copper is conserved regardless of its owner: market, player or NPC.
+    copper = sum(owner_stock["coin_copper"] for owner_stock in rs.values()
+                 if "coin_copper" in owner_stock)
     assert copper == 10 + buyer_copper
     circuit = state.supply_circuits.get("huda")
     if circuit is not None:
