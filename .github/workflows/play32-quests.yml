@@ -1,0 +1,29 @@
+name: PLAY-32 player quest acceptance
+on:
+  push:
+    branches:
+      - "feature/play32-player-quests-rewards-20261108"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quest-acceptance:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Compile and run PLAY-31 and PLAY-32 acceptance
+        working-directory: simulation
+        env:
+          PYTHONPATH: "src:scenarios/test_village"
+        run: |
+          python -m compileall -q src scenarios/test_village/play_village_local.py
+          python -m pytest -q -s scenarios/test_village/test_play31_offline_village.py scenarios/test_village/test_play31_acceptance_journey.py scenarios/test_village/test_play32_quests.py

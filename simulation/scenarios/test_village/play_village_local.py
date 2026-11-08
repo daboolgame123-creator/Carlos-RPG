@@ -21,12 +21,13 @@ from play_physical_supply import WORLD, PLAYER, seed_physical_supply
 
 HELP = (
     "scene | look | remember | status | supplies | needs | offers | food | "
-    "purchases | meals | gifts | conversations | handoff | "
+    "purchases | meals | gifts | conversations | quests | handoff | "
     "move <route-id> | wait <1-21600 seconds> | "
     "talk <npc-id> <greeting|offer_help|request_help|threat> <words> | "
     "buy <offer-id> <quantity> <unit-price> | "
     "eat | give <npc-id> <resource> <quantity> | "
-    "forage | askfood <npc-id> <site-id> | help | quit"
+    "forage | askfood <npc-id> <site-id> | "
+    "accept <quest-id> | claim <quest-id> | help | quit"
 )
 MAX_WAIT = 21600
 
@@ -63,6 +64,7 @@ def execute(gateway: PlayerGateway, line: str, serial: int):
         "food": gateway.check_food, "purchases": gateway.purchases,
         "meals": gateway.meals, "gifts": gateway.gifts,
         "conversations": gateway.conversations,
+        "quests": gateway.quests,
     }
     if verb in readonly and not args:
         return readonly[verb]()
@@ -89,6 +91,10 @@ def execute(gateway: PlayerGateway, line: str, serial: int):
         return gateway.wait(seconds, **kwargs)
     if verb == "talk" and len(args) >= 3:
         return gateway.interact(args[0], kind=args[1], text=" ".join(args[2:]), **kwargs)
+    if verb == "accept" and len(args) == 1:
+        return gateway.accept_quest(args[0], **kwargs)
+    if verb == "claim" and len(args) == 1:
+        return gateway.claim_quest(args[0], **kwargs)
     if verb == "buy" and len(args) == 3:
         return gateway.buy(args[0], int(args[1]), int(args[2]), **kwargs)
     if verb == "eat" and not args:
