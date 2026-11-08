@@ -33,6 +33,16 @@ def test_carlos_walks_into_market_sees_quote_buys_and_preserves_stock(tmp_path):
             assert "salma" in {person["id"] for person in scene["occupants"]}
 
             offers = execute(gateway, "offers", 7).details["offers"]
+            if not any(q["resource"] == "food" for q in offers):
+                snap = db.load(WORLD)
+                pytest.fail("market offer missing; source test audit=" + repr({
+                    "time": snap.time, "market_food": snap.resources["market"]["food"],
+                    "market_coins": snap.resources["market"]["coin_copper"],
+                    "keeper_at": snap.entities["salma"]["location_id"],
+                    "trades": {k: (v["buyer_id"], v["resource"]) for k, v in snap.market_trades.items()},
+                    "offers": {k: (v["status"], v["remaining"], v["site_id"]) for k, v in snap.market_offers.items()},
+                    "carlos_at": snap.entities["carlos"]["location_id"],
+                }))
             quote = next(q for q in offers if q["resource"] == "food")
             assert quote["seller_id"] == "salma"
             assert quote["unit_price"] == 2
