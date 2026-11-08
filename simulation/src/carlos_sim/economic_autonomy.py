@@ -176,10 +176,11 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
     ident = _event_id("offer", here, state.time)
     if ident in state.market_offers:
         return None
-    return OfferIntent(keeper_id, here, ident, amount,
-                       f"registered_steward; physically_stocked={food}; "
-                       f"local_quote={unit_price}; adaptive={adaptive}",
-                       unit_price)
+    reason = (f"registered_steward; physically_stocked={food}; "
+              f"local_quote={unit_price}; adaptive=True") if adaptive else (
+              f"registered_steward; physically_stocked={food}; "
+              f"test_price={TEST_FOOD_PRICE_COPPER}")
+    return OfferIntent(keeper_id, here, ident, amount, reason, unit_price)
 
 
 def choose_local_offer_retirement(state: WorldState, keeper_id: str) -> RetirementIntent | None:
@@ -254,10 +255,10 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
         ident = _event_id("trade", buyer_id, state.time)
         if ident in state.market_trades:
             return None
+        reason = (f"observed_local_quote={offer_id}; hunger="
+                  f"{npc['needs']['hunger']}; own_copper={coins}")
         choice = PurchaseIntent(buyer_id, offer_id, ident, price,
-                                f"observed_local_quote={offer_id}; hunger="
-                                f"{npc['needs']['hunger']}; own_copper={coins}; "
-                                f"adaptive={adaptive}")
+                                reason + ("; adaptive=True" if adaptive else ""))
         if not adaptive:
             return choice
         candidates.append((price, offer_id, choice))
