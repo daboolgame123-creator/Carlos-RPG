@@ -1,6 +1,8 @@
 """PLAY-28-A: fatigued workers must not bypass their physical work/travel gate."""
 from __future__ import annotations
 
+import pytest
+
 from carlos_sim import SQLiteEventStore, TimeEngine, LivingWorldEngine
 from carlos_sim.routines import work_allowed_at, choose_routine_route
 from test_routines_02f import scenario, ev
@@ -184,3 +186,69 @@ def test_food_courier_can_eat_own_rations_not_consigned_parcel(tmp_path):
         with pytest.raises(ValueError):
             apply_event(only_cargo, event, consumption_authorized=True)
         assert only_cargo.resources["huda"]["food"] == 1
+
+
+
+def test_baker_or_farmer_cannot_eat_while_producing_even_via_direct_service(tmp_path):
+    """Both autonomous intention and trusted event reduction honor a live job."""
+    from carlos_sim import DomainEvent, NPCConsumptionService
+    from carlos_sim.consumption import choose_food_consumption
+    from carlos_sim.store import InvalidEvent
+    from play_physical_supply import seed_physical_supply, WORLD
+
+    with SQLiteEventStore(tmp_path / "busy-farmer.sqlite") as db:
+        seed_physical_supply(db, personal_food=2)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        before = db.load(WORLD)
+        hungry = db.append(WORLD, "hungry-farmer", before.revision, [
+            DomainEvent("NPCNeedChanged", "nora", "genuine farmer hunger", 0,
+                        {"npc_id": "nora", "need": "hunger",
+                         "previous": 20, "current": 75}),
+        ])
+        engine = LivingWorldEngine(
+            db, clock, economic_enabled=True, agriculture_enabled=True,
+            supply_enabled=True, economy_only_enabled=True,
+        )
+        doing = engine.advance(WORLD, seconds=50,
+                               command_id="water-reaches-farm",
+                               expected_revision=hungry.revision).state
+        assert any(j["npc_id"] == "nora" and j["status"] == "running"
+                   for j in doing.production_jobs.values())
+        assert choose_food_consumption(doing, "nora") is None
+        with pytest.raises(InvalidEvent, match="actively busy"):
+            NPCConsumptionService(db, clock).eat(
+                WORLD, "nora", 1, command_id="eat-during-planting",
+                expected_revision=doing.revision)
+        assert db.load(WORLD).to_dict() == doing.to_dict()
+        assert db.verify(WORLD).to_dict() == doing.to_dict()
+
+
+def test_resting_courier_cannot_pick_or_reserve_customer_cargo(tmp_path):
+    from carlos_sim import DomainEvent
+    from carlos_sim.store import InvalidEvent
+    from play_physical_supply import seed_physical_supply, WORLD
+    with SQLiteEventStore(tmp_path / "busy-courier.sqlite") as db:
+        seed_physical_supply(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        original = db.load(WORLD)
+        raised = db.append(WORLD, "courier-exhausted", original.revision, [
+            DomainEvent("NPCNeedChanged", "huda", "real exhausted courier", 0,
+                        {"npc_id": "huda", "need": "fatigue",
+                         "previous": 5, "current": 90})
+        ])
+        during = LivingWorldEngine(db, clock).advance(
+            WORLD, seconds=1, command_id="courier-begins-rest",
+            expected_revision=raised.revision).state
+        assert any(a["npc_id"] == "huda" and a["action"] == "rest"
+                   and a["status"] == "running" for a in during.actions.values())
+        assert during.resources["well"]["water"] == 2
+        with pytest.raises(InvalidEvent, match="idle"):
+            db.append(WORLD, "forged-resting-pickup", during.revision, [
+                DomainEvent("SupplyCargoPicked", "huda",
+                            "must not transfer while sleeping", during.time,
+                            {"courier_id": "huda", "resource": "water"})
+            ], supply_authorized=True)
+        assert db.load(WORLD).to_dict() == during.to_dict()
+        assert db.verify(WORLD).to_dict() == during.to_dict()
