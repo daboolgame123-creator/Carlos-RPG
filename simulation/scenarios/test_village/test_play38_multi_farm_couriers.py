@@ -73,7 +73,7 @@ def seed_two_field_world(
         }),
     ]
     for who, role, hunger, fatigue in (
-        (FARMER, "farmer", 80 if hungry_waged_farmer else 20, 5),
+        (FARMER, "farmer", 60 if hungry_waged_farmer else 20, 5),
         (COURIER, "courier", 20, 5),
     ):
         extra.append(_event("NPCConfigured", {
