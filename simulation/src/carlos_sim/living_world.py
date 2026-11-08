@@ -527,7 +527,9 @@ class LivingWorldEngine:
                         npc_id, current.npcs[npc_id], local_site,
                         current.resources) is not None
                 if (self.navigation_enabled and not pending_action
-                        and not local_forage_wins and not injury_requires_rest):
+                        and not local_forage_wins and not injury_requires_rest
+                        and not (self.routines_enabled and
+                                 current.npcs[npc_id]["needs"]["fatigue"] >= 85)):
                     if needs_survey(current, npc_id):
                         append(DomainEvent('NPCNavigationSurveyed', npc_id,
                             'NPC surveys locally observable roads', current.time,
