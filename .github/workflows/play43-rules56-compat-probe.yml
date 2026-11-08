@@ -1,0 +1,57 @@
+name: PLAY-43 Rules 56 isolated historical-failures probe
+
+on:
+  push:
+    branches:
+      - "review/play43-rules56-compatibility-probe-20261108"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  previously-failed-tests:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Re-test all 23 modules that exposed old current Rules pins
+        run: |
+          python -m compileall -q src tests
+          PYTHONPATH=src python -m pytest -q \
+            tests/test_backup_resume.py \
+            tests/test_environment_02a.py \
+            tests/test_knowledge_compatibility.py \
+            tests/test_loans_02d.py \
+            tests/test_loans_02d_integration.py \
+            tests/test_market_02c.py \
+            tests/test_market_02c_integrity.py \
+            tests/test_persisted_injuries_03a.py \
+            tests/test_play28b_hydrology_integrated.py \
+            tests/test_play29_activity_hunger_policy.py \
+            tests/test_play29_metabolism_policy.py \
+            tests/test_play_crop_cycle_batch_26.py \
+            tests/test_play_physical_supply_batch_27.py \
+            tests/test_player_eating_batch_13.py \
+            tests/test_player_foraging_batch_11.py \
+            tests/test_player_rpg.py \
+            tests/test_player_timed_foraging_batch_12.py \
+            tests/test_production_02b.py \
+            tests/test_production_02b_integrity.py \
+            tests/test_routines_02f.py \
+            tests/test_rumors_02g.py \
+            tests/test_temperament_02e.py \
+            tests/test_temperament_02e_integrity.py
+      - name: Verify workshop grain transfer regression
+        run: |
+          PYTHONPATH=src python -m pytest -q scenarios/test_village/test_play43_grain_deposit.py
