@@ -35,3 +35,17 @@ must all stop/fail without fabrication. Demonstrate two physical work
 cycles with finite farm grain and real customers; not indefinite autonomy.
 All author-tested CI evidence must be recorded for the exact candidate.
 No external review or production P0 release implied.
+
+
+## Root-cause acceptance — clock chunking
+
+A first adversarial 900-second one-shot wait exposed that old wage settlement
+ran before fresh bread sales. With no intervening scheduled event, it
+previously paid only at the player's requested wait end and delayed the
+next professional procurement cycle; small waits behaved differently.
+The PLAY-44 opt-in planner now settles a completed, funded job a second time
+*after* local bread sales in the SAME logical tick. This is not a duplicate
+payout: the existing reducer refuses paying a job twice. The unchanged
+default-OFF coordinator retains its old event order. A new test compares
+one 900s wait against many smaller waits and demands identical grain sale,
+bread sale, wage timestamps, inventories, and physical-leg chronology.

@@ -475,6 +475,20 @@ class LivingWorldEngine:
                              'expected_unit_price': grain_buy.unit_price}),
                              market_capability=True)
                         economic_trades.append(grain_buy.trade_id)
+                    # A baker paid only after its real bread sale must receive
+                    # those earnings at the sale's SAME logical tick. Otherwise
+                    # a single 900-second wait delays wage/procurement to 900,
+                    # while many short waits pay at 211 and start a second job.
+                    # Keep this second pass strictly behind the opt-in flag;
+                    # it uses the same existing once-only production reducer.
+                    for job_id in sorted(current.production_jobs):
+                        wage = choose_local_production_wage(current, job_id)
+                        if wage is None:
+                            continue
+                        append(DomainEvent('ProductionWagePaid', None,
+                            'same-tick sale-backed professional wage',
+                            current.time, {'job_id': job_id, 'amount': wage}),
+                            production_capability=True)
             if self.assistance_enabled:
                 # The fixed passes are independent of lexical NPC ID ordering:
                 # settle old promises, then respond, request, and respond to

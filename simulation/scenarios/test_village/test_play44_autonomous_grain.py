@@ -319,3 +319,46 @@ def test_pure_professional_quote_needs_real_staff_and_known_copper(tmp_path):
         raw["entities"][FARMER]["location_id"] = FARM
         raw["resources"][FARM]["coin_copper"] = None
         assert choose_local_grain_offer(WorldState.from_dict(raw), FARMER) is None
+
+
+def test_lumped_900_second_wait_does_not_delay_wages_or_second_trade(tmp_path):
+    """One player wait has same economic outcomes as many smaller waits.
+
+    Event/clock boundaries can differ, but wages and trades must arise at
+    their real causal production/sale ticks, not at the artificial wait end.
+    """
+    summaries = []
+    for suffix, boundaries in (
+        ("lumped", (900,)),
+        ("split", (1, 60, 120, 210, 211, 271, 331, 421, 422, 900)),
+    ):
+        with SQLiteEventStore(tmp_path / f"{suffix}.sqlite") as db:
+            _setup(db)
+            clock = TimeEngine(db)
+            clock.open_session(WORLD)
+            try:
+                engine = _engine(db, clock)
+                state = None
+                for stop in boundaries:
+                    state = _advance(db, engine, stop)
+                assert state is not None
+                grain = sorted(t["executed_at"] for t in state.market_trades.values()
+                               if t["resource"] == "grain")
+                bread = sorted(t["executed_at"] for t in state.market_trades.values()
+                               if t["resource"] == "food")
+                wages = sorted(j["work_wage"]["paid_at"] for j
+                               in state.production_jobs.values()
+                               if "work_wage" in j)
+                assert len(grain) == 2 and len(bread) == 4 and len(wages) == 2
+                assert _coins(state) == 12
+                assert state.entities[BAKER]["location_id"] == BAKERY
+                summaries.append((
+                    grain, bread, wages,
+                    {k: dict(v) for k,v in state.resources.items()},
+                    sorted((t["start"], t["arrived_at"], t["route_id"])
+                           for t in state.travels.values()
+                           if t["npc_id"] == BAKER),
+                ))
+            finally:
+                clock.close_session(WORLD)
+    assert summaries[0] == summaries[1], "clock chunking changed economic causality"
