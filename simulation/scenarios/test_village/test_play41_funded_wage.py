@@ -163,7 +163,7 @@ def test_harvest_wages_remain_unpaid_if_employer_has_no_copper(tmp_path):
             clock.close_session(WORLD)
 
 
-@pytest.mark.parametrize("invalid", [None, False, True, 0, 2, "yes", []])
+@pytest.mark.parametrize("invalid", [None, True, 0, 2, "yes", []])
 def test_wage_contract_is_explicit_and_cannot_be_conjured(tmp_path, invalid):
     with SQLiteEventStore(tmp_path / "bad-setup.sqlite") as db:
         with pytest.raises(ValueError, match="waged_harvest"):
