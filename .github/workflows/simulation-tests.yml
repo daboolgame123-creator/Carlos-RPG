@@ -8,6 +8,7 @@ on:
       - "design/play28b-release-candidate-20261108"
       - "design/play29-opt-in-metabolism-20261108"
       - "design/play29-activity-hunger-fullgate-20261108"
+      - "experiment/play30-bounded-harvest-yield-20261108"
   pull_request:
     paths:
       - "simulation/**"
