@@ -13,10 +13,13 @@ DAYS = 3
 PERSONAL_PROVISIONS = 6
 
 
-def run_three_day_village(path, harvest_yield):
+def run_three_day_village(path, harvest_yield, *,
+                          personal_provisions=PERSONAL_PROVISIONS,
+                          market_wallets=False):
     with SQLiteEventStore(path) as db:
-        seed_physical_supply(db, personal_food=PERSONAL_PROVISIONS,
-                             harvest_yield=harvest_yield)
+        seed_physical_supply(db, personal_food=personal_provisions,
+                             harvest_yield=harvest_yield,
+                             market_wallets=market_wallets)
         first = db.load(WORLD)
         configured = db.append(
             WORLD, "play30-frozen-survival-configuration", first.revision,
@@ -50,7 +53,7 @@ def run_three_day_village(path, harvest_yield):
                     assert state.time == (4 * day + quarter + 1) * (DAY // 4)
                     conserved = audit_physical_supply(
                         state, seed=1, water=2, buyer_copper=2,
-                        personal_food=PERSONAL_PROVISIONS,
+                        personal_food=personal_provisions,
                     )
                     assert conserved["harvest_yield"] == harvest_yield
                 state = db.verify(WORLD)
@@ -71,6 +74,8 @@ def run_three_day_village(path, harvest_yield):
                                  and job["recipe_id"] == "grain-to-bread"
                                  for job in state.production_jobs.values()),
                     "deliveries": state.supply_circuits["huda"]["deliveries"],
+                    "trades": len(state.market_trades),
+                    "market_stock": state.resources["market"]["food"],
                 })
             last = db.load(WORLD)
             assert last.time == DAYS * DAY
@@ -85,7 +90,11 @@ def run_three_day_village(path, harvest_yield):
                     "hunger": {ident: last.npcs[ident]["needs"]["hunger"]
                                for ident, *_ in PEOPLE},
                     "matured": last.farm_plots["farm"]["matured"],
-                    "deliveries": last.supply_circuits["huda"]["deliveries"]}
+                    "deliveries": last.supply_circuits["huda"]["deliveries"],
+                    "wallets": {who: last.resources[who].get("coin_copper")
+                                for who in ("carlos", "adel", "omar", "layla")},
+                    "total_coins": sum(x["coin_copper"] for x in last.resources.values()
+                                       if "coin_copper" in x)}
         finally:
             clock.close_session(WORLD)
 
