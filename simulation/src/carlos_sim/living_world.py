@@ -23,6 +23,7 @@ from .routines import choose_routine_route, routine_allows_work, next_routine_bo
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
 from .supply import choose_cargo, choose_courier_leg, next_courier_departure
+from .production import choose_local_production_wage
 from .economic_autonomy import (choose_local_production, choose_local_food_offer,
                                 choose_local_food_purchase, choose_local_offer_retirement)
 
