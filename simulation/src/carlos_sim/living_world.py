@@ -24,7 +24,7 @@ from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
 from .supply import choose_cargo, choose_courier_leg, next_courier_departure
 from .economic_autonomy import (choose_local_production, choose_local_food_offer,
-                                choose_local_food_purchase, TEST_FOOD_PRICE_COPPER)
+                                choose_local_food_purchase, choose_local_offer_retirement)
 
 
 @dataclass(frozen=True)
@@ -69,6 +69,7 @@ class LivingWorldEngine:
                  routines_enabled: bool = False,
                  rumors_enabled: bool = False,
                  economic_enabled: bool = False,
+                 adaptive_market_enabled: bool = False,
                  agriculture_enabled: bool = False,
                  economy_only_enabled: bool = False,
                  supply_enabled: bool = False):
@@ -138,6 +139,9 @@ class LivingWorldEngine:
         if type(economic_enabled) is not bool:
             raise ValueError('economic_enabled must be boolean')
         self.economic_enabled = economic_enabled
+        if type(adaptive_market_enabled) is not bool or (adaptive_market_enabled and not economic_enabled):
+            raise ValueError("adaptive_market_enabled requires economic_enabled=True")
+        self.adaptive_market_enabled = adaptive_market_enabled
         if type(agriculture_enabled) is not bool or (agriculture_enabled and not economic_enabled):
             raise ValueError("agriculture_enabled requires boolean economic_enabled=True")
         if type(economy_only_enabled) is not bool or (economy_only_enabled and not agriculture_enabled):
@@ -353,8 +357,17 @@ class LivingWorldEngine:
                                 "local seedling grows using finite water and time",
                                 current.time, {"site_id": site}),
                                 agriculture_capability=True)
+                if self.adaptive_market_enabled:
+                    for keeper_id in sorted(current.npcs):
+                        stale = choose_local_offer_retirement(current, keeper_id)
+                        if stale is not None:
+                            append(DomainEvent('MarketOfferClosed', keeper_id,
+                                    'autonomous retired impossible quote: ' + stale.reason,
+                                    current.time, {'id': stale.offer_id}),
+                                    market_capability=True)
                 for keeper_id in sorted(current.npcs):
-                    quote = choose_local_food_offer(current, keeper_id)
+                    quote = choose_local_food_offer(
+                        current, keeper_id, adaptive=self.adaptive_market_enabled)
                     if quote is None:
                         continue
                     append(DomainEvent('MarketOfferPosted', keeper_id,
@@ -365,11 +378,12 @@ class LivingWorldEngine:
                                         'site_id': quote.site_id, 'resource': 'food',
                                         'quantity': quote.quantity,
                                         'payment_resource': 'coin_copper',
-                                        'unit_price': TEST_FOOD_PRICE_COPPER}),
+                                        'unit_price': quote.unit_price}),
                            market_capability=True)
                     economic_offers.append(quote.offer_id)
                 for buyer_id in sorted(current.npcs):
-                    purchase = choose_local_food_purchase(current, buyer_id)
+                    purchase = choose_local_food_purchase(
+                        current, buyer_id, adaptive=self.adaptive_market_enabled)
                     if purchase is None:
                         continue
                     append(DomainEvent('MarketTradeExecuted', buyer_id,
