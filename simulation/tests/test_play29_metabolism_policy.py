@@ -52,7 +52,7 @@ def test_physical_3600_seconds_and_real_owned_food_without_mint(tmp_path, period
         assert after.npcs["nora"]["needs"]["fatigue"] == 11
         assert sum(after.resources[p]["food"] for p in after.npcs) == 126
         assert after.consumptions == {}
-        assert after.schema_version == 39 and after.rules_version == 51
+        assert after.schema_version == 40 and after.rules_version == 52
         assert db.verify(WORLD).to_dict() == after.to_dict()
         assert initial.time == 0
 
