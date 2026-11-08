@@ -32,9 +32,15 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          hoe: int = 1, sickle: int = 1,
                          courier: bool = True, buyer_copper: int = 2,
                          courier_hunger: int = 20, personal_food: int = 0,
-                         harvest_yield: int = 1, market_wallets: bool = False) -> None:
+                         harvest_yield: int = 1, market_wallets: bool = False,
+                         initial_market_food: int = 0,
+                         hungry_market_buyers: bool = False) -> None:
     if type(market_wallets) is not bool:
         raise ValueError('market_wallets must be a boolean trusted setup flag')
+    if type(initial_market_food) is not int or not 0 <= initial_market_food <= 3:
+        raise ValueError('initial_market_food must be a bounded integer (0-3)')
+    if type(hungry_market_buyers) is not bool:
+        raise ValueError('hungry_market_buyers must be a boolean trusted setup flag')
     if type(personal_food) is not int or not 0 <= personal_food <= 20:
         raise ValueError('personal_food must be a finite nonnegative test allotment')
     # PLAY-30: this is a trusted test-world recipe choice, never a runtime yield cheat.
@@ -78,7 +84,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             }),
             e("NPCConfigured", {
                 "npc_id": who, "role": role,
-                "needs": {"hunger": courier_hunger if who == "huda" else hunger,
+                "needs": {"hunger": (80 if hungry_market_buyers and who in ("omar", "layla")
+                                      else courier_hunger if who == "huda" else hunger),
                           "fatigue": fatigue, "safety": 0},
                 "goals": {"earn": 0 if who == "basim" else 10,
                           "explore": 0 if who == "basim" else 10,
@@ -103,7 +110,7 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         ("bakery", "grain", 0),
         ("bakery", "oven", 1),
         ("bakery", "food", 0),
-        ("market", "food", 0),
+        ("market", "food", initial_market_food),
         ("market", "coin_copper", 0),
         ("adel", "coin_copper", buyer_copper),
         (PLAYER, "coin_copper", 2 if market_wallets else 10),
@@ -169,7 +176,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
 
 
 def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
-                          personal_food: int = 0) -> dict:
+                          personal_food: int = 0,
+                          initial_market_food: int = 0) -> dict:
     rs = state.resources
     farm, well, bakery, market, huda = (
         rs["farm"], rs["well"], rs["bakery"], rs["market"], rs["huda"]
@@ -201,7 +209,8 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
             + in_flight
             + sum(rs[who]["food"] for who, *_ in PEOPLE)
             + sum(m["quantity"] for m in state.consumptions.values()))
-    assert food == plot["matured"] * harvest_yield + len(PEOPLE) * personal_food
+    assert food == (plot["matured"] * harvest_yield
+                    + len(PEOPLE) * personal_food + initial_market_food)
     # Copper is conserved regardless of its owner: market, player or NPC.
     copper = sum(owner_stock["coin_copper"] for owner_stock in rs.values()
                  if "coin_copper" in owner_stock)
