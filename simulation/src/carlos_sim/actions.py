@@ -121,6 +121,11 @@ def resolve_action(state: dict[str, Any], action_id: str, schedule_id: str, time
         "wait": {"hunger": 5},
         "forage": {"fatigue": 12, "hunger": 5},
     }[verb]
+    # A per-world, trusted bootstrap-only calibration affects effort costs,
+    # not item creation, action time, work output, fatigue, or existing defaults.
+    from .survival import activity_hunger_percent
+    percent = activity_hunger_percent(state)
+    deltas['hunger'] = max(1, (deltas['hunger'] * percent) // 100)
     result: dict[str, Any] = {"needs": {}, "counters": {}}
     for need, delta in deltas.items():
         old = npc["needs"][need]
