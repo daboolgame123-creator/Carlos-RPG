@@ -7,7 +7,6 @@ world, and never claims that meeting the bound is sufficient for survival.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from math import ceil
 
 from carlos_sim import WorldState
 from carlos_sim.consumption import HUNGER_RELIEF_PER_FOOD
@@ -118,8 +117,8 @@ def closed_test_village_feasibility(
     period = hunger_period(state.to_dict())
     increase = horizon_seconds // period
     minimum = {
-        who: max(0, ceil((npc["needs"]["hunger"] + increase - 89)
-                         / HUNGER_RELIEF_PER_FOOD))
+        who: max(0, (npc["needs"]["hunger"] + increase - 89
+                 + HUNGER_RELIEF_PER_FOOD - 1) // HUNGER_RELIEF_PER_FOOD)
         for who, npc in sorted(state.npcs.items())
     }
     # This is the *optimistic* lower bound to keep all NPC hunger <90
