@@ -238,3 +238,35 @@ def test_courier_rejects_route_to_wrong_field_without_committing(tmp_path):
         state = db.verify(WORLD)
         assert EAST not in state.locations
         assert COURIER not in state.supply_circuits
+
+
+def test_a_second_courier_cannot_steal_remote_grain_or_pick_without_authority(
+        tmp_path):
+    with SQLiteEventStore(tmp_path / "cross-field-reject.sqlite") as db:
+        seed_two_field_world(db)
+        baseline = db.verify(WORLD).to_dict()
+        # Hana is physically at the well on the water leg, not at the
+        # other field or on an authorized grain consignment.
+        forged_grain = DomainEvent(
+            "SupplyCargoPicked", COURIER, "forged remote grain",
+            0, {"courier_id": COURIER, "resource": "grain"},
+        )
+        with pytest.raises((ValueError, InvalidEvent)):
+            db.append(
+                WORLD, "play38-forged-cross-field", db.load(WORLD).revision,
+                [forged_grain], supply_authorized=True,
+            )
+        assert db.verify(WORLD).to_dict() == baseline
+        # Even a legitimate water parcel is forbidden without a trusted
+        # supply capability. Neither physical location nor NPC role is
+        # sufficient authority on its own.
+        valid_water = DomainEvent(
+            "SupplyCargoPicked", COURIER, "no authority",
+            0, {"courier_id": COURIER, "resource": "water"},
+        )
+        with pytest.raises((ValueError, InvalidEvent)):
+            db.append(
+                WORLD, "play38-forged-local", db.load(WORLD).revision,
+                [valid_water],
+            )
+        assert db.verify(WORLD).to_dict() == baseline
