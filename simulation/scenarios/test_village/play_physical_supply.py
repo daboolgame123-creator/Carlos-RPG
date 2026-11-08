@@ -31,7 +31,9 @@ PEOPLE = (
 def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          hoe: int = 1, sickle: int = 1,
                          courier: bool = True, buyer_copper: int = 2,
-                         courier_hunger: int = 20) -> None:
+                         courier_hunger: int = 20, personal_food: int = 0) -> None:
+    if type(personal_food) is not int or not 0 <= personal_food <= 20:
+        raise ValueError('personal_food must be a finite nonnegative test allotment')
     for key, value, valid in (
         ("water", water, (0, 1, 2)), ("seed", seed, (0, 1)),
         ("hoe", hoe, (0, 1)), ("sickle", sickle, (0, 1)),
@@ -80,7 +82,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         for resource in ("labor_units", "investigation_attempts", "food"):
             events.append(e("ResourceChanged", {
                 "owner_id": who, "resource": resource, "previous": None,
-                "current": 0, "source": "initialization",
+                "current": personal_food if resource == "food" else 0,
+                "source": "initialization",
             }))
     stock = [
         ("well", "water", water),
@@ -154,7 +157,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
     store.append(WORLD, "play27-physical-bootstrap", 0, events, bootstrap=True)
 
 
-def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int) -> dict:
+def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
+                          personal_food: int = 0) -> dict:
     rs = state.resources
     farm, well, bakery, market, huda = (
         rs["farm"], rs["well"], rs["bakery"], rs["market"], rs["huda"]
@@ -177,7 +181,7 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int) ->
             + in_flight
             + sum(rs[who]["food"] for who, *_ in PEOPLE)
             + sum(m["quantity"] for m in state.consumptions.values()))
-    assert food == plot["matured"]
+    assert food == plot["matured"] + len(PEOPLE) * personal_food
     copper = (rs[PLAYER]["coin_copper"] + market["coin_copper"]
               + rs["adel"]["coin_copper"])
     assert copper == 10 + buyer_copper
