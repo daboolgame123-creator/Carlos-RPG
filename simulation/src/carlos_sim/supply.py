@@ -151,7 +151,7 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         cargo = record["carry"]
         if (cargo is None or current != cargo["destination"]
                 or p["resource"] != cargo["resource"]
-                or record["index"] not in (1, 2, 3)
+                or record["index"] not in (1, 2, 3, 4, 5)
                 or record["stops"][record["index"] - 1] != cargo["source"]):
             raise ValueError("delivery requires recorded real one-leg arrival")
         resource = cargo["resource"]
@@ -302,15 +302,19 @@ def validate_supply_circuits(state: dict) -> None:
             raise ValueError("courier stage not aligned with physical position")
         cargo = rec["carry"]
         if cargo is not None:
+            eligible = [
+                (rec["stops"][idx], rec["stops"][idx + 1], RESOURCES[idx])
+                for idx in range(3)
+            ]
+            if CASH in state["resources"].get(who, {}):
+                eligible.extend(
+                    (rec["stops"][idx], rec["stops"][idx + 1], CASH)
+                    for idx in (3, 4)
+                )
             if (type(cargo) is not dict
                     or set(cargo) != {"source", "destination", "resource"}
                     or tuple(cargo[k] for k in ("source", "destination", "resource"))
-                       not in ((rec["stops"][0], rec["stops"][1], "water"),
-                               (rec["stops"][1], rec["stops"][2], "grain"),
-                               (rec["stops"][2], rec["stops"][3], "food"),
-                               *((((rec["stops"][3], rec["stops"][4], CASH),
-                                   (rec["stops"][4], rec["stops"][5], CASH)))
-                                 if CASH in state["resources"].get(who, {}) else ())))
+                       not in eligible
                     or not (here == cargo["source"] or here == cargo["destination"])):
                 raise ValueError("cargo not physically at its source or destination")
         cash_enabled = CASH in state["resources"].get(who, {})
