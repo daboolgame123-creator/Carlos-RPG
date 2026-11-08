@@ -36,6 +36,14 @@ class OfferIntent:
     offer_id: str
     quantity: int
     reason: str
+    unit_price: int = TEST_FOOD_PRICE_COPPER
+
+
+@dataclass(frozen=True)
+class RetirementIntent:
+    keeper_id: str
+    offer_id: str
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -137,8 +145,15 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     return None
 
 
-def choose_local_food_offer(state: WorldState, keeper_id: str) -> OfferIntent | None:
-    """Registered local keeper offers existing *site-owned* food, not NPC stock."""
+def choose_local_food_offer(state: WorldState, keeper_id: str, *,
+                            adaptive: bool = False) -> OfferIntent | None:
+    """Local seller prices only their physically owned stock; no omniscient demand.
+
+    Adaptive prices are experimental and opt-in. Previously posted quotes never
+    change behind a buyer's back; a new price needs a new physical offer.
+    """
+    if type(adaptive) is not bool:
+        raise ValueError("adaptive market mode must be boolean")
     if not _free(state, keeper_id):
         return None
     here = state.entities[keeper_id]["location_id"]
@@ -154,7 +169,8 @@ def choose_local_food_offer(state: WorldState, keeper_id: str) -> OfferIntent | 
     if any(o["status"] == "open" and o["stock_owner_id"] == here
            and o["resource"] == "food" for o in state.market_offers.values()):
         return None
-    amount = min(food, MARKET_MAX, (MAX_AMOUNT - coin) // TEST_FOOD_PRICE_COPPER)
+    unit_price = (3 if food == 1 else 2 if food <= 3 else 1) if adaptive else TEST_FOOD_PRICE_COPPER
+    amount = min(food, MARKET_MAX, (MAX_AMOUNT - coin) // unit_price)
     if amount < 1:
         return None
     ident = _event_id("offer", here, state.time)
@@ -162,11 +178,41 @@ def choose_local_food_offer(state: WorldState, keeper_id: str) -> OfferIntent | 
         return None
     return OfferIntent(keeper_id, here, ident, amount,
                        f"registered_steward; physically_stocked={food}; "
-                       f"test_price={TEST_FOOD_PRICE_COPPER}")
+                       f"local_quote={unit_price}; adaptive={adaptive}",
+                       unit_price)
 
 
-def choose_local_food_purchase(state: WorldState, buyer_id: str) -> PurchaseIntent | None:
-    """An idle hungry NPC sees only a quote at their own *present* site."""
+def choose_local_offer_retirement(state: WorldState, keeper_id: str) -> RetirementIntent | None:
+    """Withdraw an unfulfillable listing after a real on-site stock change.
+
+    Listing retirement never refunds, reprices, transfers, or invents anything.
+    The established MarketOfferClosed reducer still authorizes the seller.
+    """
+    if not _free(state, keeper_id):
+        return None
+    here = state.entities[keeper_id]["location_id"]
+    stall = state.market_stalls.get(here)
+    if stall is None or stall["keeper_id"] != keeper_id:
+        return None
+    if not _present(state.to_dict(), keeper_id, here):
+        return None
+    stock = state.resources.get(here, {}).get("food")
+    if not _known(stock):
+        return None
+    for offer_id, offer in sorted(state.market_offers.items()):
+        if (offer["status"] == "open" and offer["site_id"] == here
+                and offer["stock_owner_id"] == here and offer["seller_id"] == keeper_id
+                and offer["resource"] == "food" and offer["remaining"] > stock):
+            return RetirementIntent(keeper_id, offer_id,
+                                    f"on_site_stock={stock}; unfilled_quote={offer['remaining']}")
+    return None
+
+
+def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
+                               adaptive: bool = False) -> PurchaseIntent | None:
+    """Buyer uses their *own* hunger and wallet plus physically visible quotes."""
+    if type(adaptive) is not bool:
+        raise ValueError("adaptive market mode must be boolean")
     if not _free(state, buyer_id):
         return None
     npc = state.npcs[buyer_id]
@@ -183,6 +229,10 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str) -> PurchaseInte
     coins = state.resources.get(buyer_id, {}).get(MONEY)
     if not _known(own_food) or own_food != 0 or not _known(coins):
         return None
+    candidates: list[tuple[int, str, PurchaseIntent]] = []
+    # At extreme hunger an NPC accepts a higher posted price, never credit.
+    max_price = 4 if npc["needs"]["hunger"] >= 95 else (
+        3 if npc["needs"]["hunger"] >= 80 else 2)
     for offer_id, offer in sorted(state.market_offers.items()):
         if (offer["status"] != "open" or offer["site_id"] != here
                 or offer["resource"] != "food"
@@ -198,12 +248,17 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str) -> PurchaseInte
         seller_coins = source.get(MONEY)
         if (not _known(stock) or stock < 1 or not _known(seller_coins)
                 or not _known(price) or price < 1 or coins < price
-                or seller_coins + price > MAX_AMOUNT):
+                or seller_coins + price > MAX_AMOUNT
+                or (adaptive and price > max_price)):
             continue
         ident = _event_id("trade", buyer_id, state.time)
         if ident in state.market_trades:
             return None
-        return PurchaseIntent(buyer_id, offer_id, ident, price,
-                              f"observed_local_quote={offer_id}; hunger="
-                              f"{npc['needs']['hunger']}; own_copper={coins}")
-    return None
+        choice = PurchaseIntent(buyer_id, offer_id, ident, price,
+                                f"observed_local_quote={offer_id}; hunger="
+                                f"{npc['needs']['hunger']}; own_copper={coins}; "
+                                f"adaptive={adaptive}")
+        if not adaptive:
+            return choice
+        candidates.append((price, offer_id, choice))
+    return min(candidates, key=lambda item: (item[0], item[1]))[2] if candidates else None
