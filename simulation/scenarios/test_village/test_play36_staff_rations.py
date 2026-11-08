@@ -47,7 +47,7 @@ def _visible_diagnostic(state):
     }
 
 
-def _run(path, *, staff_provisions):
+def _run(path, *, staff_provisions, full_npc_world=False):
     with SQLiteEventStore(path) as db:
         seed_physical_supply(
             db, personal_food=0, initial_market_food=3, harvest_yield=3,
@@ -73,7 +73,7 @@ def _run(path, *, staff_provisions):
                 routines_enabled=True, survival_enabled=True,
                 consumption_enabled=True, supply_enabled=True,
                 economic_enabled=True, adaptive_market_enabled=True,
-                agriculture_enabled=True, economy_only_enabled=True,
+                agriculture_enabled=True, economy_only_enabled=not full_npc_world,
             )
             timeline = [_visible_diagnostic(first)]
             for at in CHECKPOINTS[1:]:
@@ -110,6 +110,15 @@ def test_seven_npcs_market_first_vs_worker_rations_72h(tmp_path):
     assert all(t["copper"] == 12 and 0 <= t["hunger_cap"] <= 7
                for t in market + staff)
     assert market_state["world_id"] == staff_state["world_id"] == WORLD
+    # Measured control: three paid local purchases do not feed any essential
+    # worker, while the pre-positioned same three loaves feed each worker once.
+    assert market[3]["worker_meals"] == {who: 0 for who in WORKERS}
+    assert staff[3]["worker_meals"] == {who: 1 for who in WORKERS}
+    assert market[3]["courier_deliveries"] == 1
+    assert staff[3]["courier_deliveries"] == 2
+    # A finite one-time ration is insufficient to sustain three workdays.
+    assert market[3]["hunger_cap"] == staff[3]["hunger_cap"] == 7
+    assert market[-1]["bread_batches"] == staff[-1]["bread_batches"] == 0
     assert market[0]["worker_meals"] == staff[0]["worker_meals"] == {
         who: 0 for who in WORKERS}
     assert market[0]["all_meals"] == staff[0]["all_meals"] == 0
@@ -120,6 +129,26 @@ def test_seven_npcs_market_first_vs_worker_rations_72h(tmp_path):
     assert all(t["all_meals"] >= 0 and t["bread_batches"] >= 0
                and t["courier_deliveries"] >= 0 for t in market + staff)
     print("PLAY36_FINITE_STAFF_FOOD_ALLOCATIONS_72H",
+          json.dumps({"market_first": market, "worker_provisions": staff},
+                     sort_keys=True))
+
+
+
+def test_full_npc_autonomy_is_not_confused_with_focused_economy_fixture(tmp_path):
+    """Full decisions may change behavior: keep this as a separate real trial."""
+    market, market_state = _run(
+        tmp_path / "full-market.sqlite", staff_provisions=False,
+        full_npc_world=True,
+    )
+    staff, staff_state = _run(
+        tmp_path / "full-staff.sqlite", staff_provisions=True,
+        full_npc_world=True,
+    )
+    assert market[-1]["time"] == staff[-1]["time"] == 3 * DAY
+    assert len(market_state["npcs"]) == len(staff_state["npcs"]) == 7
+    assert all(s["copper"] == 12 and 0 <= s["hunger_cap"] <= 7
+               for s in market + staff)
+    print("PLAY36_FULL_NPC_LIFE_VS_FOCUSED_ECONOMY_72H",
           json.dumps({"market_first": market, "worker_provisions": staff},
                      sort_keys=True))
 
