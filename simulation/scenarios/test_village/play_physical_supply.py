@@ -177,7 +177,7 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
                     and state.production_recipes[job["recipe_id"]]["input_resource"]
                     in ("crop_ready", "grain"))
     food = (farm["crop_ready"] + farm["grain"] + bakery["grain"]
-            + bakery["food"] + market["food"] + huda["grain"] + huda["food"]
+            + bakery["food"] + market["food"] + huda["grain"]
             + in_flight
             + sum(rs[who]["food"] for who, *_ in PEOPLE)
             + sum(m["quantity"] for m in state.consumptions.values()))
