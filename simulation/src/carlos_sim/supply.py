@@ -100,6 +100,11 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         raise ValueError("cargo cannot move without a configured, idle and present courier")
     current = state["entities"][who]["location_id"]
     if event.event_type == "SupplyCargoPicked":
+        npc = state["npcs"][who]
+        if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 70
+                or npc["needs"]["safety"] >= 75
+                or _injury_rest_decision(state["injuries"], who) is not None):
+            raise ValueError("exhausted or unsafe courier cannot reserve new cargo")
         lane = _lane(record)
         if (lane is None or record["carry"] is not None or current != lane[0]
                 or p["resource"] != lane[2]):
