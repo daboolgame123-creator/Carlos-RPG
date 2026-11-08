@@ -1,0 +1,37 @@
+name: PLAY-28 focused real rest and food checks
+
+on:
+  push:
+    branches:
+      - simulation-engine-phase-play-28-survival-rest
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  survival-rest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Syntax check
+        run: python -m compileall -q src tests scenarios/test_village
+      - name: Focused survival, physical routines, supply and consumption regressions
+        run: |
+          PYTHONPATH=src:tests:scenarios/test_village python -m pytest -q \
+            tests/test_play_survival_rest_batch_28.py \
+            tests/test_routines_02f.py \
+            tests/test_consumption.py \
+            tests/test_play_physical_supply_batch_27.py
