@@ -210,6 +210,25 @@ def complete_courier_leg(state: dict, who: str, route_id: str,
         record["next_departure"] = ((now // record["period_seconds"]) + 1) * record["period_seconds"]
 
 
+def cargo_pick_quantity(state: WorldState, who: str) -> int:
+    """Only local observed stock and the courier's own cart constrain a load.
+
+    No distant bakery or market inventory is accessed by this NPC selector.
+    A receiver may later reject an overfull delivery rather than teleport stock.
+    """
+    rec = state.supply_circuits.get(who)
+    if rec is None or rec["carry"] is not None:
+        return 0
+    lane = _lane(rec)
+    if lane is None or state.entities[who]["location_id"] != lane[0]:
+        return 0
+    local = state.resources.get(lane[0], {}).get(lane[2])
+    own = state.resources.get(who, {}).get(lane[2])
+    if not _quantity(local) or not _quantity(own):
+        return 0
+    return min(rec.get("cargo_capacity", 1), local, MAX_STOCK - own)
+
+
 def choose_cargo(state: WorldState, who: str) -> str | None:
     record = state.supply_circuits.get(who)
     if record is None or _traveling(state, who):
@@ -226,10 +245,7 @@ def choose_cargo(state: WorldState, who: str) -> str | None:
             or npc["needs"]["safety"] >= 75
             or _injury_rest_decision(state.injuries, who) is not None):
         return None
-    lane = _lane(record)
-    if (lane is not None and here == lane[0]
-            and _quantity(state.resources.get(here, {}).get(lane[2]))
-            and state.resources[here][lane[2]] > 0):
+    if cargo_pick_quantity(state, who) > 0:
         return "SupplyCargoPicked"
     return None
 
@@ -279,10 +295,17 @@ def validate_supply_circuits(state: dict) -> None:
     if type(circuits) is not dict:
         raise ValueError("invalid courier contracts")
     for who, rec in circuits.items():
+        old_keys = {"stops", "route_ids", "period_seconds", "index",
+                    "rounds", "next_departure", "carry", "loads", "deliveries"}
+        cart_mode = type(rec) is dict and "cargo_capacity" in rec
+        expected_keys = old_keys | ({"cargo_capacity"} if cart_mode else set())
+        capacity = rec.get("cargo_capacity", 1) if type(rec) is dict else None
         if (who not in state["npcs"] or state["npcs"][who]["role"] != "courier"
                 or type(rec) is not dict
-                or set(rec) != {"stops", "route_ids", "period_seconds", "index",
-                               "rounds", "next_departure", "carry", "loads", "deliveries"}
+                or set(rec) != expected_keys
+                or (cart_mode and (type(capacity) is not int
+                                   or capacity not in CART_CAPACITIES
+                                   or state["resources"].get(who, {}).get("cart") != 1))
                 or not _validated_stops(rec["stops"])
                 or type(rec["route_ids"]) is not list or len(rec["route_ids"]) != 6
                 or type(rec["period_seconds"]) is not int
@@ -305,7 +328,10 @@ def validate_supply_circuits(state: dict) -> None:
         cargo = rec["carry"]
         if cargo is not None:
             if (type(cargo) is not dict
-                    or set(cargo) != {"source", "destination", "resource"}
+                    or set(cargo) != ({"source", "destination", "resource"}
+                                      | ({"quantity"} if cart_mode else set()))
+                    or (cart_mode and (type(cargo.get("quantity")) is not int
+                                       or not 1 <= cargo["quantity"] <= capacity))
                     or tuple(cargo[k] for k in ("source", "destination", "resource"))
                        not in ((rec["stops"][0], rec["stops"][1], "water"),
                                (rec["stops"][1], rec["stops"][2], "grain"),
@@ -314,7 +340,8 @@ def validate_supply_circuits(state: dict) -> None:
                 raise ValueError("cargo not physically at its source or destination")
         for item in RESOURCES:
             amount = state["resources"].get(who, {}).get(item)
-            expected = int(cargo is not None and cargo["resource"] == item)
+            carrying = cargo.get("quantity", 1) if cargo is not None else 0
+            expected = carrying if cargo is not None and cargo["resource"] == item else 0
             if (not _quantity(amount)
                     or (item == "food" and amount < expected)
                     or (item != "food" and amount != expected)):
