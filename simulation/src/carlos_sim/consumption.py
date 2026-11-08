@@ -34,6 +34,9 @@ def _available(state: Any, npc_id: str) -> bool:
     if any(a['npc_id'] == npc_id and a['status'] == 'running'
            for a in state.actions.values()):
         return False
+    if any(j['npc_id'] == npc_id and j['status'] == 'running'
+           for j in state.production_jobs.values()):
+        return False
     return True
 
 
@@ -87,7 +90,9 @@ def project_food_consumed(state: dict[str, Any], event: DomainEvent, *, consumpt
     if (any(t['npc_id'] == npc_id and t['status'] == 'traveling'
             for t in state['travels'].values())
             or any(a['npc_id'] == npc_id and a['status'] == 'running'
-                   for a in state['actions'].values())):
+                   for a in state['actions'].values())
+            or any(j['npc_id'] == npc_id and j['status'] == 'running'
+                   for j in state['production_jobs'].values())):
         raise ValueError('NPC cannot eat while traveling or actively busy')
     if any(m['npc_id'] == npc_id and m['consumed_at'] == state['time']
            for m in state['consumptions'].values()):
