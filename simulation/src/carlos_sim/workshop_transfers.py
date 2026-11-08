@@ -56,6 +56,15 @@ def deposit_workshop_material(
             or owned_before < amount
             or site_before > MAX_QUANTITY - amount):
         raise ValueError("uninitialized, insufficient or overflowing physical inventory")
+    # A courier's own balance may contain ONE separately consigned customer's
+    # unit. Even a locally eligible worker may deposit only their OWN surplus,
+    # never a third party's physically reserved cargo. Mirror consumption's
+    # original cargo reservation semantics; no new ledger/authority required.
+    circuit = state["supply_circuits"].get(who)
+    carried = circuit["carry"] if circuit is not None else None
+    reserved = int(carried is not None and carried["resource"] == item)
+    if owned_before - reserved < amount:
+        raise ValueError("cannot deposit a customer's reserved courier cargo")
     # Complete atomic double-entry commodity transfer, no monetary mutation.
     personal[item] = owned_before - amount
     workshop[item] = site_before + amount

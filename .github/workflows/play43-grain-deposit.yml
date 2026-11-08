@@ -28,7 +28,51 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Check out genuine PLAY-42 Rules 55 predecessor
+        uses: actions/checkout@v5
+        with:
+          ref: 8297016741dba1a9e0749b187177180855031ca8
+          path: reviewed-play42
+          persist-credentials: false
       - run: python -m pip install pytest
+      - name: Reject actual PLAY-42 saved world without mutation
+        run: |
+          PYTHONPATH=../reviewed-play42/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore
+          path = '/tmp/play43-genuine-prior-rules55.sqlite'
+          with SQLiteEventStore(path) as db:
+              db.create_world('legacy')
+              db.snapshot('legacy')
+              assert db.db.execute(
+                  'SELECT schema_version,rules_version FROM worlds WHERE id=?',
+                  ('legacy',),
+              ).fetchone() == (41, 55)
+          PY
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from carlos_sim import SQLiteEventStore, UnsupportedVersion
+          path = Path('/tmp/play43-genuine-prior-rules55.sqlite')
+          before = sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              row = db.db.execute(
+                  'SELECT schema_version,rules_version,revision FROM worlds WHERE id=?',
+                  ('legacy',),
+              ).fetchone()
+              assert row == (41, 55, 0)
+              try:
+                  db.load('legacy')
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError('Rules 55 previous world silently accepted by 56')
+              assert db.db.execute(
+                  'SELECT schema_version,rules_version,revision FROM worlds WHERE id=?',
+                  ('legacy',),
+              ).fetchone() == row
+              assert db.db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
+          assert sha256(path.read_bytes()).hexdigest() == before
+          PY
       - name: Validate physical trade and no material laundering
         run: |
           python -m compileall -q src scenarios

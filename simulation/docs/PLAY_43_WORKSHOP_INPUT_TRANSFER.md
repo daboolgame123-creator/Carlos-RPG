@@ -26,3 +26,18 @@ Caveat: finite bootstrap grain is real owned opening inventory but this patch
 does not prove a fresh autonomous grain harvest nor an autonomous intershop
 purchase plan. Those are separate follow-up tasks. No carpenter/blacksmith
 shop or item has been claimed as implemented.
+
+
+## Cargo reservation hardening and genuine predecessor
+
+An NPC's resources may temporarily include one parcel physically carried for
+a courier's customer. The workshop event now subtracts that one reserved cargo
+unit from the depositor's personal available amount. Only genuine additional
+surplus can enter the workshop. An adversarial projector-only test checks
+reservation without presenting a forged state as a valid end-to-end courier
+journey.
+
+The dedicated CI checks out the exact genuine PLAY-42 commit, creates an
+actual SQLite Rules55/Schema41 file with that predecessor, and confirms the
+PLAY-43 Rules56 engine rejects it without mutating metadata, byte digest or
+database integrity.

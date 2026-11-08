@@ -294,3 +294,35 @@ def test_no_unauthorized_material_deposits_or_remote_laundering(tmp_path):
             assert db.verify(WORLD).to_dict() == before
         finally:
             clock.close_session(WORLD)
+
+
+def test_reserved_courier_cargo_is_not_laundered_through_workshop(tmp_path):
+    """Reducer adversarial test: the courier's one consigned unit is not owned stock.
+
+    This constructs a narrowly manipulated reducer input to verify the invariant,
+    not a claim that the full synthetic state is a valid ordinary courier route.
+    """
+    from carlos_sim.workshop_transfers import deposit_workshop_material
+    with SQLiteEventStore(tmp_path / "reserved-cargo.sqlite") as db:
+        state = _boot(db).to_dict()
+        state["supply_circuits"][BAKER] = {
+            "carry": {"resource": "grain", "source": FARM, "destination": BAKERY},
+        }
+        # One grain in the depositor's ledger belongs to an existing consignment.
+        state["resources"][BAKER]["grain"] = 1
+        event = DomainEvent(
+            "WorkshopMaterialDeposited", BAKER,
+            "adversarial attempt to launder courier grain", 0,
+            {"site_id": BAKERY, "resource": "grain", "quantity": 1},
+        )
+        with pytest.raises(ValueError, match="reserved courier cargo"):
+            deposit_workshop_material(state, event, authorized=True)
+        assert state["resources"][BAKER]["grain"] == 1
+        assert state["resources"][BAKERY]["grain"] == 0
+
+        # If the courier additionally owns a second, unreserved grain unit,
+        # only that genuine personal surplus can be deposited.
+        state["resources"][BAKER]["grain"] = 2
+        deposit_workshop_material(state, event, authorized=True)
+        assert state["resources"][BAKER]["grain"] == 1
+        assert state["resources"][BAKERY]["grain"] == 1
