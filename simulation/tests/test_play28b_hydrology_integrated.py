@@ -47,7 +47,7 @@ def session(db):
 def test_source_config_is_time_zero_only_and_replayable(tmp_path):
     with SQLiteEventStore(tmp_path / "site.sqlite") as db:
         initial = setup_water(db)
-        assert (initial.schema_version, initial.rules_version) == (40, 53)
+        assert (initial.schema_version, initial.rules_version) == (40, 54)
         assert initial.hydrology_sources["well"]["capacity"] == 3
         assert initial.hydrology_sources["well"]["initial"] == 2
         assert db.verify(WORLD).to_dict() == initial.to_dict()
@@ -200,7 +200,7 @@ def test_snapshot_corruption_and_previous_version_are_rejected(tmp_path):
                       (WORLD,))
         with pytest.raises(UnsupportedVersion):
             db.load(WORLD)
-        db.db.execute("UPDATE worlds SET schema_version=40, rules_version=53 WHERE id=?",
+        db.db.execute("UPDATE worlds SET schema_version=40, rules_version=54 WHERE id=?",
                       (WORLD,))
         assert db.verify(WORLD).to_dict() == correct.to_dict()
 
