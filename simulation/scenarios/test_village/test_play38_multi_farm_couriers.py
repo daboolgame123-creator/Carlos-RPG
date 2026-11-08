@@ -28,6 +28,7 @@ def seed_two_field_world(
     east_growth_seconds=3600, east_grain_yield=3,
     initial_water=2, initial_market_food=0,
     market_wallets=False, hungry_market_buyers=False,
+    cash_return=False,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
     if (type(east_growth_seconds) is not int
@@ -76,12 +77,23 @@ def seed_two_field_world(
                 "previous": None, "current": 0,
                 "source": "initialization",
             }))
-    for owner, resource, value in (
+    if type(cash_return) is not bool or (cash_return and not market_wallets):
+        raise ValueError("cash_return needs a trusted initial market-wallet scenario")
+    physical_stock = [
         (EAST, "water", 0), (EAST, "seed", 1), (EAST, "crop_seeded", 0),
         (EAST, "crop_ready", 0), (EAST, "grain", 0),
         (EAST, "hoe", 1), (EAST, "sickle", 1),
         (COURIER, "water", 0), (COURIER, "grain", 0),
-    ):
+    ]
+    if cash_return:
+        # This is a ZERO opening depot balance, not a treasury injection.
+        # The market already owns a zero initialized coin ledger in PLAY-27.
+        physical_stock.extend((
+            ("bakery", "coin_copper", 0),
+            (EAST, "coin_copper", 0),
+            (COURIER, "coin_copper", 0),
+        ))
+    for owner, resource, value in physical_stock:
         extra.append(_event("ResourceChanged", {
             "owner_id": owner, "resource": resource,
             "previous": None, "current": value,

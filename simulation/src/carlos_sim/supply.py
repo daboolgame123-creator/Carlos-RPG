@@ -14,6 +14,7 @@ from .npc import _injury_rest_decision
 
 MAX_STOCK = 2**31 - 1
 RESOURCES = ("water", "grain", "food")
+CASH = "coin_copper"
 STOPS = ("well", "farm", "bakery", "market", "bakery", "farm", "well")
 
 
@@ -70,11 +71,20 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
         if not (_quantity(stock.get(source, {}).get(resource))
                 and _quantity(stock.get(destination, {}).get(resource))):
             raise ValueError("every logistics stock must have a known balance")
-    # Water/grain are strictly consignment-only. Existing, initialized food
-    # belongs to the courier until a food parcel is explicitly reserved.
+    # Water/grain are consignment-only; personally owned food stays personal.
     if (any(stock.get(who, {}).get(item) != 0 for item in ("water", "grain"))
             or not _quantity(stock.get(who, {}).get("food"))):
         raise ValueError("courier requires empty water/grain slots and known owned food")
+    # Optional physical copper consignment: declaring a known ZERO coin slot
+    # for this particular courier at trusted t=0 configures the return trip.
+    # ALL cash depots must be initialized, or the cash contract is rejected.
+    # The old, unconfigured courier's record and behavior are identical.
+    courier_cash = stock.get(who, {}).get(CASH)
+    if courier_cash is not None and (
+            not _quantity(courier_cash) or courier_cash != 0
+            or any(not _quantity(stock.get(site, {}).get(CASH))
+                   for site in (stops[1], "bakery", "market"))):
+        raise ValueError("cash return contract needs zero courier cash and known depot balances")
     state["supply_circuits"][who] = {
         "stops": list(stops), "route_ids": list(routes),
         "period_seconds": period, "index": 0, "rounds": 0,
@@ -83,12 +93,17 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
     }
 
 
-def _lane(record: Any) -> tuple[str, str, str] | None:
+def _lane(record: Any, *, cash_enabled: bool = False) -> tuple[str, str, str] | None:
     idx = record["index"]
-    if idx not in (0, 1, 2):
-        return None
     stops = record["stops"]
-    return (stops[idx], stops[idx + 1], RESOURCES[idx])
+    if idx in (0, 1, 2):
+        return (stops[idx], stops[idx + 1], RESOURCES[idx])
+    if cash_enabled and idx in (3, 4):
+        # MARKET RECEIPTS are physically walked back to the bakery, then
+        # a surplus coin is carried to the field. One coin is retained at
+        # the bakery as its minimal real operating reserve.
+        return (stops[idx], stops[idx + 1], CASH)
+    return None
 
 
 def _physically_present(state: dict, who: str) -> bool:
@@ -116,7 +131,7 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
                 or npc["needs"]["safety"] >= 75
                 or _injury_rest_decision(state["injuries"], who) is not None):
             raise ValueError("exhausted or unsafe courier cannot reserve new cargo")
-        lane = _lane(record)
+        lane = _lane(record, cash_enabled=CASH in state["resources"][who])
         if (lane is None or record["carry"] is not None or current != lane[0]
                 or p["resource"] != lane[2]):
             raise ValueError("pickup must use the local planned shipping lane")
@@ -124,7 +139,8 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         from_balance = state["resources"][src][resource]
         to_balance = state["resources"][who][resource]
         if (not _quantity(from_balance) or not _quantity(to_balance)
-                or from_balance < 1 or to_balance >= MAX_STOCK
+                or from_balance < (2 if resource == CASH and record["index"] == 4 else 1)
+                or to_balance >= MAX_STOCK
                 or (resource != "food" and to_balance != 0)):
             raise ValueError("courier cannot mint or double-load local cargo")
         state["resources"][src][resource] -= 1
@@ -135,7 +151,7 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         cargo = record["carry"]
         if (cargo is None or current != cargo["destination"]
                 or p["resource"] != cargo["resource"]
-                or record["index"] not in (1, 2, 3)
+                or record["index"] not in (1, 2, 3, 4, 5)
                 or record["stops"][record["index"] - 1] != cargo["source"]):
             raise ValueError("delivery requires recorded real one-leg arrival")
         resource = cargo["resource"]
@@ -206,10 +222,12 @@ def choose_cargo(state: WorldState, who: str) -> str | None:
             or npc["needs"]["safety"] >= 75
             or _injury_rest_decision(state.injuries, who) is not None):
         return None
-    lane = _lane(record)
+    lane = _lane(record, cash_enabled=CASH in state.resources.get(who, {}))
     if (lane is not None and here == lane[0]
             and _quantity(state.resources.get(here, {}).get(lane[2]))
-            and state.resources[here][lane[2]] > 0):
+            and state.resources[here][lane[2]] >= (
+                2 if lane[2] == CASH and record["index"] == 4 else 1
+            )):
         return "SupplyCargoPicked"
     return None
 
@@ -284,15 +302,27 @@ def validate_supply_circuits(state: dict) -> None:
             raise ValueError("courier stage not aligned with physical position")
         cargo = rec["carry"]
         if cargo is not None:
+            eligible = [
+                (rec["stops"][idx], rec["stops"][idx + 1], RESOURCES[idx])
+                for idx in range(3)
+            ]
+            if CASH in state["resources"].get(who, {}):
+                eligible.extend(
+                    (rec["stops"][idx], rec["stops"][idx + 1], CASH)
+                    for idx in (3, 4)
+                )
             if (type(cargo) is not dict
                     or set(cargo) != {"source", "destination", "resource"}
                     or tuple(cargo[k] for k in ("source", "destination", "resource"))
-                       not in ((rec["stops"][0], rec["stops"][1], "water"),
-                               (rec["stops"][1], rec["stops"][2], "grain"),
-                               (rec["stops"][2], rec["stops"][3], "food"))
+                       not in eligible
                     or not (here == cargo["source"] or here == cargo["destination"])):
                 raise ValueError("cargo not physically at its source or destination")
-        for item in RESOURCES:
+        cash_enabled = CASH in state["resources"].get(who, {})
+        if cash_enabled:
+            if any(not _quantity(state["resources"].get(site, {}).get(CASH))
+                   for site in (rec["stops"][1], "bakery", "market")):
+                raise ValueError("optional courier cash contract lost its known depots")
+        for item in (*RESOURCES, *((CASH,) if cash_enabled else ())):
             amount = state["resources"].get(who, {}).get(item)
             expected = int(cargo is not None and cargo["resource"] == item)
             if (not _quantity(amount)
