@@ -505,7 +505,7 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         configure_source(d, e, bootstrap=bootstrap)
     elif kind == "RainWaterRecorded":
         from .hydrology import record_rain
-        record_rain(d, e, hydrology_authorized=hydrology_authorized)
+        record_rain(d, e, hydrology_authorized=hydrology_authorized, bootstrap=bootstrap)
     elif kind == "FarmPlotConfigured":
         from .agriculture import configure_plot
         configure_plot(d, e, bootstrap=bootstrap)

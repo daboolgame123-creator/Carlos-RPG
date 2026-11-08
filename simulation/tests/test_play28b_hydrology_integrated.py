@@ -153,6 +153,20 @@ def test_untrusted_forgery_actor_and_mismatched_time_fail_without_damage(tmp_pat
         assert db.load(WORLD).to_dict() == initial.to_dict()
 
 
+def test_runtime_rain_cannot_be_hidden_in_privileged_bootstrap(tmp_path):
+    """A rain receipt is never a free time-zero initialization allowance."""
+    with SQLiteEventStore(tmp_path / "rain-not-bootstrap.sqlite") as db:
+        setup_water(db)
+        clock, service = session(db)
+        before = db.load(WORLD)
+        with pytest.raises(InvalidEvent, match="observation authority"):
+            db.append(WORLD, "malicious-rain-bootstrap", before.revision,
+                      [rain_event(0)], hydrology_authorized=True,
+                      bootstrap=True)
+        assert db.load(WORLD).to_dict() == before.to_dict()
+        assert db.verify(WORLD).to_dict() == before.to_dict()
+
+
 def test_paused_clock_stale_revision_and_snapshot_recovery(tmp_path):
     file = tmp_path / "resume.sqlite"
     with SQLiteEventStore(file) as db:

@@ -49,9 +49,9 @@ def configure_source(state: dict, event: DomainEvent, *, bootstrap: bool) -> Non
 
 
 def record_rain(state: dict, event: DomainEvent, *,
-                hydrology_authorized: bool) -> None:
+                hydrology_authorized: bool, bootstrap: bool) -> None:
     p = event.data
-    if (not hydrology_authorized or event.actor_id is not None
+    if (not hydrology_authorized or bootstrap or event.actor_id is not None
             or set(p) != {"source_id", "observation_id", "units"}):
         raise ValueError("rain requires dedicated authenticated observation authority")
     site, ident, units = p["source_id"], p["observation_id"], p["units"]
