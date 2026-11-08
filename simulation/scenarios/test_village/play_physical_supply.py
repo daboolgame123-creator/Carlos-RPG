@@ -31,9 +31,21 @@ PEOPLE = (
 def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          hoe: int = 1, sickle: int = 1,
                          courier: bool = True, buyer_copper: int = 2,
-                         courier_hunger: int = 20, personal_food: int = 0) -> None:
+                         courier_hunger: int = 20, personal_food: int = 0,
+                         harvest_yield: int = 1, market_wallets: bool = False,
+                         initial_market_food: int = 0,
+                         hungry_market_buyers: bool = False) -> None:
+    if type(market_wallets) is not bool:
+        raise ValueError('market_wallets must be a boolean trusted setup flag')
+    if type(initial_market_food) is not int or not 0 <= initial_market_food <= 3:
+        raise ValueError('initial_market_food must be a bounded integer (0-3)')
+    if type(hungry_market_buyers) is not bool:
+        raise ValueError('hungry_market_buyers must be a boolean trusted setup flag')
     if type(personal_food) is not int or not 0 <= personal_food <= 20:
         raise ValueError('personal_food must be a finite nonnegative test allotment')
+    # PLAY-30: this is a trusted test-world recipe choice, never a runtime yield cheat.
+    if type(harvest_yield) is not int or harvest_yield not in (1, 2, 3):
+        raise ValueError('harvest_yield must be a bounded integer of 1, 2 or 3')
     for key, value, valid in (
         ("water", water, (0, 1, 2)), ("seed", seed, (0, 1)),
         ("hoe", hoe, (0, 1)), ("sickle", sickle, (0, 1)),
@@ -72,7 +84,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             }),
             e("NPCConfigured", {
                 "npc_id": who, "role": role,
-                "needs": {"hunger": courier_hunger if who == "huda" else hunger,
+                "needs": {"hunger": (80 if hungry_market_buyers and who in ("omar", "layla")
+                                      else courier_hunger if who == "huda" else hunger),
                           "fatigue": fatigue, "safety": 0},
                 "goals": {"earn": 0 if who == "basim" else 10,
                           "explore": 0 if who == "basim" else 10,
@@ -97,13 +110,18 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         ("bakery", "grain", 0),
         ("bakery", "oven", 1),
         ("bakery", "food", 0),
-        ("market", "food", 0),
+        ("market", "food", initial_market_food),
         ("market", "coin_copper", 0),
         ("adel", "coin_copper", buyer_copper),
-        (PLAYER, "coin_copper", 10),
+        (PLAYER, "coin_copper", 2 if market_wallets else 10),
         ("huda", "water", 0),
         ("huda", "grain", 0),
     ]
+    # In the budgeted *counterfactual* only, transfer eight of Carlos's
+    # pre-existing ten coins at bootstrap: four each to Omar and Layla.
+    # Original scenario is unchanged byte-for-byte when flag=False.
+    if market_wallets:
+        stock.extend((("omar", "coin_copper", 4), ("layla", "coin_copper", 4)))
     for owner, resource, amount in stock:
         events.append(e("ResourceChanged", {
             "owner_id": owner, "resource": resource,
@@ -122,7 +140,7 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         e("ProductionRecipeConfigured", {
             "id": "finite-harvest", "site_id": "farm", "role": "farmer",
             "input_resource": "crop_ready", "input_amount": 1,
-            "output_resource": "grain", "output_amount": 1,
+            "output_resource": "grain", "output_amount": harvest_yield,
             "tool_resource": "sickle", "duration_seconds": 60,
         }),
         e("ProductionRecipeConfigured", {
@@ -158,7 +176,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
 
 
 def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
-                          personal_food: int = 0) -> dict:
+                          personal_food: int = 0,
+                          initial_market_food: int = 0) -> dict:
     rs = state.resources
     farm, well, bakery, market, huda = (
         rs["farm"], rs["well"], rs["bakery"], rs["market"], rs["huda"]
@@ -171,19 +190,30 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
     assert farm["seed"] + farm["crop_seeded"] + planting + growing == seed
     assert well["water"] + farm["water"] + huda["water"] + plot["matured"] + growing == water
 
-    in_flight = sum(state.production_recipes[job["recipe_id"]]["input_amount"]
-                    for job in state.production_jobs.values()
-                    if job["status"] == "running"
-                    and state.production_recipes[job["recipe_id"]]["input_resource"]
-                    in ("crop_ready", "grain"))
-    food = (farm["crop_ready"] + farm["grain"] + bakery["grain"]
+    # A ripe crop is a physical harvest lot, with a frozen, bounded grain yield.
+    # Count the *potential grain* while it is ripe or reserved by the harvester;
+    # never count both input and finished output when a job completes.
+    harvest_yield = state.production_recipes["finite-harvest"]["output_amount"]
+    assert type(harvest_yield) is int and harvest_yield in (1, 2, 3)
+    in_flight = sum(
+        state.production_recipes[job["recipe_id"]]["input_amount"]
+        * (harvest_yield if state.production_recipes[job["recipe_id"]]["input_resource"]
+           == "crop_ready" else 1)
+        for job in state.production_jobs.values()
+        if job["status"] == "running"
+        and state.production_recipes[job["recipe_id"]]["input_resource"]
+        in ("crop_ready", "grain")
+    )
+    food = (farm["crop_ready"] * harvest_yield + farm["grain"] + bakery["grain"]
             + bakery["food"] + market["food"] + huda["grain"]
             + in_flight
             + sum(rs[who]["food"] for who, *_ in PEOPLE)
             + sum(m["quantity"] for m in state.consumptions.values()))
-    assert food == plot["matured"] + len(PEOPLE) * personal_food
-    copper = (rs[PLAYER]["coin_copper"] + market["coin_copper"]
-              + rs["adel"]["coin_copper"])
+    assert food == (plot["matured"] * harvest_yield
+                    + len(PEOPLE) * personal_food + initial_market_food)
+    # Copper is conserved regardless of its owner: market, player or NPC.
+    copper = sum(owner_stock["coin_copper"] for owner_stock in rs.values()
+                 if "coin_copper" in owner_stock)
     assert copper == 10 + buyer_copper
     circuit = state.supply_circuits.get("huda")
     if circuit is not None:
@@ -193,6 +223,7 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
         "initial_water": water, "well_water": well["water"],
         "farm_water": farm["water"], "carried_water": huda["water"],
         "seed": farm["seed"], "food_equivalent": food,
+        "harvest_yield": harvest_yield,
         "copper": copper, "loads": circuit["loads"] if circuit else 0,
         "deliveries": circuit["deliveries"] if circuit else 0,
         "courier_rounds": circuit["rounds"] if circuit else 0,
@@ -202,12 +233,13 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
 def run_physical_supply(path: str | Path, *, water: int = 2, seed: int = 1,
                         hoe: int = 1, sickle: int = 1, courier: bool = True,
                         buyer_copper: int = 2, metabolism: bool = False,
-                        courier_hunger: int = 20,
+                        courier_hunger: int = 20, harvest_yield: int = 1,
                         target: int = TARGET) -> dict:
     def setup(store):
         seed_physical_supply(store, water=water, seed=seed, hoe=hoe,
                              sickle=sickle, courier=courier,
-                             buyer_copper=buyer_copper, courier_hunger=courier_hunger)
+                             buyer_copper=buyer_copper, courier_hunger=courier_hunger,
+                             harvest_yield=harvest_yield)
     with ResumableTestSession.create(
         path, WORLD, PLAYER, setup, disposable_test=True,
     ) as session:
@@ -271,7 +303,8 @@ def run_physical_supply(path: str | Path, *, water: int = 2, seed: int = 1,
             "max_fatigue": max(npc["needs"]["fatigue"] for npc in final.npcs.values()),
             "player_issued_courier_orders": 0,
         })
-        assert stats["bakes"] <= stats["harvests"] <= stats["grown"] <= water
+        assert stats["bakes"] <= stats["harvests"] * harvest_yield
+        assert stats["harvests"] <= stats["grown"] <= water
         assert stats["deliveries"] <= stats["loads"]
         return {
             "format": "carlos-play27-finite-physical-logistics-v1",
