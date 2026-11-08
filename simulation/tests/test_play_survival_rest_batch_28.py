@@ -252,3 +252,30 @@ def test_resting_courier_cannot_pick_or_reserve_customer_cargo(tmp_path):
             ], supply_authorized=True)
         assert db.load(WORLD).to_dict() == during.to_dict()
         assert db.verify(WORLD).to_dict() == during.to_dict()
+
+
+
+def test_forged_direct_pickup_cannot_bypass_courier_exhaustion_policy(tmp_path):
+    """Even a trusted transport capability must honor material safety guards."""
+    from carlos_sim import DomainEvent
+    from carlos_sim.store import InvalidEvent
+    from play_physical_supply import seed_physical_supply, WORLD
+
+    with SQLiteEventStore(tmp_path / "no-cargo-for-tired.sqlite") as db:
+        seed_physical_supply(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        before = db.load(WORLD)
+        tired = db.append(WORLD, "raise-real-fatigue", before.revision, [
+            DomainEvent("NPCNeedChanged", "huda", "documented fatigue", 0,
+                        {"npc_id": "huda", "need": "fatigue",
+                         "previous": 5, "current": 70})
+        ])
+        with pytest.raises(InvalidEvent, match="exhausted"):
+            db.append(WORLD, "force-new-water-cargo", tired.revision, [
+                DomainEvent("SupplyCargoPicked", "huda",
+                            "illicit exhausted freight acceptance", 0,
+                            {"courier_id": "huda", "resource": "water"})
+            ], supply_authorized=True)
+        assert db.load(WORLD).to_dict() == tired.to_dict()
+        assert db.verify(WORLD).to_dict() == tired.to_dict()
