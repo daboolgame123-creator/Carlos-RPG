@@ -48,7 +48,7 @@ def test_carlos_walks_into_market_sees_quote_buys_and_preserves_stock(tmp_path):
             assert supplies["coin_copper"] == 8
             receipts = execute(gateway, "purchases", 10).details
             assert receipts["total"] >= 1
-            assert receipts["recent"][0]["buyer_id"] if "buyer_id" in receipts["recent"][0] else True
+            assert receipts["recent"][0]["total_paid"] == 2
             handoff = execute(gateway, "handoff", 11)
             assert handoff["canonical_story"] is False
             assert handoff["player_supplies"]["balances"] == supplies
