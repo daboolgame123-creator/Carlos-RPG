@@ -47,7 +47,7 @@ def test_new_npc_world_is_strict_optin_with_exact_known_stock(tmp_path):
     db, clock, g = village(tmp_path)
     with db:
         old = db.load(WORLD)
-        assert old.schema_version == 40
+        assert old.schema_version == 41
         assert old.rules_version == 55
         assert is_living_npc_survival_world(db)
         with pytest.raises(ValueError, match="bootstrap"):
