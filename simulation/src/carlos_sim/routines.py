@@ -97,7 +97,8 @@ def work_allowed_at(entities: Any, npcs: Any, routines: Any,
     if place is None or entities[npc_id]["location_id"] != place:
         return False
     npc = npcs[npc_id]
-    if npc["needs"]["hunger"] >= 90 or npc["needs"]["safety"] >= 75:
+    if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 85
+            or npc["needs"]["safety"] >= 75):
         return False
     now = world_time % DAY_SECONDS
     start, end = profile["work_start"], profile["work_end"]
