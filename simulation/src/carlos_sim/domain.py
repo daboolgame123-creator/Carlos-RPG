@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 36
-RULES_VERSION = 48
+SCHEMA_VERSION = 37
+RULES_VERSION = 49
 
 
 def _thaw(value: Any) -> Any:
@@ -90,6 +90,7 @@ class WorldState:
     environment_cycles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     farm_plots: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     supply_circuits: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    hydrology_sources: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_recipes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_jobs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     market_stalls: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
@@ -138,6 +139,7 @@ class WorldState:
         object.__setattr__(self, "environment_cycles", _freeze(_json_copy(self.environment_cycles)))
         object.__setattr__(self, "farm_plots", _freeze(_json_copy(self.farm_plots)))
         object.__setattr__(self, "supply_circuits", _freeze(_json_copy(self.supply_circuits)))
+        object.__setattr__(self, "hydrology_sources", _freeze(_json_copy(self.hydrology_sources)))
         object.__setattr__(self, "production_recipes", _freeze(_json_copy(self.production_recipes)))
         object.__setattr__(self, "production_jobs", _freeze(_json_copy(self.production_jobs)))
         object.__setattr__(self, "market_stalls", _freeze(_json_copy(self.market_stalls)))
@@ -182,6 +184,7 @@ class WorldState:
                            "survival_progress": self.survival_progress,
                            "rpg_profiles": self.rpg_profiles, "injuries": self.injuries, "treatments": self.treatments,
                            "environment_cycles": self.environment_cycles, "farm_plots": self.farm_plots, "supply_circuits": self.supply_circuits,
+                            "hydrology_sources": self.hydrology_sources,
                            "production_recipes": self.production_recipes,
                            "production_jobs": self.production_jobs,
                            "market_stalls": self.market_stalls,
@@ -221,7 +224,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -229,7 +232,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -285,6 +288,8 @@ class WorldState:
         validate_farm_plots(d)
         from .supply import validate_supply_circuits
         validate_supply_circuits(d)
+        from .hydrology import validate_sources
+        validate_sources(d)
         from .production import validate_production_state
         validate_production_state(d)
         from .market import validate_market
@@ -359,7 +364,7 @@ class DomainEvent:
         return cls(**_json_copy(value))
 
 
-def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False, recovery_authorized: bool = False, gift_authorized: bool = False, agriculture_authorized: bool = False, supply_authorized: bool = False) -> WorldState:
+def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = False, action_authorized: bool = False, movement_authorized: bool = False, social_authorized: bool = False, assistance_authorized: bool = False, consumption_authorized: bool = False, survival_authorized: bool = False, rpg_authorized: bool = False, production_authorized: bool = False, market_authorized: bool = False, loan_authorized: bool = False, taking_authorized: bool = False, claim_authorized: bool = False, complaint_authorized: bool = False, permission_authorized: bool = False, claim_transfer_authorized: bool = False, injury_authorized: bool = False, recovery_authorized: bool = False, gift_authorized: bool = False, agriculture_authorized: bool = False, supply_authorized: bool = False, hydrology_authorized: bool = False) -> WorldState:
     """Pure projection. Any rejected event leaves the original state unmodified."""
     data = event.to_dict()
     e = DomainEvent.from_dict(data)
@@ -495,6 +500,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("SupplyCargoPicked", "SupplyCargoDelivered"):
         from .supply import project_cargo
         project_cargo(d, e, supply_authorized=supply_authorized)
+    elif kind == "WaterSourceConfigured":
+        from .hydrology import configure_source
+        configure_source(d, e, bootstrap=bootstrap)
+    elif kind == "RainWaterRecorded":
+        from .hydrology import record_rain
+        record_rain(d, e, hydrology_authorized=hydrology_authorized)
     elif kind == "FarmPlotConfigured":
         from .agriculture import configure_plot
         configure_plot(d, e, bootstrap=bootstrap)
