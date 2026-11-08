@@ -1,0 +1,29 @@
+name: PLAY-28B isolated pure finite water prototype
+on:
+  push:
+    branches:
+      - "design/play28b-pure-water-core-20261108"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  water-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Pure prototype compile and tests (no game integration)
+        run: |
+          python -m compileall -q prototypes
+          python -m pytest -q prototypes/test_hydrology_pure.py
