@@ -7,7 +7,7 @@
 ## Verified evidence
 
 - **72h controlled action-cost comparison:** [GitHub Actions #42475946942](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42475946942) — `completed/success`. Both worlds use the 3600-second hunger clock; the action surcharge is the only intended variable. Observed hunger-at-cap went from 7 (original action cost) to 0 (calibrated) after 72 logical hours.
-- **Full regression on Python 3.10 + 3.13:** [#42476104910](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42476104910) — `in_progress` at writing; **not accepted yet**. Run is pinned to `1a4a4021367c670781eea5dee030fe9d93e65f37`.
+- **Full regression on Python 3.10 + 3.13:** [#42476104910](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42476104910) — **`completed/success`: 1,670 tests passed on Python 3.10 and 1,670 on 3.13 (3,340 total), zero failures**. Run pinned to `1a4a4021367c670781eea5dee030fe9d93e65f37`. Seven-day add-on at `d67fefc0` changes only its scenario test and workflow.
 - **Real 7-day finite-food survival observation on 3.10 + 3.13:** [#42476455377](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42476455377) — `in_progress` at writing; **not accepted yet**. Pinned to `d67fefc09dddb17175e3799492167e4d4b03196c`.
 
 ## Required before technical closure
