@@ -76,11 +76,16 @@ def closed_test_village_feasibility(
 
     # The scenario's only food can be in physical NPC or site-owned stock,
     # regardless of market-first or trusted staff-prepositioned allocation.
-    actors = tuple(sorted(state.npcs)) + ("carlos",)
-    for who in WORKERS:
-        stock(who, "food")
+    actors = tuple(sorted(state.npcs))
+    # All seven NPC food balances must be *explicitly initialized*. Missing
+    # food for any NPC is UNKNOWN and is rejected, not counted as zero.
     known_food = sum(stock(site, "food") for site in ("market", "bakery"))
-    known_food += sum(stock(who, "food", missing_ok=True) for who in actors)
+    known_food += sum(stock(who, "food") for who in actors)
+    # This disposable world has an uninitialized player food balance by
+    # default. It is not a spendable stock and no player command is run.
+    # If a playable fixture initializes a balance, audit it explicitly.
+    if "food" in state.resources.get("carlos", {}):
+        known_food += stock("carlos", "food")
     if any(stock("farm", k) != 0 for k in ("grain", "crop_ready", "crop_seeded")):
         raise ValueError("existing crop/grain requires a different feasibility model")
     if stock("bakery", "grain") != 0:
