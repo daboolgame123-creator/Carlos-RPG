@@ -279,3 +279,17 @@ def test_forged_direct_pickup_cannot_bypass_courier_exhaustion_policy(tmp_path):
             ], supply_authorized=True)
         assert db.load(WORLD).to_dict() == tired.to_dict()
         assert db.verify(WORLD).to_dict() == tired.to_dict()
+
+
+
+def test_exhausted_courier_cannot_begin_contract_route_even_directly(tmp_path):
+    from carlos_sim.supply import check_leg
+    from play_physical_supply import seed_physical_supply, WORLD
+    with SQLiteEventStore(tmp_path / "route-gate.sqlite") as db:
+        seed_physical_supply(db)
+        ordinary = db.load(WORLD).to_dict()
+        check_leg(ordinary, "huda", "well-farm", "well", "farm")
+        ordinary["npcs"]["huda"]["needs"]["fatigue"] = 70
+        with pytest.raises(ValueError, match="contracted leg"):
+            check_leg(ordinary, "huda", "well-farm", "well", "farm")
+        assert db.load(WORLD).resources["well"]["water"] == 2
