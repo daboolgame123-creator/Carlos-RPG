@@ -22,7 +22,7 @@ from .food_navigation import choose_food_route
 from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
-from .supply import choose_cargo, choose_courier_leg, next_courier_departure
+from .supply import choose_cargo, choose_courier_leg, next_courier_departure, cargo_pick_quantity
 from .economic_autonomy import (choose_local_production, choose_local_food_offer,
                                 choose_local_food_purchase, choose_local_offer_retirement)
 
@@ -299,11 +299,18 @@ class LivingWorldEngine:
                             resource = rec["carry"]["resource"]
                         else:
                             resource = {0:"water", 1:"grain", 2:"food"}[rec["index"]]
+                        quantity = (rec["carry"].get("quantity", 1)
+                                    if act == "SupplyCargoDelivered"
+                                    else cargo_pick_quantity(current, courier))
+                        if quantity < 1:
+                            raise InvalidEvent("courier cannot authorize empty cart cargo")
                         append(DomainEvent(act, courier,
                                            "courier physically transfers known local owned cargo",
                                            current.time,
                                            {"courier_id": courier,
-                                            "resource": resource}),
+                                            "resource": resource,
+                                            **({"quantity": quantity}
+                                               if "cargo_capacity" in rec else {})}),
                                supply_capability=True)
                     # Survey only the currently visible adjacent roads
                     # BEFORE selecting the next leg. Otherwise an existing

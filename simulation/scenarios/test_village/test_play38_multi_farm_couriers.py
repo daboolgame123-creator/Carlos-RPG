@@ -23,7 +23,8 @@ def _event(kind, data):
     return DomainEvent(kind, None, "trusted second-field bootstrap only", 0, data)
 
 
-def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None):
+def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None,
+                         east_cart_capacity=1, cart_owned=True):
     seed_physical_supply(
         db, water=2, seed=1, initial_market_food=0,
         harvest_yield=3, personal_food=0,
@@ -71,6 +72,13 @@ def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None):
             "previous": None, "current": value,
             "source": "initialization",
         }))
+    # The cart is a distinct, finitely initialized physical NPC possession.
+    # Legacy courier scenarios do not initialize or require any cart.
+    if (type(east_cart_capacity) is not int or east_cart_capacity != 1) and cart_owned:
+        extra.append(_event("ResourceChanged", {
+            "owner_id": COURIER, "resource": "cart",
+            "previous": None, "current": 1, "source": "initialization",
+        }))
     extra.extend([
         _event("NPCRoutineConfigured", {
             "npc_id": FARMER, "home_id": "home",
@@ -96,6 +104,8 @@ def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None):
             "stops": STOPS if unsafe_stops is None else unsafe_stops,
             "route_ids": ROUTES if unsafe_route is None else unsafe_route,
             "period_seconds": 1800,
+            **({"cargo_capacity": east_cart_capacity}
+               if type(east_cart_capacity) is not int or east_cart_capacity != 1 else {}),
         }),
     ])
     db.append(WORLD, "play38-second-field", db.load(WORLD).revision,

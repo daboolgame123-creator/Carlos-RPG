@@ -22,7 +22,7 @@ def _reserved_food(circuits: Any, npc_id: str) -> int:
     """Contract ownership has priority over the courier's food balance."""
     contract = circuits.get(npc_id)
     parcel = contract["carry"] if contract is not None else None
-    return int(parcel is not None and parcel["resource"] == "food")
+    return parcel.get("quantity", 1) if parcel is not None and parcel["resource"] == "food" else 0
 
 
 def _available(state: Any, npc_id: str) -> bool:
