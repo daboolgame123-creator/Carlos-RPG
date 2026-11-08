@@ -14,6 +14,7 @@ from .npc import _injury_rest_decision
 
 MAX_STOCK = 2**31 - 1
 RESOURCES = ("water", "grain", "food")
+CART_CAPACITIES = frozenset((2, 3))  # A real initialized cart is required.
 STOPS = ("well", "farm", "bakery", "market", "bakery", "farm", "well")
 
 
@@ -38,9 +39,14 @@ def _quantity(v: Any) -> bool:
 
 def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> None:
     p = event.data
+    old_keys = {"courier_id", "stops", "route_ids", "period_seconds"}
+    cart_mode = set(p) == old_keys | {"cargo_capacity"}
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
-            or set(p) != {"courier_id", "stops", "route_ids", "period_seconds"}):
+            or (set(p) != old_keys and not cart_mode)):
         raise ValueError("courier circuit is trusted time-zero setup")
+    capacity = p["cargo_capacity"] if cart_mode else 1
+    if cart_mode and (type(capacity) is not int or capacity not in CART_CAPACITIES):
+        raise ValueError("cart capacity must be 2 or 3 known physical units")
     who, stops, routes, period = (p["courier_id"], p["stops"],
                                 p["route_ids"], p["period_seconds"])
     if (type(who) is not str or who not in state["npcs"]
@@ -73,13 +79,16 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
     # Water/grain are strictly consignment-only. Existing, initialized food
     # belongs to the courier until a food parcel is explicitly reserved.
     if (any(stock.get(who, {}).get(item) != 0 for item in ("water", "grain"))
-            or not _quantity(stock.get(who, {}).get("food"))):
+            or not _quantity(stock.get(who, {}).get("food"))
+            or (cart_mode and stock.get(who, {}).get("cart") != 1)):
+
         raise ValueError("courier requires empty water/grain slots and known owned food")
     state["supply_circuits"][who] = {
         "stops": list(stops), "route_ids": list(routes),
         "period_seconds": period, "index": 0, "rounds": 0,
         "next_departure": 0, "carry": None,
         "loads": 0, "deliveries": 0,
+        **({"cargo_capacity": capacity} if cart_mode else {}),
     }
 
 
