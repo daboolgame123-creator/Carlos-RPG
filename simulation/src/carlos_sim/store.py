@@ -286,11 +286,11 @@ class SQLiteEventStore:
         if any(e.event_type == "CropGrowthStarted" for e in events):
             if not agriculture_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("crop growth needs protected active agriculture capability")
-        if any(e.event_type == "ProductionStarted" for e in events):
-            if not production_authorized:
-                raise InvalidEvent("production requires trusted production capability")
+        if any(e.event_type in ("ProductionStarted", "ProductionWagePaid") for e in events):
+            if not production_authorized or bootstrap:
+                raise InvalidEvent("production and wages need trusted runtime capability")
             if world_id not in self._active_worlds:
-                raise InvalidEvent("production requires active play session")
+                raise InvalidEvent("production and wages require active play session")
         if any(e.event_type == 'PlayerVitalChanged' for e in events):
             if not rpg_authorized:
                 raise InvalidEvent('RPG vital changes require trusted RPG capability')
