@@ -31,7 +31,7 @@ def test_exhausted_routine_npc_does_not_fallback_to_random_travel(tmp_path):
         initial = db.load("test")
         changed = db.append("test", "fatigued", initial.revision, [
             ev("NPCNeedChanged", {"npc_id": "basim", "need": "fatigue",
-                                  "previous": 5, "current": 90}, who="basim")
+                                  "previous": 10, "current": 90}, who="basim")
         ])
         assert choose_routine_route(changed, "basim") is None
         engine = LivingWorldEngine(db, clock, navigation_enabled=True,
