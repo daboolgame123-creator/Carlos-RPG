@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - "design/play29-activity-hunger-policy-20261108"
+      - "design/play29-activity-hunger-fullgate-20261108"
   workflow_dispatch:
 permissions:
   contents: read
