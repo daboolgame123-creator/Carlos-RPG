@@ -261,6 +261,14 @@ class SQLiteEventStore:
         if any(e.event_type == "PlayerFoodEaten" for e in events):
             if not consumption_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("player eating requires trusted consumption capability and active session")
+        # PLAY-32 quests are player-originated RPG commands, never autonomous
+        # NPC/admin mutations or fabricated reward events.
+        if any(e.event_type in ("PlayerQuestAccepted", "PlayerQuestRewardClaimed")
+               for e in events):
+            if (not rpg_authorized or world_id not in self._active_worlds
+                    or not command_id.startswith("player-quest:")
+                    or len(events) != 1):
+                raise InvalidEvent("quest changes require one explicit trusted player command")
         if any(e.event_type == "PlayerGiftDelivered" for e in events):
             if not gift_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("player gift requires dedicated capability and active session")
