@@ -14,7 +14,6 @@ from .domain import WorldState
 from .economic_autonomy import BUY_HUNGER_THRESHOLD, _free
 from .market import MONEY, MAX_AMOUNT
 from .navigation import shortest_known_route
-from .routines import choose_routine_route
 
 MAX_SHOPPING_FATIGUE = 84
 MAX_SHOPPING_DANGER = 74
@@ -92,31 +91,103 @@ def choose_known_market_walk(state: WorldState, npc_id: str) -> ShoppingWalkInte
 
 
 def choose_known_market_return(state: WorldState, npc_id: str) -> ShoppingWalkIntent | None:
-    """Return from a completed *actual* market meal via normal known work roads.
+    """Walk back after an actual visit, whether the purchase succeeded or not.
 
-    Historical paid-food receipts and an actual subsequent meal at that same
-    stall authorize this intent; merely reaching a stall or possessing money
-    does not. The existing routine selector checks shift and personal health.
-    Unreachable home/work routes are not invented.
+    This is a return from a personally reached LOCAL market, never a query to
+    remote shops. A completed, real wage must precede the market arrival.
+    A valid affordable local quote keeps the shopper at the stall; an
+    unaffordable or unavailable offer does not imprison a hungry worker.
+    A genuine paid meal also permits return to the established routine.
     """
     if (npc_id not in state.npcs or not _free(state, npc_id)
             or npc_id in state.supply_circuits
             or npc_id not in state.npc_routines):
         return None
-    personal_trades = [
-        t for t in state.market_trades.values()
-        if t["buyer_id"] == npc_id and t["resource"] == "food"
-    ]
-    if not personal_trades or not any(
-            m["npc_id"] == npc_id and m["location_id"] == t["site_id"]
-            and m["consumed_at"] >= t["executed_at"]
-            for t in personal_trades for m in state.consumptions.values()):
+    entity = state.entities.get(npc_id)
+    if entity is None or entity["controller"] != "npc":
         return None
-    back = choose_routine_route(state, npc_id)
-    if back is None:
+    nav = state.navigation.get(npc_id)
+    if nav is None or nav["target"] is not None:
+        return None
+    here = entity["location_id"]
+    if here not in state.market_stalls:
+        return None
+    # The NPC must have *arrived*, not merely be at an opening market.
+    arrivals = sorted(
+        (t["arrived_at"] for t in state.travels.values()
+         if t["npc_id"] == npc_id and t["destination"] == here
+         and t["status"] == "arrived"),
+    )
+    if not arrivals:
+        return None
+    arrival = arrivals[-1]
+    if not any(
+            job["npc_id"] == npc_id and "work_wage" in job
+            and job["work_wage"]["paid_at"] <= arrival
+            for job in state.production_jobs.values()):
+        return None
+
+    # A purchased and subsequently eaten loaf is evidence of a completed
+    # errand. Only transactions after this physical arrival count.
+    own_meals = [
+        meal for meal in state.consumptions.values()
+        if meal["npc_id"] == npc_id and meal["location_id"] == here
+        and meal["consumed_at"] >= arrival
+    ]
+    fed = any(
+        trade["buyer_id"] == npc_id and trade["site_id"] == here
+        and trade["resource"] == "food" and trade["executed_at"] >= arrival
+        and trade["executed_at"] <= meal["consumed_at"]
+        for trade in state.market_trades.values() for meal in own_meals
+    )
+    if not fed:
+        wallet = state.resources.get(npc_id, {})
+        coins, food = wallet.get(MONEY), wallet.get("food")
+        if type(food) is not int or food > 0 or type(coins) is not int:
+            return None
+        # Check only ACTUALLY LOCAL, publicly posted offers, not distant stock
+        # or future deliveries. Do not leave merely because a decision cooldown
+        # temporarily prevents an otherwise affordable purchase.
+        raw = state.to_dict()
+        from .market import _present
+        affordable = any(
+            offer["status"] == "open" and offer["site_id"] == here
+            and offer["resource"] == "food"
+            and offer["payment_resource"] == MONEY
+            and offer["remaining"] >= 1
+            and offer["unit_price"] <= coins
+            and offer["seller_id"] != npc_id
+            and offer["stock_owner_id"] != npc_id
+            and _present(raw, offer["seller_id"], here)
+            and state.resources.get(offer["stock_owner_id"], {}).get("food", 0) >= 1
+            for offer in state.market_offers.values()
+        )
+        if affordable:
+            return None
+
+    npc = state.npcs[npc_id]
+    if npc["needs"]["fatigue"] >= 70 or npc["needs"]["safety"] >= 75:
+        return None
+    from .npc import _injury_rest_decision
+    if _injury_rest_decision(state.injuries, npc_id) is not None:
+        return None
+    from .routines import DAY_SECONDS
+    profile = state.npc_routines[npc_id]
+    now = state.time % DAY_SECONDS
+    start, end = profile["work_start"], profile["work_end"]
+    at_work = start <= now < end if start < end else now >= start or now < end
+    destination = (
+        profile["workplace_id"] if at_work and profile["workplace_id"] is not None
+        else profile["home_id"]
+    )
+    if destination == here:
+        return None
+    known_path = shortest_known_route(state, npc_id, destination)
+    if not known_path:
         return None
     return ShoppingWalkIntent(
-        npc_id, back.route_id, back.destination,
-        "returning after locally paid and eaten market food; "
-        f"known_routine_destination={back.destination}",
+        npc_id, known_path[0], destination,
+        "returning from physically visited market after "
+        + ("paid meal" if fed else "unavailable/unaffordable local food")
+        + f"; known_routine_destination={destination}",
     )

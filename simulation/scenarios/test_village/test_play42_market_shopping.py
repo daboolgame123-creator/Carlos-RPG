@@ -112,10 +112,12 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
             assert all(t["start"] >= receipts[0]["paid_at"]
                        for t in farmer_legs), "journey started before funded pay"
             assert len({(t["start"], t["route_id"]) for t in farmer_legs}) == len(farmer_legs)
-            # The buyer who could pay actually returns through remembered
-            # roads; the underfunded buyer stays at the real stall.
-            assert state.entities[FARMER]["location_id"] == (
-                EAST if expected_purchase else "market")
+            # A paid meal AND a failed unaffordable local shop must both
+            # permit physical return; nobody is trapped at a known market.
+            assert state.entities[FARMER]["location_id"] == EAST
+            assert any(t["origin"] == "market" and t["status"] == "arrived"
+                       for t in farmer_legs), "shopper never physically returned"
+            assert farmer_legs[-1]["destination"] == EAST
             sales = [t for t in state.market_trades.values()
                      if t["buyer_id"] == FARMER]
             meals = [m for m in state.consumptions.values()
@@ -136,6 +138,9 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
                 assert not sales, "one copper must not buy a two-copper loaf"
                 assert not meals, "unaffordable food must not be eaten"
                 assert state.resources[FARMER]["coin_copper"] == 1
+                assert any(t["origin"] == "market" and t["status"] == "arrived"
+                           for t in farmer_legs), "unaffordable buyer was trapped"
+                assert farmer_legs[-1]["destination"] == EAST
             print("PLAY42_REAL_SHOPPER", wage,
                   json.dumps(rows, sort_keys=True))
         finally:

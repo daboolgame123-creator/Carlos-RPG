@@ -64,8 +64,10 @@ sequence of visible transactions.
   require physical site cash at settlement.
 - An unaffordable quote remains unaffordable; a valid quote/stock enables
   a locally recorded purchase and an independently recorded meal.
-- After a real paid meal, the NPC uses their learned physical road graph
-  and existing shift routine to return to a reachable workplace.
+- After a real paid meal **or an actual unsuccessful market visit** (no
+  affordable stocked offer), a previously waged worker can use their learned
+  physical road graph and shift routine to return to a reachable workplace.
+  This remains subject to personal fatigue, danger and injury restrictions.
 - Total opening copper remains 12 in the two-field disposable test world;
   persistent snapshots must exactly match event replay.
 - Python 3.10/3.13 targeted and full regressions, compatibility gates and
