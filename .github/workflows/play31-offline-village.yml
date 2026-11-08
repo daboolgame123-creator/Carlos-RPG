@@ -1,0 +1,31 @@
+name: PLAY-31 real offline seven-NPC playable village
+on:
+  push:
+    branches:
+      - "feature/play31-seven-npc-offline-vertical-slice-20261108"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  playable-village:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Actual console entrypoint, 7 NPCs, real roads, privacy and replay
+        env:
+          PYTHONPATH: "src:scenarios/test_village"
+        run: |
+          python -m compileall -q src scenarios/test_village/play_village_local.py scenarios/test_village/test_play31_offline_village.py
+          python -m pytest -q -s scenarios/test_village/test_play31_offline_village.py
