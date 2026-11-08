@@ -1,0 +1,31 @@
+name: PLAY-29 real 72-hour seven-NPC hunger-rate counterfactual
+on:
+  push:
+    branches:
+      - "design/play29-opt-in-metabolism-20261108"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  life-clock-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Play 72h twice, keep all food and water conserved
+        env:
+          PYTHONPATH: "src:scenarios/test_village"
+        run: |
+          python -m compileall -q src scenarios/test_village/test_play29_metabolism_ab.py
+          python -m pytest -q -s scenarios/test_village/test_play29_metabolism_ab.py
