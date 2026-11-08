@@ -147,6 +147,11 @@ def check_leg(state: dict, who: str, route_id: str,
     record = state["supply_circuits"].get(who)
     if record is None:
         return
+    npc = state["npcs"][who]
+    if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 70
+            or npc["needs"]["safety"] >= 75
+            or _injury_rest_decision(state["injuries"], who) is not None):
+        raise ValueError("exhausted or unsafe courier cannot begin a contracted leg")
     idx = record["index"]
     if (idx >= len(record["route_ids"]) or origin != record["stops"][idx]
             or destination != record["stops"][idx+1]
