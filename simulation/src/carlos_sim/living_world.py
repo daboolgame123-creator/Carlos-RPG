@@ -298,7 +298,8 @@ class LivingWorldEngine:
                         if act == "SupplyCargoDelivered":
                             resource = rec["carry"]["resource"]
                         else:
-                            resource = {0:"water", 1:"grain", 2:"food"}[rec["index"]]
+                            resource = {0:"water", 1:"grain", 2:"food",
+                                        3:"coin_copper", 4:"coin_copper"}[rec["index"]]
                         append(DomainEvent(act, courier,
                                            "courier physically transfers known local owned cargo",
                                            current.time,
