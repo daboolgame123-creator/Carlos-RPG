@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - "design/play28b-integrated-hydrology-20261108"
+      - "design/play28b-release-candidate-20261108"
   workflow_dispatch:
 permissions:
   contents: read

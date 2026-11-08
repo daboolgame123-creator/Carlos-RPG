@@ -5,6 +5,7 @@ on:
     branches:
       - "simulation-engine-phase-*"
       - "design/play28b-integrated-hydrology-20261108"
+      - "design/play28b-release-candidate-20261108"
   pull_request:
     paths:
       - "simulation/**"
