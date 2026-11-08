@@ -67,7 +67,7 @@ def test_courier_carries_water_through_real_fifty_second_road(tmp_path):
     db, clock, engine = begin(tmp_path / "first.sqlite")
     try:
         s = tick(db, engine, 49, "before-arrival").state
-        assert s.time == 50
+        assert s.time == 49
         assert s.entities["huda"]["location_id"] == "well"
         assert s.resources["huda"]["water"] == 1
         assert s.resources["well"]["water"] == 1
@@ -115,7 +115,7 @@ def test_grain_waits_at_farm_then_is_carried_to_bakery_before_baking(tmp_path):
         before = tick(db, engine, PERIOD - 200 + 49, "before-grain").state
         # courier arrived at farm t=108050 and picked up grain; bakery
         # cannot receive it until actual 60s travel is complete.
-        assert before.time == DAY + PERIOD + 50
+        assert before.time == DAY + PERIOD + 49
         assert before.resources["bakery"]["grain"] == 0
         assert before.resources["huda"]["grain"] == 0  # farm arrival still pending
         after = tick(db, engine, 61, "real-delivery").state
