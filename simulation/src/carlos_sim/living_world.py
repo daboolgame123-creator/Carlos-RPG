@@ -23,6 +23,7 @@ from .routines import choose_routine_route, routine_allows_work, next_routine_bo
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
 from .supply import choose_cargo, choose_courier_leg, next_courier_departure
+from .production import choose_local_production_wage
 from .economic_autonomy import (choose_local_production, choose_local_food_offer,
                                 choose_local_food_purchase, choose_local_offer_retirement)
 
@@ -336,6 +337,18 @@ class LivingWorldEngine:
                          "schedule_id": sid}), movement_capability=True)
                     busy.add(courier)
             if self.economic_enabled:
+                # PLAY-41: money already walked by a real courier can pay
+                # *one completed, pre-agreed job* locally. A job remains
+                # unpaid without site funds or a physically present worker.
+                # Settlement happens before new production reservations.
+                for job_id in sorted(current.production_jobs):
+                    wage = choose_local_production_wage(current, job_id)
+                    if wage is None:
+                        continue
+                    append(DomainEvent("ProductionWagePaid", None,
+                        "locally funded, one-time completed labor receipt",
+                        current.time, {"job_id": job_id, "amount": wage}),
+                        production_capability=True)
                 # PLAY-24: pure NPC proposals, executed through the SAME reducer
                 # capabilities as explicit local production and market commands.
                 # Each pass sees only state already changed by previous events.

@@ -56,7 +56,7 @@ def configure_recipe(state: dict[str, Any], event: DomainEvent, *,
     required = {"id", "site_id", "role", "input_resource", "input_amount",
                 "output_resource", "output_amount", "tool_resource", "duration_seconds"}
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
-            or set(p) != required):
+            or set(p) not in (required, required | {"wage_coin"})):
         raise ValueError("production recipes require trusted time-zero bootstrap")
     ident, site = p["id"], p["site_id"]
     if (not _valid_name(ident, MAX_ID) or ident in state["production_recipes"]
@@ -74,6 +74,13 @@ def configure_recipe(state: dict[str, Any], event: DomainEvent, *,
     if not all(_known(resources.get(p[k])) for k in (
             "input_resource", "output_resource", "tool_resource")):
         raise ValueError("recipe requires initialized local materials, output and tools")
+    # A wage is a signed time-zero job term, not a free payout, and may only
+    # exist when this employer's real money stock is initialized.
+    if "wage_coin" in p and (
+            type(p["wage_coin"]) is not int
+            or not 1 <= p["wage_coin"] <= 5
+            or not _known(resources.get("coin_copper"))):
+        raise ValueError("funded wage terms require a known employer treasury")
     # Recipe is a fixed, auditable configuration, not an executable callback.
     state["production_recipes"][ident] = dict(p)
 
@@ -159,15 +166,87 @@ def finish_production(state: dict[str, Any], schedule_id: str,
     job["output_after"] = output_after
 
 
+def choose_local_production_wage(state: WorldState, job_id: str) -> int | None:
+    """Propose a *funded* payment for one finished, on-site job.
+
+    An unpaid job can remain unpaid indefinitely if its employer has no
+    money or the worker leaves. The planner may never mint its wages.
+    """
+    job = state.production_jobs.get(job_id)
+    if job is None or job["status"] != "completed" or "work_wage" in job:
+        return None
+    recipe = state.production_recipes.get(job["recipe_id"])
+    if recipe is None or "wage_coin" not in recipe:
+        return None
+    who, site, wage = job["npc_id"], job["site_id"], recipe["wage_coin"]
+    if (state.entities[who]["location_id"] != site
+            or any(t["npc_id"] == who and t["status"] == "traveling"
+                   for t in state.travels.values())
+            or any(a["npc_id"] == who and a["status"] == "running"
+                   for a in state.actions.values())
+            or any(j["npc_id"] == who and j["status"] == "running"
+                   for j in state.production_jobs.values())):
+        return None
+    payer = state.resources.get(site, {}).get("coin_copper")
+    receiver = state.resources.get(who, {}).get("coin_copper")
+    if (not _known(payer) or not _known(receiver)
+            or payer < wage or receiver + wage > MAX_QUANTITY):
+        return None
+    return wage
+
+
+def pay_completed_production_wage(state: dict[str, Any], event: DomainEvent, *,
+                                  production_authorized: bool) -> None:
+    p = event.data
+    if (not production_authorized or event.actor_id is not None
+            or set(p) != {"job_id", "amount"}
+            or not _valid_name(p["job_id"], MAX_ID)
+            or type(p["amount"]) is not int):
+        raise ValueError("wage payout requires a trusted, unimpersonated production receipt")
+    job = state["production_jobs"].get(p["job_id"])
+    if (job is None or job["status"] != "completed"
+            or "work_wage" in job):
+        raise ValueError("wage can be paid exactly once for a completed job")
+    recipe = state["production_recipes"][job["recipe_id"]]
+    wage = recipe.get("wage_coin")
+    who, site = job["npc_id"], job["site_id"]
+    if (type(wage) is not int or wage != p["amount"]
+            or state["time"] < job["finished_at"]
+            or state["entities"][who]["location_id"] != site
+            or any(t["npc_id"] == who and t["status"] == "traveling"
+                   for t in state["travels"].values())
+            or any(a["npc_id"] == who and a["status"] == "running"
+                   for a in state["actions"].values())
+            or is_producing(state, who)):
+        raise ValueError("wage requires agreed terms and an available on-site worker")
+    payer = state["resources"].get(site, {}).get("coin_copper")
+    receiver = state["resources"].get(who, {}).get("coin_copper")
+    if (not _known(payer) or not _known(receiver)
+            or payer < wage or receiver + wage > MAX_QUANTITY):
+        raise ValueError("wage requires initialized, sufficiently funded local balances")
+    state["resources"][site]["coin_copper"] = payer - wage
+    state["resources"][who]["coin_copper"] = receiver + wage
+    job["work_wage"] = {
+        "worker_id": who, "site_id": site, "amount": wage,
+        "paid_at": state["time"],
+        "site_before": payer, "site_after": payer - wage,
+        "worker_before": receiver, "worker_after": receiver + wage,
+    }
+
+
 def validate_production_state(state: dict[str, Any]) -> None:
     recipes, jobs = state["production_recipes"], state["production_jobs"]
     if not isinstance(recipes, dict) or not isinstance(jobs, dict):
         raise ValueError("production state collections must be mappings")
     for ident, rec in recipes.items():
         if (not _valid_name(ident, MAX_ID) or not isinstance(rec, dict)
-                or set(rec) != {"id", "site_id", "role", "input_resource",
-                               "input_amount", "output_resource", "output_amount",
-                               "tool_resource", "duration_seconds"}
+                or set(rec) not in (
+                    {"id", "site_id", "role", "input_resource",
+                     "input_amount", "output_resource", "output_amount",
+                     "tool_resource", "duration_seconds"},
+                    {"id", "site_id", "role", "input_resource",
+                     "input_amount", "output_resource", "output_amount",
+                     "tool_resource", "duration_seconds", "wage_coin"})
                 or rec["id"] != ident
                 or rec["site_id"] not in state["locations"]
                 or not _valid_name(rec["role"], MAX_NAME)
@@ -177,16 +256,24 @@ def validate_production_state(state: dict[str, Any]) -> None:
                         rec["tool_resource"]}) != 3
                 or not _amount(rec["input_amount"])
                 or not _amount(rec["output_amount"])
-                or not _seconds(rec["duration_seconds"])):
+                or not _seconds(rec["duration_seconds"])
+                or ("wage_coin" in rec and (
+                    type(rec["wage_coin"]) is not int
+                    or not 1 <= rec["wage_coin"] <= 5
+                    or not _known(state["resources"].get(rec["site_id"], {}).get("coin_copper"))))):
             raise ValueError("invalid persisted recipe")
     busy: set[str] = set()
     reservation_count: dict[tuple[str, str], int] = {}
     for ident, job in jobs.items():
         if (not _valid_name(ident, MAX_ID) or not isinstance(job, dict)
-                or set(job) != {"npc_id", "recipe_id", "site_id", "started_at",
-                                "due", "status", "finished_at", "input_before",
-                                "input_after", "tool_seen", "output_before",
-                                "output_after"}):
+                or set(job) not in (
+                    {"npc_id", "recipe_id", "site_id", "started_at",
+                     "due", "status", "finished_at", "input_before",
+                     "input_after", "tool_seen", "output_before", "output_after"},
+                    {"npc_id", "recipe_id", "site_id", "started_at",
+                     "due", "status", "finished_at", "input_before",
+                     "input_after", "tool_seen", "output_before", "output_after",
+                     "work_wage"})):
             raise ValueError("invalid persisted production job")
         recipe = recipes.get(job["recipe_id"]) if isinstance(job["recipe_id"], str) else None
         who = job["npc_id"]
@@ -203,6 +290,29 @@ def validate_production_state(state: dict[str, Any]) -> None:
                 or not _known(job["tool_seen"]) or job["tool_seen"] < 1
                 or job["status"] not in ("running", "completed")):
             raise ValueError("invalid production materials or duration/profession")
+        if "work_wage" in job:
+            receipt = job["work_wage"]
+            if (job["status"] != "completed"
+                    or "wage_coin" not in recipe
+                    or type(receipt) is not dict
+                    or set(receipt) != {
+                        "worker_id", "site_id", "amount", "paid_at",
+                        "site_before", "site_after",
+                        "worker_before", "worker_after",
+                    }
+                    or receipt["worker_id"] != who
+                    or receipt["site_id"] != job["site_id"]
+                    or type(receipt["amount"]) is not int
+                    or receipt["amount"] != recipe["wage_coin"]
+                    or type(receipt["paid_at"]) is not int
+                    or not job["due"] <= receipt["paid_at"] <= state["time"]
+                    or any(not _known(receipt[k]) for k in (
+                        "site_before", "site_after", "worker_before", "worker_after"))
+                    or receipt["site_before"] - receipt["site_after"]
+                       != receipt["amount"]
+                    or receipt["worker_after"] - receipt["worker_before"]
+                       != receipt["amount"]):
+                raise ValueError("job wage receipt must conserve an actual completed wage")
         if job["status"] == "running":
             if (who in busy or state["time"] > job["due"]
                     or job["started_at"] > state["time"]

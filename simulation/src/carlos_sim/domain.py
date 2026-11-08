@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 40
-RULES_VERSION = 54
+SCHEMA_VERSION = 41
+RULES_VERSION = 55
 
 
 def _thaw(value: Any) -> Any:
@@ -506,6 +506,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "ProductionStarted":
         from .production import start_production
         start_production(d, e, production_authorized=production_authorized)
+    elif kind == "ProductionWagePaid":
+        from .production import pay_completed_production_wage
+        pay_completed_production_wage(d, e, production_authorized=production_authorized)
     elif kind == "SupplyCircuitConfigured":
         from .supply import configure_circuit
         configure_circuit(d, e, bootstrap=bootstrap)
