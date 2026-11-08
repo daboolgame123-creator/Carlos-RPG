@@ -227,6 +227,9 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
             + bakery["food"] + market["food"] + huda["grain"]
             + in_flight
             + sum(rs[who]["food"] for who, *_ in PEOPLE)
+            # In PLAY-31 the human can purchase physical market food. Include
+            # only *initialized* player-owned food: missing is not a resource.
+            + (rs.get(PLAYER, {}).get("food") or 0)
             + sum(m["quantity"] for m in state.consumptions.values()))
     assert food == (plot["matured"] * harvest_yield
                     + len(PEOPLE) * personal_food + initial_market_food)
