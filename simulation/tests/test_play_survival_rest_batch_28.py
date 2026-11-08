@@ -92,3 +92,21 @@ def test_unfunded_hungry_npc_cannot_fabricate_a_meal(tmp_path):
         assert state.npcs["basim"]["needs"]["hunger"] >= 95
         assert db.verify("test").to_dict() == state.to_dict()
 
+
+
+def test_courier_fatigue_blocks_new_cargo_and_keeps_existing_parcel(tmp_path):
+    from carlos_sim.supply import choose_cargo, choose_courier_leg
+    from play_physical_supply import seed_physical_supply, WORLD
+    with SQLiteEventStore(tmp_path / "courier.sqlite") as db:
+        seed_physical_supply(db)
+        state = db.load(WORLD)
+        assert choose_cargo(state, "huda") == "SupplyCargoPicked"
+        state.npcs["huda"]["needs"]["fatigue"] = 70
+        assert choose_cargo(state, "huda") is None
+        assert choose_courier_leg(state, "huda") is None
+        state.npcs["huda"]["needs"]["fatigue"] = 5
+        state.npcs["huda"]["needs"]["hunger"] = 90
+        assert choose_cargo(state, "huda") is None
+        assert choose_courier_leg(state, "huda") is None
+        assert state.resources["well"]["water"] == 2
+        assert state.resources["huda"]["water"] == 0
