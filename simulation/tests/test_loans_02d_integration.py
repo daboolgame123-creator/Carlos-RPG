@@ -129,7 +129,7 @@ def test_restart_and_provenance_checked_backup_preserve_overdue_but_not_mint(tmp
         assert due.loan_contracts["loan"]["status"] == "overdue"
         bundle = tmp_path / "bundle"
         manifest = create_backup_bundle(db, "test", bundle, code_commit=BASE_SHA)
-        assert (manifest["schema"], manifest["rules"]) == (36, 48)
+        assert (manifest["schema"], manifest["rules"]) == (37, 49)
         assert verify_backup_bundle(bundle) == manifest
         saved = due.to_dict()
     restored = tmp_path / "restored.sqlite"
