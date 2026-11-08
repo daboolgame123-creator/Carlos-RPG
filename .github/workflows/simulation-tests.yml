@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "simulation-engine-phase-*"
+      - "design/play28b-integrated-hydrology-20261108"
   pull_request:
     paths:
       - "simulation/**"
