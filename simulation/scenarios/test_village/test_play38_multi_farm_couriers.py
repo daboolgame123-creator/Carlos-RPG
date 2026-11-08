@@ -74,7 +74,7 @@ def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None,
         }))
     # The cart is a distinct, finitely initialized physical NPC possession.
     # Legacy courier scenarios do not initialize or require any cart.
-    if east_cart_capacity != 1 and cart_owned:
+    if (type(east_cart_capacity) is not int or east_cart_capacity != 1) and cart_owned:
         extra.append(_event("ResourceChanged", {
             "owner_id": COURIER, "resource": "cart",
             "previous": None, "current": 1, "source": "initialization",
@@ -105,7 +105,7 @@ def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None,
             "route_ids": ROUTES if unsafe_route is None else unsafe_route,
             "period_seconds": 1800,
             **({"cargo_capacity": east_cart_capacity}
-               if east_cart_capacity != 1 else {}),
+               if type(east_cart_capacity) is not int or east_cart_capacity != 1 else {}),
         }),
     ])
     db.append(WORLD, "play38-second-field", db.load(WORLD).revision,
