@@ -65,6 +65,17 @@ class MaterialWalk:
     reason: str
 
 
+def _unreserved_personal(state: WorldState, who: str, resource: str) -> int | None:
+    """Do not spend or deposit somebody else's courier-consigned parcel."""
+    amount = state.resources.get(who, {}).get(resource)
+    if not _known(amount):
+        return None
+    circuit = state.supply_circuits.get(who)
+    cargo = circuit["carry"] if circuit is not None else None
+    reserved = int(cargo is not None and cargo["resource"] == resource)
+    return amount - reserved if amount >= reserved else None
+
+
 def _recipe(state: WorldState, who: str):
     """The buyer's own scheduled workplace contract, not a remote recipe."""
     npc = state.npcs.get(who)
@@ -150,7 +161,8 @@ def choose_local_material_purchase(state: WorldState, who: str) -> MaterialPurch
         return None
     item = recipe["input_resource"]
     owned = state.resources.get(who, {})
-    bag, coins = owned.get(item), owned.get(MONEY)
+    bag = _unreserved_personal(state, who, item)
+    coins = _unreserved_personal(state, who, MONEY)
     if not _known(bag) or bag > 0 or not _known(coins):
         return None
 
@@ -190,7 +202,7 @@ def choose_workshop_material_deposit(state: WorldState, who: str) -> MaterialDep
     if state.entities[who]["location_id"] != site:
         return None
     item = recipe["input_resource"]
-    bag = state.resources.get(who, {}).get(item)
+    bag = _unreserved_personal(state, who, item)
     work_stock = state.resources.get(site, {}).get(item)
     if (not _known(bag) or not _known(work_stock) or bag < 1
             or work_stock >= recipe["input_amount"]):
@@ -216,9 +228,10 @@ def choose_material_known_road(state: WorldState, who: str) -> MaterialWalk | No
     here = state.entities[who]["location_id"]
     item = recipe["input_resource"]
     own = state.resources.get(who, {})
-    if not _known(own.get(item)) or not _known(own.get(MONEY)):
+    bag = _unreserved_personal(state, who, item)
+    coins = _unreserved_personal(state, who, MONEY)
+    if bag is None or coins is None:
         return None
-    bag = own[item]
     last_supplier = _latest_supplier_arrival(state, who, site)
     last_work = _latest_work_arrival(state, who, site)
 
@@ -245,14 +258,20 @@ def choose_material_known_road(state: WorldState, who: str) -> MaterialWalk | No
     tool = local.get(recipe["tool_resource"])
     if (not all(_known(v) for v in (needed, output, tool))
             or needed >= recipe["input_amount"] or output > 0 or tool < 1
-            or bag > 0 or own[MONEY] < 1
+            or bag > 0 or coins < 1
             or not routine_allows_work(state, who)):
         return None
 
     # A failed trip should not oscillate through the same market for ever.
     # Only actually earned wages can justify a repeated procurement attempt.
     if last_supplier >= 0 and _latest_wage(state, who) <= last_supplier:
-        return None
+        # A failed visit must not produce a loop, but a genuinely unvisited
+        # directly surveyed road is still a bounded exploration opportunity.
+        other = _known_frontier(state, who)
+        if other is None:
+            return None
+        return MaterialWalk(other[2], other[1],
+                            'unvisited-road-after-unsuccessful-supplier')
     history = sorted(
         ((t["executed_at"], t["site_id"])
          for t in state.market_trades.values()
