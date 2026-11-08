@@ -167,7 +167,7 @@ def test_two_real_farms_and_independent_couriers_complete_physical_supply(
                 economy_only_enabled=True,
             )
             snapshots = []
-            for target in (120, 400, 1800, 3900, 5700, 8500):
+            for target in (120, 400, 1800, 3900, 5700, 8500, 12000):
                 before = db.load(WORLD)
                 state = engine.advance(
                     WORLD, seconds=target - before.time,
@@ -191,12 +191,22 @@ def test_two_real_farms_and_independent_couriers_complete_physical_supply(
                     "bakery_grain": state.resources["bakery"]["grain"],
                     "bakery_food": state.resources["bakery"]["food"],
                     "market_food": state.resources["market"]["food"],
+                    "completed_bakes": sum(j["status"] == "completed"
+                        and j["recipe_id"] == "grain-to-bread"
+                        for j in state.production_jobs.values()),
+                    "paid_food_sales": len(state.market_trades),
+                    "meals": sum(m["quantity"] for m in state.consumptions.values()),
                 })
             assert snapshots[0]["east_deliveries"] >= 1
             assert snapshots[-1]["east_mature"] >= 1
             assert snapshots[-1]["east_harvests"] >= 1
             assert snapshots[-1]["east_deliveries"] >= 2
             assert snapshots[-1]["original_deliveries"] >= 1
+            assert snapshots[-1]["completed_bakes"] >= 1
+            # A bread parcel must traverse its real baker-to-market road,
+            # or be durably bought and eaten once the market received it.
+            assert (snapshots[-1]["market_food"]
+                    + snapshots[-1]["paid_food_sales"]) >= 1
             print("PLAY38_PHYSICAL_MULTI_FARM", snapshots)
         finally:
             clock.close_session(WORLD)
