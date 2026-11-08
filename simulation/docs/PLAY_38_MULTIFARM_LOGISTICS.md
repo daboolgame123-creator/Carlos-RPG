@@ -1,0 +1,13 @@
+# PLAY-38 — physical multi-field expansion of NPC courier route contracts
+
+The root-cause [PLAY-37 plan](PLAY_37_ROOT_FOOD_ECONOMY_PLAN.md) shows that one 24h plot yields at most 3 units/day while seven slow-metabolism NPCs require **at least** 7/day; the existing one-unit courier with a 6-hour period can deliver at most 4 food units/day. A genuinely resilient medieval village needs **more real farmland**, transport capacity, worker access to food, and authenticated renewable water. This change fixes one *architectural blocking constraint*, but does **not** claim to cure famine.
+
+**Current strict rule:** All `SupplyCircuitConfigured` contracts require a single hard-coded `("well","farm","bakery","market","bakery","farm","well")`. That prevents the engine from physically serving a second distinct field, even though the agriculture/production engines already support multiple named plots.
+
+**New boundary:** A courier may be configured during trusted time-zero setup with a 7-stop physical circuit `well → farm_X → bakery → market → bakery → farm_X → well`, where `farm_X` is an actual distinct named location. This is still one distinct field **per courier**; each physically walked adjacent road is validated, the named farmer really operates at that field, the courier inventory starts initialized, and the same strict one-unit cargo reservation/arrival/delivery reducer applies. No remote resource inspection, one-tick teleports, extra resource creation, money, hidden knowledge or employment from the player.
+
+Existing circuits retain identical stored keys, original stop names, capacity, timing and default behavior. The change allows an independent auxiliary courier to serve a second field while a legacy courier continues using the old route. Test field growth uses a declared, compressed disposable growth duration only to exercise the material pipeline quickly; it does **not** silently change medieval-world crop durations or player canon.
+
+**Accept:** Separate, real two-farm nine-NPC scenario validates initial physical stock, each seed/water budget, actual crop maturity, harvest and transport, conservation of grain/food/meal transformations, sqlite genesis replay/snapshot at multiple checkpoints, adverse forged stops and wrong-route rejection with full rollback, on Python 3.10 and 3.13. Full historical regression required before merge. The next step is a well-provisioned multi-day, multi-field village with plausible harvest cadence and independent renewable-water and workforce/meal contracts.
+
+**Release boundary:** Draft until exact-SHA tests pass; no `main` edits and no claim of long-run survival. P0 and independent review separate.
