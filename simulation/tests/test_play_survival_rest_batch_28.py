@@ -9,17 +9,17 @@ from test_routines_02f import scenario, ev
 def test_shift_gate_rejects_exhaustion_but_allows_recovery(tmp_path):
     with SQLiteEventStore(tmp_path / "gate.sqlite") as db:
         scenario(db)
-        state = db.load("test")
-        state.entities["basim"]["location_id"] = "smithy"
-        state.npcs["basim"]["needs"]["fatigue"] = 85
-        assert not work_allowed_at(state.entities, state.npcs, state.npc_routines,
+        state = db.load("test").to_dict()
+        state["entities"]["basim"]["location_id"] = "smithy"
+        state["npcs"]["basim"]["needs"]["fatigue"] = 85
+        assert not work_allowed_at(state["entities"], state["npcs"], state["npc_routines"],
                                    100, "basim")
-        state.npcs["basim"]["needs"]["fatigue"] = 84
-        assert work_allowed_at(state.entities, state.npcs, state.npc_routines,
+        state["npcs"]["basim"]["needs"]["fatigue"] = 84
+        assert work_allowed_at(state["entities"], state["npcs"], state["npc_routines"],
                                100, "basim")
         # Worlds without configured shifts retain their previous work policy.
-        state.npcs["nora"]["needs"]["fatigue"] = 100
-        assert work_allowed_at(state.entities, state.npcs, state.npc_routines,
+        state["npcs"]["nora"]["needs"]["fatigue"] = 100
+        assert work_allowed_at(state["entities"], state["npcs"], state["npc_routines"],
                                100, "nora")
 
 
@@ -96,20 +96,24 @@ def test_unfunded_hungry_npc_cannot_fabricate_a_meal(tmp_path):
 
 def test_courier_fatigue_blocks_new_cargo_and_keeps_existing_parcel(tmp_path):
     from carlos_sim.supply import choose_cargo, choose_courier_leg
+    from carlos_sim.domain import WorldState
     from play_physical_supply import seed_physical_supply, WORLD
     with SQLiteEventStore(tmp_path / "courier.sqlite") as db:
         seed_physical_supply(db)
-        state = db.load(WORLD)
-        assert choose_cargo(state, "huda") == "SupplyCargoPicked"
-        state.npcs["huda"]["needs"]["fatigue"] = 70
-        assert choose_cargo(state, "huda") is None
-        assert choose_courier_leg(state, "huda") is None
-        state.npcs["huda"]["needs"]["fatigue"] = 5
-        state.npcs["huda"]["needs"]["hunger"] = 90
-        assert choose_cargo(state, "huda") is None
-        assert choose_courier_leg(state, "huda") is None
-        assert state.resources["well"]["water"] == 2
-        assert state.resources["huda"]["water"] == 0
+        saved = db.load(WORLD)
+        assert choose_cargo(saved, "huda") == "SupplyCargoPicked"
+        tired = saved.to_dict()
+        tired["npcs"]["huda"]["needs"]["fatigue"] = 70
+        exhausted = WorldState.from_dict(tired)
+        assert choose_cargo(exhausted, "huda") is None
+        assert choose_courier_leg(exhausted, "huda") is None
+        hungry = saved.to_dict()
+        hungry["npcs"]["huda"]["needs"]["hunger"] = 90
+        starving = WorldState.from_dict(hungry)
+        assert choose_cargo(starving, "huda") is None
+        assert choose_courier_leg(starving, "huda") is None
+        assert saved.resources["well"]["water"] == 2
+        assert saved.resources["huda"]["water"] == 0
 
 
 def test_seven_named_people_act_with_real_metabolism_and_economy(tmp_path):
