@@ -82,7 +82,7 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         for resource in ("labor_units", "investigation_attempts", "food"):
             events.append(e("ResourceChanged", {
                 "owner_id": who, "resource": resource, "previous": None,
-                "current": personal_food if resource == "food" and who != "huda" else 0,
+                "current": personal_food if resource == "food" else 0,
                 "source": "initialization",
             }))
     stock = [
@@ -181,7 +181,7 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
             + in_flight
             + sum(rs[who]["food"] for who, *_ in PEOPLE)
             + sum(m["quantity"] for m in state.consumptions.values()))
-    assert food == plot["matured"] + (len(PEOPLE) - 1) * personal_food
+    assert food == plot["matured"] + len(PEOPLE) * personal_food
     copper = (rs[PLAYER]["coin_copper"] + market["coin_copper"]
               + rs["adel"]["coin_copper"])
     assert copper == 10 + buyer_copper

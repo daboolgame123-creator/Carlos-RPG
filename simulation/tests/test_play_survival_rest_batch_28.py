@@ -143,3 +143,41 @@ def test_seven_named_people_act_with_real_metabolism_and_economy(tmp_path):
         assert any(a["status"] == "completed" for a in state.actions.values())
         assert audit_physical_supply(state, seed=1, water=2, buyer_copper=2)
         assert db.verify(WORLD).to_dict() == state.to_dict()
+
+
+def test_food_courier_can_eat_own_rations_not_consigned_parcel(tmp_path):
+    """Synthetic arrival fixture: reserve one bread without changing ownership."""
+    import pytest
+    from carlos_sim import DomainEvent, apply_event
+    from carlos_sim.domain import WorldState
+    from carlos_sim.consumption import choose_food_consumption
+    from play_physical_supply import seed_physical_supply, WORLD
+    with SQLiteEventStore(tmp_path / "ration-and-cargo.sqlite") as db:
+        seed_physical_supply(db, personal_food=2)
+        forged = db.load(WORLD).to_dict()
+        forged["entities"]["huda"]["location_id"] = "bakery"
+        forged["npcs"]["huda"]["needs"]["hunger"] = 75
+        shipment = forged["supply_circuits"]["huda"]
+        shipment["index"] = 2
+        shipment["loads"] = 3
+        shipment["deliveries"] = 2
+        shipment["carry"] = {
+            "source": "bakery", "destination": "market", "resource": "food"
+        }
+        forged["resources"]["huda"]["food"] = 3   # two owned + one reserved
+        present = WorldState.from_dict(forged)
+        assert choose_food_consumption(present, "huda") == 1
+        event = DomainEvent("NPCFoodConsumed", "huda", "eat strictly owned ration",
+                            present.time, {"id": "meal:huda:0", "npc_id": "huda", "quantity": 1})
+        fed = apply_event(present, event, consumption_authorized=True)
+        assert fed.resources["huda"]["food"] == 2
+        assert fed.supply_circuits["huda"]["carry"]["resource"] == "food"
+        assert fed.npcs["huda"]["needs"]["hunger"] == 50
+        # With the reserved parcel as the ONLY bread, both policy and reducer
+        # must reject eating; it can never be assigned to the courier.
+        forged["resources"]["huda"]["food"] = 1
+        only_cargo = WorldState.from_dict(forged)
+        assert choose_food_consumption(only_cargo, "huda") is None
+        with pytest.raises(ValueError):
+            apply_event(only_cargo, event, consumption_authorized=True)
+        assert only_cargo.resources["huda"]["food"] == 1

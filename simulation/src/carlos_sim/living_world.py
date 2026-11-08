@@ -417,13 +417,9 @@ class LivingWorldEngine:
                             job['npc_id'] == npc_id and job['status'] == 'running'
                             for job in current.production_jobs.values()):
                         continue
-                    if self.supply_enabled:
-                        parcel = current.supply_circuits.get(npc_id)
-                        if (parcel is not None and parcel["carry"] is not None
-                                and parcel["carry"]["resource"] == "food"):
-                            # Contracted goods remain owned by the destination:
-                            # a hungry courier may not eat customer inventory.
-                            continue
+                    # The consumption policy and reducer subtract any consigned
+                    # food parcel before checking personal ownership. A courier
+                    # may eat only their own surplus, never customer cargo.
                     quantity = choose_food_consumption(current, npc_id)
                     if quantity is None:
                         continue

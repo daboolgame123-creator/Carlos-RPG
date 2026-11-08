@@ -56,8 +56,11 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
         if not (_quantity(stock.get(source, {}).get(resource))
                 and _quantity(stock.get(destination, {}).get(resource))):
             raise ValueError("every logistics stock must have a known balance")
-    if any(stock.get(who, {}).get(item) != 0 for item in RESOURCES):
-        raise ValueError("courier must start with known empty personal cargo slots")
+    # Water/grain are strictly consignment-only. Existing, initialized food
+    # belongs to the courier until a food parcel is explicitly reserved.
+    if (any(stock.get(who, {}).get(item) != 0 for item in ("water", "grain"))
+            or not _quantity(stock.get(who, {}).get("food"))):
+        raise ValueError("courier requires empty water/grain slots and known owned food")
     state["supply_circuits"][who] = {
         "stops": list(stops), "route_ids": list(routes),
         "period_seconds": period, "index": 0, "rounds": 0,
@@ -101,7 +104,8 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         from_balance = state["resources"][src][resource]
         to_balance = state["resources"][who][resource]
         if (not _quantity(from_balance) or not _quantity(to_balance)
-                or from_balance < 1 or to_balance != 0):
+                or from_balance < 1 or to_balance >= MAX_STOCK
+                or (resource != "food" and to_balance != 0)):
             raise ValueError("courier cannot mint or double-load local cargo")
         state["resources"][src][resource] -= 1
         state["resources"][who][resource] += 1
@@ -117,8 +121,10 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         resource = cargo["resource"]
         amount = state["resources"][who][resource]
         dest = state["resources"][current][resource]
-        if not _quantity(amount) or amount != 1 or not _quantity(dest) or dest >= MAX_STOCK:
-            raise ValueError("delivery requires one personally carried unit")
+        if (not _quantity(amount) or amount < 1
+                or (resource != "food" and amount != 1)
+                or not _quantity(dest) or dest >= MAX_STOCK):
+            raise ValueError("delivery requires one reserved carried unit")
         state["resources"][who][resource] -= 1
         state["resources"][current][resource] += 1
         record["carry"] = None
@@ -264,7 +270,9 @@ def validate_supply_circuits(state: dict) -> None:
         for item in RESOURCES:
             amount = state["resources"].get(who, {}).get(item)
             expected = int(cargo is not None and cargo["resource"] == item)
-            if not _quantity(amount) or amount != expected:
+            if (not _quantity(amount)
+                    or (item == "food" and amount < expected)
+                    or (item != "food" and amount != expected)):
                 raise ValueError("courier inventory and cargo reservations disagree")
         if (rec["rounds"] == 0 and rec["next_departure"] != 0
                 or rec["rounds"] > 0 and rec["next_departure"] <= 0):

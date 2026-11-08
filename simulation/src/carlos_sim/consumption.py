@@ -18,6 +18,13 @@ AUTONOMOUS_EATING_THRESHOLD = 50
 MAX_MEAL_QUANTITY = 3
 
 
+def _reserved_food(circuits: Any, npc_id: str) -> int:
+    """Contract ownership has priority over the courier's food balance."""
+    contract = circuits.get(npc_id)
+    parcel = contract["carry"] if contract is not None else None
+    return int(parcel is not None and parcel["resource"] == "food")
+
+
 def _available(state: Any, npc_id: str) -> bool:
     if npc_id not in state.npcs:
         return False
@@ -89,8 +96,9 @@ def project_food_consumed(state: dict[str, Any], event: DomainEvent, *, consumpt
         raise ValueError('duplicate meal ID')
     available = state['resources'].get(npc_id, {}).get('food')
     hunger = state['npcs'][npc_id]['needs']['hunger']
-    if type(available) is not int or available < quantity:
-        raise ValueError('eating requires sufficient initialized owned food')
+    reserved = _reserved_food(state['supply_circuits'], npc_id)
+    if type(available) is not int or available - reserved < quantity:
+        raise ValueError('eating requires sufficient unreserved owned food')
     if hunger <= 0 or quantity > (hunger + HUNGER_RELIEF_PER_FOOD - 1) // HUNGER_RELIEF_PER_FOOD:
         raise ValueError('cannot consume more meals than current hunger warrants')
     new_hunger = max(0, hunger - HUNGER_RELIEF_PER_FOOD * quantity)
@@ -115,7 +123,8 @@ def choose_food_consumption(state: WorldState, npc_id: str) -> int | None:
         return None
     hunger = profile['needs']['hunger']
     stock = state.resources.get(npc_id, {}).get('food')
-    if hunger < AUTONOMOUS_EATING_THRESHOLD or type(stock) is not int or stock <= 0:
+    if (hunger < AUTONOMOUS_EATING_THRESHOLD or type(stock) is not int
+            or stock <= _reserved_food(state.supply_circuits, npc_id)):
         return None
     if any(m['npc_id'] == npc_id and m['consumed_at'] == state.time
            for m in state.consumptions.values()):
