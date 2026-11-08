@@ -1,0 +1,31 @@
+name: PLAY-30 bounded real harvest-yield seven-NPC A/B
+on:
+  push:
+    branches:
+      - "experiment/play30-bounded-harvest-yield-20261108"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-harvest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Reject invalid yields, run two real crop seasons, drought and adversarial replay
+        env:
+          PYTHONPATH: "src:scenarios/test_village"
+        run: |
+          python -m compileall -q src scenarios/test_village/play_physical_supply.py scenarios/test_village/test_play30_harvest_yield.py
+          python -m pytest -q -s scenarios/test_village/test_play30_harvest_yield.py tests/test_play_physical_supply_batch_27.py tests/test_play_crop_cycle_batch_26.py
