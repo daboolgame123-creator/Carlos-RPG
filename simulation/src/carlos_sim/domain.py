@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 37
-RULES_VERSION = 49
+SCHEMA_VERSION = 38
+RULES_VERSION = 50
 
 
 def _thaw(value: Any) -> Any:
@@ -84,6 +84,7 @@ class WorldState:
     gatherings: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     foraging_attempts: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     survival_progress: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
+    metabolism_policy: Mapping[str, int] = field(default_factory=dict)
     rpg_profiles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     injuries: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     treatments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
@@ -133,6 +134,7 @@ class WorldState:
         object.__setattr__(self, "gatherings", _freeze(_json_copy(self.gatherings)))
         object.__setattr__(self, "foraging_attempts", _freeze(_json_copy(self.foraging_attempts)))
         object.__setattr__(self, "survival_progress", _freeze(_json_copy(self.survival_progress)))
+        object.__setattr__(self, "metabolism_policy", _freeze(_json_copy(self.metabolism_policy)))
         object.__setattr__(self, "rpg_profiles", _freeze(_json_copy(self.rpg_profiles)))
         object.__setattr__(self, "injuries", _freeze(_json_copy(self.injuries)))
         object.__setattr__(self, "treatments", _freeze(_json_copy(self.treatments)))
@@ -182,6 +184,7 @@ class WorldState:
                            "consumptions": self.consumptions, "gatherings": self.gatherings,
                            "foraging_attempts": self.foraging_attempts,
                            "survival_progress": self.survival_progress,
+                            "metabolism_policy": self.metabolism_policy,
                            "rpg_profiles": self.rpg_profiles, "injuries": self.injuries, "treatments": self.treatments,
                            "environment_cycles": self.environment_cycles, "farm_plots": self.farm_plots, "supply_circuits": self.supply_circuits,
                             "hydrology_sources": self.hydrology_sources,
@@ -224,7 +227,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -232,7 +235,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -401,6 +404,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "NPCTemperamentConfigured":
         from .temperament import configure_temperament
         configure_temperament(d, e, bootstrap=bootstrap)
+    elif kind == "MetabolismPolicyConfigured":
+        from .survival import configure_metabolism_policy
+        configure_metabolism_policy(d, e, bootstrap=bootstrap)
     elif kind in ("NPCConfigured", "NPCInformationDelivered", "NPCBeliefReceived", "NPCNeedChanged", "NPCDecisionRecorded"):
         from .npc import project_npc_event
         project_npc_event(d, e, bootstrap=bootstrap, survival_authorized=survival_authorized,
