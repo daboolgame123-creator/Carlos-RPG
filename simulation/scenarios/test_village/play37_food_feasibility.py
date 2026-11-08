@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass
 from carlos_sim import WorldState
 from carlos_sim.consumption import HUNGER_RELIEF_PER_FOOD
 from carlos_sim.survival import FATIGUE_SECONDS_PER_POINT, hunger_period
+from play_physical_supply import DAY
 
 WORKERS = ("basim", "nora", "huda")
 SITES = ("farm", "bakery", "market", "well")
@@ -30,6 +31,11 @@ class ClosedVillageFeasibility:
     physical_grain_yield_per_crop: int
     theoretical_max_food_units: int
     minimum_food_shortfall: int
+    ideal_minimum_daily_meals_at_steady_state: int
+    ideal_max_field_loaves_per_day: int
+    ideal_max_market_delivery_loaves_per_day: int
+    ideal_max_local_market_loaves_per_day: int
+    ideal_daily_market_loaf_deficit: int
     initial_time_to_critical_hunger_by_worker: dict[str, int]
     no_rest_time_to_fatigue_block_by_worker: dict[str, int]
 
@@ -130,6 +136,18 @@ def closed_test_village_feasibility(
     # continuously. No activity costs are counted. It is invalid as a
     # proof of success even if supply >= demand due to nonlocal ownership.
     total = sum(minimum.values())
+    # Long-run bounds assume unlimited REAL water deliveries and healthy,
+    # always-present labor; they remain upper capacities, never forecasts.
+    # One fixed plot's growth cycle produces at most the recorded harvest
+    # recipe yield. This village's single food courier can carry exactly
+    # one parcel per contracted whole six-stop circuit.
+    daily_demand = (
+        len(state.npcs) * DAY + (period * HUNGER_RELIEF_PER_FOOD) - 1
+    ) // (period * HUNGER_RELIEF_PER_FOOD)
+    daily_field = (DAY * recipe["output_amount"]) // plot["growth_seconds"]
+    courier_period = state.supply_circuits["huda"]["period_seconds"]
+    daily_courier = DAY // courier_period
+    daily_market_supply = min(daily_field, daily_courier)
     worker_critical = {
         who: max(0, 90 - state.npcs[who]["needs"]["hunger"]) * period
         for who in WORKERS
@@ -153,6 +171,11 @@ def closed_test_village_feasibility(
         physical_grain_yield_per_crop=recipe["output_amount"],
         theoretical_max_food_units=max_total_food,
         minimum_food_shortfall=max(0, total - max_total_food),
+        ideal_minimum_daily_meals_at_steady_state=daily_demand,
+        ideal_max_field_loaves_per_day=daily_field,
+        ideal_max_market_delivery_loaves_per_day=daily_courier,
+        ideal_max_local_market_loaves_per_day=daily_market_supply,
+        ideal_daily_market_loaf_deficit=max(0, daily_demand-daily_market_supply),
         initial_time_to_critical_hunger_by_worker=worker_critical,
         no_rest_time_to_fatigue_block_by_worker=worker_fatigue,
     )
