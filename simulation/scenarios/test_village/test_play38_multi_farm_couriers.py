@@ -110,7 +110,7 @@ def _conserve(state):
     assert len(couriers) == 2
     assert state.resources["well"]["water"] + sum(
         state.resources[owner]["water"]
-        for owner in ("farm", EAST, "huda", COURIER")
+        for owner in ("farm", EAST, "huda", COURIER)
     ) + sum(p["matured"] + (p["status"] == "growing")
             for p in plots.values()) == 2
     for field in ("farm", EAST):
