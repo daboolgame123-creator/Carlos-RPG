@@ -34,6 +34,7 @@ def real_three_days(path, *, opt_in: bool):
             agriculture_enabled=True, economy_only_enabled=False,
         )
         daily_actions=[]
+        hunger_trajectory=[]
         try:
             for day in range(3):
                 before_day = db.load(WORLD)
@@ -47,6 +48,12 @@ def real_three_days(path, *, opt_in: bool):
                     assert after.time == (day*4+quarter+1)*(DAY//4)
                     audit_physical_supply(after, seed=1, water=2, buyer_copper=2,
                                           personal_food=PERSONAL_PROVISIONS)
+                    # Capture every 6 hours: final hunger can saturate at
+                    # 100 in BOTH worlds despite different earlier rates.
+                    hunger_trajectory.append({
+                        who: after.npcs[who]["needs"]["hunger"]
+                        for who, *_ in PEOPLE
+                    })
                 today = db.load(WORLD)
                 n = sum(a["start"]>=before_day.time for a in today.actions.values())
                 assert n>0
@@ -62,6 +69,7 @@ def real_three_days(path, *, opt_in: bool):
                 "seconds":final.time,
                 "policy":dict(final.metabolism_policy),
                 "daily_actions":daily_actions,
+                "hunger_trajectory":hunger_trajectory,
                 "hunger":{n: final.npcs[n]["needs"]["hunger"] for n,*_ in PEOPLE},
                 "high_risk":len(report.high_risk),
                 "hunger_cap_count":len(report.hunger_at_cap),
@@ -83,8 +91,10 @@ def test_finite_provisions_with_normal_and_experimental_metabolism(tmp_path):
     assert all(a>0 for a in original["daily_actions"]+calibrated["daily_actions"])
     assert all(0<=v<=100 for v in original["hunger"].values())
     assert all(0<=v<=100 for v in calibrated["hunger"].values())
-    assert original["hunger"]!=calibrated["hunger"], (
-        "the trusted opted-in per-world rate must influence actual NPC needs"
+    assert len(original["hunger_trajectory"]) == len(calibrated["hunger_trajectory"]) == 12
+    assert original["hunger_trajectory"][0] != calibrated["hunger_trajectory"][0], (
+        "the frozen per-world rate must change early NPC needs even if starvation "
+        "eventually pushes both worlds to the same 100-hunger ceiling"
     )
     print("PLAY29_REAL_3DAY_METABOLISM_AB",{
         "original": original, "calibrated": calibrated,
