@@ -70,7 +70,7 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
         before = db.verify(WORLD)
         assert before.resources[FARMER]["coin_copper"] == 0
         assert before.resources[FARMER]["food"] == 0
-        assert before.npcs[FARMER]["needs"]["hunger"] == 80
+        assert before.npcs[FARMER]["needs"]["hunger"] == 60
         assert not wants_local_market(before, FARMER)
         assert choose_known_market_walk(before, FARMER) is None
         clock = TimeEngine(db)
