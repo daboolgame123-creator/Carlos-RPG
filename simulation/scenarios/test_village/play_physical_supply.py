@@ -35,6 +35,7 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          harvest_yield: int = 1, market_wallets: bool = False,
                          initial_market_food: int = 0,
                          hungry_market_buyers: bool = False,
+                         one_hungry_market_buyer: bool = False,
                          staff_provisions: bool = False,
                          playable_demo: bool = False) -> None:
     if type(playable_demo) is not bool:
@@ -45,6 +46,9 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
         raise ValueError('initial_market_food must be a bounded integer (0-3)')
     if type(hungry_market_buyers) is not bool:
         raise ValueError('hungry_market_buyers must be a boolean trusted setup flag')
+    if (type(one_hungry_market_buyer) is not bool or
+            (one_hungry_market_buyer and (not market_wallets or hungry_market_buyers))):
+        raise ValueError('one_hungry_market_buyer requires exclusive real market wallets')
     if type(staff_provisions) is not bool:
         raise ValueError('staff_provisions must be a boolean trusted setup flag')
     # This is a time-zero ownership counterfactual, NOT a runtime allocation
@@ -111,7 +115,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             }),
             e("NPCConfigured", {
                 "npc_id": who, "role": role,
-                "needs": {"hunger": (80 if hungry_market_buyers and who in ("omar", "layla")
+                "needs": {"hunger": (80 if ((hungry_market_buyers and who in ("omar", "layla"))
+                                       or (one_hungry_market_buyer and who == "omar"))
                                       else courier_hunger if who == "huda" else hunger),
                           "fatigue": fatigue, "safety": 0},
                 "goals": {"earn": 0 if who == "basim" else 10,
@@ -149,7 +154,10 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
     # pre-existing ten coins at bootstrap: four each to Omar and Layla.
     # Original scenario is unchanged byte-for-byte when flag=False.
     if market_wallets:
-        stock.extend((("omar", "coin_copper", 4), ("layla", "coin_copper", 4)))
+        # Optional one-buyer counterfactual: Omar can pay for exactly one
+        # loaf, Layla holds the other coins; no currency is created.
+        stock.extend((("omar", "coin_copper", 2 if one_hungry_market_buyer else 4),
+                      ("layla", "coin_copper", 6 if one_hungry_market_buyer else 4)))
     for owner, resource, amount in stock:
         events.append(e("ResourceChanged", {
             "owner_id": owner, "resource": resource,
