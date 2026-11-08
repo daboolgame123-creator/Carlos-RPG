@@ -68,3 +68,27 @@ def test_rest_uses_clock_time_and_reduces_fatigue_without_teleport(tmp_path):
         assert completed.npcs["basim"]["needs"]["fatigue"] == 70
         assert completed.entities["basim"]["location_id"] == "square"
         assert db.verify("test").to_dict() == completed.to_dict()
+
+
+def test_unfunded_hungry_npc_cannot_fabricate_a_meal(tmp_path):
+    from carlos_sim.consumption import choose_food_consumption
+    with SQLiteEventStore(tmp_path / "no-food.sqlite") as db:
+        scenario(db)
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        original = db.load("test")
+        hungry = db.append("test", "no-free-food", original.revision, [
+            ev("NPCNeedChanged", {"npc_id": "basim", "need": "hunger",
+                                  "previous": 5, "current": 95}, who="basim")
+        ])
+        assert choose_food_consumption(hungry, "basim") is None
+        state = LivingWorldEngine(
+            db, clock, navigation_enabled=True, routines_enabled=True,
+            survival_enabled=True, consumption_enabled=True,
+        ).advance("test", seconds=300, command_id="survive-without-food",
+                  expected_revision=hungry.revision).state
+        assert not [m for m in state.consumptions.values() if m["npc_id"] == "basim"]
+        assert state.resources.get("basim", {}).get("food", 0) == 0
+        assert state.npcs["basim"]["needs"]["hunger"] >= 95
+        assert db.verify("test").to_dict() == state.to_dict()
+
