@@ -65,6 +65,7 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
             db, cash_return=True, waged_harvest=True,
             hungry_waged_farmer=True, harvest_wage_copper=wage,
             market_wallets=True, hungry_market_buyers=False,
+            one_hungry_market_buyer=(wage == 2),
             initial_market_food=3,
         )
         before = db.verify(WORLD)
@@ -98,7 +99,7 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
                 })
             receipts = [j["work_wage"] for j in state.production_jobs.values()
                         if "work_wage" in j and j["npc_id"] == FARMER]
-            assert receipts, "farmer never earned an actual wage"
+            assert receipts, f"farmer never earned a real funded wage: {rows}"
             assert all(r["amount"] == wage for r in receipts)
             farmer_legs = [t for t in state.travels.values()
                            if t["npc_id"] == FARMER]
