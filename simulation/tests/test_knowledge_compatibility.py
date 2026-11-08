@@ -28,7 +28,7 @@ def test_flag_off_no_new_knowledge_events_in_rules_26(tmp_path):
             expected_revision=db.load("r").revision)
         s = result.state
         assert s.rules_version == 55
-        assert s.schema_version == 40
+        assert s.schema_version == SCHEMA_VERSION
         # No knowledge events were emitted (flag off).
         payloads = db.db.execute("SELECT payload FROM events WHERE world_id='r'").fetchall()
         for (payload,) in payloads:
