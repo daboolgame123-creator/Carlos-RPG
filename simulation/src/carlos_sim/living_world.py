@@ -76,7 +76,8 @@ class LivingWorldEngine:
                  agriculture_enabled: bool = False,
                  economy_only_enabled: bool = False,
                  shopping_routes_enabled: bool = False,
-                 supply_enabled: bool = False):
+                 supply_enabled: bool = False,
+                 professional_procurement_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -157,6 +158,16 @@ class LivingWorldEngine:
                 and consumption_enabled and survival_enabled)):
             raise ValueError('shopping_routes_enabled requires focused economy, navigation, consumption and survival')
         self.shopping_routes_enabled = shopping_routes_enabled
+        if (type(professional_procurement_enabled) is not bool or
+                (professional_procurement_enabled and not (
+                    economic_enabled and agriculture_enabled and economy_only_enabled
+                    and navigation_enabled and routines_enabled
+                    and not shopping_routes_enabled))):
+            raise ValueError(
+                "professional_procurement_enabled requires focused economic "
+                "simulation, navigation, routines, and no concurrent hunger shopping"
+            )
+        self.professional_procurement_enabled = professional_procurement_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
@@ -357,6 +368,21 @@ class LivingWorldEngine:
                         "locally funded, one-time completed labor receipt",
                         current.time, {"job_id": job_id, "amount": wage}),
                         production_capability=True)
+                if self.professional_procurement_enabled:
+                    from .professional_trade import choose_workshop_input_deposit
+                    # A purchased bag item is still private property until
+                    # physically deposited; only then may ordinary production
+                    # consume workshop-owned grain on the same local tick.
+                    for worker_id in sorted(current.npcs):
+                        intent = choose_workshop_input_deposit(current, worker_id)
+                        if intent is None:
+                            continue
+                        append(DomainEvent('WorkshopMaterialDeposited', worker_id,
+                            'autonomous physically delivered professional input',
+                            current.time,
+                            {'site_id': intent.site_id, 'resource': intent.resource,
+                             'quantity': intent.quantity}),
+                            production_capability=True, market_capability=True)
                 # PLAY-24: pure NPC proposals, executed through the SAME reducer
                 # capabilities as explicit local production and market commands.
                 # Each pass sees only state already changed by previous events.
@@ -387,6 +413,23 @@ class LivingWorldEngine:
                                     'autonomous retired impossible quote: ' + stale.reason,
                                     current.time, {'id': stale.offer_id}),
                                     market_capability=True)
+                if self.professional_procurement_enabled:
+                    from .professional_trade import choose_local_grain_offer
+                    for keeper_id in sorted(current.npcs):
+                        grain = choose_local_grain_offer(current, keeper_id)
+                        if grain is None:
+                            continue
+                        append(DomainEvent('MarketOfferPosted', keeper_id,
+                            'real farmer offers locally owned grain; ' + grain.reason,
+                            current.time,
+                            {'id': grain.offer_id, 'seller_id': keeper_id,
+                             'stock_owner_id': grain.site_id,
+                             'site_id': grain.site_id, 'resource': 'grain',
+                             'quantity': grain.quantity,
+                             'payment_resource': 'coin_copper',
+                             'unit_price': grain.unit_price}),
+                             market_capability=True)
+                        economic_offers.append(grain.offer_id)
                 for keeper_id in sorted(current.npcs):
                     quote = choose_local_food_offer(
                         current, keeper_id, adaptive=self.adaptive_market_enabled)
@@ -417,6 +460,35 @@ class LivingWorldEngine:
                                         'expected_unit_price': purchase.price}),
                            market_capability=True)
                     economic_trades.append(purchase.trade_id)
+                if self.professional_procurement_enabled:
+                    from .professional_trade import choose_local_grain_purchase
+                    for buyer_id in sorted(current.npcs):
+                        grain_buy = choose_local_grain_purchase(current, buyer_id)
+                        if grain_buy is None:
+                            continue
+                        append(DomainEvent('MarketTradeExecuted', buyer_id,
+                            'on-site professional grain purchase; ' + grain_buy.reason,
+                            current.time,
+                            {'id': grain_buy.trade_id,
+                             'offer_id': grain_buy.offer_id, 'buyer_id': buyer_id,
+                             'quantity': 1,
+                             'expected_unit_price': grain_buy.unit_price}),
+                             market_capability=True)
+                        economic_trades.append(grain_buy.trade_id)
+                    # A baker paid only after its real bread sale must receive
+                    # those earnings at the sale's SAME logical tick. Otherwise
+                    # a single 900-second wait delays wage/procurement to 900,
+                    # while many short waits pay at 211 and start a second job.
+                    # Keep this second pass strictly behind the opt-in flag;
+                    # it uses the same existing once-only production reducer.
+                    for job_id in sorted(current.production_jobs):
+                        wage = choose_local_production_wage(current, job_id)
+                        if wage is None:
+                            continue
+                        append(DomainEvent('ProductionWagePaid', None,
+                            'same-tick sale-backed professional wage',
+                            current.time, {'job_id': job_id, 'amount': wage}),
+                            production_capability=True)
             if self.assistance_enabled:
                 # The fixed passes are independent of lexical NPC ID ordering:
                 # settle old promises, then respond, request, and respond to
@@ -482,6 +554,44 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
+            if self.professional_procurement_enabled:
+                from .professional_trade import (has_workshop_recipe,
+                    choose_professional_known_road)
+                for buyer_id in sorted(current.npcs):
+                    if buyer_id in busy or not has_workshop_recipe(current, buyer_id):
+                        continue
+                    if needs_survey(current, buyer_id):
+                        append(DomainEvent('NPCNavigationSurveyed', buyer_id,
+                            'professional learns only roads visible from current site',
+                            current.time, {'npc_id': buyer_id}),
+                            movement_capability=True)
+                    journey = choose_professional_known_road(current, buyer_id)
+                    if journey is None:
+                        continue
+                    edge = current.routes[journey.route_id]
+                    here = current.entities[buyer_id]['location_id']
+                    there = edge['b'] if edge['a'] == here else edge['a']
+                    tid = f'auto-nav:{buyer_id}:{current.time}'
+                    sid = 'npc-travel:' + tid
+                    if tid in current.travels or sid in current.scheduled:
+                        raise InvalidEvent('duplicate professional travel identifier')
+                    append(DomainEvent('ScheduledEventCreated', None,
+                        'professional known-road journey arrival',
+                        current.time,
+                        {'id': sid, 'due': current.time + edge['seconds'],
+                         'order': current.next_schedule_order, 'kind': 'signal',
+                         'payload': {'__npc_travel_id': tid}, 'interrupt': False}),
+                         movement_capability=True)
+                    append(DomainEvent('NPCTravelStarted', buyer_id,
+                        'professional input procurement; ' + journey.reason,
+                        current.time,
+                        {'id': tid, 'npc_id': buyer_id,
+                         'route_id': journey.route_id,
+                         'origin': here, 'destination': there,
+                         'due': current.time + edge['seconds'],
+                         'schedule_id': sid}),
+                         movement_capability=True)
+                    busy.add(buyer_id)
             if self.shopping_routes_enabled:
                 # PLAY-42: only hungry solvent NPCs look for a LOCAL market.
                 # An unvisited road can be surveyed only from their real site;
