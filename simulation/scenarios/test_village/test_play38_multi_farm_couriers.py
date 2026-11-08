@@ -28,9 +28,11 @@ def seed_two_field_world(
     east_growth_seconds=3600, east_grain_yield=3,
     initial_water=2, initial_market_food=0,
     market_wallets=False, hungry_market_buyers=False,
-    cash_return=False,
+    cash_return=False, waged_harvest=False,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
+    if type(waged_harvest) is not bool or (waged_harvest and not cash_return):
+        raise ValueError("waged_harvest requires funded cash-return contract")
     if (type(east_growth_seconds) is not int
             or east_growth_seconds not in (3600, 86400)
             or type(east_grain_yield) is not int
@@ -93,6 +95,8 @@ def seed_two_field_world(
             (EAST, "coin_copper", 0),
             (COURIER, "coin_copper", 0),
         ))
+    if waged_harvest:
+        physical_stock.append((FARMER, "coin_copper", 0))
     for owner, resource, value in physical_stock:
         extra.append(_event("ResourceChanged", {
             "owner_id": owner, "resource": resource,
@@ -115,6 +119,7 @@ def seed_two_field_world(
             "input_resource": "crop_ready", "input_amount": 1,
             "output_resource": "grain", "output_amount": east_grain_yield,
             "tool_resource": "sickle", "duration_seconds": 60,
+            **({"wage_coin": 1} if waged_harvest else {}),
         }),
         _event("FarmPlotConfigured", {
             "site_id": EAST, "growth_seconds": east_growth_seconds, "capacity": 1,
