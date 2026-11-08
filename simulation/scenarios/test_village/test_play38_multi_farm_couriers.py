@@ -29,10 +29,21 @@ def seed_two_field_world(
     initial_water=2, initial_market_food=0,
     market_wallets=False, hungry_market_buyers=False,
     cash_return=False, waged_harvest=False,
+    hungry_waged_farmer=False, harvest_wage_copper=1,
+    one_hungry_market_buyer=False,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
+    if type(one_hungry_market_buyer) is not bool:
+        raise ValueError('one_hungry_market_buyer must be a test-only boolean')
     if type(waged_harvest) is not bool or (waged_harvest and not cash_return):
         raise ValueError("waged_harvest requires funded cash-return contract")
+    if (type(hungry_waged_farmer) is not bool
+            or (hungry_waged_farmer and not waged_harvest)):
+        raise ValueError("hungry_waged_farmer requires a waged harvest")
+    if (type(harvest_wage_copper) is not int
+            or harvest_wage_copper not in (1, 2)
+            or (harvest_wage_copper != 1 and not waged_harvest)):
+        raise ValueError("harvest_wage_copper must be a bounded signed contract")
     if (type(east_growth_seconds) is not int
             or east_growth_seconds not in (3600, 86400)
             or type(east_grain_yield) is not int
@@ -46,6 +57,7 @@ def seed_two_field_world(
         harvest_yield=3, personal_food=0,
         market_wallets=market_wallets,
         hungry_market_buyers=hungry_market_buyers,
+        one_hungry_market_buyer=one_hungry_market_buyer,
     )
     extra = [
         _event("LocationCreated", {"id": EAST, "name": "East field"}),
@@ -65,7 +77,7 @@ def seed_two_field_world(
         }),
     ]
     for who, role, hunger, fatigue in (
-        (FARMER, "farmer", 20, 5),
+        (FARMER, "farmer", 60 if hungry_waged_farmer else 20, 5),
         (COURIER, "courier", 20, 5),
     ):
         extra.append(_event("NPCConfigured", {
@@ -119,7 +131,7 @@ def seed_two_field_world(
             "input_resource": "crop_ready", "input_amount": 1,
             "output_resource": "grain", "output_amount": east_grain_yield,
             "tool_resource": "sickle", "duration_seconds": 60,
-            **({"wage_coin": 1} if waged_harvest else {}),
+            **({"wage_coin": harvest_wage_copper} if waged_harvest else {}),
         }),
         _event("FarmPlotConfigured", {
             "site_id": EAST, "growth_seconds": east_growth_seconds, "capacity": 1,
