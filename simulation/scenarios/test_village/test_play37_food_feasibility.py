@@ -63,7 +63,7 @@ def test_water_and_seed_provenance_bound_total_future_food(
         tmp_path, initial_water, expected_max_food):
     with SQLiteEventStore(tmp_path / f"water-{initial_water}.sqlite") as db:
         seed_physical_supply(db, water=initial_water, initial_market_food=3,
-                             harvest_yield=3)
+                             harvest_yield=3, hungry_market_buyers=True)
         state = db.verify(WORLD)
         lower_upper = closed_test_village_feasibility(
             state, horizon_seconds=3 * DAY,
