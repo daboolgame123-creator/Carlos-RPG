@@ -5,6 +5,12 @@ This is an isolated integration branch: no weather generator or magic supply.
 from __future__ import annotations
 
 import pytest
+import sys
+from pathlib import Path
+
+# Both the isolated workflow and the inherited full-suite runner import this
+# physical-world scenario; avoid depending on runner-specific PYTHONPATH.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scenarios" / "test_village"))
 
 from carlos_sim import (SQLiteEventStore, TimeEngine, LivingWorldEngine,
                         DomainEvent, WorldState, apply_event)
