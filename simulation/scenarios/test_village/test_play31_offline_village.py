@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from carlos_sim import SQLiteEventStore, TimeEngine
+from carlos_sim.store import InvalidEvent
 from play_physical_supply import WORLD, PEOPLE, audit_physical_supply, seed_physical_supply
 from play_village_local import create_session, execute, HELP, MAX_WAIT
 
@@ -91,7 +92,7 @@ def test_bad_player_actions_do_not_create_events_or_teleport(tmp_path, cmd):
     db, clock, gateway = session(tmp_path)
     try:
         before = db.load(WORLD).to_dict()
-        with pytest.raises((ValueError, PermissionError)):
+        with pytest.raises((ValueError, PermissionError, InvalidEvent)):
             execute(gateway, cmd, 1)
         assert db.verify(WORLD).to_dict() == before
     finally:
