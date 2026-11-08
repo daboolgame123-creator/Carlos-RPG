@@ -200,7 +200,7 @@ def test_snapshot_corruption_and_previous_version_are_rejected(tmp_path):
                       (WORLD,))
         with pytest.raises(UnsupportedVersion):
             db.load(WORLD)
-        db.db.execute("UPDATE worlds SET schema_version=37, rules_version=49 WHERE id=?",
+        db.db.execute("UPDATE worlds SET schema_version=38, rules_version=50 WHERE id=?",
                       (WORLD,))
         assert db.verify(WORLD).to_dict() == correct.to_dict()
 
