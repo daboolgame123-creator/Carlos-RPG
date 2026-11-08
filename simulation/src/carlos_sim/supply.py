@@ -92,8 +92,12 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         raise ValueError("cargo changes need an authorized physical courier")
     who = p["courier_id"]
     record = state["supply_circuits"].get(who)
-    if record is None or not _physically_present(state, who):
-        raise ValueError("cargo cannot move without a configured present courier")
+    if (record is None or not _physically_present(state, who)
+            or any(a["npc_id"] == who and a["status"] == "running"
+                   for a in state["actions"].values())
+            or any(j["npc_id"] == who and j["status"] == "running"
+                   for j in state["production_jobs"].values())):
+        raise ValueError("cargo cannot move without a configured, idle and present courier")
     current = state["entities"][who]["location_id"]
     if event.event_type == "SupplyCargoPicked":
         lane = _lane(record)
