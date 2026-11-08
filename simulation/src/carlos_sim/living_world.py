@@ -488,6 +488,21 @@ class LivingWorldEngine:
                 # each physical leg has a deterministic clock cost. This
                 # pass neither reads a distant quote nor reserves food.
                 for shopper_id in sorted(current.npcs):
+                    # Physically reaching a market is a FIRST-HAND visit even
+                    # if the buyer cannot afford anything. Record its nearby
+                    # roads and visited tile once, preventing a hungry worker
+                    # from rediscovering the same market after returning home.
+                    market_here = current.entities[shopper_id]['location_id']
+                    if (shopper_id not in busy and market_here in current.market_stalls
+                            and any(t['npc_id'] == shopper_id
+                                    and t['status'] == 'arrived'
+                                    and t['destination'] == market_here
+                                    for t in current.travels.values())
+                            and needs_survey(current, shopper_id)):
+                        append(DomainEvent('NPCNavigationSurveyed', shopper_id,
+                            'shopper surveys the physically reached local market',
+                            current.time, {'npc_id': shopper_id}),
+                            movement_capability=True)
                     # An initiated homeward journey has priority over a
                     # second hungry exploration impulse at each intermediate
                     # road tile. This remains a pure projection of completed

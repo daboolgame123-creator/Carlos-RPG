@@ -118,6 +118,9 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
             assert any(t["origin"] == "market" and t["status"] == "arrived"
                        for t in farmer_legs), "shopper never physically returned"
             assert farmer_legs[-1]["destination"] == EAST
+            assert farmer_legs[-1]["status"] == "arrived"
+            assert "market" in state.navigation[FARMER]["visited"], (
+                "the physical market visit must be remembered")
             sales = [t for t in state.market_trades.values()
                      if t["buyer_id"] == FARMER]
             meals = [m for m in state.consumptions.values()
