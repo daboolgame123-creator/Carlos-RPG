@@ -11,11 +11,16 @@ on:
       - "experiment/play30-bounded-harvest-yield-20261108"
       - "experiment/play30-physical-wallet-access-20261108"
       - "experiment/play30c-stocked-market-proof-20261108"
+      - "feature/play31-seven-npc-offline-vertical-slice-20261108"
   pull_request:
     paths:
       - "simulation/**"
       - ".github/workflows/simulation-tests.yml"
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

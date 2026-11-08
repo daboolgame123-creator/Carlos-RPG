@@ -1,5 +1,16 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## أولوية التسريع — النسخة القابلة للعب أولًا (8 نوفمبر 2026)
+
+- **PLAY-30:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. فرع تجارب فقط، دمج PR #18 في `design/play29-seven-day-provisions-20261108` عند `186c79fc0fe28deead8f052dfc769bb840abcf7c`. الاختبارات الشاملة [42486981474](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42486981474) **1,670 ناجحة لكل Python 3.10/3.13**؛ انعدام استدامة الغذاء **مُثبت ومُعلن**، وليس عيب نزاهة مخفيًا. تقرير [الإغلاق](PLAY_30_TECHNICAL_CLOSURE.md).
+- **PLAY-31 — مسار اللعب العمودي التجريبي:** `CHAT_EXECUTABLE / VERIFICATION_PENDING`. الفرع `feature/play31-seven-npc-offline-vertical-slice-20261108`؛ الواجهة `scenarios/test_village/play_village_local.py`. يمكن لكارلوس دخول قرية ذات سبع شخصيات مستقلة، خمسة مواقع، طريق بيت/سوق يستغرق 90 ثانية، رؤية محلية وحوار وحركة وشراء وأكل وهدايا وانتظار، وموجز `handoff` لا يكشف الأسرار. الحفظ مؤقت داخل SQLite ويتلف عند الخروج؛ ليست القصة الأصلية.
+- **الدليل الموجّه:** [PLAY-31](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42490987807) — **21 اختبارًا ناجحًا لكل Python 3.10/3.13** على شيفرة `245dc608438d16dccea1ca6deaaf4f603a9caa83`. تعديلات لاحقة تخص workflow والتوثيق فقط. **الاختبار الشامل النهائي على أحدث SHA مطلوب قبل الإغلاق**.
+- **تسريع CI:** ضبط `concurrency.cancel-in-progress=true` في workflow الفحص الشامل لإلغاء تشغيلات الفرع المتقادمة بدل استهلاك عشرات الدقائق في دفعات superseded.
+- **الترتيب العملي:** (1) إتمام بوابة PLAY-31 واختبار تشغيل يدوي واضح؛ (2) حزمة لعب قصيرة متماسكة لكارلوس بقرارات/أفعال/تجربة UI محلية إن أمكن؛ (3) المهام والمهارات والمغامرة والصراع ضمن قواعد العالم؛ (4) استدامة اقتصادية أشمل بعد توفر لعبة عملية للاختبار. لا يُستخدم النموذج اللغوي كسلطة أحداث ولا تُعتمد أحداث غير مرئية للاعب.
+- **الحدود:** `main` والقصة الأصلية دون تغيير، Schema **39** / Rules **51**. المراجعة الخارجية و`P0_PRODUCTION_NOT_APPROVED` مفتوحان، ولا نسخ حفظ طويلة الأمد أو اتصال شبكة غير موثوق.
+- **تشغيل:** [PLAY-31 quickstart](PLAY_31_OFFLINE_QUICKSTART.md).
+
+
 ## Latest verified milestone — PLAY-29 (2026-11-08)
 
 - **Technical decision:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`, **no self-sufficiency claim**. World version **Schema 39 / Rules 51**, disposable worlds; source `1a4a4021367c670781eea5dee030fe9d93e65f37`, seven-day test-only SHA `d67fefc09dddb17175e3799492167e4d4b03196c`.

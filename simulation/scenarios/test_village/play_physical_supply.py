@@ -34,7 +34,10 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          courier_hunger: int = 20, personal_food: int = 0,
                          harvest_yield: int = 1, market_wallets: bool = False,
                          initial_market_food: int = 0,
-                         hungry_market_buyers: bool = False) -> None:
+                         hungry_market_buyers: bool = False,
+                         playable_demo: bool = False) -> None:
+    if type(playable_demo) is not bool:
+        raise ValueError('playable_demo must be a boolean trusted setup flag')
     if type(market_wallets) is not bool:
         raise ValueError('market_wallets must be a boolean trusted setup flag')
     if type(initial_market_food) is not int or not 0 <= initial_market_food <= 3:
@@ -76,6 +79,22 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             "controller": "player",
         }),
     ]
+    if playable_demo:
+        from carlos_sim.rpg_state import unknown_profile
+        # A real road and a sample game status. No story-file import.
+        events.append(e('RouteCreated', {
+            'id': 'home-market', 'a': 'home', 'b': 'market', 'seconds': 90,
+        }))
+        demo_profile = unknown_profile()
+        demo_profile['vitals']['hp'] = {'current': 12, 'max': 12}
+        demo_profile['vitals']['st'] = {'current': 8, 'max': 8}
+        events.append(e('PlayerRPGInitialized', {
+            'player_id': PLAYER, 'profile': demo_profile,
+        }))
+        events.append(e('ResourceChanged', {
+            'owner_id': PLAYER, 'resource': 'food',
+            'previous': None, 'current': 0, 'source': 'initialization',
+        }))
     for who, role, location, hunger, fatigue in PEOPLE:
         events.extend((
             e("EntityCreated", {
