@@ -89,17 +89,25 @@ def test_reserved_crop_counts_as_potential_grain_before_work_finishes(tmp_path):
                 economic_enabled=True, economy_only_enabled=True,
                 consumption_enabled=True,
             )
+            # The farm starts with ZERO water; Huda must first travel from
+            # the well and physically deliver it. At t=60 planting need not
+            # be completed, so inspect an actual growing field after 6h.
             one = engine.advance(
-                WORLD, seconds=60, command_id="plant-first",
+                WORLD, seconds=DAY // 4, command_id="courier-and-plant",
                 expected_revision=db.load(WORLD).revision,
             ).state
+            assert one.supply_circuits["huda"]["deliveries"] >= 1
             assert one.farm_plots["farm"]["status"] == "growing"
-            # The first harvest appointment happens after a real growing day.
+            # Stop on the authenticated maturity appointment, not an
+            # assumed elapsed day since the player began waiting.
+            due = one.farm_plots["farm"]["due"]
+            assert due is not None and due > one.time
             grown = engine.advance(
-                WORLD, seconds=DAY, command_id="mature-first",
+                WORLD, seconds=due - one.time, command_id="mature-first",
                 expected_revision=one.revision,
             ).state
             assert grown.farm_plots["farm"]["matured"] == 1
+            assert grown.time == due
             audit = audit_physical_supply(grown, seed=1, water=2, buyer_copper=2)
             assert audit["food_equivalent"] == 3
             assert db.verify(WORLD).to_dict() == grown.to_dict()
