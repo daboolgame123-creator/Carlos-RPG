@@ -110,3 +110,30 @@ def test_courier_fatigue_blocks_new_cargo_and_keeps_existing_parcel(tmp_path):
         assert choose_courier_leg(state, "huda") is None
         assert state.resources["well"]["water"] == 2
         assert state.resources["huda"]["water"] == 0
+
+
+def test_seven_named_people_act_with_real_metabolism_and_economy(tmp_path):
+    from play_physical_supply import WORLD, seed_physical_supply, audit_physical_supply
+    with SQLiteEventStore(tmp_path / "seven-live.sqlite") as db:
+        seed_physical_supply(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        start = db.load(WORLD)
+        assert len(start.npcs) == 7
+        engine = LivingWorldEngine(
+            db, clock, max_events_per_advance=5000,
+            navigation_enabled=True, routines_enabled=True,
+            survival_enabled=True, consumption_enabled=True,
+            supply_enabled=True, economic_enabled=True,
+            agriculture_enabled=True, economy_only_enabled=False,
+        )
+        outcome = engine.advance(
+            WORLD, seconds=600, command_id="real-life-600-seconds",
+            expected_revision=start.revision,
+        )
+        state = outcome.state
+        assert state.time == 600
+        assert state.npcs["basim"]["needs"]["hunger"] > 0
+        assert any(a["status"] == "completed" for a in state.actions.values())
+        assert audit_physical_supply(state, seed=1, water=2, buyer_copper=2)
+        assert db.verify(WORLD).to_dict() == state.to_dict()
