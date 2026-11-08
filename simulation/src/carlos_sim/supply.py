@@ -107,11 +107,20 @@ def _physically_present(state: dict, who: str) -> bool:
 
 def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -> None:
     p = event.data
-    if (not supply_authorized or set(p) != {"courier_id", "resource"}
-            or type(p["courier_id"]) is not str or event.actor_id != p["courier_id"]):
+    if (not supply_authorized or not isinstance(p, dict)
+            or type(p.get("courier_id")) is not str
+            or event.actor_id != p.get("courier_id")):
         raise ValueError("cargo changes need an authorized physical courier")
     who = p["courier_id"]
     record = state["supply_circuits"].get(who)
+    cart_mode = record is not None and "cargo_capacity" in record
+    expected = {"courier_id", "resource"} | ({"quantity"} if cart_mode else set())
+    if set(p) != expected:
+        raise ValueError("cart payload quantity required; legacy payload must be unmodified")
+    quantity = p["quantity"] if cart_mode else 1
+    if (type(quantity) is not int or
+            not 1 <= quantity <= (record["cargo_capacity"] if cart_mode else 1)):
+        raise ValueError("parcel quantity exceeds licensed physical cart capacity")
     if (record is None or not _physically_present(state, who)
             or any(a["npc_id"] == who and a["status"] == "running"
                    for a in state["actions"].values())
@@ -133,29 +142,31 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         from_balance = state["resources"][src][resource]
         to_balance = state["resources"][who][resource]
         if (not _quantity(from_balance) or not _quantity(to_balance)
-                or from_balance < 1 or to_balance >= MAX_STOCK
+                or from_balance < quantity or to_balance > MAX_STOCK - quantity
                 or (resource != "food" and to_balance != 0)):
             raise ValueError("courier cannot mint or double-load local cargo")
-        state["resources"][src][resource] -= 1
-        state["resources"][who][resource] += 1
-        record["carry"] = {"source": src, "destination": dest, "resource": resource}
+        state["resources"][src][resource] -= quantity
+        state["resources"][who][resource] += quantity
+        record["carry"] = {"source": src, "destination": dest, "resource": resource,
+                           **({"quantity": quantity} if cart_mode else {})}
         record["loads"] += 1
     elif event.event_type == "SupplyCargoDelivered":
         cargo = record["carry"]
         if (cargo is None or current != cargo["destination"]
                 or p["resource"] != cargo["resource"]
+                or quantity != cargo.get("quantity", 1)
                 or record["index"] not in (1, 2, 3)
                 or record["stops"][record["index"] - 1] != cargo["source"]):
             raise ValueError("delivery requires recorded real one-leg arrival")
         resource = cargo["resource"]
         amount = state["resources"][who][resource]
         dest = state["resources"][current][resource]
-        if (not _quantity(amount) or amount < 1
-                or (resource != "food" and amount != 1)
-                or not _quantity(dest) or dest >= MAX_STOCK):
-            raise ValueError("delivery requires one reserved carried unit")
-        state["resources"][who][resource] -= 1
-        state["resources"][current][resource] += 1
+        if (not _quantity(amount) or amount < quantity
+                or (resource != "food" and amount != quantity)
+                or not _quantity(dest) or dest > MAX_STOCK - quantity):
+            raise ValueError("delivery requires precisely the reserved stock")
+        state["resources"][who][resource] -= quantity
+        state["resources"][current][resource] += quantity
         record["carry"] = None
         record["deliveries"] += 1
     else:
