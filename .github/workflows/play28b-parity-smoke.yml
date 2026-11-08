@@ -1,0 +1,69 @@
+name: PLAY-28B frozen feature-off behavior parity smoke
+on:
+  push:
+    branches:
+      - "design/play28b-parity-fix-20261108"
+      - "design/play28b-release-candidate-20261108"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frozen-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: c35245d1904e7a6d779cafa92cbf556618247f38
+          path: reviewed-01s
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: 60593ce54ba3ea601aa3e17d01f852f97e074ef7
+          path: reviewed-01t
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: 5c8930b12973e7b764376147d8b43cd105a2beef
+          path: reviewed-01u
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: c892cb0b3948b2affff03c82c65a3bc243049e39
+          path: reviewed-02e
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compare real old runtimes with absent opt-in water
+        run: |
+          PYTHONPATH=src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/new-event.json
+          PYTHONPATH=../reviewed-01s/simulation/src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/old-event.json
+          PYTHONPATH=../reviewed-02e/simulation/src python scenarios/test_village/bench_event_parity.py --counts 7 > /tmp/old-02e-event.json
+          PYTHONPATH=src python scenarios/test_village/bench_food_knowledge_parity.py > /tmp/new-food.json
+          PYTHONPATH=../reviewed-01t/simulation/src python scenarios/test_village/bench_food_knowledge_parity.py > /tmp/old-food.json
+          PYTHONPATH=src python scenarios/test_village/bench_scarcity_disabled_parity.py > /tmp/new-scarcity.json
+          PYTHONPATH=../reviewed-01u/simulation/src python scenarios/test_village/bench_scarcity_disabled_parity.py > /tmp/old-scarcity.json
+          python - <<'PY'
+          import json
+          read=lambda name:json.load(open('/tmp/'+name+'.json'))
+          for old,new in (("old-event","new-event"),("old-02e-event","new-event")):
+              a,b=read(old)["results"][0],read(new)["results"][0]
+              for key in ("npcs","time","revision","events_count","events_digest",
+                          "legacy_semantic_digest","replay_equal"):
+                  assert a[key]==b[key],(old,key,a[key],b[key])
+          for old,new in (("old-food","new-food"),("old-scarcity","new-scarcity")):
+              a,b=read(old),read(new)
+              for key in ("npcs","time","revision","events_count","events_digest",
+                          "state_semantic_digest","replay_equal"):
+                  assert a[key]==b[key],(old,key,a[key],b[key])
+          print('PLAY28B_FROZEN_PARITY_PASS: 4 predecessor comparisons')
+          PY
