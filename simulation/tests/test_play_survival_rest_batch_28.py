@@ -140,6 +140,9 @@ def test_seven_named_people_act_with_real_metabolism_and_economy(tmp_path):
         assert state.npcs["basim"]["needs"]["hunger"] > 0
         assert state.entities["basim"]["location_id"] == "bakery"
         assert not [t for t in state.travels.values() if t["npc_id"] == "basim"]
+        assert state.farm_plots["farm"]["status"] == "growing"
+        assert any(job["recipe_id"] == "seed-planting"
+                   for job in state.production_jobs.values())
         assert any(a["status"] == "completed" for a in state.actions.values())
         assert audit_physical_supply(state, seed=1, water=2, buyer_copper=2)
         assert db.verify(WORLD).to_dict() == state.to_dict()

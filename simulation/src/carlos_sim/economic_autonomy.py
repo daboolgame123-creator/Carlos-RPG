@@ -73,7 +73,12 @@ def _known(value: object) -> bool:
 
 def choose_local_production(state: WorldState, npc_id: str, *,
                             agriculture_enabled: bool = False) -> ProductionIntent | None:
-    """Baker voluntarily starts a physically possible batch during a real shift."""
+    """Worker starts one real batch as soon as local inputs and shift allow.
+
+    The unrelated general NPC deliberation cooldown does not suppress a
+    short-shift worker's physically available production opportunity. Same-tick
+    duplicate choices remain blocked by last_decision and job/resource guards.
+    """
     if not _free(state, npc_id):
         return None
     npc = state.npcs[npc_id]
@@ -81,8 +86,7 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     if (needs["hunger"] > MAX_WORK_HUNGER
             or needs["fatigue"] > MAX_WORK_FATIGUE
             or needs["safety"] >= 75
-            or _injury_rest_decision(state.injuries, npc_id) is not None
-            or state.time < npc["next_decision_at"]):
+            or _injury_rest_decision(state.injuries, npc_id) is not None):
         return None
     last = npc["last_decision"]
     if last is not None and last["at"] == state.time:
