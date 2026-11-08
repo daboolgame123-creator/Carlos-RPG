@@ -1,6 +1,6 @@
 # PLAY-27 — finite well water and real road-borne cargo logistics
 
-**Plan status:** OPEN / IMPLEMENTATION_PENDING (2026-11-08).
+**Plan status:** CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER (2026-11-08).
 **From:** PLAY-26 docs commit `0283df637360a566a572a54dd051cd416fecd981`; branch `simulation-engine-phase-play-27-physical-supply`; never edit `main` or canonical Carlos story.
 **Prior:** PLAY-26 proved two seeded cycles at a *single shared test site*, not goods movement or full-survival endurance.
 
@@ -23,3 +23,11 @@ A second limited **full metabolism** branch (`survival_enabled=True`, seven NPC,
 - Before code: committed analysis. Then write strict reducer + deterministic planner + physical scenarios/tests with appropriate trust/capability guards.
 - Python 3.10 and 3.13 targeted CI plus genuine complete regression, including older branch parity. Both must pass on the **same tested code SHA**, all historical parity steps included.
 - Document-only close in `ROADMAP.md`, `WORK_QUEUE.md`, plan and final report **after** two green workflows; otherwise leave stage open with precise blocker. No premature P0/production authorization; external review remains deferred.
+
+## Completion evidence and limitations
+
+- The **tested code/test SHA** is `9cbe31aec2725c39e6accf53ac5956c5e0b5cdfc`; [targeted 42426820039](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42426820039) = **SUCCESS**, 144 tests on each of Python 3.10 and 3.13, six real seven-NPC trials. [full 42426820040](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42426820040) = **SUCCESS**, 1,582 tests on each of Python 3.10 and 3.13 plus frozen predecessor parity and integrity. The documentation closure commit is different and later than the code SHA.
+- Physical carriers and all three cargo lanes were verified independently. Endurance at 260,700s is a focused economic test with routine NPC actions disabled; a separate experiment turns on metabolism and shows the unsustainable hunger/fatigue limit.
+- Explicitly fixed the route-discovery deadlock: Huda now surveys her *current* adjacent roads before deciding her next trip. Added guard against eating consigned bread and against a hungry/exhausted courier picking up a new package.
+- The water source is a **finite preloaded well**; there is no rainfall, replenishment or broad hydro-system. Cargo is driven by **one fixed six-leg demonstration circuit**, not a general NPC trade network. Full multi-day daily life, rest, starvation death, dynamic prices and wages remain open. See [PLAY-27 closure report](PLAY_27_PHYSICAL_SUPPLY_REPORT.md).
+- **Schema 36 / Rules 48**: legacy database versions are rejected safely without a migration, and the current world/backup assertions are updated. Feature-off historical semantic parity checks discard only an explicitly verified **empty** `supply_circuits` collection; meaningful logistics cannot be hidden. `main`, story canon and P0 authorization are untouched.
