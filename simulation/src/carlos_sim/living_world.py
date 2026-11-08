@@ -19,7 +19,8 @@ from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
 from .knowledge import make_observation_events, choose_food_sharing_round, known_food_sites
 from .food_navigation import choose_food_route
-from .market_navigation import choose_known_market_walk, wants_local_market
+from .market_navigation import (choose_known_market_walk, choose_known_market_return,
+                                wants_local_market)
 from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
@@ -487,14 +488,17 @@ class LivingWorldEngine:
                 # each physical leg has a deterministic clock cost. This
                 # pass neither reads a distant quote nor reserves food.
                 for shopper_id in sorted(current.npcs):
-                    if not wants_local_market(current, shopper_id):
-                        continue
-                    if needs_survey(current, shopper_id):
-                        append(DomainEvent('NPCNavigationSurveyed', shopper_id,
-                            'shopper sees roads adjoining their physical location',
-                            current.time, {'npc_id': shopper_id}),
-                            movement_capability=True)
-                    walk = choose_known_market_walk(current, shopper_id)
+                    if wants_local_market(current, shopper_id):
+                        if needs_survey(current, shopper_id):
+                            append(DomainEvent('NPCNavigationSurveyed', shopper_id,
+                                'shopper sees roads adjoining their physical location',
+                                current.time, {'npc_id': shopper_id}),
+                                movement_capability=True)
+                        walk = choose_known_market_walk(current, shopper_id)
+                    else:
+                        # A real paid meal may motivate return to the existing
+                        # scheduled workplace; only personally known roads.
+                        walk = choose_known_market_return(current, shopper_id)
                     if walk is None:
                         continue
                     route = current.routes[walk.route_id]
