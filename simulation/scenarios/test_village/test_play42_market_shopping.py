@@ -52,6 +52,9 @@ def _advance(db, engine, target):
         }
         if t["status"] == "arrived":
             assert t["arrived_at"] == t["due"]
+        else:
+            assert state.entities[t["npc_id"]]["location_id"] == t["origin"]
+            assert state.time <= t["due"]
     return state
 
 
@@ -109,7 +112,10 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
             assert all(t["start"] >= receipts[0]["paid_at"]
                        for t in farmer_legs), "journey started before funded pay"
             assert len({(t["start"], t["route_id"]) for t in farmer_legs}) == len(farmer_legs)
-            assert state.entities[FARMER]["location_id"] == "market"
+            # The buyer who could pay actually returns through remembered
+            # roads; the underfunded buyer stays at the real stall.
+            assert state.entities[FARMER]["location_id"] == (
+                EAST if expected_purchase else "market")
             sales = [t for t in state.market_trades.values()
                      if t["buyer_id"] == FARMER]
             meals = [m for m in state.consumptions.values()
@@ -123,6 +129,9 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
                 assert meals[0]["hunger_after"] < meals[0]["hunger_before"]
                 assert state.resources[FARMER]["coin_copper"] == 0
                 assert state.resources[FARMER]["food"] == 0
+                assert any(t["origin"] == "market" and t["status"] == "arrived"
+                           for t in farmer_legs), "fed shopper did not return"
+                assert farmer_legs[-1]["destination"] == EAST
             else:
                 assert not sales, "one copper must not buy a two-copper loaf"
                 assert not meals, "unaffordable food must not be eaten"
