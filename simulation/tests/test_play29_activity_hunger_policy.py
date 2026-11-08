@@ -45,7 +45,7 @@ def test_real_work_charge_preserves_time_tool_and_fatigue(tmp_path, rate, cost, 
         assert result.npcs["nora"]["needs"]["fatigue"] == 20
         assert result.resources["nora"]["labor_units"] == 1
         assert result.actions["auto:nora:0"]["status"] == "completed"
-        assert result.actions["auto:nora:0"]["result"]["needs"]["hunger"] == [20, expected]
+        assert result.actions["auto:nora:0"]["result"]["needs"]["hunger"] == (20, expected)
         assert result.resources["nora"].get("food", 0) == 0
         assert result.consumptions == {}
 
@@ -122,4 +122,4 @@ def test_legacy_defaults_untouched_when_rate_and_cost_unconfigured(tmp_path):
         after = advance_real_action(db, clock)
         assert after.metabolism_policy == {}
         assert after.npcs["nora"]["needs"]["hunger"] == 30
-        assert after.actions["auto:nora:0"]["result"]["needs"]["hunger"] == [20, 30]
+        assert after.actions["auto:nora:0"]["result"]["needs"]["hunger"] == (20, 30)
