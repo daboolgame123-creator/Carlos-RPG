@@ -16,7 +16,7 @@ The village's bakery, traders, hungry customers and finite wallets remain autono
 
 - CI: `.github/workflows/play33-npc-market.yml` checks Python 3.10/3.13, new policy/integration tests, existing PLAY-24 NPC economy, 02-C trade authorization and PLAY-30C stocked local market.
 - Validate exact final commit SHA; then run/check historical full regression for the same SHA before changing PR status or merging.
-- Scenarios: no inventory, one-loaf shortage, financed/underfinanced buyers, competitor, stale offer, buyer near vs far, price tier, best local quote, invalid option types, double-trade protection, deterministic independent worlds, SQLite snapshot/replay and conserved physical food/copper.
+- Seven-NPC physically stocked counterfactuals: 0 loaves (no sale), 1 loaf (3-copper price exceeds 2-copper buyer wallets), 3 loaves (2-copper local quotes), with autonomous movement/consumption and 12 conserved copper. Exact results still require green CI.\n- Scenarios: no inventory, one-loaf shortage, financed/underfinanced buyers, competitor, stale offer, buyer near vs far, price tier, best local quote, invalid option types, double-trade protection, deterministic independent worlds, SQLite snapshot/replay and conserved physical food/copper.
 - Pure-policy synthetic snapshots are **tests only**; they are not substitutes for the durable village event trials.
 - **Do not claim** long-term food sustainability, equilibrium prices, wages, remote commerce, or absence of every economic failure. Those need further seven-day trials.
 
