@@ -35,4 +35,5 @@ jobs:
             tests/test_play_market_adaptive_batch_33.py \
             tests/test_play_economic_autonomy_batch_24.py \
             tests/test_market_02c.py \
-            scenarios/test_village/test_play30c_stocked_market.py
+            scenarios/test_village/test_play30c_stocked_market.py \
+            scenarios/test_village/test_play33_seven_npc_market.py
