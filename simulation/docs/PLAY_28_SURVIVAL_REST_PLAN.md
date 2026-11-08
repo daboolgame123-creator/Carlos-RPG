@@ -1,6 +1,6 @@
 # PLAY-28 — Real daily survival, food, rest, and work scheduling
 
-**Status:** ANALYSIS_COMMITTED / IMPLEMENTATION_PENDING (2026-11-08).
+**Status:** PLAY-28A CLOSED_TECHNICALLY (2026-11-08); PLAY-28B isolated integration in progress (not merged).
 **Base:** PLAY-27 documentation closure `1c2d86019e80159cc86c350576749345bbf0e29a`.
 **Branch:** `simulation-engine-phase-play-28-survival-rest`.
 **Safety:** no edits to `main`, canonical Carlos story, production P0 approval or historic feature-off semantics. External review deferred by owner.
@@ -42,3 +42,45 @@ Implement only after A is green: a finite hydrological source with *explicit* ra
 ## Explicit non-goals for this phase
 
 No supernatural abilities, infinite water, unrestricted dynamic trade network, generalized weather, full wages/pricing, large-world performance claim, or proof of production readiness.
+
+
+## PLAY-28A — verified technical closure (2026-11-08)
+
+**Exact tested code SHA:** `b17f390cca49b8467f7b43edcb88ca56788d64c5`.
+**Schema / Rules:** 36 / 48.
+**Branch:** `simulation-engine-phase-play-28-survival-rest`; no merge to `main`.
+
+All three GitHub Actions gates completed SUCCESS on the SAME code commit,
+with Python 3.10 and Python 3.13:
+- Focused real resting/meal/courier/production safety:
+  https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42466507878
+- True three-day active NPC metabolism + physical production/logistics:
+  https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42466507869
+- Full predecessor-aware simulation regression suite:
+  https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42466507857
+
+Three-day trial observed **two independently initialized seven-NPC worlds**,
+each at 259,200 seconds with all metabolism and everyday behaviors enabled:
+- **No food allotment:** daily NPC action counts [171,174,174],
+  0 meals, 1 matured crop, 1 courier delivery; hunger reached 100.
+- **Finite 18-food personal allotment per NPC:** daily action counts
+  [150,164,174], 126 meals, 2 matured crops, 2 courier deliveries;
+  some NPCs still reached hunger 100.
+- Every quarter-day material audit, verified complete event replay, and
+  a persisted snapshot comparison succeeded; no free food was credited.
+
+**Interpretation:** Simulation continuity, resource conservation and
+meaningful poverty consequences have been established. These results do
+NOT establish food self-sufficiency, long-term economic sustainability,
+safe production deployment, or closed external security review.
+
+**Infrastructure issue resolved:** intermittent GitHub Actions HTTP 504
+while installing Python 3.10; pinned CI runner to Ubuntu 24.04.
+The final successful gate is stronger evidence than earlier interrupted runs.
+
+**Next independent slice:** PLAY-28B finite hydrology uses Schema 37 /
+Rules 49 on `design/play28b-integrated-hydrology-20261108`. It requires
+separate acceptance and is not part of the validated PLAY-28A SHA.
+
+**Review gates still open:** independent external review and legacy
+release/production gates; never represent PLAY-28A as a public game release.
