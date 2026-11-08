@@ -32,7 +32,11 @@ def test_carlos_walks_into_market_sees_quote_buys_and_preserves_stock(tmp_path):
             scene = execute(gateway, "scene", 6).details
             assert "salma" in {person["id"] for person in scene["occupants"]}
 
-            offers = execute(gateway, "offers", 7).details["offers"]
+            # The vendor is genuinely resting until t=120; posted stock is
+            # not tradable while its keeper is occupied. Carlos must wait.
+            assert execute(gateway, "offers", 7).details["offers"] == ()
+            assert execute(gateway, "wait 30", 70).time == 120
+            offers = execute(gateway, "offers", 71).details["offers"]
             if not any(q["resource"] == "food" for q in offers):
                 snap = db.load(WORLD)
                 pytest.fail("market offer missing; source test audit=" + repr({
