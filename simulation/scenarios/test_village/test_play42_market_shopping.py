@@ -114,7 +114,7 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
             assert len({(t["start"], t["route_id"]) for t in farmer_legs}) == len(farmer_legs)
             # A paid meal AND a failed unaffordable local shop must both
             # permit physical return; nobody is trapped at a known market.
-            assert state.entities[FARMER]["location_id"] == EAST
+            assert state.entities[FARMER]["location_id"] == EAST, rows
             assert any(t["origin"] == "market" and t["status"] == "arrived"
                        for t in farmer_legs), "shopper never physically returned"
             assert farmer_legs[-1]["destination"] == EAST

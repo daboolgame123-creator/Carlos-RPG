@@ -488,17 +488,18 @@ class LivingWorldEngine:
                 # each physical leg has a deterministic clock cost. This
                 # pass neither reads a distant quote nor reserves food.
                 for shopper_id in sorted(current.npcs):
-                    if wants_local_market(current, shopper_id):
+                    # An initiated homeward journey has priority over a
+                    # second hungry exploration impulse at each intermediate
+                    # road tile. This remains a pure projection of completed
+                    # physical travel history; no teleport or new schema.
+                    walk = choose_known_market_return(current, shopper_id)
+                    if walk is None and wants_local_market(current, shopper_id):
                         if needs_survey(current, shopper_id):
                             append(DomainEvent('NPCNavigationSurveyed', shopper_id,
                                 'shopper sees roads adjoining their physical location',
                                 current.time, {'npc_id': shopper_id}),
                                 movement_capability=True)
                         walk = choose_known_market_walk(current, shopper_id)
-                    else:
-                        # A real paid meal may motivate return to the existing
-                        # scheduled workplace; only personally known roads.
-                        walk = choose_known_market_return(current, shopper_id)
                     if walk is None:
                         continue
                     route = current.routes[walk.route_id]

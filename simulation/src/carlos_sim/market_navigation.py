@@ -110,17 +110,24 @@ def choose_known_market_return(state: WorldState, npc_id: str) -> ShoppingWalkIn
     if nav is None or nav["target"] is not None:
         return None
     here = entity["location_id"]
-    if here not in state.market_stalls:
-        return None
-    # The NPC must have *arrived*, not merely be at an opening market.
+    # A personally completed trip is sufficient evidence of a visited stall.
+    # Do not require the villager to still be on that market tile when their
+    # next physical homeward road leg is due.
     arrivals = sorted(
-        (t["arrived_at"] for t in state.travels.values()
-         if t["npc_id"] == npc_id and t["destination"] == here
-         and t["status"] == "arrived"),
+        (t["arrived_at"], t["destination"] for t in state.travels.values()
+         if t["npc_id"] == npc_id and t["status"] == "arrived"
+         and t["destination"] in state.market_stalls),
     )
     if not arrivals:
         return None
-    arrival = arrivals[-1]
+    arrival, market_site = arrivals[-1]
+    departed = any(
+        t["npc_id"] == npc_id and t["origin"] == market_site
+        and t["start"] >= arrival and t["status"] == "arrived"
+        for t in state.travels.values()
+    )
+    if here != market_site and not departed:
+        return None
     if not any(
             job["npc_id"] == npc_id and "work_wage" in job
             and job["work_wage"]["paid_at"] <= arrival
@@ -131,16 +138,16 @@ def choose_known_market_return(state: WorldState, npc_id: str) -> ShoppingWalkIn
     # errand. Only transactions after this physical arrival count.
     own_meals = [
         meal for meal in state.consumptions.values()
-        if meal["npc_id"] == npc_id and meal["location_id"] == here
+        if meal["npc_id"] == npc_id and meal["location_id"] == market_site
         and meal["consumed_at"] >= arrival
     ]
     fed = any(
-        trade["buyer_id"] == npc_id and trade["site_id"] == here
+        trade["buyer_id"] == npc_id and trade["site_id"] == market_site
         and trade["resource"] == "food" and trade["executed_at"] >= arrival
         and trade["executed_at"] <= meal["consumed_at"]
         for trade in state.market_trades.values() for meal in own_meals
     )
-    if not fed:
+    if not fed and here == market_site:
         wallet = state.resources.get(npc_id, {})
         coins, food = wallet.get(MONEY), wallet.get("food")
         if type(food) is not int or food > 0 or type(coins) is not int:
