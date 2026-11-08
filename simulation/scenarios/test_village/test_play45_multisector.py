@@ -311,3 +311,42 @@ def test_real_seller_leaving_while_worker_walks_blocks_wood_purchase(tmp_path):
             assert _cash(final) == 6
         finally:
             clock.close_session(WORLD)
+
+
+def test_courier_reservations_are_not_spendable_or_depositable_material():
+    from types import SimpleNamespace
+    from carlos_sim.multi_professional_trade import _unreserved_personal
+
+    state = SimpleNamespace(
+        resources={"builder": {"coin_copper": 2, "plank": 1}},
+        supply_circuits={"builder": {"carry": {"resource": "plank"}}},
+    )
+    assert _unreserved_personal(state, "builder", "plank") == 0
+    assert _unreserved_personal(state, "builder", "coin_copper") == 2
+    state.supply_circuits["builder"]["carry"]["resource"] = "coin_copper"
+    assert _unreserved_personal(state, "builder", "coin_copper") == 1
+    assert _unreserved_personal(state, "builder", "plank") == 1
+    state.resources["builder"]["coin_copper"] = 0
+    assert _unreserved_personal(state, "builder", "coin_copper") is None
+
+
+def test_exhausted_supplier_exploration_remains_finite_on_personal_roads(tmp_path):
+    with SQLiteEventStore(tmp_path / "bounded-exploration.sqlite") as db:
+        _seed(db, wood=0)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            state = _run(db, _engine(db, clock), 700, "empty-lumber-yard")
+            # The carpenter visits the locally unknown wood stall, fails,
+            # investigates one other truly unvisited road, and returns.
+            # No remote market offers guide this decision.
+            legs = [t for t in state.travels.values()
+                    if t["npc_id"] == "carpenter"]
+            assert len(legs) == 4
+            assert all(t["status"] == "arrived" for t in legs)
+            assert not [t for t in state.market_trades.values()
+                        if t["resource"] == "wood"]
+            assert state.resources[CARP]["plank"] == 0
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+        finally:
+            clock.close_session(WORLD)
