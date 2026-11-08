@@ -14,6 +14,7 @@ from .domain import WorldState
 from .economic_autonomy import BUY_HUNGER_THRESHOLD, _free
 from .market import MONEY, MAX_AMOUNT
 from .navigation import shortest_known_route
+from .routines import choose_routine_route
 
 MAX_SHOPPING_FATIGUE = 84
 MAX_SHOPPING_DANGER = 74
@@ -87,4 +88,35 @@ def choose_known_market_walk(state: WorldState, npc_id: str) -> ShoppingWalkInte
         npc_id, path[0], destination,
         "hungry funded shopper exploring personally known roads; "
         f"unvisited_destination={destination}",
+    )
+
+
+def choose_known_market_return(state: WorldState, npc_id: str) -> ShoppingWalkIntent | None:
+    """Return from a completed *actual* market meal via normal known work roads.
+
+    Historical paid-food receipts and an actual subsequent meal at that same
+    stall authorize this intent; merely reaching a stall or possessing money
+    does not. The existing routine selector checks shift and personal health.
+    Unreachable home/work routes are not invented.
+    """
+    if (npc_id not in state.npcs or not _free(state, npc_id)
+            or npc_id in state.supply_circuits
+            or npc_id not in state.npc_routines):
+        return None
+    personal_trades = [
+        t for t in state.market_trades.values()
+        if t["buyer_id"] == npc_id and t["resource"] == "food"
+    ]
+    if not personal_trades or not any(
+            m["npc_id"] == npc_id and m["location_id"] == t["site_id"]
+            and m["consumed_at"] >= t["executed_at"]
+            for t in personal_trades for m in state.consumptions.values()):
+        return None
+    back = choose_routine_route(state, npc_id)
+    if back is None:
+        return None
+    return ShoppingWalkIntent(
+        npc_id, back.route_id, back.destination,
+        "returning after locally paid and eaten market food; "
+        f"known_routine_destination={back.destination}",
     )
