@@ -8,6 +8,7 @@ separate atomic events; only the existing real scheduled travel moves Huda.
 from __future__ import annotations
 
 from typing import Any
+from collections.abc import Mapping
 from .domain import DomainEvent, WorldState
 from .navigation import needs_survey
 from .npc import _injury_rest_decision
@@ -107,7 +108,7 @@ def _physically_present(state: dict, who: str) -> bool:
 
 def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -> None:
     p = event.data
-    if (not supply_authorized or not isinstance(p, dict)
+    if (not supply_authorized or not isinstance(p, Mapping)
             or type(p.get("courier_id")) is not str
             or event.actor_id != p.get("courier_id")):
         raise ValueError("cargo changes need an authorized physical courier")
