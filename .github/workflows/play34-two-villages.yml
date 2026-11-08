@@ -1,0 +1,37 @@
+name: PLAY-34 two independent NPC village economies
+
+on:
+  push:
+    branches:
+      - feature/play34-two-village-economic-audit-20261108
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  two-villages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Compile simulation and scenarios
+        run: python -m compileall -q src scenarios/test_village tests
+      - name: Compare two physical seven-NPC villages over one logical day
+        run: |
+          PYTHONPATH=src:tests:scenarios/test_village python -m pytest -q -s \
+            scenarios/test_village/test_play34_parallel_village_economies.py \
+            scenarios/test_village/test_play33_seven_npc_market.py \
+            scenarios/test_village/test_play30c_stocked_market.py
