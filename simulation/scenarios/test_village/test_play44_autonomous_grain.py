@@ -245,3 +245,77 @@ def test_default_off_and_explicit_false_have_identical_events_and_state(tmp_path
                 clock.close_session(WORLD)
     assert snapshots[0] == snapshots[1]
     assert histories[0] == histories[1]
+
+
+def test_sold_out_farmer_cannot_create_third_sale_or_infinite_baker_market_loop(tmp_path):
+    with SQLiteEventStore(tmp_path / "honest-sold-out.sqlite") as db:
+        _setup(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = _engine(db, clock)
+            state = _advance(db, engine, 900)
+            bought = [t for t in state.market_trades.values()
+                      if t["resource"] == "grain"]
+            assert len(bought) == 2
+            assert state.resources[FARM]["grain"] == 0
+            assert _coins(state) == 12
+            legs = [t for t in state.travels.values()
+                    if t["npc_id"] == BAKER]
+            assert len(legs) == 6, "third funded errand must return, without oscillating"
+            assert all(t["status"] == "arrived" for t in legs)
+            assert state.entities[BAKER]["location_id"] == BAKERY
+            assert state.resources[BAKER]["grain"] == 0
+            assert len([j for j in state.production_jobs.values()
+                        if j["npc_id"] == BAKER]) == 2
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_farmer_departure_during_actual_road_travel_blocks_purchase_and_worker_returns(tmp_path):
+    from carlos_sim.movement import NPCMovementService
+    with SQLiteEventStore(tmp_path / "seller-absent.sqlite") as db:
+        _setup(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = _engine(db, clock)
+            first = _advance(db, engine, 1)
+            assert any(t["npc_id"] == BAKER and t["status"] == "traveling"
+                       for t in first.travels.values())
+            assert any(o["resource"] == "grain"
+                       for o in first.market_offers.values())
+            # A real seller is now unavailable while traveling along the
+            # same road; an old recorded quote is NOT a remote seller.
+            leaving = NPCMovementService(db, clock).start(
+                WORLD, FARMER, "farm-bakery", "farmer-is-away",
+                expected_revision=first.revision,
+            )
+            assert leaving.due == first.time + 60
+            state = _advance(db, engine, 240)
+            assert not state.market_trades
+            assert not state.production_jobs
+            assert state.resources[FARM]["grain"] == 2
+            assert state.resources[BAKER]["grain"] == 0
+            assert state.entities[BAKER]["location_id"] == BAKERY
+            legs = [t for t in state.travels.values()
+                    if t["npc_id"] == BAKER]
+            assert len(legs) == 2
+            assert all(t["status"] == "arrived" for t in legs)
+            assert _coins(state) == 12
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_pure_professional_quote_needs_real_staff_and_known_copper(tmp_path):
+    with SQLiteEventStore(tmp_path / "seller-capacity.sqlite") as db:
+        raw = _setup(db).to_dict()
+        assert choose_local_grain_offer(WorldState.from_dict(raw), FARMER)
+        # No real physical keeper at the stall means no sale quotation.
+        raw["entities"][FARMER]["location_id"] = BAKERY
+        assert choose_local_grain_offer(WorldState.from_dict(raw), FARMER) is None
+        raw["entities"][FARMER]["location_id"] = FARM
+        raw["resources"][FARM]["coin_copper"] = None
+        assert choose_local_grain_offer(WorldState.from_dict(raw), FARMER) is None
