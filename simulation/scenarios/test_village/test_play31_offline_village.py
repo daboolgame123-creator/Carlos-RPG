@@ -25,7 +25,7 @@ def test_playable_bootstrap_is_seven_real_npcs_finite_seed_water_and_carlos_prof
     try:
         state = db.verify(WORLD)
         assert len(state.npcs) == len(PEOPLE) == 7
-        assert state.schema_version == 40 and state.rules_version == 52
+        assert state.schema_version == 40 and state.rules_version == 53
         assert state.entities["carlos"]["location_id"] == "home"
         assert state.routes["home-market"]["seconds"] == 90
         assert "carlos" in state.rpg_profiles
