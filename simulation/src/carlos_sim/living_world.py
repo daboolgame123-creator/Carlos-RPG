@@ -551,7 +551,8 @@ class LivingWorldEngine:
                                       else None)
                     route_id = (food_intent.route_id if food_intent is not None
                                 else routine_intent.route_id if routine_intent is not None
-                                else next_route(current, npc_id))
+                                else (None if self.routines_enabled and npc_id in current.npc_routines
+                                      else next_route(current, npc_id)))
                     if route_id is not None:
                         route = current.routes[route_id]
                         here = current.entities[npc_id]['location_id']
