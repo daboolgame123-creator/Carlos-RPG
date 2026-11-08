@@ -1,0 +1,37 @@
+name: PLAY-42 physical known-road NPC shopping
+
+on:
+  push:
+    branches:
+      - "feature/play42-known-road-shopping-20261108"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  physical-shopping:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Validate syntax and deterministic real-wage shopping
+        run: |
+          python -m compileall -q src scenarios
+          PYTHONPATH=src python -m pytest -q -s \
+            scenarios/test_village/test_play41_funded_wage.py \
+            scenarios/test_village/test_play42_market_shopping.py
