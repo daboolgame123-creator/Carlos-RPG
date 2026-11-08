@@ -98,7 +98,7 @@ def project_food_consumed(state: dict[str, Any], event: DomainEvent, *, consumpt
     hunger = state['npcs'][npc_id]['needs']['hunger']
     reserved = _reserved_food(state['supply_circuits'], npc_id)
     if type(available) is not int or available - reserved < quantity:
-        raise ValueError('eating requires sufficient unreserved owned food')
+        raise ValueError('eating requires sufficient initialized, unreserved owned food')
     if hunger <= 0 or quantity > (hunger + HUNGER_RELIEF_PER_FOOD - 1) // HUNGER_RELIEF_PER_FOOD:
         raise ValueError('cannot consume more meals than current hunger warrants')
     new_hunger = max(0, hunger - HUNGER_RELIEF_PER_FOOD * quantity)
