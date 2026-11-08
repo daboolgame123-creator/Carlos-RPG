@@ -13,7 +13,7 @@ from play_physical_supply import WORLD, PEOPLE, audit_physical_supply, seed_phys
 
 @pytest.mark.parametrize("loaves,expected_price,expected_sales", [
     (0, None, 0),
-    (1, 3, 0),
+    (1, 3, 1),
     (3, 2, 3),
 ])
 def test_seven_independent_npcs_experience_local_stock_shortage_without_free_goods(
@@ -47,6 +47,9 @@ def test_seven_independent_npcs_experience_local_stock_shortage_without_free_goo
                              if v["site_id"] == "market" and v["resource"] == "food"]
             assert (market_quotes[0]["unit_price"] if market_quotes else None) == expected_price
             assert len(final.market_trades) == expected_sales
+            if loaves == 1:
+                # Layla holds enough finite coins for the scarcity price.
+                assert next(iter(final.market_trades.values()))["buyer_id"] == "layla"
             assert len(final.consumptions) == expected_sales
             assert final.resources["market"]["food"] == loaves - expected_sales
             assert final.resources["market"]["coin_copper"] == expected_sales * (expected_price or 0)
