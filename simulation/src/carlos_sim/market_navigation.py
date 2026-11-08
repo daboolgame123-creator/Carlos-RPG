@@ -114,7 +114,7 @@ def choose_known_market_return(state: WorldState, npc_id: str) -> ShoppingWalkIn
     # Do not require the villager to still be on that market tile when their
     # next physical homeward road leg is due.
     arrivals = sorted(
-        (t["arrived_at"], t["destination"] for t in state.travels.values()
+        ((t["arrived_at"], t["destination"]) for t in state.travels.values()
          if t["npc_id"] == npc_id and t["status"] == "arrived"
          and t["destination"] in state.market_stalls),
     )
