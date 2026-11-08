@@ -48,7 +48,7 @@ def test_isolated_backup_restore_preserves_once_only_finished_product(tmp_path):
         result = advance(db, clock, 90, "finish")
         bundle = tmp_path / "backup"
         manifest = create_backup_bundle(db, "test", bundle, code_commit=COMMIT)
-        assert manifest["schema"] == 38 and manifest["rules"] == 50
+        assert manifest["schema"] == 39 and manifest["rules"] == 51
         assert verify_backup_bundle(bundle) == manifest
         frozen = result.to_dict()
     restored = tmp_path / "restore.sqlite"
