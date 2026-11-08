@@ -23,10 +23,26 @@ def _event(kind, data):
     return DomainEvent(kind, None, "trusted second-field bootstrap only", 0, data)
 
 
-def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None):
+def seed_two_field_world(
+    db, *, unsafe_stops=None, unsafe_route=None,
+    east_growth_seconds=3600, east_grain_yield=3,
+    initial_water=2, initial_market_food=0,
+    market_wallets=False, hungry_market_buyers=False,
+):
+    # Explicit bounded time-zero economy variations, not runtime gifts.
+    if (type(east_growth_seconds) is not int
+            or east_growth_seconds not in (3600, 86400)
+            or type(east_grain_yield) is not int
+            or east_grain_yield not in (3, 7)
+            or type(market_wallets) is not bool
+            or type(hungry_market_buyers) is not bool):
+        raise ValueError("invalid fixed two-farm counterfactual")
     seed_physical_supply(
-        db, water=2, seed=1, initial_market_food=0,
+        db, water=initial_water, seed=1,
+        initial_market_food=initial_market_food,
         harvest_yield=3, personal_food=0,
+        market_wallets=market_wallets,
+        hungry_market_buyers=hungry_market_buyers,
     )
     extra = [
         _event("LocationCreated", {"id": EAST, "name": "East field"}),
@@ -85,11 +101,11 @@ def seed_two_field_world(db, *, unsafe_stops=None, unsafe_route=None):
         _event("ProductionRecipeConfigured", {
             "id": "east-finite-harvest", "site_id": EAST, "role": "farmer",
             "input_resource": "crop_ready", "input_amount": 1,
-            "output_resource": "grain", "output_amount": 3,
+            "output_resource": "grain", "output_amount": east_grain_yield,
             "tool_resource": "sickle", "duration_seconds": 60,
         }),
         _event("FarmPlotConfigured", {
-            "site_id": EAST, "growth_seconds": 3600, "capacity": 1,
+            "site_id": EAST, "growth_seconds": east_growth_seconds, "capacity": 1,
         }),
         _event("SupplyCircuitConfigured", {
             "courier_id": COURIER,
