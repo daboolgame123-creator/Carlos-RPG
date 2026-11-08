@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - "feature/play31-seven-npc-offline-vertical-slice-20261108"
+      - "feature/play31-acceptance-player-journey-20261108"
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,4 +29,4 @@ jobs:
           PYTHONPATH: "src:scenarios/test_village"
         run: |
           python -m compileall -q src scenarios/test_village/play_village_local.py scenarios/test_village/test_play31_offline_village.py
-          python -m pytest -q -s scenarios/test_village/test_play31_offline_village.py
+          python -m pytest -q -s scenarios/test_village/test_play31_offline_village.py scenarios/test_village/test_play31_acceptance_journey.py
