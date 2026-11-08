@@ -19,6 +19,7 @@ from .consumption import choose_food_consumption, _meal_id
 from .gathering import choose_gathering_intent
 from .knowledge import make_observation_events, choose_food_sharing_round, known_food_sites
 from .food_navigation import choose_food_route
+from .market_navigation import choose_known_market_walk, wants_local_market
 from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
@@ -73,6 +74,7 @@ class LivingWorldEngine:
                  adaptive_market_enabled: bool = False,
                  agriculture_enabled: bool = False,
                  economy_only_enabled: bool = False,
+                 shopping_routes_enabled: bool = False,
                  supply_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
@@ -149,6 +151,11 @@ class LivingWorldEngine:
             raise ValueError("economy_only_enabled requires agriculture_enabled")
         self.agriculture_enabled = agriculture_enabled
         self.economy_only_enabled = economy_only_enabled
+        if type(shopping_routes_enabled) is not bool or (shopping_routes_enabled and not (
+                economy_only_enabled and navigation_enabled
+                and consumption_enabled and survival_enabled)):
+            raise ValueError('shopping_routes_enabled requires focused economy, navigation, consumption and survival')
+        self.shopping_routes_enabled = shopping_routes_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
@@ -474,6 +481,42 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
+            if self.shopping_routes_enabled:
+                # PLAY-42: only hungry solvent NPCs look for a LOCAL market.
+                # An unvisited road can be surveyed only from their real site;
+                # each physical leg has a deterministic clock cost. This
+                # pass neither reads a distant quote nor reserves food.
+                for shopper_id in sorted(current.npcs):
+                    if not wants_local_market(current, shopper_id):
+                        continue
+                    if needs_survey(current, shopper_id):
+                        append(DomainEvent('NPCNavigationSurveyed', shopper_id,
+                            'shopper sees roads adjoining their physical location',
+                            current.time, {'npc_id': shopper_id}),
+                            movement_capability=True)
+                    walk = choose_known_market_walk(current, shopper_id)
+                    if walk is None:
+                        continue
+                    route = current.routes[walk.route_id]
+                    here = current.entities[shopper_id]['location_id']
+                    there = route['b'] if route['a'] == here else route['a']
+                    tid = f'auto-nav:{shopper_id}:{current.time}'
+                    if tid in current.travels:
+                        raise InvalidEvent('duplicate market shopping travel ID')
+                    due_at = current.time + route['seconds']
+                    sid = 'npc-travel:' + tid
+                    append(DomainEvent('ScheduledEventCreated', None,
+                        'physical market search arrival appointment', current.time,
+                        {'id': sid, 'due': due_at,
+                         'order': current.next_schedule_order, 'kind': 'signal',
+                         'payload': {'__npc_travel_id': tid}, 'interrupt': False}),
+                         movement_capability=True)
+                    append(DomainEvent('NPCTravelStarted', shopper_id,
+                        walk.reason, current.time,
+                        {'id': tid, 'npc_id': shopper_id, 'route_id': walk.route_id,
+                         'origin': here, 'destination': there, 'due': due_at,
+                         'schedule_id': sid}), movement_capability=True)
+                    busy.add(shopper_id)
             if self.knowledge_enabled:
                 # Bounded, deterministic food-knowledge sharing pass. Never
                 # touches next_decision_at, never adds to busy, never emits a
