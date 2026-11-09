@@ -155,11 +155,13 @@ def start_production(state: dict[str, Any], event: DomainEvent, *,
                    for t in state["travels"].values())):
         raise ValueError("worker cannot work twice or produce while traveling")
     stocks = state["resources"].get(site, {})
-    input_before = stocks.get(recipe["input_resource"])
+    needs = recipe_inputs(recipe)
+    before_by = {item: stocks.get(item) for item, _ in needs}
     output_before = stocks.get(recipe["output_resource"])
     tool_qty = stocks.get(recipe["tool_resource"])
-    if (not all(_known(v) for v in (input_before, output_before, tool_qty))
-            or input_before < recipe["input_amount"]
+    if (not all(_known(v) for v in
+                (*before_by.values(), output_before, tool_qty))
+            or any(before_by[item] < amount for item, amount in needs)
             or tool_qty < 1
             or output_before + recipe["output_amount"] > MAX_QUANTITY):
         raise ValueError("insufficient or unknown local production inputs/tool/output")
@@ -176,12 +178,21 @@ def start_production(state: dict[str, Any], event: DomainEvent, *,
     due = state["time"] + recipe["duration_seconds"]
     if due > 2**63 - 1 or _sid(p["id"]) in state["scheduled"]:
         raise ValueError("invalid or duplicate production appointment")
-    stocks[recipe["input_resource"]] = input_before - recipe["input_amount"]
+    # Validate every requirement BEFORE touching any resource balance.
+    for item, amount in needs:
+        stocks[item] = before_by[item] - amount
+    receipt = (
+        {"input_before_by_resource": dict(before_by),
+         "input_after_by_resource": {
+             item: before_by[item] - amount for item, amount in needs
+         }} if "inputs" in recipe else
+        {"input_before": before_by[needs[0][0]],
+         "input_after": before_by[needs[0][0]] - needs[0][1]}
+    )
     state["production_jobs"][p["id"]] = {
         "npc_id": who, "recipe_id": recipe_id, "site_id": site,
         "started_at": state["time"], "due": due, "status": "running",
-        "finished_at": None, "input_before": input_before,
-        "input_after": input_before - recipe["input_amount"],
+        "finished_at": None, **receipt,
         "tool_seen": tool_qty, "output_before": None, "output_after": None,
     }
     state["scheduled"][_sid(p["id"])] = {
