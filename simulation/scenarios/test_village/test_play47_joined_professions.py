@@ -19,7 +19,10 @@ def _e(kind, data):
     return DomainEvent(kind, None, "trusted combined world only at t=0", 0, data)
 
 
-def _joined_bootstrap(db, *, smith_hunger=10, water=2, staff_provisions=False):
+def _joined_bootstrap(
+    db, *, smith_hunger=10, water=2, staff_provisions=False,
+    repair_shift_end=20_000,
+):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
     No second bootstrap may reinterpret a known wallet or silently mint money.
@@ -122,7 +125,8 @@ def _joined_bootstrap(db, *, smith_hunger=10, water=2, staff_provisions=False):
             events.append(_e("NPCRoutineConfigured", {
                 "npc_id": owner, "home_id": home,
                 "workplace_id": workplace,
-                "work_start": start, "work_end": 20_000,
+                "work_start": start,
+                "work_end": repair_shift_end if owner == "repairman" else 20_000,
             }))
         for site, keeper in (
             ("iron_mine", "miner"),
@@ -286,6 +290,29 @@ def test_urgent_hunger_preempts_professional_ore_shopping(tmp_path):
             assert not any(t["npc_id"] == "smith"
                            for t in final.travels.values())
             assert audit_npc_economy(final)["copper_known_total"] == 12
+            assert db.verify(WORLD).to_dict() == final.to_dict()
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_off_shift_repairer_finishes_homeward_commute(tmp_path):
+    with SQLiteEventStore(tmp_path / "repairer-commutes-home.sqlite") as db:
+        start = _joined_bootstrap(db, repair_shift_end=600)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            final = _engine(db, clock).advance(
+                WORLD, seconds=900, command_id="play47:repairer-home",
+                expected_revision=start.revision,
+            ).state
+            assert final.resources["repair_shop"]["repaired_gear"] == 1
+            assert final.entities["repairman"]["location_id"] == "charcoal_kiln"
+            assert sorted(
+                (trip["origin"], trip["destination"], trip["status"])
+                for trip in final.travels.values()
+                if trip["npc_id"] == "repairman" and trip["started_at"] >= 600
+            ) == [("repair_shop", "smithy", "arrived"),
+                  ("smithy", "charcoal_kiln", "arrived")]
             assert db.verify(WORLD).to_dict() == final.to_dict()
         finally:
             clock.close_session(WORLD)

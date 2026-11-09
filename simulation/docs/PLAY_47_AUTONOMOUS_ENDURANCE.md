@@ -93,6 +93,8 @@ Local Python 3.13 observations on the joined 11-NPC world with physical supply e
 
 The candidate tests check the full physical food and water balance every six hours, record the farm, courier, bakery and market positions of those resources, and reopen SQLite at daily boundaries. The short partition test compares the courier and farm states across different advance schedules. Acceptance requires exact-head CI after the parent PR gates.
 
+The slower-policy event ledger also exposed a scheduling conflict. By hour 54 the repairer had recorded 1,323 homeward legs from the repair shop to the smithy and 1,324 procurement returns in the opposite direction. The procurement travel pass intercepted his commute at the smithy. Full-life workers with an explicit schedule now start optional procurement travel only during their shifts. The regression gives the repairer a short shift, checks that he finishes his paid-material repair and walks both real roads home, and verifies SQLite replay. Focused economy modes retain their existing travel policy.
+
 ### Capacity under the current circuit contract
 
 Each courier can serve only one configured field. Eight fields and six couriers therefore deliver at most **18 loaves/day** against at least **23 meals/day** under the slower policy, even with sufficient water. With eight fields and eight couriers, **25 residents** have a modeled minimum of **24 meals/day** and an ideal field output of **24 loaves/day**. This leaves zero modeled margin for activity, late crops, absent workers or missed trips. Twenty-four full crop cycles would require 24 water units. The current fixture owns two at genesis, leaving 22 without a source.

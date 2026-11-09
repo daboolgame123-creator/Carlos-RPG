@@ -21,7 +21,9 @@ from .knowledge import make_observation_events, choose_food_sharing_round, known
 from .food_navigation import choose_food_route
 from .market_navigation import (choose_known_market_walk, choose_known_market_return,
                                 wants_local_market)
-from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
+from .routines import (
+    choose_routine_route, is_work_shift, next_routine_boundary, routine_allows_work,
+)
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
 from .supply import choose_cargo, choose_courier_leg, next_courier_departure
@@ -672,6 +674,12 @@ class LivingWorldEngine:
                     if (buyer_id in busy
                             or self._professional_life_emergency(current, buyer_id)
                             or not has_workshop_recipe(current, buyer_id)):
+                        continue
+                    routine = current.npc_routines.get(buyer_id)
+                    if (self.professional_full_life_enabled and routine is not None
+                            and not is_work_shift(routine, current.time)):
+                        # Optional procurement must yield to a full-life
+                        # worker's homeward commute once their shift ends.
                         continue
                     if needs_survey(current, buyer_id):
                         append(DomainEvent('NPCNavigationSurveyed', buyer_id,
