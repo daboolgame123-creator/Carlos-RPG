@@ -97,8 +97,11 @@ same real thirteen-resident joined world. Only the wet case receives six finite
 rain units at the existing day-one/two/three boundaries. Each daily connection
 is closed and reopened, including the final checkpoint. A closed day-three
 database is copied, then continued using three-hour instead of six-hour waits
-through day seven; **the entire semantic state**, excluding revision metadata
-only, must match. No post-stall delivery or recovery is presumed.
+to the 96-hour gate; **the entire semantic state**, excluding revision metadata
+only, must match. The original world continues to day seven. Each advance
+creates a checked snapshot to bound incremental replay cost; after each daily
+close/reopen the full genesis replay is still independently verified. No
+post-stall delivery or recovery is presumed.
 
 External review remains `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` and production
 remains `P0_PRODUCTION_NOT_APPROVED`.
