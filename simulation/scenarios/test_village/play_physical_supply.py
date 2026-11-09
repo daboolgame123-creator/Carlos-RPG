@@ -252,7 +252,7 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
     food = (farm["crop_ready"] * harvest_yield + farm["grain"] + bakery["grain"]
             + bakery["food"] + market["food"] + huda["grain"]
             + in_flight
-            + sum(rs[who]["food"] for who, *_ in PEOPLE)
+            + sum(rs[who]["food"] for who in state.npcs)
             # In PLAY-31 the human can purchase physical market food. Include
             # only *initialized* player-owned food: missing is not a resource.
             + (rs.get(PLAYER, {}).get("food") or 0)

@@ -19,7 +19,7 @@ def _e(kind, data):
     return DomainEvent(kind, None, "trusted combined world only at t=0", 0, data)
 
 
-def _joined_bootstrap(db, *, smith_hunger=10, water=2):
+def _joined_bootstrap(db, *, smith_hunger=10, water=2, staff_provisions=False):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
     No second bootstrap may reinterpret a known wallet or silently mint money.
@@ -157,7 +157,8 @@ def _joined_bootstrap(db, *, smith_hunger=10, water=2):
     seed_physical_supply(
         db, water=water, harvest_yield=3,
         market_wallets=True, hungry_market_buyers=True,
-        initial_market_food=3, trusted_genesis_hook=extend,
+        initial_market_food=3, staff_provisions=staff_provisions,
+        trusted_genesis_hook=extend,
     )
     state = db.load(WORLD)
     audit = audit_npc_economy(state)
@@ -229,6 +230,7 @@ def test_joined_full_life_npcs_really_trade_smelt_and_get_hungry(tmp_path):
             assert circuit["loads"] >= 1
             assert circuit["deliveries"] >= 1
             assert state.resources["well"]["water"] < 2
+            assert state.farm_plots["farm"]["status"] == "growing"
             courier_observed = audit_courier(
                 state, "huda", supply_enabled=True,
             )
@@ -323,6 +325,8 @@ def test_joined_world_partitioned_clock_preserves_economic_receipts(tmp_path):
                     receipts, jobs, audit["copper_known_total"],
                     audit["stock_known_by_resource"],
                     audit["npc_hunger"],
+                    current.supply_circuits["huda"],
+                    current.farm_plots["farm"],
                 ))
             finally:
                 clock.close_session(WORLD)
@@ -390,6 +394,7 @@ def test_joined_dry_world_courier_does_not_invent_water(tmp_path):
             assert state.resources["well"]["water"] == 0
             assert state.resources["farm"]["water"] == 0
             assert state.resources["huda"]["water"] == 0
+            assert state.farm_plots["farm"]["started"] == 0
             assert not any(
                 job["recipe_id"] == "finite-harvest"
                 for job in state.production_jobs.values()

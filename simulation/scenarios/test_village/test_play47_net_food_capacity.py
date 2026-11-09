@@ -53,8 +53,8 @@ def test_default_meal_demand_outgrows_hypothetical_additional_workers(tmp_path):
         assert expanded.added_npcs == 12
         assert expanded.npc_count == 23
         assert expanded.daily_minimum_meals == 265
-        assert expanded.daily_market_upper_loaves == 24
-        assert expanded.daily_shortfall_lower_bound == 241
+        assert expanded.daily_market_upper_loaves == 18
+        assert expanded.daily_shortfall_lower_bound == 247
         # No feasible pair under a generously bounded search. The model does
         # not assert an unbounded theorem from a finite search.
         assert envelope.fewest_additional_workers_candidate(
@@ -64,7 +64,7 @@ def test_default_meal_demand_outgrows_hypothetical_additional_workers(tmp_path):
         assert state.to_dict() == initial_dict
 
 
-def test_slower_existing_policy_needs_eight_fields_six_couriers_AND_water(tmp_path):
+def test_slower_existing_policy_needs_eight_fields_and_eight_couriers(tmp_path):
     with SQLiteEventStore(tmp_path / "slow-carrying-capacity.sqlite") as db:
         first = _joined_bootstrap(db)
         calibrated = db.append(
@@ -85,11 +85,11 @@ def test_slower_existing_policy_needs_eight_fields_six_couriers_AND_water(tmp_pa
             max_plots=20, max_couriers=20, horizon_days=3
         )
         assert optimal is not None
-        assert (optimal.plots, optimal.couriers, optimal.npc_count) == (8, 6, 23)
-        assert optimal.added_npcs == 12
-        assert optimal.daily_minimum_meals == 23
+        assert (optimal.plots, optimal.couriers, optimal.npc_count) == (8, 8, 25)
+        assert optimal.added_npcs == 14
+        assert optimal.daily_minimum_meals == 24
         assert optimal.daily_plot_upper_loaves == 24
-        assert optimal.daily_transport_upper_loaves == 24
+        assert optimal.daily_transport_upper_loaves == 32
         assert optimal.daily_shortfall_lower_bound == 0
         assert optimal.water_observed_at_t0 == 2
         assert optimal.hypothetical_future_water == 0
@@ -99,7 +99,12 @@ def test_slower_existing_policy_needs_eight_fields_six_couriers_AND_water(tmp_pa
         assert optimal.horizon_market_upper_loaves_with_water == 9
         # Only actual recorded rainfall could meet the extra requirement.
         hypothetical = replace(envelope, hypothetical_future_water=22)
-        wetted = hypothetical.evaluate(8, 6, horizon_days=3)
+        under_routed = hypothetical.evaluate(8, 6, horizon_days=3)
+        assert under_routed.daily_market_upper_loaves == 18
+        assert under_routed.daily_shortfall_lower_bound == 5
+        assert under_routed.horizon_crop_upper_loaves_with_water == 72
+        assert under_routed.horizon_market_upper_loaves_with_water == 57
+        wetted = hypothetical.evaluate(8, 8, horizon_days=3)
         assert wetted.water_missing_for_full_utilization == 0
         assert wetted.water_observed_at_t0 == 2
         assert wetted.hypothetical_future_water == 22

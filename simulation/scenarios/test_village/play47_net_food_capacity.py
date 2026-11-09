@@ -97,10 +97,19 @@ class FoodCapacityParameters:
         )
         plot_daily = (DAY // self.plot_growth_seconds) * self.plot_yield_loaves * plots
         courier_daily = (DAY // self.courier_period_seconds) * self.courier_food_per_trip * couriers
-        local_daily = min(plot_daily, courier_daily)
+        # One configured circuit serves one field. Surplus capacity on
+        # another field's circuit cannot move an unserved field's grain.
+        served_plots = min(plots, couriers)
+        served_plot_daily = (
+            (DAY // self.plot_growth_seconds) * self.plot_yield_loaves * served_plots
+        )
+        local_daily = min(served_plot_daily, courier_daily)
         all_possible_cycles = (horizon_days * DAY // self.plot_growth_seconds) * plots
         water = self.current_known_water + self.hypothetical_future_water
         crop_upper = min(all_possible_cycles, water) * self.plot_yield_loaves
+        served_crop_upper = min(
+            (horizon_days * DAY // self.plot_growth_seconds) * served_plots, water,
+        ) * self.plot_yield_loaves
         transported_upper = (
             horizon_days * DAY // self.courier_period_seconds
         ) * self.courier_food_per_trip * couriers
@@ -123,7 +132,7 @@ class FoodCapacityParameters:
             water_missing_for_full_utilization=max(0, all_possible_cycles - water),
             horizon_crop_upper_loaves_with_water=crop_upper,
             horizon_market_upper_loaves_with_water=(
-                self.current_known_food + min(crop_upper, transported_upper)
+                self.current_known_food + min(served_crop_upper, transported_upper)
             ),
         )
 
