@@ -41,7 +41,9 @@ class NetCapacity:
     daily_shortfall_lower_bound: int
     model_passes_steady_daily_throughput: bool
     horizon_days: int
-    water_known_available: int
+    water_observed_at_t0: int
+    hypothetical_future_water: int
+    water_scenario_total: int
     water_for_full_plot_utilization: int
     water_missing_for_full_utilization: int
     horizon_crop_upper_loaves_with_water: int
@@ -65,7 +67,7 @@ class FoodCapacityParameters:
     relief_points_per_meal: int
     current_known_food: int
     current_known_water: int
-    attested_additional_water: int = 0
+    hypothetical_future_water: int = 0
 
     def __post_init__(self) -> None:
         for key in (
@@ -76,7 +78,7 @@ class FoodCapacityParameters:
         ):
             _positive(key, getattr(self, key))
         for key in ("current_known_food", "current_known_water",
-                    "attested_additional_water"):
+                    "hypothetical_future_water"):
             _nonnegative(key, getattr(self, key))
         if self.original_npcs < self.current_plots + self.current_couriers:
             raise ValueError("original population cannot be smaller than assigned farm and delivery workforce")
@@ -97,7 +99,7 @@ class FoodCapacityParameters:
         courier_daily = (DAY // self.courier_period_seconds) * self.courier_food_per_trip * couriers
         local_daily = min(plot_daily, courier_daily)
         all_possible_cycles = (horizon_days * DAY // self.plot_growth_seconds) * plots
-        water = self.current_known_water + self.attested_additional_water
+        water = self.current_known_water + self.hypothetical_future_water
         crop_upper = min(all_possible_cycles, water) * self.plot_yield_loaves
         transported_upper = (
             horizon_days * DAY // self.courier_period_seconds
@@ -114,7 +116,9 @@ class FoodCapacityParameters:
             daily_shortfall_lower_bound=max(0, daily_food - local_daily),
             model_passes_steady_daily_throughput=local_daily >= daily_food,
             horizon_days=horizon_days,
-            water_known_available=water,
+            water_observed_at_t0=self.current_known_water,
+            hypothetical_future_water=self.hypothetical_future_water,
+            water_scenario_total=water,
             water_for_full_plot_utilization=all_possible_cycles,
             water_missing_for_full_utilization=max(0, all_possible_cycles - water),
             horizon_crop_upper_loaves_with_water=crop_upper,

@@ -91,14 +91,19 @@ def test_slower_existing_policy_needs_eight_fields_six_couriers_AND_water(tmp_pa
         assert optimal.daily_plot_upper_loaves == 24
         assert optimal.daily_transport_upper_loaves == 24
         assert optimal.daily_shortfall_lower_bound == 0
-        assert optimal.water_known_available == 2
+        assert optimal.water_observed_at_t0 == 2
+        assert optimal.hypothetical_future_water == 0
+        assert optimal.water_scenario_total == 2
         assert optimal.water_for_full_plot_utilization == 24
         assert optimal.water_missing_for_full_utilization == 22
         assert optimal.horizon_market_upper_loaves_with_water == 9
         # Only actual recorded rainfall could meet the extra requirement.
-        hypothetical = replace(envelope, attested_additional_water=22)
+        hypothetical = replace(envelope, hypothetical_future_water=22)
         wetted = hypothetical.evaluate(8, 6, horizon_days=3)
         assert wetted.water_missing_for_full_utilization == 0
+        assert wetted.water_observed_at_t0 == 2
+        assert wetted.hypothetical_future_water == 22
+        assert wetted.water_scenario_total == 24
         assert wetted.horizon_market_upper_loaves_with_water == 75
         assert db.verify(WORLD).to_dict() == calibrated.to_dict()
         # The hypothetical water is NOT an event or a credit to this world.
