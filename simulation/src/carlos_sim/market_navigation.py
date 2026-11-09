@@ -198,7 +198,7 @@ def choose_known_market_return(
         # or future deliveries. Do not leave merely because a decision cooldown
         # temporarily prevents an otherwise affordable purchase.
         raw = state.to_dict()
-        from .market import _present
+        from .market import _present, reserved_trade_units
         affordable = any(
             offer["status"] == "open" and offer["site_id"] == here
             and offer["resource"] == "food"
@@ -208,7 +208,8 @@ def choose_known_market_return(
             and offer["seller_id"] != npc_id
             and offer["stock_owner_id"] != npc_id
             and _present(raw, offer["seller_id"], here)
-            and state.resources.get(offer["stock_owner_id"], {}).get("food", 0) >= 1
+            and state.resources.get(offer["stock_owner_id"], {}).get("food", 0)
+                > reserved_trade_units(state.supply_circuits, offer["stock_owner_id"], "food")
             for offer in state.market_offers.values()
         )
         if affordable:
