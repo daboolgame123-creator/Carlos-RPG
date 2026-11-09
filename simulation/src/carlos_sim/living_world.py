@@ -79,7 +79,8 @@ class LivingWorldEngine:
                  supply_enabled: bool = False,
                  professional_procurement_enabled: bool = False,
                  multi_professional_markets_enabled: bool = False,
-                 compound_procurement_enabled: bool = False):
+                 compound_procurement_enabled: bool = False,
+                 professional_full_life_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -172,13 +173,14 @@ class LivingWorldEngine:
         self.professional_procurement_enabled = professional_procurement_enabled
         if (type(multi_professional_markets_enabled) is not bool or
                 (multi_professional_markets_enabled and not (
-                    economic_enabled and agriculture_enabled and economy_only_enabled
+                    economic_enabled and agriculture_enabled
+                    and (economy_only_enabled or professional_full_life_enabled)
                     and navigation_enabled and routines_enabled
                     and not shopping_routes_enabled
                     and not professional_procurement_enabled))):
             raise ValueError(
-                'multi_professional_markets_enabled requires focused economic '
-                'simulation and cannot share another professional/shopping planner'
+                'multi_professional_markets_enabled requires focused economy or full-life '
+                'opt-in and cannot share another professional/shopping planner'
             )
         self.multi_professional_markets_enabled = multi_professional_markets_enabled
         if (type(compound_procurement_enabled) is not bool or
@@ -189,9 +191,39 @@ class LivingWorldEngine:
                 "multi_professional_markets_enabled=True"
             )
         self.compound_procurement_enabled = compound_procurement_enabled
+        if (type(professional_full_life_enabled) is not bool or
+                (professional_full_life_enabled and not (
+                    multi_professional_markets_enabled
+                    and compound_procurement_enabled
+                    and economic_enabled and agriculture_enabled
+                    and survival_enabled and consumption_enabled
+                    and navigation_enabled and routines_enabled
+                    and not economy_only_enabled
+                    and not shopping_routes_enabled))):
+            raise ValueError(
+                "professional_full_life_enabled requires full survival, "
+                "consumption, navigation, routines and compound markets; "
+                "economy_only and hungry-shopper planners are incompatible"
+            )
+        self.professional_full_life_enabled = professional_full_life_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
+
+    def _professional_life_emergency(self, state: WorldState,
+                                     npc_id: str) -> bool:
+        """Safety/food/rest overrides optional material trade and production.
+
+        This never gives the worker remote knowledge or changes reducer rules;
+        only opt-in full-life NPCs use this precedence.
+        """
+        if not self.professional_full_life_enabled:
+            return False
+        from .npc import _injury_rest_decision
+        needs = state.npcs[npc_id]["needs"]
+        return (needs["hunger"] >= 75 or needs["fatigue"] >= 70
+                or needs["safety"] >= 75
+                or _injury_rest_decision(state.injuries, npc_id) is not None)
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int,
@@ -407,6 +439,8 @@ class LivingWorldEngine:
                     # physically deposited; only then may ordinary production
                     # consume workshop-owned grain on the same local tick.
                     for worker_id in sorted(current.npcs):
+                        if self._professional_life_emergency(current, worker_id):
+                            continue
                         intent = choose_workshop_input_deposit(current, worker_id)
                         if intent is None:
                             continue
@@ -420,6 +454,8 @@ class LivingWorldEngine:
                 # capabilities as explicit local production and market commands.
                 # Each pass sees only state already changed by previous events.
                 for worker_id in sorted(current.npcs):
+                    if self._professional_life_emergency(current, worker_id):
+                        continue
                     intent = choose_local_production(current, worker_id,
                                                      agriculture_enabled=self.agriculture_enabled)
                     if intent is None:
@@ -520,6 +556,8 @@ class LivingWorldEngine:
                                     if has_compound_recipe(state, buyer)
                                     else old_purchase(state, buyer))
                     for buyer_id in sorted(current.npcs):
+                        if self._professional_life_emergency(current, buyer_id):
+                            continue
                         grain_buy = choose_local_grain_purchase(current, buyer_id)
                         if grain_buy is None:
                             continue
@@ -631,7 +669,9 @@ class LivingWorldEngine:
                                 if has_compound_recipe(state, worker)
                                 else old_walk(state, worker))
                 for buyer_id in sorted(current.npcs):
-                    if buyer_id in busy or not has_workshop_recipe(current, buyer_id):
+                    if (buyer_id in busy
+                            or self._professional_life_emergency(current, buyer_id)
+                            or not has_workshop_recipe(current, buyer_id)):
                         continue
                     if needs_survey(current, buyer_id):
                         append(DomainEvent('NPCNavigationSurveyed', buyer_id,
