@@ -162,3 +162,36 @@ def test_stranded_courier_cannot_offer_consigned_copper_for_bread(tmp_path):
         }), market_authorized=True)
     assert raw == before
     validate_supply_circuits(raw)
+
+
+def test_food_purchase_skips_a_listing_backed_only_by_courier_cargo(tmp_path):
+    from carlos_sim.domain import WorldState
+    from carlos_sim.economic_autonomy import choose_local_food_purchase
+    from carlos_sim.market import post_offer
+    from carlos_sim.supply import project_cargo, validate_supply_circuits
+
+    with SQLiteEventStore(tmp_path / "cargo-is-not-for-sale.sqlite") as db:
+        seed_two_field_world(db, cash_return=True, market_wallets=True,
+                             hungry_market_buyers=True, initial_market_food=3)
+        raw = db.verify(WORLD).to_dict()
+    raw["entities"][COURIER]["location_id"] = "bakery"
+    raw["supply_circuits"][COURIER]["index"] = 2
+    raw["entities"]["omar"]["location_id"] = "bakery"
+    raw["resources"]["market"]["food"] -= 1
+    raw["resources"]["bakery"]["food"] += 1
+    project_cargo(raw, DomainEvent(
+        "SupplyCargoPicked", COURIER, "bread for the market", 0,
+        {"courier_id": COURIER, "resource": "food"},
+    ), supply_authorized=True)
+    validate_supply_circuits(raw)
+    post_offer(raw, DomainEvent("MarketOfferPosted", COURIER, "local listing", 0, {
+        "id": "courier-loaf", "seller_id": COURIER, "stock_owner_id": COURIER,
+        "site_id": "bakery", "resource": "food", "quantity": 1,
+        "payment_resource": "coin_copper", "unit_price": 1,
+    }), market_authorized=True)
+    assert choose_local_food_purchase(WorldState.from_dict(raw), "omar") is None
+    raw["resources"]["market"]["food"] -= 1
+    raw["resources"][COURIER]["food"] += 1
+    validate_supply_circuits(raw)
+    purchase = choose_local_food_purchase(WorldState.from_dict(raw), "omar")
+    assert purchase is not None and purchase.offer_id == "courier-loaf"

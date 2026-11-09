@@ -249,7 +249,8 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
         source = state.resources.get(offer["stock_owner_id"], {})
         stock = source.get("food")
         seller_coins = source.get(MONEY)
-        if (not _known(stock) or stock < 1 or not _known(seller_coins)
+        reserved_food = reserved_trade_units(state.supply_circuits, offer["stock_owner_id"], "food")
+        if (not _known(stock) or stock - reserved_food < 1 or not _known(seller_coins)
                 or not _known(price) or price < 1 or coins < price
                 or seller_coins + price > MAX_AMOUNT
                 or (adaptive and price > max_price)):

@@ -55,3 +55,15 @@ the market reducer checks available units on both outgoing sides before any
 transfer. The reproduced state uses a real supply pickup and a local posted
 loaf. The attempt leaves the market, wallet and cargo ledgers unchanged.
 This hardening does not add courier wages or alter the currency schema.
+
+The complementary seller case shows that a previously posted loaf can be
+physically present as consigned cargo and still be unavailable for sale.
+The food buyer and the return-route decision now both discount that reserved
+stock. The regression also verifies that the same quote becomes usable with
+an additional personal loaf. Historical offer records remain replayable.
+
+A funded courier contract still requires an explicit payer, a completed
+delivery receipt and a separate personal balance. Its first proof must show
+a worker physically buying or receiving food while the route can still run.
+The day-four evidence alone does not authorize a remote transfer, a payment
+out of cargo, or a recurring fee under the existing rules.
