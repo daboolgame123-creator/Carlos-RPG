@@ -89,6 +89,10 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
             or not _valid_name(recipe["output_resource"], MAX_NAME)
             or not _valid_name(recipe["tool_resource"], MAX_NAME)
             or recipe["output_resource"] == recipe["tool_resource"]
+            # Legacy single-input production must also never mint, burn or
+            # disguise existing copper as a reusable manufacturing tool.
+            or recipe["output_resource"] == "coin_copper"
+            or recipe["tool_resource"] == "coin_copper"
             or not _amount(recipe["output_amount"])
             or not _seconds(recipe["duration_seconds"])):
         return False
@@ -109,6 +113,7 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
             return False
     else:
         if (not _valid_name(recipe["input_resource"], MAX_NAME)
+                or recipe["input_resource"] == "coin_copper"
                 or not _amount(recipe["input_amount"])):
             return False
         names = [recipe["input_resource"]]
