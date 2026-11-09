@@ -18,7 +18,7 @@ def _e(kind, data):
     return DomainEvent(kind, None, "trusted combined world only at t=0", 0, data)
 
 
-def _joined_bootstrap(db, *, smith_hunger=10):
+def _joined_bootstrap(db, *, smith_hunger=10, water=2):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
     No second bootstrap may reinterpret a known wallet or silently mint money.
@@ -154,7 +154,7 @@ def _joined_bootstrap(db, *, smith_hunger=10):
         ))
 
     seed_physical_supply(
-        db, water=2, harvest_yield=3,
+        db, water=water, harvest_yield=3,
         market_wallets=True, hungry_market_buyers=True,
         initial_market_food=3, trusted_genesis_hook=extend,
     )
