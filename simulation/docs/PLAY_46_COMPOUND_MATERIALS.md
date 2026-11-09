@@ -16,11 +16,13 @@
 
 A test-world initializes **4 copper** at t=0, one miner's ore, and one charcoal producer's fuel. A smith makes **four real physical route legs**, purchases ore and charcoal at the staffed local stalls with personal copper, carries them home, deposits both, schedules the two-input `iron_fitting` job, sells the finished fitting to a real repairer and receives one funded wage from that sale. The world ends with exactly four copper; neither ore nor coal is produced from nothing.
 
-**Important distinction:** this integrated purchase and journey scenario drives existing trusted market/movement APIs explicitly and proves physical interoperability. It does **not** yet prove that the smith autonomously plans successive ore and charcoal procurement. That separate pure decision planner must persist an NPC-specific locally observed shortage or other equally strong evidence before traveling, without reading remote workshop balances. Do not silently infer missing intent from global stock.
+**Important distinction:** the 4-copper physical integration explicitly drives trusted movement/market APIs; it demonstrates physical transaction integrity, not autonomous planning by itself.
+
+Separate opt-in autonomous tests (`test_smith_autonomously_buys_both_distinct_inputs_on_roads_and_smelts`, `test_all_three_trades_both_professions_act_without_manual_commands`) verify a smith using personally surveyed roads and its own contract/market receipts to buy ore and charcoal, deposit them, and smelt without scripted travel, buy, or production commands. A second autonomous profession buys the finished fitting and repairs gear. That six-copper scenario produces **3 real trades, 2 completed jobs, 1 sale-funded wage, and conserved 6 copper**. Decision intent is derived from durable job/trade/travel receipts rather than an explicit new stored goal field. Local seller presence, failure of absent suppliers, replay consistency, and partitioned-vs-lumped world time have dedicated tests. Production consumes both inputs atomically; the two market purchases are separate real transactions.
 
 ## Remaining closure conditions
 
-- Implement and independently test NPC-owned, non-omniscient compound material shopping goals, failure/exhaustion and exact-clock partitioning.
+- Reconfirm the existing opt-in autonomous procurement, seller-unavailable behavior, and time-partition invariance on the exact final commit under both supported Python versions.
 - Verify test-world snapshot/replay and the predecessor's genuine v41/56 SQLite file without byte mutation.
 - Full historical regressions green for Python 3.10 and 3.13 on the final exact code SHA.
 - PR remains **Draft**, no main merge, P0 and independent review still separately open.
