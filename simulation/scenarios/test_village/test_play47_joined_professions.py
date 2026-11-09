@@ -21,7 +21,7 @@ def _e(kind, data):
 
 def _joined_bootstrap(
     db, *, smith_hunger=10, water=2, staff_provisions=False,
-    repair_shift_end=20_000,
+    repair_shift_end=20_000, initial_market_food=3,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -161,7 +161,7 @@ def _joined_bootstrap(
     seed_physical_supply(
         db, water=water, harvest_yield=3,
         market_wallets=True, hungry_market_buyers=True,
-        initial_market_food=3, staff_provisions=staff_provisions,
+        initial_market_food=initial_market_food, staff_provisions=staff_provisions,
         trusted_genesis_hook=extend,
     )
     state = db.load(WORLD)
