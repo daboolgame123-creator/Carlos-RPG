@@ -27,7 +27,12 @@ class ShoppingWalkIntent:
     reason: str
 
 
-def wants_local_market(state: WorldState, npc_id: str) -> bool:
+def _latest_wage_at(state: WorldState, npc_id: str) -> int:
+    return max((job["work_wage"]["paid_at"] for job in state.production_jobs.values()
+                if job["npc_id"] == npc_id and "work_wage" in job), default=-1)
+
+
+def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False) -> bool:
     """Personal hunger, free time and owned wallet; no remote market oracle."""
     npc = state.npcs.get(npc_id)
     entity = state.entities.get(npc_id)
@@ -49,24 +54,52 @@ def wants_local_market(state: WorldState, npc_id: str) -> bool:
     if nav is not None and nav["target"] is not None:
         return False  # Explicit travel choices take precedence.
     here = entity["location_id"]
-    if here in state.market_stalls:
-        return False  # At an actual local stall: ordinary price/stock checks decide.
+    if here in state.market_stalls and (
+            not repeat_errands or any(
+                offer["site_id"] == here and offer["resource"] == "food"
+                for offer in state.market_offers.values()
+            )):
+        return False  # Local food stalls use the normal price and stock checks.
     return True
 
 
-def choose_known_market_walk(state: WorldState, npc_id: str) -> ShoppingWalkIntent | None:
+def choose_known_market_walk(
+    state: WorldState, npc_id: str, *, repeat_errands=False,
+) -> ShoppingWalkIntent | None:
     """One real road toward a personally unexplored reachable location.
 
     Only the NPC's OWN surveyed route identifiers, own visited locations,
     and public travel durations of those learned roads enter pathfinding.
     Unknown shops and distant inventory are never inspected. No teleport.
     """
-    if not wants_local_market(state, npc_id):
+    if not wants_local_market(state, npc_id, repeat_errands=repeat_errands):
         return None
     nav = state.navigation.get(npc_id)
     if nav is None:
         return None  # Caller must first survey adjacent roads while on-site.
     here = state.entities[npc_id]["location_id"]
+    if repeat_errands:
+        wage_at = _latest_wage_at(state, npc_id)
+        # Only personal purchases reveal a remote food destination. A new
+        # wage permits one fresh attempt, even on a previously visited route.
+        previous_sites = {
+            trade["site_id"] for trade in state.market_trades.values()
+            if trade["buyer_id"] == npc_id and trade["resource"] == "food"
+            and trade["executed_at"] < wage_at
+        }
+        attempted_sites = {
+            trip["destination"] for trip in state.travels.values()
+            if trip["npc_id"] == npc_id and trip["status"] == "arrived"
+            and trip["arrived_at"] >= wage_at
+        }
+        for destination in sorted(previous_sites - attempted_sites - {here}):
+            path = shortest_known_route(state, npc_id, destination)
+            if path:
+                return ShoppingWalkIntent(
+                    npc_id, path[0], destination,
+                    "funded shopper returning to a personally used food stall",
+                )
+
     candidates: list[tuple[int, str, tuple[str, ...]]] = []
     reachable = set()
     for rid in nav["known_routes"]:
@@ -90,7 +123,9 @@ def choose_known_market_walk(state: WorldState, npc_id: str) -> ShoppingWalkInte
     )
 
 
-def choose_known_market_return(state: WorldState, npc_id: str) -> ShoppingWalkIntent | None:
+def choose_known_market_return(
+    state: WorldState, npc_id: str, *, repeat_errands=False,
+) -> ShoppingWalkIntent | None:
     """Walk back after an actual visit, whether the purchase succeeded or not.
 
     This is a return from a personally reached LOCAL market, never a query to
@@ -113,10 +148,17 @@ def choose_known_market_return(state: WorldState, npc_id: str) -> ShoppingWalkIn
     # A personally completed trip is sufficient evidence of a visited stall.
     # Do not require the villager to still be on that market tile when their
     # next physical homeward road leg is due.
+    wage_at = _latest_wage_at(state, npc_id) if repeat_errands else -1
     arrivals = sorted(
         ((t["arrived_at"], t["destination"]) for t in state.travels.values()
          if t["npc_id"] == npc_id and t["status"] == "arrived"
-         and t["destination"] in state.market_stalls),
+         and t["arrived_at"] >= wage_at
+         and t["destination"] in state.market_stalls
+         and (not repeat_errands or any(
+             offer["site_id"] == t["destination"] and offer["resource"] == "food"
+             and offer["posted_at"] <= t["arrived_at"]
+             for offer in state.market_offers.values()
+         ))),
     )
     if not arrivals:
         return None
