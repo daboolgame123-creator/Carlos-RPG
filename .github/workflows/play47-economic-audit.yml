@@ -37,4 +37,5 @@ jobs:
             scenarios/test_village/test_play47_joined_professions.py \
             scenarios/test_village/test_play47_joined_feasibility.py \
             scenarios/test_village/test_play47_net_food_capacity.py \
-            scenarios/test_village/test_play47_72h_endurance.py
+            scenarios/test_village/test_play47_72h_endurance.py \
+            scenarios/test_village/test_play47_courier_diagnostics.py
