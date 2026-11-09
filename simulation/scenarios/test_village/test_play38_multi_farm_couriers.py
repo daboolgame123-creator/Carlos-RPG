@@ -30,7 +30,7 @@ def seed_two_field_world(
     market_wallets=False, hungry_market_buyers=False,
     cash_return=False, waged_harvest=False,
     hungry_waged_farmer=False, harvest_wage_copper=1,
-    one_hungry_market_buyer=False,
+    one_hungry_market_buyer=False, bootstrap=seed_physical_supply,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
     if type(one_hungry_market_buyer) is not bool:
@@ -51,7 +51,7 @@ def seed_two_field_world(
             or type(market_wallets) is not bool
             or type(hungry_market_buyers) is not bool):
         raise ValueError("invalid fixed two-farm counterfactual")
-    seed_physical_supply(
+    bootstrap(
         db, water=initial_water, seed=1,
         initial_market_food=initial_market_food,
         harvest_yield=3, personal_food=0,

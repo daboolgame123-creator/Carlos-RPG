@@ -100,3 +100,19 @@ The slower-policy event ledger also exposed a scheduling conflict. By hour 54 th
 Each courier can serve only one configured field. Eight fields and six couriers therefore deliver at most **18 loaves/day** against at least **23 meals/day** under the slower policy, even with sufficient water. With eight fields and eight couriers, **25 residents** have a modeled minimum of **24 meals/day** and an ideal field output of **24 loaves/day**. This leaves zero modeled margin for activity, late crops, absent workers or missed trips. Twenty-four full crop cycles would require 24 water units. The current fixture owns two at genesis, leaving 22 without a source.
 
 The next field trial can reuse the two-field and two-courier road layout from PLAY-38, the bounded well and attested rain receipts from PLAY-39, and the finite opening provisions from this trial. Settle ownership and funded wages at their physical sites, then track each lane independently through two harvests, baking, market arrival and actual purchase or consumption. Start the drought control with the same opening resources and omit rain receipts. Check replay after reopening and compare transport and food receipts across clock partitions. Use observed batch, water, labor and delivery timings to size a larger village and its opening reserve before a seven-day run.
+
+## 47-J — Two fields, two couriers and a liquidity bottleneck
+
+A local Python 3.13 probe ran the joined 13-NPC economy for 72 hours with two routes and the existing slower hunger policy. Both variants began with two water units, three loaves and twelve copper coins. The wet variant recorded two finite rain receipts through the existing hydrology service, at hours 24 and 48. The dry variant received no rain. The probe reconciled food, water and copper every six hours and reopened and verified the SQLite state at daily boundaries.
+
+| Outcome after 72 hours | Dry | Receipted rain |
+| --- | ---: | ---: |
+| Rain credited | 0 | 4 |
+| Water used for crops | 2 | 3 |
+| Mature crop lots, original and eastern fields | 1 + 1 | 1 + 2 |
+| Baked loaves | 7 | 7 |
+| Bread in the market | 7 | 7 |
+| Paid food purchases | 3 | 3 |
+| Residents at maximum hunger | 13 | 13 |
+
+By hour 48 the market held the seven new loaves, and all three opening food buyers had spent their balances. Their three meals came from opening stock. One further crop ripened in the east in the wet case, while hunger stopped the workers before they converted it into additional bread. The next comparison should trace sale-funded pay through the existing physical copper routes to determine whether an earned wage can finance a new food purchase. This batch adds no wages, credit or currency to the running world. Acceptance still depends on the parent and this candidate's CI.
