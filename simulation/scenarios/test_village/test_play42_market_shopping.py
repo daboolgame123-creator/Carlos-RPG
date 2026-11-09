@@ -17,15 +17,18 @@ from test_play38_multi_farm_couriers import (
 )
 
 
-def _engine(db, clock, *, enable=True):
+def _engine(db, clock, *, enable=True, full_life=False):
     return LivingWorldEngine(
         db, clock, max_events_per_advance=5000,
         decision_cooldown=3600, navigation_enabled=True,
         routines_enabled=True, survival_enabled=True,
         consumption_enabled=True, supply_enabled=True,
         economic_enabled=True, adaptive_market_enabled=True,
-        agriculture_enabled=True, economy_only_enabled=True,
+        agriculture_enabled=True, economy_only_enabled=not full_life,
         shopping_routes_enabled=enable,
+        multi_professional_markets_enabled=full_life,
+        compound_procurement_enabled=full_life,
+        professional_full_life_enabled=full_life,
     )
 
 
@@ -58,11 +61,12 @@ def _advance(db, engine, target):
     return state
 
 
-@pytest.mark.parametrize("wage,expected_purchase", [
-    (1, False), (2, True),
+@pytest.mark.parametrize("wage,expected_purchase,full_life", [
+    (1, False, False), (2, True, False),
+    (1, False, True), (2, True, True),
 ])
 def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
-        tmp_path, wage, expected_purchase):
+        tmp_path, wage, expected_purchase, full_life):
     with SQLiteEventStore(tmp_path / f"shopper-{wage}.sqlite") as db:
         seed_two_field_world(
             db, cash_return=True, waged_harvest=True,
@@ -80,7 +84,7 @@ def test_farmer_earns_walks_known_roads_then_fails_or_buys_and_eats(
         clock = TimeEngine(db)
         clock.open_session(WORLD)
         try:
-            engine = _engine(db, clock)
+            engine = _engine(db, clock, full_life=full_life)
             rows = []
             state = before
             for target in (300, 1200, 3600, 3900, 4800, 7200, 8400, 12000):
