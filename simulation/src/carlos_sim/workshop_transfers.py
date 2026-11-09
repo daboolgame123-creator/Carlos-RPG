@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .domain import DomainEvent, WorldState
-from .production import MAX_BATCH, MAX_QUANTITY, _valid_name, MAX_NAME
+from .production import MAX_BATCH, MAX_QUANTITY, _valid_name, MAX_NAME, recipe_inputs
 from .market import MONEY, FORBIDDEN, _present
 from .store import RevisionConflict, SQLiteEventStore
 from .time_engine import TimeEngine
@@ -43,7 +43,8 @@ def deposit_workshop_material(
     # The deposit must serve a recipe this worker can physically perform.
     role = state["npcs"][who]["role"]
     if not any(
-            recipe["site_id"] == site and recipe["input_resource"] == item
+            recipe["site_id"] == site and any(
+                resource == item for resource, _ in recipe_inputs(recipe))
             and recipe["role"] == role
             for recipe in state["production_recipes"].values()):
         raise ValueError("not a real local production input for this worker")
