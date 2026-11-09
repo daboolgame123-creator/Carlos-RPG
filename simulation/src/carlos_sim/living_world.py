@@ -786,6 +786,27 @@ class LivingWorldEngine:
                     continue
                 existing = current.npcs[npc_id]['last_decision']
                 pending_action = existing is not None and existing['at'] == current.time
+                if (self.professional_full_life_enabled and not pending_action
+                        and not self._professional_life_emergency(current, npc_id)):
+                    # A real on-duty stall keeper cannot simultaneously run a
+                    # generic NPC action and trade at their own physical till:
+                    # market._present() explicitly rejects busy sellers.
+                    # Likewise, a professional on shift should remain free
+                    # for the existing production/road selectors, not start a
+                    # fictitious generic 'work' action. Once food, fatigue,
+                    # danger or injury is urgent, ordinary full-life decisions
+                    # take precedence instead.
+                    site = current.entities[npc_id]["location_id"]
+                    stall = current.market_stalls.get(site)
+                    keeper = stall is not None and stall["keeper_id"] == npc_id
+                    professional = (
+                        routine_allows_work(current, npc_id)
+                        and any(recipe["site_id"] == site
+                                and recipe["role"] == current.npcs[npc_id]["role"]
+                                for recipe in current.production_recipes.values())
+                    )
+                    if keeper or professional:
+                        continue
                 # A social exchange is an instantaneous *speech act*, not an
                 # executed favor. Both events share this one authorized command.
                 if self.social_enabled and not pending_action:
