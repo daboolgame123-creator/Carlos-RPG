@@ -179,3 +179,165 @@ def test_purchased_ore_and_charcoal_cross_4_roads_and_fund_smith_wage(tmp_path):
             assert db.verify(WORLD).to_dict() == paid.to_dict()
         finally:
             clock.close_session(WORLD)
+
+
+
+def _auto_boot(db):
+    """Smith's actual work shift and contract are initialized at time zero."""
+    state = _initialize(db)
+    return db.append(WORLD, "auto:work-contract", state.revision, [
+        _e("NPCRoutineConfigured", {
+            "npc_id": SMITH, "home_id": MINE,
+            "workplace_id": FORGE, "work_start": 0, "work_end": 20_000,
+        }),
+    ], bootstrap=True)
+
+
+def _auto_engine(db, clock, enabled=True):
+    from carlos_sim import LivingWorldEngine
+    return LivingWorldEngine(
+        db, clock, economic_enabled=True, agriculture_enabled=True,
+        economy_only_enabled=True, navigation_enabled=True,
+        routines_enabled=True, multi_professional_markets_enabled=True,
+        compound_procurement_enabled=enabled,
+        max_events_per_advance=5000,
+    )
+
+
+def _auto_until(db, engine, stop, label):
+    current = db.load(WORLD)
+    result = engine.advance(
+        WORLD, seconds=stop-current.time,
+        command_id="auto:time:" + label,
+        expected_revision=current.revision,
+    )
+    assert result.state.time == stop
+    assert db.verify(WORLD).to_dict() == result.state.to_dict()
+    return result.state
+
+
+def test_smith_autonomously_buys_both_distinct_inputs_on_roads_and_smelts(tmp_path):
+    """No buyer/travel/production calls: one trusted world-time simulation only."""
+    with SQLiteEventStore(tmp_path / "truly-autonomous.sqlite") as db:
+        _auto_boot(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = _auto_engine(db, clock)
+            state = _auto_until(db, engine, 420, "one-long-wait")
+            assert state.resources[FORGE]["iron_fitting"] == 1
+            assert state.resources[FORGE]["iron_ore"] == 0
+            assert state.resources[FORGE]["charcoal"] == 0
+            trades = [t for t in state.market_trades.values() if t["buyer_id"] == SMITH]
+            assert sorted(t["resource"] for t in trades) == ["charcoal", "iron_ore"]
+            assert all(t["quantity"] == 1 and t["total_paid"] == 1 for t in trades)
+            assert [t["site_id"] for t in sorted(trades,
+                     key=lambda t: t["executed_at"])] == [MINE, KILN]
+            jobs = [j for j in state.production_jobs.values() if j["npc_id"] == SMITH]
+            assert len(jobs) == 1 and jobs[0]["status"] == "completed"
+            assert dict(jobs[0]["input_after_by_resource"]) == {
+                "iron_ore": 0, "charcoal": 0,
+            }
+            journeys = [t for t in state.travels.values()
+                        if t["npc_id"] == SMITH]
+            assert len(journeys) == 4
+            assert all(t["status"] == "arrived" for t in journeys)
+            assert _money(state) == 4
+            assert state.resources[SMITH]["coin_copper"] == 0
+            assert not any("work_wage" in j for j in jobs), (
+                "No one bought the fitting yet; wages must not be minted"
+            )
+            # A customer paying at the *real counter* funds one later wage.
+            priced = [o for o in state.market_offers.items()
+                      if o[1]["resource"] == "iron_fitting"
+                      and o[1]["status"] == "open"]
+            assert len(priced) == 1
+            offer_id, offer = priced[0]
+            state = NPCMarketService(db, clock).buy(
+                WORLD, CUSTOMER, "repairer-buys-autonomous-output",
+                offer_id, 1, offer["unit_price"],
+                expected_revision=state.revision,
+            ).state
+            assert _money(state) == 4
+            state = _auto_until(db, engine, 421, "funded-salary")
+            assert len([j for j in state.production_jobs.values()
+                        if "work_wage" in j]) == 1
+            assert state.resources[SMITH]["coin_copper"] == 1
+            assert _money(state) == 4
+            db.snapshot(WORLD)
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_smith_does_not_conjure_sold_out_material_or_distant_price(tmp_path):
+    from carlos_sim.movement import NPCMovementService
+    from carlos_sim.compound_professional_trade import choose_compound_purchase
+
+    with SQLiteEventStore(tmp_path / "seller-walks-away.sqlite") as db:
+        _auto_boot(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = _auto_engine(db, clock)
+            state = _auto_until(db, engine, 1, "first-day")
+            # Miner leaves while the smith is still traveling to the mine.
+            mover = NPCMovementService(db, clock)
+            mover.start(WORLD, MINER, "smith-mine", "miner-leaves",
+                        expected_revision=state.revision)
+            state = _auto_until(db, engine, 420, "seller-absent")
+            assert not any(t["resource"] == "iron_ore"
+                           for t in state.market_trades.values())
+            assert state.resources[FORGE]["iron_fitting"] == 0
+            assert state.resources[MINE]["iron_ore"] == 1
+            assert _money(state) == 4
+            assert len([t for t in state.travels.values()
+                        if t["npc_id"] == SMITH]) <= 6
+            assert choose_compound_purchase(state, SMITH) is None
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_multi_compound_flag_is_strict_default_off(tmp_path):
+    import pytest
+    from carlos_sim import LivingWorldEngine
+
+    with SQLiteEventStore(tmp_path / "flag.sqlite") as db:
+        clock = TimeEngine(db)
+        for bad in ("yes", 1, None, (), {}, []):
+            with pytest.raises(ValueError, match="compound_procurement_enabled"):
+                LivingWorldEngine(db, clock,
+                                  compound_procurement_enabled=bad)
+        with pytest.raises(ValueError, match="compound_procurement_enabled"):
+            LivingWorldEngine(db, clock, compound_procurement_enabled=True)
+
+
+def test_one_wait_vs_partitioned_wait_preserves_individual_material_trades(tmp_path):
+    outputs = []
+    for name, targets in (
+        ("single", (420,)),
+        ("chunked", (1, 30, 61, 101, 141, 231, 420)),
+    ):
+        with SQLiteEventStore(tmp_path / (name + ".sqlite")) as db:
+            _auto_boot(db)
+            clock = TimeEngine(db)
+            clock.open_session(WORLD)
+            try:
+                engine = _auto_engine(db, clock)
+                for stop in targets:
+                    state = _auto_until(db, engine, stop, f"{name}-{stop}")
+                receipts = sorted((
+                    v["resource"], v["site_id"], v["executed_at"],
+                    v["total_paid"]) for v in state.market_trades.values())
+                jobs = sorted((j["recipe_id"], j["started_at"],
+                               j["finished_at"],
+                               tuple(sorted(dict(j[
+                                 "input_after_by_resource"]).items())))
+                              for j in state.production_jobs.values())
+                outputs.append((receipts, jobs,
+                                state.resources[FORGE]["iron_fitting"],
+                                _money(state)))
+            finally:
+                clock.close_session(WORLD)
+    assert outputs[0] == outputs[1]
