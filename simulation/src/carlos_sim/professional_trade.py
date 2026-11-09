@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 from .domain import WorldState
 from .economic_autonomy import _free, _known, _event_id
-from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY, _present
+from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY, _present, trade_receipt_allowed
 from .navigation import shortest_known_route
 from .npc import _injury_rest_decision
 from .routines import routine_allows_work
@@ -128,6 +128,8 @@ def choose_local_grain_purchase(state: WorldState, who: str) -> GrainPurchase | 
                 or offer["resource"] != "grain" or
                 offer["payment_resource"] != MONEY
                 or offer["seller_id"] == who or offer["stock_owner_id"] == who
+                or not trade_receipt_allowed(state.supply_circuits, who, "grain")
+                or not trade_receipt_allowed(state.supply_circuits, offer["stock_owner_id"], MONEY)
                 or offer["remaining"] < 1):
             continue
         price = offer["unit_price"]

@@ -1,5 +1,20 @@
 # سجل تغييرات خارطة الطريق — Carlos RPG
 
+## PLAY-47 closure verification — 2026-11-09
+
+- Source: owner's approved closure plan and direct request to finish PLAY-47.
+- Reproduced: settling a personal courier loaf/ore quote credits copper into a
+  consignment-only slot. Reject incoming custody conflicts before writes and
+  skip these food/grain/material quotes; site-owned goods remain tradable.
+- Alternatives: personal wages in the current cash slot are invalid. A new
+  payer/delivery/idempotency/beneficiary contract is documented but not added.
+- Verification: local market/custody probes, authentic 41/56 save refusal and
+  PLAY-44/45 regressions; final exact-head CI and seven-day controls pending.
+- Schema **42** / Rules **57** unchanged. PLAY-47 **OPEN / RELEASE NO-GO**;
+  PLAY-48 stays blocked until an evidenced technical decision. External review
+  deferred by owner; P0 not approved. No `main` or canonical story changes.
+- Recheck at final CI: [closure evidence](PLAY_47_CLOSURE_EVIDENCE.md).
+
 ## Latest verified milestone — PLAY-29 (2026-11-08)
 
 - **Technical decision:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`, **no self-sufficiency claim**. World version **Schema 39 / Rules 51**, disposable worlds; source `1a4a4021367c670781eea5dee030fe9d93e65f37`, seven-day test-only SHA `d67fefc09dddb17175e3799492167e4d4b03196c`.

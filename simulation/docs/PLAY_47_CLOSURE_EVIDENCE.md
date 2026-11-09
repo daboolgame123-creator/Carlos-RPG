@@ -75,13 +75,27 @@ remain loadable; no history, schema, route or supply contract is rewritten.
 The regression checks rejection, unchanged raw ledgers and valid supply custody.
 This is author self-review, not independent approval.
 
+The same failure was reproduced in the single-material profession selector:
+it returned a personal courier ore quote whose copper settlement was invalid.
+Grain, single-material and compound-material selectors now check both receipt
+owners as well. Two local probes verify that personal courier ore is skipped,
+but the same courier can steward site-owned ore: the real trade credits the
+site's copper, preserves the courier's zero balance and conserves twelve coins.
+The new probes plus PLAY-44/45 regressions passed **29 tests on each local
+Python 3.10.22 and 3.13.17**. These synthetic local quote probes do not claim
+autonomous ore delivery or courier wages.
+
+The long seven-day cases run in separate Python-matrix jobs in the targeted
+workflow, alongside the audit/adversarial jobs. All four jobs must succeed;
+moving the long cases to parallel jobs does not omit any acceptance check.
+
 ## Final acceptance matrix
 
 | Gate | Evidence / state |
 | --- | --- |
 | Stack full CI, #57 | [42707752554](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42707752554), both Python jobs success |
 | Stack full CI, #58 | [42708580882](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42708580882), both Python jobs success |
-| Stack full CI, #59 | [42712961446](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42712961446), pending final observation |
+| Stack full CI, #59 | [42712961446](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42712961446), both Python jobs success |
 | Stack targeted, #57 | [42707745153](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42707745153), pending final observation |
 | Stack targeted, #58 | [42715541830](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42715541830), dispatched on exact head |
 | Stack targeted, #59 | [42715548910](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42715548910), dispatched on exact head |
@@ -89,7 +103,7 @@ This is author self-review, not independent approval.
 | Depleted treasury / duplicate wages | `test_play41_funded_wage.py`, included in final targeted workflow |
 | Physical road / reserved cargo / absent seller | supply, cash-courier and market suites, included in final targeted workflow |
 | SQLite close/reopen, replay, snapshot, PRAGMA and time partitions | seven-day test, pending |
-| Old saves / default-off compatibility | final full workflow, pending exact candidate SHA |
+| Old saves / default-off compatibility | genuine 41/56 fixture rejection in targeted workflow; historical compatibility in full workflow |
 | Final exact-SHA targeted + full 3.10/3.13 | pending; blocks technical closure |
 
 The seven-day experiment records daily food/water/cash and wage receipts in the
@@ -105,3 +119,34 @@ post-stall delivery or recovery is presumed.
 
 External review remains `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` and production
 remains `P0_PRODUCTION_NOT_APPROVED`.
+
+## Audited historical run identities
+
+The full PR runs checked out GitHub's temporary merge commits, rather than the
+head commits themselves. Both Python logs report **1,694 passed** for each PR.
+The three merge objects were fetched and `git diff --exit-code HEAD MERGE`
+confirmed identical trees for each pair:
+
+| PR | Head | Actual checked-out merge | Full run |
+| --- | --- | --- | --- |
+| #57 | `51cdc3b02fb1d891398a5258b954b554d61a4a4d` | `7b093b0a41198ace76f5a8fa12968c33f7b038e7` | `42707752554` |
+| #58 | `21e8b0236a952d6dd038bf3a076c354b4e4fbbd2` | `9a9f8e8d62ab261c155373fce6c49901b0d7ef3b` | `42708580882` |
+| #59 | `77ddb54b82038075c2d9ec642b8d0dcd3b75c43d` | `e5ef7cd8f01e64d8485c6a46538be95bdd12f4bb` | `42712961446` |
+
+The candidate workflows now explicitly check out the PR head (or push SHA) and
+assert `git rev-parse HEAD` equals that source SHA. This avoids calling a merge
+object an exact head. At `caa76a1c88e9ad23a34d498a1a3d00148fe5a5f7`, targeted
+[42717339117](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42717339117)
+and full [42717347582](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42717347582)
+were launched; their overall results remain pending at this documentation update.
+The authentic old-save gate passed locally on both Python versions and in both
+candidate targeted jobs; this alone is not completion of the full targeted run.
+
+The original plan's #53–55 gates were also rechecked: both Python jobs succeeded
+in targeted/full pairs [42701787041](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42701787041)
+/ [42707543170](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42707543170),
+[42703695310](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42703695310)
+/ [42703704217](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42703704217),
+and [42705193034](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42705193034)
+/ [42705198691](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42705198691).
+Their current heads `7c0876b`, `8068f91`, and `7845491` are ancestors of `b326c5e`.

@@ -170,3 +170,19 @@ the final state. The funded CI fixture now includes the wet fourth day.
 ## Closure execution
 
 See [the PLAY-47 closure plan](PLAY_47_CLOSURE_PLAN.md) for remaining gates and the first controlled recovery experiment.
+
+### Closure verification batch — incoming market custody
+
+The extra personal loaf control exposed a second boundary: its sale can credit
+personal copper into a courier's consignment-only slot. A local settlement
+reproducer failed supply validation. Market settlement now rejects incoming
+water/grain/copper into exact-custody slots before writes, and food/grain/material
+selectors skip quotes whose payment recipient cannot receive the price. Site
+stock sold by a courier steward remains eligible because payment belongs to the
+site. No courier pay contract, new account or Schema/Rules change was introduced.
+
+The seven-day thirteen-resident wet/dry control, final SQLite reopen/replay and
+96-hour full semantic clock comparison are **verification pending**, not a
+recovery or sustainability result. The [closure evidence report](PLAY_47_CLOSURE_EVIDENCE.md)
+records exact PR/run identities, observed failures and the future funding
+contract boundary. PLAY-47 remains OPEN until the final candidate checks pass.
