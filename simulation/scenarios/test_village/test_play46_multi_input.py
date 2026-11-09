@@ -265,3 +265,16 @@ def test_genuine_41_56_sqlite_world_is_refused_without_any_mutation():
             db.load("predecessor-41-56")
     after = hashlib.sha256(path.read_bytes()).hexdigest()
     assert after == before, "old world bytes must remain exactly untouched"
+
+
+
+@pytest.mark.parametrize("field", ["input_resource", "output_resource",
+                                    "tool_resource"])
+def test_legacy_recipe_cannot_mint_burn_or_use_copper_as_tool(tmp_path, field):
+    recipe = copy.deepcopy(_recipe(compound=False))
+    recipe[field] = "coin_copper"
+    with SQLiteEventStore(tmp_path / ("forbidden-" + field + ".sqlite")) as db:
+        with pytest.raises(InvalidEvent):
+            _seed(db, recipe_override=recipe)
+        assert db.load(WORLD).revision == 0
+        assert db.verify(WORLD).revision == 0
