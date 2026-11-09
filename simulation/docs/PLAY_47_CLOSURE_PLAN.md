@@ -44,3 +44,14 @@ A fee paid into the courier's current copper slot would still conflict with
 consignment custody. The evidence leaves durable worker access to food as an
 unresolved capacity limit. Keep the bounded trial as a negative control and
 avoid treating a one-time provision as recurring compensation.
+
+## Market custody regression
+
+An idle courier at the market holding one reserved copper previously received
+a one-copper bread purchase intent. The market reducer also allowed the
+transfer in isolation, although it would invalidate supply custody at the
+world boundary. Food purchase planning now subtracts reserved payment, and
+the market reducer checks available units on both outgoing sides before any
+transfer. The reproduced state uses a real supply pickup and a local posted
+loaf. The attempt leaves the market, wallet and cargo ledgers unchanged.
+This hardening does not add courier wages or alter the currency schema.
