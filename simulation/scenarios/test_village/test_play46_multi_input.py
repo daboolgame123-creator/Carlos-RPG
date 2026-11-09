@@ -134,6 +134,8 @@ def test_compound_all_or_nothing_underflow_and_revision_unchanged(tmp_path, ore,
     lambda x: x["inputs"].clear(),
     lambda x: x.update(input_resource="charcoal"),
     lambda x: x.update(inputs="charcoal"),
+    lambda x: x.update(output_resource="coin_copper"),
+    lambda x: x.update(tool_resource="coin_copper"),
 ])
 def test_invalid_compound_recipe_rejected_at_bootstrap_without_events(tmp_path, change):
     recipe = copy.deepcopy(_recipe())
