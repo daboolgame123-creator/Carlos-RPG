@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from hashlib import sha256
 
 from .domain import WorldState
-from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present, reserved_trade_units
+from .market import (MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present,
+                     reserved_trade_units, trade_receipt_allowed)
 from .npc import _injury_rest_decision
 from .production import MAX_QUANTITY as PRODUCTION_MAX, recipe_inputs
 from .routines import DAY_SECONDS, routine_allows_work
@@ -242,6 +243,7 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
                 or offer["payment_resource"] != MONEY
                 or offer["seller_id"] == buyer_id
                 or offer["stock_owner_id"] == buyer_id
+                or not trade_receipt_allowed(state.supply_circuits, offer["stock_owner_id"], MONEY)
                 or offer["remaining"] < 1
                 or not _present(raw, offer["seller_id"], here)):
             continue

@@ -1,5 +1,26 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-47 — closure verification batch (2026-11-09)
+
+**OPEN / RELEASE NO-GO**; Schema **42** / Rules **57**. Current candidate:
+`feature/play47-closure-verification-20261109`, based on PR #59 `77ddb54`.
+Integration remains `feature/play47-npc-economic-endurance-20261109` at
+`b326c5e` until required stack checks are confirmed. No PLAY-48, OpenCode
+assignment, `main` update or canonical story edit.
+
+| ID | Work | Dependencies | Classification | State | Evidence | Remaining step |
+| --- | --- | --- | --- | --- | --- | --- |
+| PLAY-47-STACK | Verify #57–59 and fast-forward | exact-head targeted/full 3.10 + 3.13 | CHAT_EXECUTABLE | VERIFICATION_PENDING | [CI evidence](PLAY_47_CLOSURE_EVIDENCE.md) | Confirm all jobs, advance without force |
+| PLAY-47-FUNDING | Food access before immobility | existing cash custody | CHAT_EXECUTABLE | VERIFICATION_PENDING | local quote at hunger 80/90, provision control | Final CI; no new wage contract |
+| PLAY-47-CUSTODY | Reject invalid incoming market receipts | reproduced #59 failure | CHAT_EXECUTABLE | VERIFICATION_PENDING | unchanged-ledger regressions | Final candidate CI on both Pythons |
+| PLAY-47-7D | Seven-day wet/dry scarcity, reopen and clock parity | physical and accounting invariants | CHAT_EXECUTABLE | VERIFICATION_PENDING | `test_play47_closure_endurance.py` | Observe results and exact-SHA CI |
+| PLAY-47-CLOSE | Explicit technical decision | preceding gates + full historic CI | CHAT_EXECUTABLE | BLOCKED | [plan](PLAY_47_CLOSURE_PLAN.md) | Record SHA, results and capacity limits |
+
+Incoming copper breaking custody is an integrity defect, distinct from famine.
+An unreserved personal loaf alone does not make its market settlement valid.
+The evidence report records the reproduced failure and the future contract's
+payer, delivery entitlement, separation of funds and idempotency requirements.
+
 ## مرجع العمل عند تجدد الرصيد — 2026-11-09
 
 راجع [تسليم المحادثة الجديدة](CARLOS_NEXT_CHAT_HANDOFF.md) و[خطة تسريع PLAY-46→51](CARLOS_ACCELERATION_PLAN_2026-11-09.md) و[نماذج OpenCode/Low–Max](OPENCODE_AVAILABLE_MODELS_2026-11-09.md). **الأولوية الفعلية: إغلاق PLAY-46 وفق أحدث CI ثم PLAY-47 بعد البوابة**. لا تعتبر الأرقام المخططة إنجازات، ولا تتجاوز الانحدار الكامل أو مؤشرات نزاهة الاقتصاد.

@@ -40,5 +40,9 @@ jobs:
             scenarios/test_village/test_play47_72h_endurance.py \
             scenarios/test_village/test_play47_courier_diagnostics.py \
             scenarios/test_village/test_play47_two_field_liquidity.py \
+            scenarios/test_village/test_play47_closure_endurance.py \
             scenarios/test_village/test_play42_market_shopping.py \
-            scenarios/test_village/test_play40_copper_cash_courier.py
+            scenarios/test_village/test_play40_copper_cash_courier.py \
+            scenarios/test_village/test_play41_funded_wage.py \
+            tests/test_market_02c.py \
+            tests/test_play_physical_supply_batch_27.py
