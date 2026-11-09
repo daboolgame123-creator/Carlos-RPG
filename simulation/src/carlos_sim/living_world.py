@@ -662,6 +662,7 @@ class LivingWorldEngine:
                 # An unvisited road can be surveyed only from their real site;
                 # each physical leg has a deterministic clock cost. This
                 # pass neither reads a distant quote nor reserves food.
+                repeat_errands = self.professional_full_life_enabled
                 for shopper_id in sorted(current.npcs):
                     if (self.professional_full_life_enabled and
                             _injury_rest_decision(current.injuries, shopper_id) is not None):
@@ -685,14 +686,19 @@ class LivingWorldEngine:
                     # second hungry exploration impulse at each intermediate
                     # road tile. This remains a pure projection of completed
                     # physical travel history; no teleport or new schema.
-                    walk = choose_known_market_return(current, shopper_id)
-                    if walk is None and wants_local_market(current, shopper_id):
+                    walk = choose_known_market_return(
+                        current, shopper_id, repeat_errands=repeat_errands,
+                    )
+                    if walk is None and wants_local_market(
+                            current, shopper_id, repeat_errands=repeat_errands):
                         if needs_survey(current, shopper_id):
                             append(DomainEvent('NPCNavigationSurveyed', shopper_id,
                                 'shopper sees roads adjoining their physical location',
                                 current.time, {'npc_id': shopper_id}),
                                 movement_capability=True)
-                        walk = choose_known_market_walk(current, shopper_id)
+                        walk = choose_known_market_walk(
+                            current, shopper_id, repeat_errands=repeat_errands,
+                        )
                     if walk is None:
                         continue
                     route = current.routes[walk.route_id]

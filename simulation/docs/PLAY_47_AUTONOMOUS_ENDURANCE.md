@@ -145,3 +145,12 @@ ends exploration at any local stall, including the smithy. The next regression
 should let a hungry funded shopper continue past a non-food stall using only
 local observations and learned roads. The experiment reconciles all twelve
 copper and verifies SQLite replay at each daily boundary.
+
+### 47-M — Returning to a personally known food stall
+
+Full-life shoppers can pass a stall with no local food listings. A fresh wage
+permits one return attempt to a personally used food stall via learned roads.
+A prior visit funded by an earlier wage cannot trigger an old return trip.
+The 13-resident rainy run records Farid's second purchase and meal at second
+213,600, after his second harvest wage. Both trips spend exactly two copper.
+The original focused shopping mode retains its existing policy.

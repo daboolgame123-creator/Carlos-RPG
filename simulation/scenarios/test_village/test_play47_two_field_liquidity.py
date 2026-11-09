@@ -73,24 +73,24 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
                      if trade["buyer_id"] == east.FARMER and trade["resource"] == "food"]
         meals = [meal for meal in state.consumptions.values()
                  if meal["npc_id"] == east.FARMER]
-        assert len(wages) == 2
-        assert len(purchases) == len(meals) == 1
-        wage, second_wage = sorted(wages, key=lambda receipt: receipt["paid_at"])
-        purchase, meal = purchases[0], meals[0]
-        assert wage["site_id"] == east.EAST
-        assert wage["amount"] == purchase["total_paid"] == 2
-        assert purchase["site_id"] == "market"
-        assert any(trip["npc_id"] == east.FARMER
-                   and trip["destination"] == "market"
-                   and trip["status"] == "arrived"
-                   and wage["paid_at"] <= trip["arrived_at"] <= purchase["executed_at"]
-                   for trip in state.travels.values())
-        assert purchase["executed_at"] <= meal["consumed_at"]
-        assert meal["hunger_after"] < meal["hunger_before"]
-        assert meal["consumed_at"] < second_wage["paid_at"]
-        assert state.resources[east.FARMER]["coin_copper"] == second_wage["amount"] == 2
-        assert state.entities[east.FARMER]["location_id"] == "smithy"
-        assert state.resources["market"]["food"] == 6
+        assert len(wages) == len(purchases) == len(meals) == 2
+        ordered_wages = sorted(wages, key=lambda receipt: receipt["paid_at"])
+        ordered_purchases = sorted(purchases, key=lambda trade: trade["executed_at"])
+        ordered_meals = sorted(meals, key=lambda meal: meal["consumed_at"])
+        for wage, purchase, meal in zip(ordered_wages, ordered_purchases, ordered_meals):
+            assert wage["site_id"] == east.EAST
+            assert wage["amount"] == purchase["total_paid"] == 2
+            assert purchase["site_id"] == "market"
+            assert any(trip["npc_id"] == east.FARMER
+                       and trip["destination"] == "market"
+                       and trip["status"] == "arrived"
+                       and wage["paid_at"] <= trip["arrived_at"] <= purchase["executed_at"]
+                       for trip in state.travels.values())
+            assert purchase["executed_at"] <= meal["consumed_at"]
+            assert meal["hunger_after"] < meal["hunger_before"]
+        assert ordered_meals[0]["consumed_at"] < ordered_wages[1]["paid_at"]
+        assert state.resources[east.FARMER]["coin_copper"] == 0
+        assert state.resources["market"]["food"] == 5
         return
     assert readings[-1]["matured"] == {"farm": 1, east.EAST: 2 if wet else 1}
     assert readings[-1]["rain_units"] == (4 if wet else 0)
