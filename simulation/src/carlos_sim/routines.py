@@ -53,6 +53,13 @@ class RoutineIntent:
     route_id: str
     reason: str
 
+def is_work_shift(profile: Any, world_time: int) -> bool:
+    if profile["workplace_id"] is None:
+        return False
+    now = world_time % DAY_SECONDS
+    start, end = profile["work_start"], profile["work_end"]
+    return (start <= now < end) if start < end else (now >= start or now < end)
+
 def choose_routine_route(state: WorldState, npc_id: str) -> RoutineIntent | None:
     """Decide one physical known-road leg; no state mutation and no remote inspection."""
     profile = state.npc_routines.get(npc_id)
@@ -74,10 +81,8 @@ def choose_routine_route(state: WorldState, npc_id: str) -> RoutineIntent | None
     if (npc["needs"]["hunger"] >= 75 or npc["needs"]["fatigue"] >= 70
             or npc["needs"]["safety"] >= 75):
         return None
-    now = state.time % DAY_SECONDS
-    start, end = profile["work_start"], profile["work_end"]
-    at_work = (start <= now < end) if start < end else (now >= start or now < end)
-    dest = profile["workplace_id"] if at_work and profile["workplace_id"] is not None else profile["home_id"]
+    at_work = is_work_shift(profile, state.time)
+    dest = profile["workplace_id"] if at_work else profile["home_id"]
     here = state.entities[npc_id]["location_id"]
     if dest == here:
         return None
@@ -100,9 +105,7 @@ def work_allowed_at(entities: Any, npcs: Any, routines: Any,
     if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 85
             or npc["needs"]["safety"] >= 75):
         return False
-    now = world_time % DAY_SECONDS
-    start, end = profile["work_start"], profile["work_end"]
-    return (start <= now < end) if start < end else (now >= start or now < end)
+    return is_work_shift(profile, world_time)
 
 
 def routine_allows_work(state: WorldState, npc_id: str) -> bool:
