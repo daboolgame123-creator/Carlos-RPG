@@ -28,3 +28,19 @@ reducer also requires a zero courier copper balance when loading cash and an
 exact one-coin balance when delivering it. Funding wages into that same balance
 would conflict with the existing custody rule. The first experiment therefore
 uses separately owned opening food and the existing consumption protections.
+
+## First experiment result
+
+The locally measured provision case moved one opening loaf from market stock
+to Hana. She ate it and reached hunger 53 at hour 24, then reached hunger 100
+by hour 48. By hour 96 her route still had 25 completed deliveries, the same
+as the unprovisioned control. No delivery was added during day four. Initial
+food revenue fell from six copper to four because only two loaves were for
+sale at the opening tick. The test case preserves the opening total of three
+loaves and twelve copper and reconciles the physical ledgers daily.
+
+The single opening provision delayed hunger without extending the route.
+A fee paid into the courier's current copper slot would still conflict with
+consignment custody. The evidence leaves durable worker access to food as an
+unresolved capacity limit. Keep the bounded trial as a negative control and
+avoid treating a one-time provision as recurring compensation.

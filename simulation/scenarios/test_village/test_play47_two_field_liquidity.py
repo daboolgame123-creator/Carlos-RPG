@@ -9,14 +9,18 @@ import test_play38_multi_farm_couriers as east
 import test_play39_rain_drought_real_day as reference
 from test_play47_joined_professions import _engine, _joined_bootstrap
 
-@pytest.mark.parametrize("wet,funded", [(False, False), (True, False), (True, True)])
-def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
+@pytest.mark.parametrize("wet,funded,provision", [
+    (False, False, False), (True, False, False),
+    (True, True, False), (True, True, True),
+])
+def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded, provision):
     path = tmp_path / "two-field.sqlite"
     world = east.WORLD
     with SQLiteEventStore(path) as db:
         east.seed_two_field_world(
             db, east_growth_seconds=reference.DAY, east_grain_yield=7,
-            initial_water=2, initial_market_food=3, market_wallets=True,
+            initial_water=2, initial_market_food=3 - provision, market_wallets=True,
+            east_courier_provision=provision,
             hungry_market_buyers=True, bootstrap=_joined_supply_genesis,
             cash_return=funded, waged_harvest=funded,
             harvest_wage_copper=2 if funded else 1,
@@ -67,6 +71,17 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
                 ))
             finally:
                 clock.close_session(world)
+    if provision:
+        assert any(meal["npc_id"] == east.COURIER for meal in state.consumptions.values())
+        opening_food_sales = [trade for trade in state.market_trades.values()
+                              if trade["resource"] == "food" and trade["executed_at"] == 0]
+        assert len(opening_food_sales) == 2
+        assert sum(trade["total_paid"] for trade in opening_food_sales) == 4
+        assert readings[-1]["time"] == 4 * day
+        assert readings[-1]["courier_deliveries"] == readings[-2]["courier_deliveries"]
+        assert state.npcs[east.COURIER]["needs"]["hunger"] == 100
+        assert state.resources["market"]["food"] == 4
+        return
     if funded:
         wages = [job["work_wage"] for job in state.production_jobs.values()
                  if job["npc_id"] == east.FARMER and "work_wage" in job]
@@ -114,10 +129,11 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
     assert readings[-1]["npc_hunger_cap"] == 13
 
 
-def _joined_supply_genesis(db, **options):
+def _joined_supply_genesis(db, *, initial_market_food, **options):
+    assert initial_market_food in (2, 3)
     assert options == {
-        "water": 2, "seed": 1, "initial_market_food": 3, "harvest_yield": 3,
+        "water": 2, "seed": 1, "harvest_yield": 3,
         "personal_food": 0, "market_wallets": True, "hungry_market_buyers": True,
         "one_hungry_market_buyer": False,
     }
-    _joined_bootstrap(db)
+    _joined_bootstrap(db, initial_market_food=initial_market_food)

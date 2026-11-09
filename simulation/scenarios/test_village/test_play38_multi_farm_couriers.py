@@ -31,8 +31,11 @@ def seed_two_field_world(
     cash_return=False, waged_harvest=False,
     hungry_waged_farmer=False, harvest_wage_copper=1,
     one_hungry_market_buyer=False, bootstrap=seed_physical_supply,
+    east_courier_provision=False,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
+    if type(east_courier_provision) is not bool:
+        raise ValueError("east_courier_provision must be a boolean")
     if type(one_hungry_market_buyer) is not bool:
         raise ValueError('one_hungry_market_buyer must be a test-only boolean')
     if type(waged_harvest) is not bool or (waged_harvest and not cash_return):
@@ -88,7 +91,7 @@ def seed_two_field_world(
         for resource in ("labor_units", "investigation_attempts", "food"):
             extra.append(_event("ResourceChanged", {
                 "owner_id": who, "resource": resource,
-                "previous": None, "current": 0,
+                "previous": None, "current": int(east_courier_provision and who == COURIER and resource == "food"),
                 "source": "initialization",
             }))
     if type(cash_return) is not bool or (cash_return and not market_wallets):
