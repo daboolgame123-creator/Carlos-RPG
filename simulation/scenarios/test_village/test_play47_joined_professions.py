@@ -212,6 +212,30 @@ def test_joined_full_life_npcs_really_trade_smelt_and_get_hungry(tmp_path):
             assert state.time == 900
             trades = {(t["buyer_id"], t["resource"])
                       for t in state.market_trades.values()}
+            print("PLAY47_JOINED_DIAG", json.dumps({
+                "smith_needs": state.npcs["smith"]["needs"],
+                "smith_site": state.entities["smith"]["location_id"],
+                "smith_nav": state.navigation.get("smith"),
+                "smith_travels": [
+                    {"route": t["route_id"], "destination": t["destination"],
+                     "due": t["due"], "status": t["status"]}
+                    for t in state.travels.values() if t["npc_id"] == "smith"
+                ],
+                "smith_actions": [
+                    {"action": a["action"], "status": a["status"],
+                     "due": a["due"]}
+                    for a in state.actions.values() if a["npc_id"] == "smith"
+                ],
+                "source_locations": {
+                    name: state.entities[name]["location_id"]
+                    for name in ("miner", "burner", "repairman")},
+                "site_stocks": {site: dict(state.resources[site])
+                    for site in ("smithy", "iron_mine", "charcoal_kiln")},
+                "open_offers": {k: {"item": o["resource"],
+                    "site": o["site_id"], "status": o["status"]}
+                    for k, o in state.market_offers.items()},
+                "trades": sorted(trades),
+            }, sort_keys=True, default=str))
             # Genuine autonomous multi-input smith procurement alongside food.
             assert ("smith", "iron_ore") in trades
             assert ("smith", "charcoal") in trades
