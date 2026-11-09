@@ -341,3 +341,112 @@ def test_one_wait_vs_partitioned_wait_preserves_individual_material_trades(tmp_p
             finally:
                 clock.close_session(WORLD)
     assert outputs[0] == outputs[1]
+
+
+
+def _add_second_autonomous_profession(db):
+    """Trusted time-zero repair workshop, no scripted buyer or product."""
+    site, worker = "repair_shop", "repairman"
+    current = db.load(WORLD)
+    events = [
+        _e("LocationCreated", {"id": site, "name": "Repair Shop"}),
+        _e("RouteCreated", {
+            "id": "smith-repair", "a": FORGE, "b": site, "seconds": 50,
+        }),
+        _e("EntityCreated", {
+            "id": worker, "name": "Repairman",
+            "location_id": site, "controller": "npc",
+        }),
+        _e("NPCConfigured", {
+            "npc_id": worker, "role": "repairer",
+            "needs": {"hunger": 10, "fatigue": 0, "safety": 0},
+            "goals": {"earn": 10, "explore": 10, "survive": 30},
+        }),
+    ]
+    stock = {
+        site: {"iron_fitting": 0, "repaired_gear": 0,
+               "wrench": 1, "coin_copper": 0},
+        worker: {"iron_fitting": 0, "coin_copper": 2},
+    }
+    for owner, owned in stock.items():
+        for item, count in owned.items():
+            events.append(_e("ResourceChanged", {
+                "owner_id": owner, "resource": item,
+                "previous": None, "current": count,
+                "source": "initialization",
+            }))
+    events.extend([
+        _e("ProductionRecipeConfigured", {
+            "id": "repair-tools", "site_id": site, "role": "repairer",
+            "input_resource": "iron_fitting", "input_amount": 1,
+            "output_resource": "repaired_gear", "output_amount": 1,
+            "tool_resource": "wrench", "duration_seconds": 90,
+        }),
+        _e("NPCRoutineConfigured", {
+            "npc_id": worker, "home_id": KILN, "workplace_id": site,
+            "work_start": 250, "work_end": 20_000,
+        }),
+    ])
+    return db.append(WORLD, "repairer:genesis", current.revision,
+                     events, bootstrap=True)
+
+
+def test_all_three_trades_both_professions_act_without_manual_commands(tmp_path):
+    """Miner/burner -> smith -> repairer, entire local economic sequence automatic."""
+    with SQLiteEventStore(tmp_path / "autonomous-two-professions.sqlite") as db:
+        _auto_boot(db)
+        initial = _add_second_autonomous_profession(db)
+        assert _money(initial) == 6
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            state = _auto_until(db, _auto_engine(db, clock), 700, "end-to-end")
+            assert state.resources[FORGE]["iron_ore"] == 0
+            assert state.resources[FORGE]["charcoal"] == 0
+            assert state.resources[FORGE]["iron_fitting"] == 0
+            assert state.resources["repair_shop"]["repaired_gear"] == 1
+            trades = list(state.market_trades.values())
+            assert sorted(t["resource"] for t in trades) == [
+                "charcoal", "iron_fitting", "iron_ore",
+            ]
+            assert {(t["buyer_id"], t["resource"]) for t in trades} == {
+                (SMITH, "iron_ore"), (SMITH, "charcoal"),
+                ("repairman", "iron_fitting"),
+            }
+            completed = [j for j in state.production_jobs.values()
+                         if j["status"] == "completed"]
+            assert len(completed) == 2
+            assert {j["recipe_id"] for j in completed} == {
+                "iron-plus-fuel", "repair-tools",
+            }
+            assert sum("work_wage" in j for j in completed) == 1
+            assert state.resources[SMITH]["coin_copper"] == 1
+            assert _money(state) == 6
+            repaired_trips = [t for t in state.travels.values()
+                              if t["npc_id"] == "repairman"]
+            assert len(repaired_trips) == 2
+            assert all(t["status"] == "arrived" for t in repaired_trips)
+            db.snapshot(WORLD)
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+            assert db.db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+            print("PLAY46_FULL_AUTO_ECONOMY",
+                  "trades=3 production_jobs=2 funded_wages=1 copper=6")
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_compound_autonomy_can_be_disabled_without_blocking_old_economy(tmp_path):
+    with SQLiteEventStore(tmp_path / "autonomous-flag-off.sqlite") as db:
+        state = _auto_boot(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            state = _auto_until(db, _auto_engine(db, clock, enabled=False),
+                                420, "explicitly-disabled")
+            assert state.resources[FORGE]["iron_fitting"] == 0
+            assert not state.market_trades
+            assert not state.production_jobs
+            assert _money(state) == 4
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+        finally:
+            clock.close_session(WORLD)
