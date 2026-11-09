@@ -93,6 +93,9 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
             or not _seconds(recipe["duration_seconds"])):
         return False
     if compound:
+        if (recipe["output_resource"] in _COMPOUND_DENIED
+                or recipe["tool_resource"] in _COMPOUND_DENIED):
+            return False
         parts = recipe["inputs"]
         if type(parts) is not list or not 2 <= len(parts) <= 4:
             return False
