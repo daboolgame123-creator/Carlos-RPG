@@ -38,6 +38,10 @@ jobs:
         working-directory: simulation
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact tested source SHA
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
       - name: Check out reviewed Phase 01-R baseline
         uses: actions/checkout@v5
         with:
