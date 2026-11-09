@@ -154,3 +154,15 @@ A prior visit funded by an earlier wage cannot trigger an old return trip.
 The 13-resident rainy run records Farid's second purchase and meal at second
 213,600, after his second harvest wage. Both trips spend exactly two copper.
 The original focused shopping mode retains its existing policy.
+
+### 47-N — The fourth-day circulation limit
+
+Two local continuations started from the same verified 72-hour funded save.
+One continued with the remaining three water units, and one received two more
+units through a finite rain receipt. At hour 96 the added rain was still in
+storage. Both worlds had harvested three crop lots in total, stored ten grain
+units and retained five market loaves. No fourth-day harvest, wage, purchase,
+or delivery occurred. Twelve residents reached maximum hunger, and the market
+held four copper while the east farm and Farid held zero. Every checkpoint
+accounted for twelve copper and all water and food, with SQLite replay matching
+the final state. The funded CI fixture now includes the wet fourth day.

@@ -35,7 +35,8 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
         ], bootstrap=True)
     day = reference.DAY
     readings = []
-    for end in (day, 2 * day, 3 * day):
+    days = 4 if funded else 3
+    for end in range(day, (days + 1) * day, day):
         with SQLiteEventStore(path) as db:
             assert db.load(world).to_dict() == state.to_dict()
             clock = TimeEngine(db)
@@ -53,7 +54,7 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
                         state, rain_units=state.hydrology_sources["well"]["received_total"],
                         people=13,
                     )
-                if wet and end < 3 * day:
+                if wet and end < days * day:
                     state = FiniteWaterService(db, clock).record(
                         world, "well", f"observed-rain-{end}", 2,
                         command_id=f"rain-{end}", expected_revision=state.revision,
@@ -91,6 +92,16 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
         assert ordered_meals[0]["consumed_at"] < ordered_wages[1]["paid_at"]
         assert state.resources[east.FARMER]["coin_copper"] == 0
         assert state.resources["market"]["food"] == 5
+        assert state.resources["market"]["coin_copper"] == 4
+        assert state.resources[east.EAST]["coin_copper"] == 0
+        day_three, day_four = readings[-2:]
+        assert day_four["time"] == 4 * day
+        assert day_four["rain_units"] == 6
+        assert day_four["stored_water"] == 5
+        for key in ("water_used_for_growth", "matured", "grain", "baked",
+                    "owned_food", "eaten", "market_sales", "courier_deliveries"):
+            assert day_four[key] == day_three[key], key
+        assert day_four["npc_hunger_cap"] == 12
         return
     assert readings[-1]["matured"] == {"farm": 1, east.EAST: 2 if wet else 1}
     assert readings[-1]["rain_units"] == (4 if wet else 0)
