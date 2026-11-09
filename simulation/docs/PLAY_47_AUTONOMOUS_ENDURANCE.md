@@ -27,3 +27,10 @@ The pilot provides no general economic solvency, demand model, resource regenera
 - Reusing existing trusted test-world genesis does not authorize migration of PLAY-45 saved worlds to Schema 42.
 - Playable Carlos input and untrusted network/API remain isolated; P0 production and external review stay open.
 - Last SHA, genuine CI links, actual NPC/economy outcomes, observed bottlenecks and open gates belong in the next report.
+
+## 47-C baseline experiment (separate from compound production)
+
+- Adds a **single real seven-NPC food/water village**, with `economy_only_enabled=False`, enabled survival, paid food purchases, actual farm→bakery→market physical distribution, hunger and bounded cash. Read-only audit checkpoints through **24 hours**, matching event replay and SQLite integrity.
+- Independent **zero-water counterfactual** measures no free harvest over six hours. A shortage is not treated as a software failure; the opening three loaves may still be eaten.
+- This is an **intermediate baseline**, not the final *joined* NPC world: the compound/professional planner currently requires `economy_only_enabled=True` and its coexistence with full survival needs explicit design and independent testing. **Do not claim 7 NPC full compound-professional autonomy or 72h/7d sustainable survival from this batch.**
+- No schema/rules/event changes, no new privileges, no player-visible omniscient diagnostics.

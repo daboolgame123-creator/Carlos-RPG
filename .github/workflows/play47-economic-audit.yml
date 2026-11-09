@@ -32,4 +32,5 @@ jobs:
       - name: Compile and audit real autonomous NPC economy
         run: |
           python -m compileall -q src scenarios/test_village/test_play47_economic_audit.py
-          PYTHONPATH=src python -m pytest -q -s scenarios/test_village/test_play47_economic_audit.py             scenarios/test_village/test_play46_physical_chain.py
+          PYTHONPATH=src python -m pytest -q -s scenarios/test_village/test_play47_economic_audit.py             scenarios/test_village/test_play46_physical_chain.py \
+            scenarios/test_village/test_play47_seven_npc_survival.py
