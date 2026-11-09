@@ -78,7 +78,8 @@ class LivingWorldEngine:
                  shopping_routes_enabled: bool = False,
                  supply_enabled: bool = False,
                  professional_procurement_enabled: bool = False,
-                 multi_professional_markets_enabled: bool = False):
+                 multi_professional_markets_enabled: bool = False,
+                 compound_procurement_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -180,6 +181,14 @@ class LivingWorldEngine:
                 'simulation and cannot share another professional/shopping planner'
             )
         self.multi_professional_markets_enabled = multi_professional_markets_enabled
+        if (type(compound_procurement_enabled) is not bool or
+                (compound_procurement_enabled and
+                 not multi_professional_markets_enabled)):
+            raise ValueError(
+                "compound_procurement_enabled requires "
+                "multi_professional_markets_enabled=True"
+            )
+        self.compound_procurement_enabled = compound_procurement_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
@@ -386,6 +395,14 @@ class LivingWorldEngine:
                     if self.multi_professional_markets_enabled:
                         from .multi_professional_trade import (
                             choose_workshop_material_deposit as choose_workshop_input_deposit)
+                    if self.compound_procurement_enabled:
+                        from .compound_professional_trade import (
+                            has_compound_recipe, choose_compound_deposit)
+                        old_deposit = choose_workshop_input_deposit
+                        def choose_workshop_input_deposit(state, worker):
+                            return (choose_compound_deposit(state, worker)
+                                    if has_compound_recipe(state, worker)
+                                    else old_deposit(state, worker))
                     # A purchased bag item is still private property until
                     # physically deposited; only then may ordinary production
                     # consume workshop-owned grain on the same local tick.
@@ -435,6 +452,12 @@ class LivingWorldEngine:
                     if self.multi_professional_markets_enabled:
                         from .multi_professional_trade import (
                             choose_local_material_offer as choose_local_grain_offer)
+                    if self.compound_procurement_enabled:
+                        from .compound_professional_trade import choose_charcoal_offer
+                        old_offer = choose_local_grain_offer
+                        def choose_local_grain_offer(state, keeper):
+                            return (old_offer(state, keeper)
+                                    or choose_charcoal_offer(state, keeper))
                     for keeper_id in sorted(current.npcs):
                         grain = choose_local_grain_offer(current, keeper_id)
                         if grain is None:
@@ -488,6 +511,14 @@ class LivingWorldEngine:
                     if self.multi_professional_markets_enabled:
                         from .multi_professional_trade import (
                             choose_local_material_purchase as choose_local_grain_purchase)
+                    if self.compound_procurement_enabled:
+                        from .compound_professional_trade import (
+                            has_compound_recipe, choose_compound_purchase)
+                        old_purchase = choose_local_grain_purchase
+                        def choose_local_grain_purchase(state, buyer):
+                            return (choose_compound_purchase(state, buyer)
+                                    if has_compound_recipe(state, buyer)
+                                    else old_purchase(state, buyer))
                     for buyer_id in sorted(current.npcs):
                         grain_buy = choose_local_grain_purchase(current, buyer_id)
                         if grain_buy is None:
@@ -588,6 +619,17 @@ class LivingWorldEngine:
                     from .multi_professional_trade import (
                         has_material_workshop_recipe as has_workshop_recipe,
                         choose_material_known_road as choose_professional_known_road)
+                if self.compound_procurement_enabled:
+                    from .compound_professional_trade import (
+                        has_compound_recipe, choose_compound_known_road)
+                    old_has, old_walk = has_workshop_recipe, choose_professional_known_road
+                    def has_workshop_recipe(state, worker):
+                        return (has_compound_recipe(state, worker)
+                                or old_has(state, worker))
+                    def choose_professional_known_road(state, worker):
+                        return (choose_compound_known_road(state, worker)
+                                if has_compound_recipe(state, worker)
+                                else old_walk(state, worker))
                 for buyer_id in sorted(current.npcs):
                     if buyer_id in busy or not has_workshop_recipe(current, buyer_id):
                         continue

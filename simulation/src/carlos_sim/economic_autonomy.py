@@ -12,7 +12,7 @@ from hashlib import sha256
 from .domain import WorldState
 from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present
 from .npc import _injury_rest_decision
-from .production import MAX_QUANTITY as PRODUCTION_MAX
+from .production import MAX_QUANTITY as PRODUCTION_MAX, recipe_inputs
 from .routines import DAY_SECONDS, routine_allows_work
 
 BUY_HUNGER_THRESHOLD = 70
@@ -112,7 +112,7 @@ def choose_local_production(state: WorldState, npc_id: str, *,
         remaining_shift = (profile["work_end"] - state.time % DAY_SECONDS) % DAY_SECONDS
         if recipe["duration_seconds"] > remaining_shift:
             continue
-        if recipe["input_resource"] == "seed":
+        if recipe.get("input_resource") == "seed":
             field = state.farm_plots.get(here)
             resources = state.resources.get(here, {})
             if (not agriculture_enabled or field is None or field["status"] != "idle"
@@ -120,13 +120,14 @@ def choose_local_production(state: WorldState, npc_id: str, *,
                     or resources.get("water", 0) < 1):
                 continue
         stock = state.resources.get(here, {})
-        input_amount = stock.get(recipe["input_resource"])
+        needs = recipe_inputs(recipe)
+        stocked = {item: stock.get(item) for item, _ in needs}
         output_amount = stock.get(recipe["output_resource"])
         tool_amount = stock.get(recipe["tool_resource"])
-        if not all(_known(n) for n in (input_amount, output_amount, tool_amount)):
+        if not all(_known(n) for n in (*stocked.values(), output_amount, tool_amount)):
             continue
-        if (input_amount < recipe["input_amount"] or tool_amount < 1
-                or output_amount != 0
+        if (any(stocked[item] < amount for item, amount in needs)
+                or tool_amount < 1 or output_amount != 0
                 or output_amount + recipe["output_amount"] > PRODUCTION_MAX):
             continue
         reservations = sum(
@@ -140,7 +141,7 @@ def choose_local_production(state: WorldState, npc_id: str, *,
         if ident in state.production_jobs or "production:" + ident in state.scheduled:
             continue
         return ProductionIntent(npc_id, recipe_id, ident,
-                                f"on_shift; local_input={input_amount}; "
+                                f"on_shift; local_inputs={stocked}; "
                                 f"local_output={output_amount}; tool_free=1")
     return None
 

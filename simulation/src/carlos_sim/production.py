@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .domain import DomainEvent, WorldState
+from .domain import DomainEvent, WorldState, _thaw
 from .store import SQLiteEventStore, RevisionConflict
 from .time_engine import TimeEngine
 
@@ -50,40 +50,95 @@ def is_producing(state: dict[str, Any], npc_id: str) -> bool:
                for job in state["production_jobs"].values())
 
 
+
+# v42/57: old scalar receipts remain unchanged; compound jobs have per-input
+# receipts. Currency and nontradeable pseudo-resources cannot become fuel.
+_COMPOUND_DENIED = {"coin_copper", "labor_units", "investigation_attempts",
+                    "regrowth_reserve", "wild_food"}
+_RECIPE_BASE = {"id", "site_id", "role", "output_resource", "output_amount",
+                "tool_resource", "duration_seconds"}
+_RECIPE_LEGACY = _RECIPE_BASE | {"input_resource", "input_amount"}
+_RECIPE_COMPOUND = _RECIPE_BASE | {"inputs"}
+_JOB_BASE = {"npc_id", "recipe_id", "site_id", "started_at", "due", "status",
+             "finished_at", "tool_seen", "output_before", "output_after"}
+_JOB_LEGACY = _JOB_BASE | {"input_before", "input_after"}
+_JOB_COMPOUND = _JOB_BASE | {"input_before_by_resource",
+                             "input_after_by_resource"}
+
+
+def recipe_inputs(recipe: dict[str, Any]) -> tuple[tuple[str, int], ...]:
+    """Validated normalized view of a legacy or compound recipe."""
+    if "inputs" in recipe:
+        return tuple((part["resource"], part["amount"])
+                     for part in recipe["inputs"])
+    return ((recipe["input_resource"], recipe["input_amount"]),)
+
+
+def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
+                    resources: dict[str, Any]) -> bool:
+    if not isinstance(recipe, dict):
+        return False
+    compound = "inputs" in recipe
+    expected = _RECIPE_COMPOUND if compound else _RECIPE_LEGACY
+    if set(recipe) not in (expected, expected | {"wage_coin"}):
+        return False
+    if (not _valid_name(recipe["id"], MAX_ID)
+            or not isinstance(recipe["site_id"], str)
+            or recipe["site_id"] not in locations
+            or not _valid_name(recipe["role"], MAX_NAME)
+            or not _valid_name(recipe["output_resource"], MAX_NAME)
+            or not _valid_name(recipe["tool_resource"], MAX_NAME)
+            or recipe["output_resource"] == recipe["tool_resource"]
+            # Legacy single-input production must also never mint, burn or
+            # disguise existing copper as a reusable manufacturing tool.
+            or recipe["output_resource"] == "coin_copper"
+            or recipe["tool_resource"] == "coin_copper"
+            or not _amount(recipe["output_amount"])
+            or not _seconds(recipe["duration_seconds"])):
+        return False
+    if compound:
+        if (recipe["output_resource"] in _COMPOUND_DENIED
+                or recipe["tool_resource"] in _COMPOUND_DENIED):
+            return False
+        parts = recipe["inputs"]
+        if type(parts) is not list or not 2 <= len(parts) <= 4:
+            return False
+        if any(type(part) is not dict or set(part) != {"resource", "amount"}
+               or not _valid_name(part["resource"], MAX_NAME)
+               or part["resource"] in _COMPOUND_DENIED
+               or not _amount(part["amount"]) for part in parts):
+            return False
+        names = [part["resource"] for part in parts]
+        if len(set(names)) != len(names):
+            return False
+    else:
+        if (not _valid_name(recipe["input_resource"], MAX_NAME)
+                or recipe["input_resource"] == "coin_copper"
+                or not _amount(recipe["input_amount"])):
+            return False
+        names = [recipe["input_resource"]]
+    if any(name in (recipe["output_resource"], recipe["tool_resource"])
+           for name in names):
+        return False
+    stocks = resources.get(recipe["site_id"], {})
+    if not all(_known(stocks.get(name)) for name in
+               (*names, recipe["output_resource"], recipe["tool_resource"])):
+        return False
+    if "wage_coin" in recipe and (
+            type(recipe["wage_coin"]) is not int
+            or not 1 <= recipe["wage_coin"] <= 5
+            or not _known(stocks.get("coin_copper"))):
+        return False
+    return True
+
 def configure_recipe(state: dict[str, Any], event: DomainEvent, *,
                      bootstrap: bool) -> None:
-    p = event.data
-    required = {"id", "site_id", "role", "input_resource", "input_amount",
-                "output_resource", "output_amount", "tool_resource", "duration_seconds"}
+    p = _thaw(event.data)
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
-            or set(p) not in (required, required | {"wage_coin"})):
-        raise ValueError("production recipes require trusted time-zero bootstrap")
-    ident, site = p["id"], p["site_id"]
-    if (not _valid_name(ident, MAX_ID) or ident in state["production_recipes"]
-            or not isinstance(site, str) or site not in state["locations"]
-            or not _valid_name(p["role"], MAX_NAME)
-            or not all(_valid_name(p[k], MAX_NAME) for k in (
-                "input_resource", "output_resource", "tool_resource"))
-            or len({p["input_resource"], p["output_resource"],
-                    p["tool_resource"]}) != 3
-            or not _amount(p["input_amount"])
-            or not _amount(p["output_amount"])
-            or not _seconds(p["duration_seconds"])):
-        raise ValueError("invalid recipe fields or site")
-    resources = state["resources"].get(site, {})
-    if not all(_known(resources.get(p[k])) for k in (
-            "input_resource", "output_resource", "tool_resource")):
-        raise ValueError("recipe requires initialized local materials, output and tools")
-    # A wage is a signed time-zero job term, not a free payout, and may only
-    # exist when this employer's real money stock is initialized.
-    if "wage_coin" in p and (
-            type(p["wage_coin"]) is not int
-            or not 1 <= p["wage_coin"] <= 5
-            or not _known(resources.get("coin_copper"))):
-        raise ValueError("funded wage terms require a known employer treasury")
-    # Recipe is a fixed, auditable configuration, not an executable callback.
-    state["production_recipes"][ident] = dict(p)
-
+            or not recipe_shape_ok(p, state["locations"], state["resources"])
+            or p["id"] in state["production_recipes"]):
+        raise ValueError("recipe requires finite, initialized time-zero materials")
+    state["production_recipes"][p["id"]] = dict(p)
 
 def start_production(state: dict[str, Any], event: DomainEvent, *,
                      production_authorized: bool) -> None:
@@ -108,11 +163,13 @@ def start_production(state: dict[str, Any], event: DomainEvent, *,
                    for t in state["travels"].values())):
         raise ValueError("worker cannot work twice or produce while traveling")
     stocks = state["resources"].get(site, {})
-    input_before = stocks.get(recipe["input_resource"])
+    needs = recipe_inputs(recipe)
+    before_by = {item: stocks.get(item) for item, _ in needs}
     output_before = stocks.get(recipe["output_resource"])
     tool_qty = stocks.get(recipe["tool_resource"])
-    if (not all(_known(v) for v in (input_before, output_before, tool_qty))
-            or input_before < recipe["input_amount"]
+    if (not all(_known(v) for v in
+                (*before_by.values(), output_before, tool_qty))
+            or any(before_by[item] < amount for item, amount in needs)
             or tool_qty < 1
             or output_before + recipe["output_amount"] > MAX_QUANTITY):
         raise ValueError("insufficient or unknown local production inputs/tool/output")
@@ -129,12 +186,21 @@ def start_production(state: dict[str, Any], event: DomainEvent, *,
     due = state["time"] + recipe["duration_seconds"]
     if due > 2**63 - 1 or _sid(p["id"]) in state["scheduled"]:
         raise ValueError("invalid or duplicate production appointment")
-    stocks[recipe["input_resource"]] = input_before - recipe["input_amount"]
+    # Validate every requirement BEFORE touching any resource balance.
+    for item, amount in needs:
+        stocks[item] = before_by[item] - amount
+    receipt = (
+        {"input_before_by_resource": dict(before_by),
+         "input_after_by_resource": {
+             item: before_by[item] - amount for item, amount in needs
+         }} if "inputs" in recipe else
+        {"input_before": before_by[needs[0][0]],
+         "input_after": before_by[needs[0][0]] - needs[0][1]}
+    )
     state["production_jobs"][p["id"]] = {
         "npc_id": who, "recipe_id": recipe_id, "site_id": site,
         "started_at": state["time"], "due": due, "status": "running",
-        "finished_at": None, "input_before": input_before,
-        "input_after": input_before - recipe["input_amount"],
+        "finished_at": None, **receipt,
         "tool_seen": tool_qty, "output_before": None, "output_after": None,
     }
     state["scheduled"][_sid(p["id"])] = {
@@ -239,54 +305,51 @@ def validate_production_state(state: dict[str, Any]) -> None:
     if not isinstance(recipes, dict) or not isinstance(jobs, dict):
         raise ValueError("production state collections must be mappings")
     for ident, rec in recipes.items():
-        if (not _valid_name(ident, MAX_ID) or not isinstance(rec, dict)
-                or set(rec) not in (
-                    {"id", "site_id", "role", "input_resource",
-                     "input_amount", "output_resource", "output_amount",
-                     "tool_resource", "duration_seconds"},
-                    {"id", "site_id", "role", "input_resource",
-                     "input_amount", "output_resource", "output_amount",
-                     "tool_resource", "duration_seconds", "wage_coin"})
-                or rec["id"] != ident
-                or rec["site_id"] not in state["locations"]
-                or not _valid_name(rec["role"], MAX_NAME)
-                or not all(_valid_name(rec[k], MAX_NAME) for k in (
-                    "input_resource", "output_resource", "tool_resource"))
-                or len({rec["input_resource"], rec["output_resource"],
-                        rec["tool_resource"]}) != 3
-                or not _amount(rec["input_amount"])
-                or not _amount(rec["output_amount"])
-                or not _seconds(rec["duration_seconds"])
-                or ("wage_coin" in rec and (
-                    type(rec["wage_coin"]) is not int
-                    or not 1 <= rec["wage_coin"] <= 5
-                    or not _known(state["resources"].get(rec["site_id"], {}).get("coin_copper"))))):
+        if (not _valid_name(ident, MAX_ID)
+                or not recipe_shape_ok(rec, state["locations"],
+                                       state["resources"])
+                or rec["id"] != ident):
             raise ValueError("invalid persisted recipe")
     busy: set[str] = set()
     reservation_count: dict[tuple[str, str], int] = {}
     for ident, job in jobs.items():
-        if (not _valid_name(ident, MAX_ID) or not isinstance(job, dict)
-                or set(job) not in (
-                    {"npc_id", "recipe_id", "site_id", "started_at",
-                     "due", "status", "finished_at", "input_before",
-                     "input_after", "tool_seen", "output_before", "output_after"},
-                    {"npc_id", "recipe_id", "site_id", "started_at",
-                     "due", "status", "finished_at", "input_before",
-                     "input_after", "tool_seen", "output_before", "output_after",
-                     "work_wage"})):
+        if not _valid_name(ident, MAX_ID) or not isinstance(job, dict):
             raise ValueError("invalid persisted production job")
-        recipe = recipes.get(job["recipe_id"]) if isinstance(job["recipe_id"], str) else None
+        recipe = (recipes.get(job.get("recipe_id"))
+                  if isinstance(job.get("recipe_id"), str) else None)
+        if recipe is None:
+            raise ValueError("job must reference existing recipe")
+        compound = "inputs" in recipe
+        valid_shape = _JOB_COMPOUND if compound else _JOB_LEGACY
+        if set(job) not in (valid_shape, valid_shape | {"work_wage"}):
+            raise ValueError("invalid persisted job receipt shape")
         who = job["npc_id"]
-        if (recipe is None or who not in state["npcs"]
+        if compound:
+            needed = dict(recipe_inputs(recipe))
+            before = job["input_before_by_resource"]
+            after = job["input_after_by_resource"]
+            valid_inputs = (
+                type(before) is dict and type(after) is dict
+                and set(before) == set(needed) == set(after)
+                and all(_known(before[item]) and _known(after[item])
+                        and before[item] >= quantity
+                        and after[item] == before[item] - quantity
+                        for item, quantity in needed.items())
+            )
+        else:
+            valid_inputs = (
+                _known(job["input_before"]) and _known(job["input_after"])
+                and job["input_before"] >= recipe["input_amount"]
+                and job["input_after"] ==
+                job["input_before"] - recipe["input_amount"]
+            )
+        if (who not in state["npcs"]
                 or state["npcs"][who]["role"] != recipe["role"]
                 or job["site_id"] != recipe["site_id"]
                 or type(job["started_at"]) is not int or job["started_at"] < 0
                 or type(job["due"]) is not int
                 or job["due"] != job["started_at"] + recipe["duration_seconds"]
-                or not _known(job["input_before"])
-                or not _known(job["input_after"])
-                or job["input_before"] < recipe["input_amount"]
-                or job["input_after"] != job["input_before"] - recipe["input_amount"]
+                or not valid_inputs
                 or not _known(job["tool_seen"]) or job["tool_seen"] < 1
                 or job["status"] not in ("running", "completed")):
             raise ValueError("invalid production materials or duration/profession")

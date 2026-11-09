@@ -41,7 +41,7 @@ def test_registered_four_sites_are_truly_separated_with_known_finite_stock(tmp_p
     db, clock, engine = begin(tmp_path / "four.sqlite")
     try:
         state = db.load(WORLD)
-        assert state.schema_version == 41 and state.rules_version == 56
+        assert state.schema_version == 42 and state.rules_version == 57
         assert len(state.npcs) == 7
         assert set(["farm", "well", "bakery", "market"]).issubset(state.locations)
         assert state.entities["nora"]["location_id"] == "farm"
