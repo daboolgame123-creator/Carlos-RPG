@@ -9,8 +9,8 @@ import test_play38_multi_farm_couriers as east
 import test_play39_rain_drought_real_day as reference
 from test_play47_joined_professions import _engine, _joined_bootstrap
 
-@pytest.mark.parametrize("wet", [False, True])
-def test_joined_two_field_food_and_liquidity(tmp_path, wet):
+@pytest.mark.parametrize("wet,funded", [(False, False), (True, False), (True, True)])
+def test_joined_two_field_food_and_liquidity(tmp_path, wet, funded):
     path = tmp_path / "two-field.sqlite"
     world = east.WORLD
     with SQLiteEventStore(path) as db:
@@ -18,6 +18,8 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet):
             db, east_growth_seconds=reference.DAY, east_grain_yield=7,
             initial_water=2, initial_market_food=3, market_wallets=True,
             hungry_market_buyers=True, bootstrap=_joined_supply_genesis,
+            cash_return=funded, waged_harvest=funded,
+            harvest_wage_copper=2 if funded else 1,
         )
         state = db.load(world)
         state = db.append(world, "joined-two-field-policy", state.revision, [
@@ -28,7 +30,8 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet):
             *(DomainEvent("ResourceChanged", None, "explicit opening zero wallet", 0,
                           {"owner_id": who, "resource": "coin_copper", "previous": None,
                            "current": 0, "source": "initialization"})
-              for who in (east.EAST, east.FARMER, east.COURIER)),
+              for who in (east.EAST, east.FARMER, east.COURIER)
+              if "coin_copper" not in state.resources[who]),
         ], bootstrap=True)
     day = reference.DAY
     readings = []
@@ -38,7 +41,7 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet):
             clock = TimeEngine(db)
             clock.open_session(world)
             try:
-                engine = _engine(db, clock)
+                engine = _engine(db, clock, shopping=funded)
                 for tick in range(end - 3 * day // 4, end + 1, day // 4):
                     state = engine.advance(world, seconds=tick-state.time,
                                            command_id=f"tick-{tick}",
@@ -63,6 +66,32 @@ def test_joined_two_field_food_and_liquidity(tmp_path, wet):
                 ))
             finally:
                 clock.close_session(world)
+    if funded:
+        wages = [job["work_wage"] for job in state.production_jobs.values()
+                 if job["npc_id"] == east.FARMER and "work_wage" in job]
+        purchases = [trade for trade in state.market_trades.values()
+                     if trade["buyer_id"] == east.FARMER and trade["resource"] == "food"]
+        meals = [meal for meal in state.consumptions.values()
+                 if meal["npc_id"] == east.FARMER]
+        assert len(wages) == 2
+        assert len(purchases) == len(meals) == 1
+        wage, second_wage = sorted(wages, key=lambda receipt: receipt["paid_at"])
+        purchase, meal = purchases[0], meals[0]
+        assert wage["site_id"] == east.EAST
+        assert wage["amount"] == purchase["total_paid"] == 2
+        assert purchase["site_id"] == "market"
+        assert any(trip["npc_id"] == east.FARMER
+                   and trip["destination"] == "market"
+                   and trip["status"] == "arrived"
+                   and wage["paid_at"] <= trip["arrived_at"] <= purchase["executed_at"]
+                   for trip in state.travels.values())
+        assert purchase["executed_at"] <= meal["consumed_at"]
+        assert meal["hunger_after"] < meal["hunger_before"]
+        assert meal["consumed_at"] < second_wage["paid_at"]
+        assert state.resources[east.FARMER]["coin_copper"] == second_wage["amount"] == 2
+        assert state.entities[east.FARMER]["location_id"] == "smithy"
+        assert state.resources["market"]["food"] == 6
+        return
     assert readings[-1]["matured"] == {"farm": 1, east.EAST: 2 if wet else 1}
     assert readings[-1]["rain_units"] == (4 if wet else 0)
     assert readings[-1]["water_used_for_growth"] == (3 if wet else 2)

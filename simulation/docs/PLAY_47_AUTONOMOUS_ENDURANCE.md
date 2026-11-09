@@ -133,3 +133,15 @@ loaf at the market, eats it and returns. At one copper he returns with his
 wage after finding the loaf unaffordable. Both cases preserve all twelve copper
 and verify the SQLite replay at each checkpoint. This isolates one completed
 cycle; the 13-resident endurance fixture still needs a longer circulation trial.
+
+### 47-L — Two harvest wages, one purchase in the 13-resident village
+
+The wet variant signs a two-copper harvest wage at genesis and enables the
+existing full-life shopping planner. Farid earns two wages, at seconds 86,570
+and 174,770. His first wage pays for a market loaf at second 140,600, lowering
+his hunger from 70 to 45. At hour 72 he still has his second wage and is at the
+smithy, while the food market has six loaves. The current shopping selector
+ends exploration at any local stall, including the smithy. The next regression
+should let a hungry funded shopper continue past a non-food stall using only
+local observations and learned roads. The experiment reconciles all twelve
+copper and verifies SQLite replay at each daily boundary.

@@ -102,8 +102,9 @@ def seed_two_field_world(
     if cash_return:
         # This is a ZERO opening depot balance, not a treasury injection.
         # The market already owns a zero initialized coin ledger in PLAY-27.
+        if "coin_copper" not in db.load(WORLD).resources["bakery"]:
+            physical_stock.append(("bakery", "coin_copper", 0))
         physical_stock.extend((
-            ("bakery", "coin_copper", 0),
             (EAST, "coin_copper", 0),
             (COURIER, "coin_copper", 0),
         ))
