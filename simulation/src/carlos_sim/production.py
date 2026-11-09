@@ -297,54 +297,51 @@ def validate_production_state(state: dict[str, Any]) -> None:
     if not isinstance(recipes, dict) or not isinstance(jobs, dict):
         raise ValueError("production state collections must be mappings")
     for ident, rec in recipes.items():
-        if (not _valid_name(ident, MAX_ID) or not isinstance(rec, dict)
-                or set(rec) not in (
-                    {"id", "site_id", "role", "input_resource",
-                     "input_amount", "output_resource", "output_amount",
-                     "tool_resource", "duration_seconds"},
-                    {"id", "site_id", "role", "input_resource",
-                     "input_amount", "output_resource", "output_amount",
-                     "tool_resource", "duration_seconds", "wage_coin"})
-                or rec["id"] != ident
-                or rec["site_id"] not in state["locations"]
-                or not _valid_name(rec["role"], MAX_NAME)
-                or not all(_valid_name(rec[k], MAX_NAME) for k in (
-                    "input_resource", "output_resource", "tool_resource"))
-                or len({rec["input_resource"], rec["output_resource"],
-                        rec["tool_resource"]}) != 3
-                or not _amount(rec["input_amount"])
-                or not _amount(rec["output_amount"])
-                or not _seconds(rec["duration_seconds"])
-                or ("wage_coin" in rec and (
-                    type(rec["wage_coin"]) is not int
-                    or not 1 <= rec["wage_coin"] <= 5
-                    or not _known(state["resources"].get(rec["site_id"], {}).get("coin_copper"))))):
+        if (not _valid_name(ident, MAX_ID)
+                or not recipe_shape_ok(rec, state["locations"],
+                                       state["resources"])
+                or rec["id"] != ident):
             raise ValueError("invalid persisted recipe")
     busy: set[str] = set()
     reservation_count: dict[tuple[str, str], int] = {}
     for ident, job in jobs.items():
-        if (not _valid_name(ident, MAX_ID) or not isinstance(job, dict)
-                or set(job) not in (
-                    {"npc_id", "recipe_id", "site_id", "started_at",
-                     "due", "status", "finished_at", "input_before",
-                     "input_after", "tool_seen", "output_before", "output_after"},
-                    {"npc_id", "recipe_id", "site_id", "started_at",
-                     "due", "status", "finished_at", "input_before",
-                     "input_after", "tool_seen", "output_before", "output_after",
-                     "work_wage"})):
+        if not _valid_name(ident, MAX_ID) or not isinstance(job, dict):
             raise ValueError("invalid persisted production job")
-        recipe = recipes.get(job["recipe_id"]) if isinstance(job["recipe_id"], str) else None
+        recipe = (recipes.get(job.get("recipe_id"))
+                  if isinstance(job.get("recipe_id"), str) else None)
+        if recipe is None:
+            raise ValueError("job must reference existing recipe")
+        compound = "inputs" in recipe
+        valid_shape = _JOB_COMPOUND if compound else _JOB_LEGACY
+        if set(job) not in (valid_shape, valid_shape | {"work_wage"}):
+            raise ValueError("invalid persisted job receipt shape")
         who = job["npc_id"]
-        if (recipe is None or who not in state["npcs"]
+        if compound:
+            needed = dict(recipe_inputs(recipe))
+            before = job["input_before_by_resource"]
+            after = job["input_after_by_resource"]
+            valid_inputs = (
+                type(before) is dict and type(after) is dict
+                and set(before) == set(needed) == set(after)
+                and all(_known(before[item]) and _known(after[item])
+                        and before[item] >= quantity
+                        and after[item] == before[item] - quantity
+                        for item, quantity in needed.items())
+            )
+        else:
+            valid_inputs = (
+                _known(job["input_before"]) and _known(job["input_after"])
+                and job["input_before"] >= recipe["input_amount"]
+                and job["input_after"] ==
+                job["input_before"] - recipe["input_amount"]
+            )
+        if (who not in state["npcs"]
                 or state["npcs"][who]["role"] != recipe["role"]
                 or job["site_id"] != recipe["site_id"]
                 or type(job["started_at"]) is not int or job["started_at"] < 0
                 or type(job["due"]) is not int
                 or job["due"] != job["started_at"] + recipe["duration_seconds"]
-                or not _known(job["input_before"])
-                or not _known(job["input_after"])
-                or job["input_before"] < recipe["input_amount"]
-                or job["input_after"] != job["input_before"] - recipe["input_amount"]
+                or not valid_inputs
                 or not _known(job["tool_seen"]) or job["tool_seen"] < 1
                 or job["status"] not in ("running", "completed")):
             raise ValueError("invalid production materials or duration/profession")
