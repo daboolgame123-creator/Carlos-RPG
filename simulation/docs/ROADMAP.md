@@ -1,5 +1,9 @@
 # خارطة الطريق الرسمية — محرك محاكاة كارلوس RPG
 
+## رابط خطة التسريع المعتمدة — 9 نوفمبر 2026
+
+التوجيه الحالي للوصول إلى اقتصاد NPC حي وتجربة لعب مرئية: [CARLOS_ACCELERATION_PLAN_2026-11-09.md](CARLOS_ACCELERATION_PLAN_2026-11-09.md). التسلسل المقترح: إغلاق PLAY-46 تقنيًا، ثم PLAY-47 اختبار أيام، PLAY-48 دورات إنتاج، PLAY-49 أسواق إضافية، PLAY-50 مسار البنّاء، PLAY-51 تجارة قريتين. **هذه خطة مشروطة وليست حالات تنفيذ**؛ تحقّق من الـCI والـHEAD قبل تغيير حالة أي مرحلة. نماذج OpenCode ومستويات التفكير: [OPENCODE_AVAILABLE_MODELS_2026-11-09.md](OPENCODE_AVAILABLE_MODELS_2026-11-09.md).
+
 ## أولوية التسريع — النسخة القابلة للعب أولًا (8 نوفمبر 2026)
 
 - **PLAY-30:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. فرع تجارب فقط، دمج PR #18 في `design/play29-seven-day-provisions-20261108` عند `186c79fc0fe28deead8f052dfc769bb840abcf7c`. الاختبارات الشاملة [42486981474](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42486981474) **1,670 ناجحة لكل Python 3.10/3.13**؛ انعدام استدامة الغذاء **مُثبت ومُعلن**، وليس عيب نزاهة مخفيًا. تقرير [الإغلاق](PLAY_30_TECHNICAL_CLOSURE.md).

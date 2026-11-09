@@ -1,5 +1,9 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## مرجع العمل عند تجدد الرصيد — 2026-11-09
+
+راجع [تسليم المحادثة الجديدة](CARLOS_NEXT_CHAT_HANDOFF.md) و[خطة تسريع PLAY-46→51](CARLOS_ACCELERATION_PLAN_2026-11-09.md) و[نماذج OpenCode/Low–Max](OPENCODE_AVAILABLE_MODELS_2026-11-09.md). **الأولوية الفعلية: إغلاق PLAY-46 وفق أحدث CI ثم PLAY-47 بعد البوابة**. لا تعتبر الأرقام المخططة إنجازات، ولا تتجاوز الانحدار الكامل أو مؤشرات نزاهة الاقتصاد.
+
 ## أولوية التسريع — النسخة القابلة للعب أولًا (8 نوفمبر 2026)
 
 - **PLAY-30:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. فرع تجارب فقط، دمج PR #18 في `design/play29-seven-day-provisions-20261108` عند `186c79fc0fe28deead8f052dfc769bb840abcf7c`. الاختبارات الشاملة [42486981474](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42486981474) **1,670 ناجحة لكل Python 3.10/3.13**؛ انعدام استدامة الغذاء **مُثبت ومُعلن**، وليس عيب نزاهة مخفيًا. تقرير [الإغلاق](PLAY_30_TECHNICAL_CLOSURE.md).
