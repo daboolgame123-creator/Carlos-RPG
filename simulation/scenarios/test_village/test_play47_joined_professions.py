@@ -310,7 +310,7 @@ def test_off_shift_repairer_finishes_homeward_commute(tmp_path):
             assert sorted(
                 (trip["origin"], trip["destination"], trip["status"])
                 for trip in final.travels.values()
-                if trip["npc_id"] == "repairman" and trip["started_at"] >= 600
+                if trip["npc_id"] == "repairman" and trip["start"] >= 600
             ) == [("repair_shop", "smithy", "arrived"),
                   ("smithy", "charcoal_kiln", "arrived")]
             assert db.verify(WORLD).to_dict() == final.to_dict()
