@@ -11,6 +11,7 @@ import pytest
 
 from carlos_sim import DomainEvent, LivingWorldEngine, SQLiteEventStore, TimeEngine
 from carlos_sim.economic_diagnostics import audit_npc_economy
+from carlos_sim.supply_diagnostics import audit_courier
 from play_physical_supply import PEOPLE, WORLD, audit_physical_supply, seed_physical_supply
 
 
@@ -228,6 +229,11 @@ def test_joined_full_life_npcs_really_trade_smelt_and_get_hungry(tmp_path):
             assert circuit["loads"] >= 1
             assert circuit["deliveries"] >= 1
             assert state.resources["well"]["water"] < 2
+            courier_observed = audit_courier(
+                state, "huda", supply_enabled=True,
+            )
+            assert courier_observed["deliveries"] >= 1
+            assert "engine_supply_flag_disabled" not in courier_observed["blocked_reasons"]
             # Independent physical conservation proof for water, seed,
             # grains, bread, owned meals and copper, despite the joined
             # smith's separate material/copper trade activities.
