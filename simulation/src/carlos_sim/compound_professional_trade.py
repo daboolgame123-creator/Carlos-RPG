@@ -11,7 +11,7 @@ from __future__ import annotations
 from .domain import WorldState
 from .production import recipe_inputs
 from .economic_autonomy import _free, _known, _event_id
-from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY, _present
+from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY, _present, trade_receipt_allowed
 from .navigation import shortest_known_route
 from .professional_trade import (
     _healthy, _known_frontier, _latest_supplier_arrival,
@@ -139,7 +139,9 @@ def choose_compound_purchase(state: WorldState, who: str) -> MaterialPurchase | 
             if (offer["site_id"] != site or offer["status"] != "open"
                     or offer["resource"] != item or offer["payment_resource"] != MONEY
                     or offer["remaining"] < 1 or offer["seller_id"] == who
-                    or offer["stock_owner_id"] == who):
+                    or offer["stock_owner_id"] == who
+                    or not trade_receipt_allowed(state.supply_circuits, who, item)
+                    or not trade_receipt_allowed(state.supply_circuits, offer["stock_owner_id"], MONEY)):
                 continue
             owner_stock = state.resources.get(offer["stock_owner_id"], {})
             price = offer["unit_price"]

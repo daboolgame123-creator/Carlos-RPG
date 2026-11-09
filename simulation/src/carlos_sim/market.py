@@ -146,6 +146,15 @@ def reserved_trade_units(circuits: Any, owner: str, resource: str) -> int:
     return int(cargo is not None and cargo["resource"] == resource)
 
 
+def trade_receipt_allowed(circuits: Any, owner: str, resource: str) -> bool:
+    """Courier water/grain/cash slots accept only supply consignments.
+
+    Owned food may coexist with a food parcel. A market receipt must not
+    create a personal balance in an exact-custody slot, even between loads.
+    """
+    return owner not in circuits or resource not in ("water", "grain", MONEY)
+
+
 def execute_trade(state: dict[str, Any], event: DomainEvent, *,
                   market_authorized: bool) -> None:
     p = event.data
@@ -174,6 +183,9 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
     pb = _ledger(state, buyer, pay)
     pt = _ledger(state, owner, pay)
     circuits = state["supply_circuits"]
+    if (not trade_receipt_allowed(circuits, buyer, item)
+            or not trade_receipt_allowed(circuits, owner, pay)):
+        raise ValueError("market receipt conflicts with courier custody")
     if (gb - reserved_trade_units(circuits, owner, item) < quantity
             or pb - reserved_trade_units(circuits, buyer, pay) < total
             or gt + quantity > MAX_AMOUNT or pt + total > MAX_AMOUNT):
