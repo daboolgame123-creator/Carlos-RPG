@@ -159,9 +159,12 @@ class LivingWorldEngine:
         self.agriculture_enabled = agriculture_enabled
         self.economy_only_enabled = economy_only_enabled
         if type(shopping_routes_enabled) is not bool or (shopping_routes_enabled and not (
-                economy_only_enabled and navigation_enabled
-                and consumption_enabled and survival_enabled)):
-            raise ValueError('shopping_routes_enabled requires focused economy, navigation, consumption and survival')
+                (economy_only_enabled or professional_full_life_enabled)
+                and navigation_enabled and consumption_enabled and survival_enabled)):
+            raise ValueError(
+                'shopping_routes_enabled requires focused economy or full-life '
+                'professions, with navigation, consumption and survival'
+            )
         self.shopping_routes_enabled = shopping_routes_enabled
         if (type(professional_procurement_enabled) is not bool or
                 (professional_procurement_enabled and not (
@@ -178,11 +181,12 @@ class LivingWorldEngine:
                     economic_enabled and agriculture_enabled
                     and (economy_only_enabled or professional_full_life_enabled)
                     and navigation_enabled and routines_enabled
-                    and not shopping_routes_enabled
+                    and (not shopping_routes_enabled or professional_full_life_enabled)
                     and not professional_procurement_enabled))):
             raise ValueError(
                 'multi_professional_markets_enabled requires focused economy or full-life '
-                'opt-in and cannot share another professional/shopping planner'
+                'opt-in; separate procurement is incompatible, and concurrent shopping '
+                'requires full-life professions'
             )
         self.multi_professional_markets_enabled = multi_professional_markets_enabled
         if (type(compound_procurement_enabled) is not bool or
@@ -200,12 +204,11 @@ class LivingWorldEngine:
                     and economic_enabled and agriculture_enabled
                     and survival_enabled and consumption_enabled
                     and navigation_enabled and routines_enabled
-                    and not economy_only_enabled
-                    and not shopping_routes_enabled))):
+                    and not economy_only_enabled))):
             raise ValueError(
                 "professional_full_life_enabled requires full survival, "
                 "consumption, navigation, routines and compound markets; "
-                "economy_only and hungry-shopper planners are incompatible"
+                "economy_only is incompatible"
             )
         self.professional_full_life_enabled = professional_full_life_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
@@ -651,6 +654,67 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
+            if self.shopping_routes_enabled:
+                from .npc import _injury_rest_decision
+
+                # Food errands get first choice of travel when both planners run.
+                # PLAY-42: only hungry solvent NPCs look for a LOCAL market.
+                # An unvisited road can be surveyed only from their real site;
+                # each physical leg has a deterministic clock cost. This
+                # pass neither reads a distant quote nor reserves food.
+                for shopper_id in sorted(current.npcs):
+                    if (self.professional_full_life_enabled and
+                            _injury_rest_decision(current.injuries, shopper_id) is not None):
+                        continue
+                    # Physically reaching a market is a FIRST-HAND visit even
+                    # if the buyer cannot afford anything. Record its nearby
+                    # roads and visited tile once, preventing a hungry worker
+                    # from rediscovering the same market after returning home.
+                    market_here = current.entities[shopper_id]['location_id']
+                    if (shopper_id not in busy and market_here in current.market_stalls
+                            and any(t['npc_id'] == shopper_id
+                                    and t['status'] == 'arrived'
+                                    and t['destination'] == market_here
+                                    for t in current.travels.values())
+                            and needs_survey(current, shopper_id)):
+                        append(DomainEvent('NPCNavigationSurveyed', shopper_id,
+                            'shopper surveys the physically reached local market',
+                            current.time, {'npc_id': shopper_id}),
+                            movement_capability=True)
+                    # An initiated homeward journey has priority over a
+                    # second hungry exploration impulse at each intermediate
+                    # road tile. This remains a pure projection of completed
+                    # physical travel history; no teleport or new schema.
+                    walk = choose_known_market_return(current, shopper_id)
+                    if walk is None and wants_local_market(current, shopper_id):
+                        if needs_survey(current, shopper_id):
+                            append(DomainEvent('NPCNavigationSurveyed', shopper_id,
+                                'shopper sees roads adjoining their physical location',
+                                current.time, {'npc_id': shopper_id}),
+                                movement_capability=True)
+                        walk = choose_known_market_walk(current, shopper_id)
+                    if walk is None:
+                        continue
+                    route = current.routes[walk.route_id]
+                    here = current.entities[shopper_id]['location_id']
+                    there = route['b'] if route['a'] == here else route['a']
+                    tid = f'auto-nav:{shopper_id}:{current.time}'
+                    if tid in current.travels:
+                        raise InvalidEvent('duplicate market shopping travel ID')
+                    due_at = current.time + route['seconds']
+                    sid = 'npc-travel:' + tid
+                    append(DomainEvent('ScheduledEventCreated', None,
+                        'physical market search arrival appointment', current.time,
+                        {'id': sid, 'due': due_at,
+                         'order': current.next_schedule_order, 'kind': 'signal',
+                         'payload': {'__npc_travel_id': tid}, 'interrupt': False}),
+                         movement_capability=True)
+                    append(DomainEvent('NPCTravelStarted', shopper_id,
+                        walk.reason, current.time,
+                        {'id': tid, 'npc_id': shopper_id, 'route_id': walk.route_id,
+                         'origin': here, 'destination': there, 'due': due_at,
+                         'schedule_id': sid}), movement_capability=True)
+                    busy.add(shopper_id)
             if (self.professional_procurement_enabled or
                     self.multi_professional_markets_enabled):
                 from .professional_trade import (has_workshop_recipe,
@@ -713,61 +777,6 @@ class LivingWorldEngine:
                          'schedule_id': sid}),
                          movement_capability=True)
                     busy.add(buyer_id)
-            if self.shopping_routes_enabled:
-                # PLAY-42: only hungry solvent NPCs look for a LOCAL market.
-                # An unvisited road can be surveyed only from their real site;
-                # each physical leg has a deterministic clock cost. This
-                # pass neither reads a distant quote nor reserves food.
-                for shopper_id in sorted(current.npcs):
-                    # Physically reaching a market is a FIRST-HAND visit even
-                    # if the buyer cannot afford anything. Record its nearby
-                    # roads and visited tile once, preventing a hungry worker
-                    # from rediscovering the same market after returning home.
-                    market_here = current.entities[shopper_id]['location_id']
-                    if (shopper_id not in busy and market_here in current.market_stalls
-                            and any(t['npc_id'] == shopper_id
-                                    and t['status'] == 'arrived'
-                                    and t['destination'] == market_here
-                                    for t in current.travels.values())
-                            and needs_survey(current, shopper_id)):
-                        append(DomainEvent('NPCNavigationSurveyed', shopper_id,
-                            'shopper surveys the physically reached local market',
-                            current.time, {'npc_id': shopper_id}),
-                            movement_capability=True)
-                    # An initiated homeward journey has priority over a
-                    # second hungry exploration impulse at each intermediate
-                    # road tile. This remains a pure projection of completed
-                    # physical travel history; no teleport or new schema.
-                    walk = choose_known_market_return(current, shopper_id)
-                    if walk is None and wants_local_market(current, shopper_id):
-                        if needs_survey(current, shopper_id):
-                            append(DomainEvent('NPCNavigationSurveyed', shopper_id,
-                                'shopper sees roads adjoining their physical location',
-                                current.time, {'npc_id': shopper_id}),
-                                movement_capability=True)
-                        walk = choose_known_market_walk(current, shopper_id)
-                    if walk is None:
-                        continue
-                    route = current.routes[walk.route_id]
-                    here = current.entities[shopper_id]['location_id']
-                    there = route['b'] if route['a'] == here else route['a']
-                    tid = f'auto-nav:{shopper_id}:{current.time}'
-                    if tid in current.travels:
-                        raise InvalidEvent('duplicate market shopping travel ID')
-                    due_at = current.time + route['seconds']
-                    sid = 'npc-travel:' + tid
-                    append(DomainEvent('ScheduledEventCreated', None,
-                        'physical market search arrival appointment', current.time,
-                        {'id': sid, 'due': due_at,
-                         'order': current.next_schedule_order, 'kind': 'signal',
-                         'payload': {'__npc_travel_id': tid}, 'interrupt': False}),
-                         movement_capability=True)
-                    append(DomainEvent('NPCTravelStarted', shopper_id,
-                        walk.reason, current.time,
-                        {'id': tid, 'npc_id': shopper_id, 'route_id': walk.route_id,
-                         'origin': here, 'destination': there, 'due': due_at,
-                         'schedule_id': sid}), movement_capability=True)
-                    busy.add(shopper_id)
             if self.knowledge_enabled:
                 # Bounded, deterministic food-knowledge sharing pass. Never
                 # touches next_decision_at, never adds to busy, never emits a

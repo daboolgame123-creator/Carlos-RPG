@@ -116,3 +116,20 @@ A local Python 3.13 probe ran the joined 13-NPC economy for 72 hours with two ro
 | Residents at maximum hunger | 13 | 13 |
 
 By hour 48 the market held the seven new loaves, and all three opening food buyers had spent their balances. Their three meals came from opening stock. One further crop ripened in the east in the wet case, while hunger stopped the workers before they converted it into additional bread. The next comparison should trace sale-funded pay through the existing physical copper routes to determine whether an earned wage can finance a new food purchase. This batch adds no wages, credit or currency to the running world. Acceptance still depends on the parent and this candidate's CI.
+
+## 47-K — An earned wage returns to the bread market
+
+The professional full-life configuration rejected the existing opt-in market
+journeys. The focused-economy test already covered funded shopping in isolation.
+This batch allows both planners to be enabled together in full-life worlds and
+runs funded food travel before optional material procurement. Existing travel
+claims, rest needed for an injury, and the normal local market checks still
+govern these errands.
+
+The nine-resident two-field fixture starts Farid with an empty wallet. A real
+sale funds a physical copper shipment to the farm, where a completed harvest
+earns the contracted wage. At two copper he travels over known roads, buys one
+loaf at the market, eats it and returns. At one copper he returns with his
+wage after finding the loaf unaffordable. Both cases preserve all twelve copper
+and verify the SQLite replay at each checkpoint. This isolates one completed
+cycle; the 13-resident endurance fixture still needs a longer circulation trial.
