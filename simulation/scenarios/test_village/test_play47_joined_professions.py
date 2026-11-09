@@ -11,7 +11,7 @@ import pytest
 
 from carlos_sim import DomainEvent, LivingWorldEngine, SQLiteEventStore, TimeEngine
 from carlos_sim.economic_diagnostics import audit_npc_economy
-from play_physical_supply import PEOPLE, WORLD, seed_physical_supply
+from play_physical_supply import PEOPLE, WORLD, audit_physical_supply, seed_physical_supply
 
 
 def _e(kind, data):
@@ -179,6 +179,7 @@ def _engine(db, clock, full_life=True):
         consumption_enabled=full_life, survival_enabled=full_life,
         multi_professional_markets_enabled=True,
         compound_procurement_enabled=True,
+        supply_enabled=True,
         professional_full_life_enabled=full_life,
     )
 
@@ -223,6 +224,17 @@ def test_joined_full_life_npcs_really_trade_smelt_and_get_hungry(tmp_path):
                          if j["status"] == "completed"]
             assert any(j["recipe_id"] == "iron-plus-fuel" for j in completed)
             assert state.npcs["basim"]["needs"]["hunger"] > 0
+            circuit = state.supply_circuits["huda"]
+            assert circuit["loads"] >= 1
+            assert circuit["deliveries"] >= 1
+            assert state.resources["well"]["water"] < 2
+            # Independent physical conservation proof for water, seed,
+            # grains, bread, owned meals and copper, despite the joined
+            # smith's separate material/copper trade activities.
+            audit_physical_supply(
+                state, seed=1, water=2, buyer_copper=2,
+                personal_food=0, initial_market_food=3,
+            )
             audit = audit_npc_economy(state)
             assert audit["copper_scope_complete"] is True
             assert audit["copper_known_total"] == 12
@@ -348,5 +360,36 @@ def test_joined_eleven_npcs_reach_full_day_without_money_or_material_minting(tmp
             assert db.verify(WORLD).to_dict() == state.to_dict()
             assert db.db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
             print("PLAY47_JOINED_FULL_DAY", json.dumps(readings, sort_keys=True))
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_joined_dry_world_courier_does_not_invent_water(tmp_path):
+    """An empty actual well is not a reason for a courier to fabricate water."""
+    with SQLiteEventStore(tmp_path / "play47-dry-courier.sqlite") as db:
+        start = _joined_bootstrap(db, water=0)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            state = _engine(db, clock).advance(
+                WORLD, seconds=900,
+                command_id="play47:dry-courier:900",
+                expected_revision=start.revision,
+            ).state
+            report = audit_physical_supply(
+                state, seed=1, water=0, buyer_copper=2,
+                personal_food=0, initial_market_food=3,
+            )
+            assert report["initial_water"] == 0
+            assert state.resources["well"]["water"] == 0
+            assert state.resources["farm"]["water"] == 0
+            assert state.resources["huda"]["water"] == 0
+            assert not any(
+                job["recipe_id"] == "finite-harvest"
+                for job in state.production_jobs.values()
+                if job["status"] == "completed"
+            )
+            assert audit_npc_economy(state)["copper_known_total"] == 12
+            assert db.verify(WORLD).to_dict() == state.to_dict()
         finally:
             clock.close_session(WORLD)
