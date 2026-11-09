@@ -232,3 +232,34 @@ def test_unauthorized_compound_start_is_rejected(tmp_path):
             assert db.verify(WORLD).to_dict() == state.to_dict()
         finally:
             clock.close_session(WORLD)
+
+
+
+def test_genuine_41_56_sqlite_world_is_refused_without_any_mutation():
+    """Only CI supplies a predecessor-generated world; never reversion-stamp one."""
+    import hashlib
+    import os
+    import sqlite3
+    from pathlib import Path
+    from carlos_sim.store import UnsupportedVersion
+
+    path_value = os.environ.get("CARLOS_PREDECESSOR_SQLITE")
+    if not path_value:
+        pytest.skip("real PLAY-45 predecessor fixture is generated in compatibility CI")
+    path = Path(path_value)
+    assert path.is_file()
+    before_bytes = path.read_bytes()
+    before = hashlib.sha256(before_bytes).hexdigest()
+    with sqlite3.connect(path) as raw:
+        version = raw.execute("SELECT schema_version,rules_version FROM worlds").fetchone()
+        assert version == (41, 56)
+        before_rows = tuple(raw.execute(
+            "SELECT (SELECT COUNT(*) FROM events), (SELECT COUNT(*) FROM snapshots)"
+        ).fetchone())
+        assert before_rows[0] > 0
+        assert before_rows[1] > 0
+    with SQLiteEventStore(path) as db:
+        with pytest.raises(UnsupportedVersion):
+            db.load("predecessor-41-56")
+    after = hashlib.sha256(path.read_bytes()).hexdigest()
+    assert after == before, "old world bytes must remain exactly untouched"
