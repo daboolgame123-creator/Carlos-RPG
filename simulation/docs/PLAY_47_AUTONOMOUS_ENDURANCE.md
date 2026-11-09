@@ -45,3 +45,9 @@ The pilot provides no general economic solvency, demand model, resource regenera
 ## 47-C.2 audit finding: staffed shops versus general NPC actions
 
 The first integrated test confirmed the smith *physically reached* the iron mine, the ore/charcoal quotes existed, and miner/burner remained at their stalls, but ordinary full-life `NPCActionStarted(work)` had made the sellers **busy**. The trusted market correctly rejected purchasing from a seller doing an incompatible activity. The correction is **not** to relax `market._present()`: only in `professional_full_life_enabled`, a healthy on-duty shop keeper or production-role worker does not start a conflicting generic NPC task. Hunger ≥75, fatigue ≥70, serious danger or injury permits the full-life survival/rest choices to resume. Prior modes remain unchanged. Confirm by targeted exact-HEAD CI before claiming this behavior fixed.
+
+## 47-C.3 strengthened acceptance candidates
+
+The short 900-second joined-world test was verified by [targeted CI 42647367865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42647367865): **23/23 on each Python 3.10/3.13**, eleven NPCs, six real local trades (3 food + ore + charcoal + fitting), two completed jobs, one real funded wage and twelve copper conserved with all owners initialized. **This is not a long-term claim.**
+
+Next targeted tests check: (a) a smith beginning at hunger 80 does not depart on procurement or ignore food/rest priority; (b) one clock jump versus segmented time yields identical economic receipts, stock totals and hunger; (c) the same joined world reaches 24h with copper and physical supply conserved, replay/snapshot/integrity checks and measured starvation. These three tests remain **unverified until their exact SHA CI finishes**. A documented famine is valid; creating money or food to make it look healthy is not.

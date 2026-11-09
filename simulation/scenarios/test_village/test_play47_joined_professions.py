@@ -18,7 +18,7 @@ def _e(kind, data):
     return DomainEvent(kind, None, "trusted combined world only at t=0", 0, data)
 
 
-def _joined_bootstrap(db):
+def _joined_bootstrap(db, *, smith_hunger=10):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
     No second bootstrap may reinterpret a known wallet or silently mint money.
@@ -65,7 +65,8 @@ def _joined_bootstrap(db):
                 }),
                 _e("NPCConfigured", {
                     "npc_id": name, "role": role,
-                    "needs": {"hunger": 10, "fatigue": 0, "safety": 0},
+                    "needs": {"hunger": smith_hunger if name == "smith" else 10,
+                              "fatigue": 0, "safety": 0},
                     "goals": {"earn": 10, "explore": 10, "survive": 30},
                 }),
             ))
@@ -171,6 +172,7 @@ def _joined_bootstrap(db):
 def _engine(db, clock, full_life=True):
     return LivingWorldEngine(
         db, clock, max_events_per_advance=5000,
+        decision_cooldown=3600,
         economic_enabled=True, agriculture_enabled=True,
         economy_only_enabled=not full_life,
         navigation_enabled=True, routines_enabled=True,
@@ -212,30 +214,6 @@ def test_joined_full_life_npcs_really_trade_smelt_and_get_hungry(tmp_path):
             assert state.time == 900
             trades = {(t["buyer_id"], t["resource"])
                       for t in state.market_trades.values()}
-            print("PLAY47_JOINED_DIAG", json.dumps({
-                "smith_needs": state.npcs["smith"]["needs"],
-                "smith_site": state.entities["smith"]["location_id"],
-                "smith_nav": state.navigation.get("smith"),
-                "smith_travels": [
-                    {"route": t["route_id"], "destination": t["destination"],
-                     "due": t["due"], "status": t["status"]}
-                    for t in state.travels.values() if t["npc_id"] == "smith"
-                ],
-                "smith_actions": [
-                    {"action": a["action"], "status": a["status"],
-                     "due": a["due"]}
-                    for a in state.actions.values() if a["npc_id"] == "smith"
-                ],
-                "source_locations": {
-                    name: state.entities[name]["location_id"]
-                    for name in ("miner", "burner", "repairman")},
-                "site_stocks": {site: dict(state.resources[site])
-                    for site in ("smithy", "iron_mine", "charcoal_kiln")},
-                "open_offers": {k: {"item": o["resource"],
-                    "site": o["site_id"], "status": o["status"]}
-                    for k, o in state.market_offers.items()},
-                "trades": sorted(trades),
-            }, sort_keys=True, default=str))
             # Genuine autonomous multi-input smith procurement alongside food.
             assert ("smith", "iron_ore") in trades
             assert ("smith", "charcoal") in trades
@@ -264,5 +242,111 @@ def test_joined_full_life_npcs_really_trade_smelt_and_get_hungry(tmp_path):
                 "hunger": audit["npc_hunger"],
                 "wages": audit["wage_receipts"],
             }, sort_keys=True))
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_urgent_hunger_preempts_professional_ore_shopping(tmp_path):
+    """Full-life NPC survival must win over nonessential professional travel."""
+    with SQLiteEventStore(tmp_path / "play47-hungry-smith.sqlite") as db:
+        initial = _joined_bootstrap(db, smith_hunger=80)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            final = _engine(db, clock).advance(
+                WORLD, seconds=180,
+                command_id="play47:hungry:180",
+                expected_revision=initial.revision,
+            ).state
+            assert final.time == 180
+            assert not any(t["buyer_id"] == "smith"
+                           for t in final.market_trades.values())
+            assert not any(j["npc_id"] == "smith"
+                           for j in final.production_jobs.values())
+            assert not any(t["npc_id"] == "smith"
+                           for t in final.travels.values())
+            assert audit_npc_economy(final)["copper_known_total"] == 12
+            assert db.verify(WORLD).to_dict() == final.to_dict()
+        finally:
+            clock.close_session(WORLD)
+
+
+def test_joined_world_partitioned_clock_preserves_economic_receipts(tmp_path):
+    """Compare actual finite trades and jobs, not command/revision metadata."""
+    outcomes = []
+    for label, checkpoints in (
+        ("one", (900,)),
+        ("segmented", (30, 100, 230, 450, 700, 900)),
+    ):
+        with SQLiteEventStore(tmp_path / f"{label}.sqlite") as db:
+            start = _joined_bootstrap(db)
+            clock = TimeEngine(db)
+            clock.open_session(WORLD)
+            try:
+                engine = _engine(db, clock)
+                current = start
+                for point in checkpoints:
+                    current = engine.advance(
+                        WORLD, seconds=point-current.time,
+                        command_id=f"play47:parity:{label}:{point}",
+                        expected_revision=current.revision,
+                    ).state
+                    assert db.verify(WORLD).to_dict() == current.to_dict()
+                receipts = sorted((
+                    t["buyer_id"], t["resource"], t["site_id"],
+                    t["executed_at"], t["total_paid"]
+                ) for t in current.market_trades.values())
+                jobs = sorted((
+                    j["npc_id"], j["recipe_id"], j["started_at"],
+                    j["finished_at"], j["status"]
+                ) for j in current.production_jobs.values())
+                audit = audit_npc_economy(current)
+                outcomes.append((
+                    receipts, jobs, audit["copper_known_total"],
+                    audit["stock_known_by_resource"],
+                    audit["npc_hunger"],
+                ))
+            finally:
+                clock.close_session(WORLD)
+    assert outcomes[0] == outcomes[1]
+
+
+def test_joined_eleven_npcs_reach_full_day_without_money_or_material_minting(tmp_path):
+    """A bad famine is an observed world outcome, not a reason to add gifts."""
+    with SQLiteEventStore(tmp_path / "play47-one-day-joined.sqlite") as db:
+        state = _joined_bootstrap(db)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = _engine(db, clock)
+            checkpoints = (900, 21600, 43200, 64800, 86400)
+            readings = []
+            for target in checkpoints:
+                state = engine.advance(
+                    WORLD, seconds=target-state.time,
+                    command_id=f"play47:day:{target}",
+                    expected_revision=state.revision,
+                ).state
+                audit = audit_npc_economy(state)
+                assert audit["copper_scope_complete"]
+                assert audit["copper_known_total"] == 12
+                assert audit["trades"] >= 6
+                assert len(state.npcs) == 11
+                assert state.resources["iron_mine"]["iron_ore"] == 0
+                assert state.resources["charcoal_kiln"]["charcoal"] == 0
+                assert state.resources["repair_shop"]["repaired_gear"] == 1
+                assert db.verify(WORLD).to_dict() == state.to_dict()
+                readings.append({
+                    "hour": target // 3600,
+                    "hunger_at_100": sum(h == 100 for h in audit["npc_hunger"].values()),
+                    "trades": audit["trades"],
+                    "jobs": audit["completed_jobs"],
+                    "wages": audit["wage_receipts"],
+                    "copper": audit["copper_known_total"],
+                })
+            db.snapshot(WORLD)
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+            assert db.db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+            print("PLAY47_JOINED_FULL_DAY", json.dumps(readings, sort_keys=True))
         finally:
             clock.close_session(WORLD)
