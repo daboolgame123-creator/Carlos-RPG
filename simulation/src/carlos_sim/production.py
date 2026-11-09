@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .domain import DomainEvent, WorldState
+from .domain import DomainEvent, WorldState, _thaw
 from .store import SQLiteEventStore, RevisionConflict
 from .time_engine import TimeEngine
 
@@ -125,7 +125,7 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
 
 def configure_recipe(state: dict[str, Any], event: DomainEvent, *,
                      bootstrap: bool) -> None:
-    p = event.data
+    p = _thaw(event.data)
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
             or not recipe_shape_ok(p, state["locations"], state["resources"])
             or p["id"] in state["production_recipes"]):
