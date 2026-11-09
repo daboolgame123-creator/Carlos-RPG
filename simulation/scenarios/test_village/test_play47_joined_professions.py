@@ -78,10 +78,14 @@ def _joined_bootstrap(db):
             "repair_shop": {"iron_fitting": 0, "repaired_gear": 0,
                             "wrench": 1},
             "smith": {"iron_ore": 0, "charcoal": 0, "food": 0,
-                      "coin_copper": 2},
-            "repairman": {"iron_fitting": 0, "food": 0, "coin_copper": 2},
-            "miner": {"food": 0},
-            "burner": {"food": 0},
+                      "coin_copper": 2, "labor_units": 0,
+                      "investigation_attempts": 0},
+            "repairman": {"iron_fitting": 0, "food": 0, "coin_copper": 2,
+                          "labor_units": 0, "investigation_attempts": 0},
+            "miner": {"food": 0, "labor_units": 0,
+                      "investigation_attempts": 0},
+            "burner": {"food": 0, "labor_units": 0,
+                       "investigation_attempts": 0},
         }
         for owner, owned in resources.items():
             for resource, amount in owned.items():
