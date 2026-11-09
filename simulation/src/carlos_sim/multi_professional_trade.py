@@ -91,7 +91,7 @@ def _recipe(state: WorldState, who: str):
         )
         if recipe["site_id"] == workplace
         and recipe["role"] == npc["role"]
-        and recipe["input_resource"] in MATERIAL_PRICE
+        and recipe.get("input_resource") in MATERIAL_PRICE
     ), None)
 
 
