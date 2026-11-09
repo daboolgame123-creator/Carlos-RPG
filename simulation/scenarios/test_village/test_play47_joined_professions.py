@@ -175,7 +175,7 @@ def _joined_bootstrap(
     return state
 
 
-def _engine(db, clock, full_life=True):
+def _engine(db, clock, full_life=True, *, shopping=False):
     return LivingWorldEngine(
         db, clock, max_events_per_advance=5000,
         decision_cooldown=3600,
@@ -186,6 +186,7 @@ def _engine(db, clock, full_life=True):
         multi_professional_markets_enabled=True,
         compound_procurement_enabled=True,
         supply_enabled=True,
+        shopping_routes_enabled=shopping,
         professional_full_life_enabled=full_life,
     )
 
