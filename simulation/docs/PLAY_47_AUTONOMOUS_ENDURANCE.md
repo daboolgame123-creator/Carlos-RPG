@@ -166,3 +166,7 @@ or delivery occurred. Twelve residents reached maximum hunger, and the market
 held four copper while the east farm and Farid held zero. Every checkpoint
 accounted for twelve copper and all water and food, with SQLite replay matching
 the final state. The funded CI fixture now includes the wet fourth day.
+
+## Closure execution
+
+See [the PLAY-47 closure plan](PLAY_47_CLOSURE_PLAN.md) for remaining gates and the first controlled recovery experiment.
