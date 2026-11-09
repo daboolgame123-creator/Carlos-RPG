@@ -35,4 +35,5 @@ jobs:
           PYTHONPATH=src python -m pytest -q -s scenarios/test_village/test_play47_economic_audit.py             scenarios/test_village/test_play46_physical_chain.py \
             scenarios/test_village/test_play47_seven_npc_survival.py \
             scenarios/test_village/test_play47_joined_professions.py \
-            scenarios/test_village/test_play47_joined_feasibility.py
+            scenarios/test_village/test_play47_joined_feasibility.py \
+            scenarios/test_village/test_play47_net_food_capacity.py
