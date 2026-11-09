@@ -139,6 +139,13 @@ def _ledger(state: dict[str, Any], owner: str, resource: str) -> int:
     return result
 
 
+def reserved_trade_units(circuits: Any, owner: str, resource: str) -> int:
+    """Return the units held in custody rather than available for trade."""
+    circuit = circuits.get(owner)
+    cargo = circuit["carry"] if circuit is not None else None
+    return int(cargo is not None and cargo["resource"] == resource)
+
+
 def execute_trade(state: dict[str, Any], event: DomainEvent, *,
                   market_authorized: bool) -> None:
     p = event.data
@@ -166,8 +173,10 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
     gt = _ledger(state, buyer, item)
     pb = _ledger(state, buyer, pay)
     pt = _ledger(state, owner, pay)
-    if (gb < quantity or pb < total or gt + quantity > MAX_AMOUNT
-            or pt + total > MAX_AMOUNT):
+    circuits = state["supply_circuits"]
+    if (gb - reserved_trade_units(circuits, owner, item) < quantity
+            or pb - reserved_trade_units(circuits, buyer, pay) < total
+            or gt + quantity > MAX_AMOUNT or pt + total > MAX_AMOUNT):
         raise ValueError("insufficient market goods/coins or destination overflow")
     state["resources"][owner][item] = gb - quantity
     state["resources"][buyer][item] = gt + quantity

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 
 from .domain import WorldState
-from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present
+from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present, reserved_trade_units
 from .npc import _injury_rest_decision
 from .production import MAX_QUANTITY as PRODUCTION_MAX, recipe_inputs
 from .routines import DAY_SECONDS, routine_allows_work
@@ -231,6 +231,7 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
     coins = state.resources.get(buyer_id, {}).get(MONEY)
     if not _known(own_food) or own_food != 0 or not _known(coins):
         return None
+    coins -= reserved_trade_units(state.supply_circuits, buyer_id, MONEY)
     candidates: list[tuple[int, str, PurchaseIntent]] = []
     # At extreme hunger an NPC accepts a higher posted price, never credit.
     max_price = 4 if npc["needs"]["hunger"] >= 95 else (
