@@ -128,24 +128,41 @@ def _check_wage_receipts(path, state):
         assert db.verify(WORLD).to_dict() == original
         assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
         assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
-        events = [
-            json.loads(row[0]) for row in db.db.execute(
-                "SELECT payload FROM events WHERE world_id=? ORDER BY seq",
-                (WORLD,),
-            )
-        ]
-        payments = [i for i, e in enumerate(events)
+        # The trusted reducer validates the same committed command as the
+        # actual service. A legitimate ScheduledEventFired or other causal
+        # event can appear between service and payment, so adjacency alone is
+        # an incorrect test oracle. SQLite's command_id is durable provenance.
+        rows = list(db.db.execute(
+            "SELECT command_id, payload FROM events WHERE world_id=? ORDER BY seq",
+            (WORLD,),
+        ))
+        events = [(command, json.loads(payload)) for command, payload in rows]
+        payments = [i for i, (_, e) in enumerate(events)
                     if e["event_type"] == "CourierProvisionPaid"]
         assert sum(len(c["payments"]) for c in state.courier_provisions.values()) == len(payments)
         for i in payments:
-            paid = events[i]
+            command, paid = events[i]
             assert i > 0
-            prev = events[i-1]
-            assert prev["event_type"] == "SupplyCargoDelivered"
-            assert prev["actor_id"] == paid["data"]["courier_id"]
-            assert prev["data"]["courier_id"] == paid["data"]["courier_id"]
-            assert prev["time"] == paid["time"]
-            assert prev["data"]["resource"] in ("water", "grain", "food")
+            who = paid["data"]["courier_id"]
+            contract = state.courier_provisions[paid["data"]["id"]]
+            payer = contract["payer_site"]
+            proof = paid["data"].get("proof")
+            allowed_resource = (
+                {"water"} if payer == "farm" else
+                {"grain"} if payer == "bakery" else
+                {"food"} if proof is None else {"water", "grain", "food"}
+            )
+            same_command_service = [
+                delivery for service_cmd, delivery in events[:i]
+                if service_cmd == command
+                and delivery["event_type"] == "SupplyCargoDelivered"
+                and delivery["actor_id"] == who
+                and delivery["time"] == paid["time"]
+                and delivery["data"]["courier_id"] == who
+                and delivery["data"]["resource"] in allowed_resource
+            ]
+            assert same_command_service, "No same-command genuine service for earned wage"
+            assert paid["data"]["service_deliveries"] <= state.supply_circuits[who]["deliveries"]
         assert state.to_dict() == original
 
 
