@@ -1,7 +1,10 @@
 # PLAY-47 closure execution evidence
 
-Status: **OPEN / RELEASE NO-GO / VERIFICATION_PENDING**. Schema **42** /
-Rules **57**. No PLAY-48 work, `main` update, story change or production approval.
+Status is governed by the [gated technical decision](PLAY_47_TECHNICAL_CLOSURE_DECISION.md):
+**OPEN / RELEASE NO-GO** on an unverified candidate; **CLOSED_TECHNICALLY /
+EXTERNAL_REVIEW_DEFERRED_BY_OWNER** only after the exact decision commit passes
+all required checks and is fast-forwarded to the integration branch. Schema
+**42** / Rules **57**. No PLAY-48 work, `main` update or production approval.
 
 ## Analysis and scope
 
@@ -10,8 +13,9 @@ was fetched from `origin` and verified at `b326c5ea2f685697c04ed24f6bc961043bee1
 The stacked heads were still #57 `51cdc3b02fb1d891398a5258b954b554d61a4a4d`,
 #58 `21e8b0236a952d6dd038bf3a076c354b4e4fbbd2`, and
 #59 `77ddb54b82038075c2d9ec642b8d0dcd3b75c43d`.
-Integration must remain a verified fast-forward; the new candidate branch is
-`feature/play47-closure-verification-20261109`.
+Integration must remain a verified fast-forward. The runtime repair branch is
+`feature/play47-closure-verification-20261109`; the final documentation decision
+branch is `feature/play47-technical-closure-20261110`.
 
 This batch checks five related tasks: stack provenance/CI, existing courier
 funding boundaries, incoming-custody rejection, seven-day scarcity with a dry
@@ -89,22 +93,29 @@ The long seven-day cases run in separate Python-matrix jobs in the targeted
 workflow, alongside the audit/adversarial jobs. All four jobs must succeed;
 moving the long cases to parallel jobs does not omit any acceptance check.
 
-## Final acceptance matrix
+## Verified runtime baseline and final acceptance matrix
+
+The table records the observed runtime baseline `0f8c31f` while this
+documentation-only closure proposal is prepared. It does not substitute for
+the final proposal commit's own full/targeted checks. That exact SHA and its
+run links must be recorded in the closure review before gated promotion.
 
 | Gate | Evidence / state |
 | --- | --- |
 | Stack full CI, #57 | [42707752554](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42707752554), both Python jobs success |
 | Stack full CI, #58 | [42708580882](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42708580882), both Python jobs success |
 | Stack full CI, #59 | [42712961446](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42712961446), both Python jobs success |
-| Stack targeted, #57 | [42707745153](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42707745153), pending final observation |
-| Stack targeted, #58 | [42715541830](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42715541830), dispatched on exact head |
-| Stack targeted, #59 | [42715548910](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42715548910), dispatched on exact head |
-| Finite seven-day wet/dry worlds | `test_play47_closure_endurance.py`, pending |
+| Stack targeted, #57 | [42707745153](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42707745153), 72 passed on each Python; source `51cdc3b` confirmed in logs |
+| Stack targeted, #58 | [42715541830](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42715541830), 76 passed on each Python at exact source `21e8b02` |
+| Stack targeted, #59 | [42715548910](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42715548910), 77 passed on each Python; source `77ddb54` confirmed in logs |
+| Finite seven-day wet/dry worlds | `test_play47_closure_endurance.py`, 2 passed on each Python at source `0f8c31f`; complete reports identical across versions |
 | Depleted treasury / duplicate wages | `test_play41_funded_wage.py`, included in final targeted workflow |
 | Physical road / reserved cargo / absent seller | supply, cash-courier and market suites, included in final targeted workflow |
-| SQLite close/reopen, replay, snapshot, PRAGMA and time partitions | seven-day test, pending |
-| Old saves / default-off compatibility | genuine 41/56 fixture rejection in targeted workflow; historical compatibility in full workflow |
-| Final exact-SHA targeted + full 3.10/3.13 | pending; blocks technical closure |
+| SQLite close/reopen, replay, snapshot, PRAGMA and time partitions | Passed for both wet/dry 7d cases on each Python in exact-source runtime CI |
+| Old saves / default-off compatibility | Genuine 41/56 rejection, historical compatibility and scenario opt-out controls all passed on both at runtime `0f8c31f` |
+| Final full 3.10/3.13 | [42719791538](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42719791538), SUCCESS, 1,694 per Python at exact checked-out `0f8c31f15e065cdc2d101bdfa6ca9b67d3331bdf` |
+| Runtime targeted 3.10/3.13 | [42719785455](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42719785455), SUCCESS: audit 176 + genuine old save 1 + endurance 2 = 179 on each Python at exact source `0f8c31f` |
+| Final decision commit | Its own exact-SHA full/targeted checks and verified integration are still required; baseline results above do not enact this proposal |
 
 The seven-day experiment records daily food/water/cash and wage receipts in the
 same real thirteen-resident joined world. Only the wet case receives six finite
@@ -119,6 +130,100 @@ post-stall delivery or recovery is presumed.
 
 External review remains `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` and production
 remains `P0_PRODUCTION_NOT_APPROVED`.
+
+## Supplementary local reproduction
+
+Both seven-day cases completed locally on CPython 3.13.17, including final
+full replay after connection close, snapshot equality, integrity/foreign-key
+checks and the complete 96-hour semantic partition comparison. Every reported
+checkpoint matches the exact-source 3.13 CI reports. Local 3.10 independently
+passed the dry seven-day case and 96-hour gate. The authoritative runtime CI
+subsequently passed both cases on both Pythons. These local observations do
+not replace the final decision commit's own CI.
+
+At dry hour 168, twelve copper remain conserved, seven loaves have been baked,
+four meals have been eaten, six food units and three grain remain, and all
+thirteen residents are at hunger 100. Both initial water units were consumed
+by real crop growth; there are no rain receipts or stored water. Hana has 24
+deliveries and Huda three. From hour 72 to 168 there are no new deliveries,
+market trades, completed production jobs or wage receipts. The two wage receipts
+in the global audit include the smith; they are not two Farid harvest wages.
+This is measured finite-world failure, with no post-stall recovery claim.
+
+### Specific adverse-case coverage
+
+| Gate | Executed test / final verification route |
+| --- | --- |
+| Empty treasury and no invented pay | `test_harvest_wages_remain_unpaid_if_employer_has_no_copper`, PLAY-41 targeted |
+| Duplicate, forged or wrong-price wage | `test_harvest_worker_earns_only_after_completed_work_and_real_copper`, PLAY-41 targeted |
+| Unknown road and travel authorization | `test_target_cannot_be_set_without_road_knowledge` and `test_direct_low_level_travel_start_cannot_bypass_known_roads`, full + targeted navigation suite |
+| Seller walks away | `test_smith_does_not_conjure_sold_out_material_or_distant_price`, PLAY-46 physical-chain targeted |
+| Reserved food/copper and incoming custody | PLAY-40 cash suite, PLAY-47 market-custody probes, PLAY-27 physical-supply suite |
+| Opt-out parity | `test_disabled_market_journey_preserves_exact_legacy_event_replay`, `test_multi_compound_flag_is_strict_default_off` and PLAY-44/45 controls |
+| Genuine old save refusal | `test_genuine_41_56_sqlite_world_is_refused_without_any_mutation`, generated by actual predecessor `a6c20e3` |
+| Reopen/replay/PRAGMA and clock partitions | `test_thirteen_residents_seven_days_and_post_stall_clock_partitions`, separate targeted endurance matrix |
+
+Coverage entries identify the acceptance cases; pending targeted jobs are not
+reported as successful merely because their tests are listed here.
+
+## Exact-source seven-day CI evidence (both Pythons verified)
+
+Job `129510623967` in [targeted run 42719785455](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42719785455)
+completed SUCCESS: **2 passed in 2,039.79 seconds**. Its checkout log explicitly
+records `0f8c31f15e065cdc2d101bdfa6ca9b67d3331bdf`. These two tests include daily
+full-genesis replay after actual connection close/reopen, final day-seven replay,
+snapshot equality, both SQLite PRAGMAs and the full semantic 96-hour comparison
+of three-hour versus six-hour waits from the same verified day-three database.
+Job `129510624455` also completed SUCCESS on Python 3.10: **2 passed in
+4,428.70 seconds**, with the same exact checkout SHA. Its complete wet/dry
+checkpoint reports are identical to the Python 3.13 reports. The audit jobs
+passed **176** each plus the separate genuine old-save refusal **1** each;
+the entire runtime targeted run concluded SUCCESS. This is runtime-baseline
+proof; the final documentation decision must pass its own exact-head checks.
+
+| Measured at hour 168 | Dry | Six finite rain units |
+| --- | --- | --- |
+| Residents at hunger 100 | 13 / 13 | 13 / 13 |
+| Conserved copper | 12 | 12 |
+| Food remaining | 6 | 5 |
+| Grain remaining | 3 | 10 |
+| Known remaining water, including cargo | 0 | 5 |
+| Water used for crop growth | 2 | 3 |
+| Mature crop lots (original / east field) | 1 / 1 | 1 / 2 |
+| Completed bakes | 7 | 7 |
+| Meals eaten | 4 | 5 |
+| Completed deliveries (Huda / Hana) | 3 / 24 | 3 / 25 |
+| All market trades, including materials | 7 | 8 |
+| All funded wage receipts, including smith | 2 | 3 |
+| Additional deliveries after hour 72 | 0 | 0 |
+| Additional bakes, crop growth, trades or wages after hour 72 | 0 | 0 |
+
+The rain is credited only through the three finite receipts at hours 24, 48
+and 72; the original two water units remain the sole dry source. Unused water
+includes physically held stocks, so five remaining units must not be described
+as five units all located in the well. The rainy case reproduces the existing
+two paid harvests and Farid's two real meals; it does not restore the stopped
+courier cycle. This is a valid measured capacity/distribution limit under the
+approved plan. Both Python and audit gates are verified for runtime `0f8c31f`.
+The final documentation decision remains subject to its own activation gates.
+
+## Verified stack integration — 2026-11-10 UTC
+
+After #58's last Python job succeeded (76 passed in 4,034.90 seconds on 3.10),
+the entire #57–59 stack had targeted/full success on both supported Pythons.
+The #58 log confirms source `21e8b0236a952d6dd038bf3a076c354b4e4fbbd2`.
+The integration ref was advanced **without force**, with expected old SHA
+`b326c5ea2f685697c04ed24f6bc961043bee15ab`, to
+`77ddb54b82038075c2d9ec642b8d0dcd3b75c43d` after the ancestry check.
+The remote ref and local tracking ref were then fetched and checked.
+
+After all four targeted jobs and both full jobs passed at exact source
+`0f8c31f15e065cdc2d101bdfa6ca9b67d3331bdf`, the integration branch was advanced
+again without force, with expected old SHA `77ddb54`, to `0f8c31f`. Remote and
+local tracking refs were fetched and checked. This adopts the tested receipt
+custody repair. The final documentation-only decision is a separate gated
+candidate; PLAY-47 stays OPEN until that exact decision commit is verified and
+promoted. No `main` ref was changed.
 
 ## Audited historical run identities
 
@@ -138,7 +243,8 @@ assert `git rev-parse HEAD` equals that source SHA. This avoids calling a merge
 object an exact head. At `caa76a1c88e9ad23a34d498a1a3d00148fe5a5f7`, targeted
 [42717339117](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42717339117)
 and full [42717347582](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42717347582)
-were launched; their overall results remain pending at this documentation update.
+were launched and later superseded/cancelled when the runtime source advanced.
+They are historical run identities, not the final acceptance evidence.
 The authentic old-save gate passed locally on both Python versions and in both
 candidate targeted jobs; this alone is not completion of the full targeted run.
 

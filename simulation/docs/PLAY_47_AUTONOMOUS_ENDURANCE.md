@@ -1,6 +1,19 @@
 # PLAY-47 — NPC economy: multi-day endurance and root-cause measurement
 
-**Status: OPEN / FIRST INSTRUMENTATION PILOT.** Depends on PLAY-46's **technical** closure at `a346d8b5f3fe4b736e420bfa3e470a8afa089313` (Python 3.10/3.13 full CI green, review deferred by owner). No external approval, P0 signoff, `main` merge or durable save support.
+**Status:** see the [gated technical closure decision](PLAY_47_TECHNICAL_CLOSURE_DECISION.md).
+The operative decision becomes `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`
+only after the exact decision commit passes all full/targeted checks and is
+fast-forwarded to integration. Until then PLAY-47 remains OPEN / RELEASE NO-GO.
+The historical pilots below depend on PLAY-46's technical closure at
+`a346d8b5f3fe4b736e420bfa3e470a8afa089313`. No P0 signoff, `main` merge or
+durable-save support is implied.
+
+The latest evidence is one real thirteen-resident full-life world through
+seven days, in dry and finite-rain conditions, with food/water and ore/fuel/
+smith/repair chains. The [evidence report](PLAY_47_CLOSURE_EVIDENCE.md) preserves
+verified source/run identities and explicitly separates completed baseline
+checks from the final decision candidate's required checks. Finite resource
+failure is the measured outcome, with no recovery or self-sufficiency claim.
 
 ## Objective
 

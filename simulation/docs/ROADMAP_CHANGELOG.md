@@ -1,5 +1,24 @@
 # سجل تغييرات خارطة الطريق — Carlos RPG
 
+## PLAY-47 final decision candidate — 2026-11-10 UTC
+
+- Source: the approved closure plan and owner's instruction to continue inside
+  PLAY-47. The #57–59 stack passed targeted/full checks on both Pythons and was
+  fast-forwarded without force from `b326c5e` to `77ddb54`.
+- Runtime baseline `0f8c31f` has full 1,694 + targeted audit 176 + genuine old-save
+  refusal 1 + endurance 2 green per Python. Its complete wet/dry seven-day reports
+  are identical across versions. After confirming the exact checked-out source
+  and both run conclusions, integration was fast-forwarded again to `0f8c31f`.
+- A separate documentation-only branch prepares the [gated technical decision](PLAY_47_TECHNICAL_CLOSURE_DECISION.md)
+  so it can be tested without cancelling the runtime baseline's long-running
+  validation. Full and targeted CI must pass on the exact decision commit
+  before that commit is fast-forwarded to integration and closure takes effect.
+- The proposed outcome is technical closure with an explicit measured finite
+  food/distribution failure. No recovery, sustainable village, recurrent courier
+  pay, independent review or production approval is claimed.
+- Schema 42 / Rules 57, `main`, original story and runtime/test/workflow code
+  remain unchanged by this decision candidate. PLAY-48 remains gated.
+
 ## PLAY-47 closure verification — 2026-11-09
 
 - Source: owner's approved closure plan and direct request to finish PLAY-47.
