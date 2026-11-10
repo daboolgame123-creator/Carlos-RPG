@@ -106,14 +106,14 @@ def corruption_parity(store: SQLiteEventStore, world_id: str) -> None:
     # With a non-head snapshot, the candidate must not skip suffix replay.
     try:
         store.db.execute(
-            "UPDATE snapshots SET revision=revision-1 WHERE world_id=? AND revision=?",
+            "UPDATE snapshots SET revision=revision+1000000 WHERE world_id=? AND revision=?",
             (world_id, snap[0]),
         )
         require_same_rejection(store, world_id, "snapshot_revision_forgery")
     finally:
         store.db.execute(
             "UPDATE snapshots SET revision=? WHERE world_id=? AND revision=?",
-            (snap[0], world_id, snap[0]-1),
+            (snap[0], world_id, snap[0]+1000000),
         )
     assert store.verify(world_id).to_dict() == candidate_verify(store, world_id).to_dict()
 
