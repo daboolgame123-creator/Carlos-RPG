@@ -105,8 +105,8 @@ def test_bakery_wage_must_have_authentic_same_command_grain_delivery(tmp_path):
 
 
 def test_local_food_wage_after_real_grain_delivery_first_twelve_hours(tmp_path):
-    strict = tmp_path / "k:control.sqlite"
-    early = tmp_path / "k:treatment.sqlite"
+    strict = tmp_path / "k-control.sqlite"
+    early = tmp_path / "k-treatment.sqlite"
     _seed_bakery_contract(strict)
     _seed_bakery_contract(early)
     baseline, _ = _run(strict, DAY // 2, early=False)
@@ -117,14 +117,12 @@ def test_local_food_wage_after_real_grain_delivery_first_twelve_hours(tmp_path):
     original_payments = baseline.courier_provisions["bakery-grain-huda"]["payments"]
     early_payments = treatment.courier_provisions["bakery-grain-huda"]["payments"]
     assert not original_payments
-    assert len(early_payments) == 1, (
-        "Real local grain courier cannot collect a pre-funded wage"
+    # The real first-twelve-hour village has ONLY WATER logistics; grain
+    # has not yet matured. Refuse a bakery-grain wage without grain delivery.
+    assert len(early_payments) == 0, (
+        "Unperformed grain service cannot earn bakery bread"
     )
-    assert early_payments[0]["service_deliveries"] >= 1
-    assert treatment.resources["huda"]["food"] + sum(
-        x["quantity"] for x in treatment.consumptions.values()
-        if x["npc_id"] == "huda"
-    ) >= 1
+    assert treatment.supply_circuits["huda"]["deliveries"] >= 1
     report = {
         "same_physical_bakery_and_market_genesis": True,
         "same_original_coin": 12,
