@@ -1,5 +1,13 @@
 # Carlos RPG — سجل الخطتين الهندسيتين قبل PLAY-48
 
+## دفعة الحماية والفشل — 10 نوفمبر 2026 (أدلة تنفيذية مثبتة)
+
+- **MIG-04 — فشل آمن ورفض فساد البيانات:** [التقرير الأساسي](reports/MIG_04_ADVERSARIAL_DISPOSABLE_PROOF_2026-11-10.md)، [Run #42793803908](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42793803908) **SUCCESS 3.10/3.13**؛ عالمين، 53 Event و7 Commands، 6 حالات فساد مرفوضة، 3 انقطاعات مصطنعة، منع overwrite/symlink، واستعادة هدف مستقل سليم. فشل إعداد سابق [#42793658276](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42793658276) أُصلح بإضافة `pytest` إلى fixture التاريخي.
+- **MIG-04b — قتل عملية حقيقي وWAL حي:** [التقرير الإضافي](reports/MIG_04B_PROCESS_CRASH_AND_WAL_2026-11-10.md)، [Run #42794524369](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42794524369) **SUCCESS 3.10/3.13**؛ SIGKILL حقيقي عند 3 مراحل، لا هدف ناقص قبل النشر، هدف متكامل بعد Hard Link، ورفض صريح لمصدر WAL نشط إلى أن توجد نسخة متسقة. **ليس اختبار انقطاع كهرباء، ولا Windows**؛ `MIG04_OPEN / P0_NO_GO`.
+- **CI-01b — سياسة تصنيف آمنة لا تنفَّذ على Release Check بعد:** [التقرير](reports/CI_01B_ADVERSARIAL_CLASSIFICATION_2026-11-10.md)، [Run #42794930046](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42794930046) **SUCCESS 3.10/3.13**، 14 حالة فحص وخط أساس Git حقيقي. `engineering/contracts/*.json` تُصنّف **`RELEASE`** لا `DOCS_FEEDBACK` لأنها قد تتضمن `migration_approved`. حقول Required Check محجوبة HTTP 403، فلا تغيير للـtriggers ولا وفورات CI معتمدة بعد.
+- **حدّ النطاق:** تجارب القراءة والكتابة استخدمت ملفات **اختبار اصطناعية** ناتجة من 41/56 الحقيقي؛ لا CLI لإدخال ملف مستخدم، ولا دخول قصة أصلية، ولا تعديل `simulation/src/` أو `main`. أدوات `engineering/probes/` مخصصة للاختبار فقط، لا للاستيراد الإنتاجي. كل Workflow اختبار مؤقت محفوظ بتاريخ Git ويجب إخراجه من رأس الفرع بعد توثيق النجاح.
+- **القادم:** حسم بيانات WAL عبر SQLite Backup API مع Provenance وعدم تغيّر المصدر، اختبارات Power-cut/Windows خارجية، وحصول owner على وضع Required Checks قبل تعديل CI الرسمي؛ ثم تغيير أداء صغير على فرع مستقل إن ثبت مكسب مع `full exact-SHA` وReplay ضد الانحدار.
+
 ## دفعة التوافق التاريخي — 10 نوفمبر 2026 (أدلة منفذة)
 
 - **MIG-02b — فحص دلالة الأحداث القديمة:** [تقرير تجربتين فعليتين](reports/MIG_02B_GENUINE_EVENT_SEMANTICS_2026-11-10.md)، Run [#42790950606](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42790950606) و[#42791690586](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42791690586)، **SUCCESS 3.10/3.13**؛ تطابق `WorldState` المصدر بعد تغيير رقمي الإصدار **في الذاكرة فقط**: عينة 51 حدثًا للمخبز/السوق، وعينة 97 حدثًا للمندوب/النقل المادي. `TWO_LIMITED_FIXTURES_VERIFIED`، وليس كل التاريخ.
