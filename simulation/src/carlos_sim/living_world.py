@@ -85,7 +85,8 @@ class LivingWorldEngine:
                  compound_procurement_enabled: bool = False,
                  professional_full_life_enabled: bool = False,
                  early_courier_food_wage_enabled: bool = False,
-                 hungry_woodcutter_work_enabled: bool = False):
+                 hungry_woodcutter_work_enabled: bool = False,
+                 retry_known_supplier_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -207,6 +208,11 @@ class LivingWorldEngine:
                 "multi_professional_markets_enabled=True"
             )
         self.compound_procurement_enabled = compound_procurement_enabled
+        if (type(retry_known_supplier_enabled) is not bool
+                or (retry_known_supplier_enabled
+                    and not compound_procurement_enabled)):
+            raise ValueError("supplier retry requires actual compound procurement")
+        self.retry_known_supplier_enabled = retry_known_supplier_enabled
         if (type(professional_full_life_enabled) is not bool or
                 (professional_full_life_enabled and not (
                     multi_professional_markets_enabled
@@ -919,7 +925,11 @@ class LivingWorldEngine:
                         return (has_compound_recipe(state, worker)
                                 or old_has(state, worker))
                     def choose_professional_known_road(state, worker):
-                        return (choose_compound_known_road(state, worker)
+                        return (choose_compound_known_road(
+                            state, worker,
+                            retry_after_seconds=3600
+                            if self.retry_known_supplier_enabled else None
+                        )
                                 if has_compound_recipe(state, worker)
                                 else old_walk(state, worker))
                 for buyer_id in sorted(current.npcs):

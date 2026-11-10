@@ -21,7 +21,8 @@ import test_play39_rain_drought_real_day as ref
 
 
 def _original_engine(db, clock, *, early: bool,
-                     hungry_woodcutter_work_enabled=False):
+                     hungry_woodcutter_work_enabled=False,
+                     retry_known_supplier_enabled=False):
     return LivingWorldEngine(
         db, clock, max_events_per_advance=5000,
         decision_cooldown=3600,
@@ -36,6 +37,7 @@ def _original_engine(db, clock, *, early: bool,
         professional_full_life_enabled=True,
         early_courier_food_wage_enabled=early,
         hungry_woodcutter_work_enabled=hungry_woodcutter_work_enabled,
+        retry_known_supplier_enabled=retry_known_supplier_enabled,
     )
 
 
@@ -76,7 +78,8 @@ def _conserve(state):
 
 
 def _run(path, end, *, early: bool,
-         hungry_woodcutter_work_enabled=False):
+         hungry_woodcutter_work_enabled=False,
+         retry_known_supplier_enabled=False):
     day_summaries = []
     with SQLiteEventStore(path) as db:
         clock = TimeEngine(db)
@@ -85,6 +88,7 @@ def _run(path, end, *, early: bool,
         engine = _original_engine(
             db, clock, early=early,
             hungry_woodcutter_work_enabled=hungry_woodcutter_work_enabled,
+            retry_known_supplier_enabled=retry_known_supplier_enabled,
         )
         try:
             for t in range(DAY // 4, end + 1, DAY // 4):
