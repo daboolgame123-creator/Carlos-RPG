@@ -85,7 +85,7 @@ def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
                           supply_authorized: bool) -> None:
     p = event.data
     if (not supply_authorized or event.actor_id is not None
-            or set(p) != {"id", "service_deliveries"}
+            or set(p) != {"id", "courier_id", "service_deliveries"}
             or not _id(p["id"])
             or type(p["service_deliveries"]) is not int):
         raise ValueError("courier food wage needs trusted physical-service proof")
@@ -93,6 +93,8 @@ def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
     if contract is None or contract["remaining"] < 1:
         raise ValueError("courier wage requires real escrowed employer food")
     who = contract["courier_id"]
+    if p["courier_id"] != who:
+        raise ValueError("wage contract worker identity does not match")
     circuit = state["supply_circuits"][who]
     service = p["service_deliveries"]
     if (service < 1 or circuit["deliveries"] != service

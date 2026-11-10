@@ -44,6 +44,11 @@ def audit_npc_economy(state: WorldState) -> dict:
             else:
                 stock_totals[resource] += amount
 
+    # Employer-owned food held in provision escrow remains physical food,
+    # but is no longer listed in ordinary market saleable inventory.
+    for provision in state.courier_provisions.values():
+        stock_totals["food"] += provision["remaining"]
+
     trade_resources: Counter[str] = Counter()
     for trade in state.market_trades.values():
         resource = trade["resource"]
