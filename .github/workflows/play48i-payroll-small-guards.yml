@@ -1,0 +1,39 @@
+name: PLAY-48I focused funded payroll bootstrap and wage forgery guards
+on:
+  push:
+    branches: ["feature/play48-i-funded-field-bakery-payroll-20261110"]
+    paths:
+      - ".github/workflows/play48i-payroll-small-guards.yml"
+      - "simulation/scenarios/test_village/test_play47_joined_professions.py"
+      - "simulation/scenarios/test_village/test_play48i_site_payroll.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48i-small-guards-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  valid-funds-and-no-forgery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Compile altered domain scenario and focused data-integrity assertions
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m compileall -q scenarios/test_village/test_play47_joined_professions.py scenarios/test_village/test_play48i_site_payroll.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48i_site_payroll.py \
+            -k "prepaid_employer_payroll or fake_salary_without_actual_completed_work"

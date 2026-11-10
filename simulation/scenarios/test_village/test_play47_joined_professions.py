@@ -22,11 +22,17 @@ def _e(kind, data):
 def _joined_bootstrap(
     db, *, smith_hunger=10, water=2, staff_provisions=False,
     repair_shift_end=20_000, initial_market_food=3,
+    site_payroll_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
     No second bootstrap may reinterpret a known wallet or silently mint money.
+    When site_payroll_enabled, TWO of Carlos's actual initial 2 copper
+    are allocated at genesis as farm/bakery working capital, without adding
+    any copper. The normal field/baker jobs get one-copper wage contracts.
     """
+    if type(site_payroll_enabled) is not bool:
+        raise ValueError("site_payroll_enabled must be boolean")
     def extend(events):
         # Redistribute four of the twelve existing opening copper coins BEFORE
         # the one and only authoritative genesis is committed.
@@ -42,6 +48,46 @@ def _joined_bootstrap(
                 events[idx] = _e("ResourceChanged", updated)
                 adjusted.add(updated["owner_id"])
         assert adjusted == {"omar", "layla"}
+        if site_payroll_enabled:
+            # This is a deliberately DISTINCT genesis counterfactual.
+            # Reallocate Carlos's two existing opening coins to the actual
+            # two employer site treasuries. No new currency, no gifts after t=0.
+            carlos_wallets = [
+                (idx, ev) for idx, ev in enumerate(events)
+                if ev.event_type == "ResourceChanged"
+                and ev.data.get("owner_id") == "carlos"
+                and ev.data.get("resource") == "coin_copper"
+            ]
+            assert len(carlos_wallets) == 1
+            idx, old = carlos_wallets[0]
+            assert old.data["current"] == 2 and old.data["previous"] is None
+            funded = dict(old.data)
+            funded["current"] = 0
+            events[idx] = _e("ResourceChanged", funded)
+            # Wage-bearing recipes are strictly validated *as they enter
+            # the event stream*. Employer cash must already exist BEFORE
+            # the first ProductionRecipeConfigured event is projected.
+            first_recipe = next(i for i, ev in enumerate(events)
+                                if ev.event_type == "ProductionRecipeConfigured")
+            events[first_recipe:first_recipe] = [
+                _e("ResourceChanged", {
+                    "owner_id": site, "resource": "coin_copper",
+                    "previous": None, "current": 1,
+                    "source": "initialization",
+                })
+                for site in ("farm", "bakery")
+            ]
+            signed = set()
+            for idx, ev in enumerate(events):
+                if (ev.event_type == "ProductionRecipeConfigured"
+                        and ev.data.get("id") in
+                            ("finite-harvest", "grain-to-bread")):
+                    assert "wage_coin" not in ev.data
+                    terms = dict(ev.data)
+                    terms["wage_coin"] = 1
+                    events[idx] = _e("ProductionRecipeConfigured", terms)
+                    signed.add(terms["id"])
+            assert signed == {"finite-harvest", "grain-to-bread"}
 
         sites = ("smithy", "iron_mine", "charcoal_kiln", "repair_shop")
         staff = (
@@ -171,6 +217,12 @@ def _joined_bootstrap(
     assert state.resources["layla"]["coin_copper"] == 2
     assert audit["copper_scope_complete"] is True
     assert audit["copper_known_total"] == 12
+    if site_payroll_enabled:
+        assert state.resources["carlos"]["coin_copper"] == 0
+        assert state.resources["farm"]["coin_copper"] == 1
+        assert state.resources["bakery"]["coin_copper"] == 1
+        for contract in ("finite-harvest", "grain-to-bread"):
+            assert state.production_recipes[contract]["wage_coin"] == 1
     assert db.verify(WORLD).to_dict() == state.to_dict()
     return state
 
