@@ -8,6 +8,7 @@ on:
       - "simulation/src/carlos_sim/living_world.py"
       - "simulation/src/carlos_sim/assistance_autonomy.py"
       - "simulation/scenarios/test_village/test_play48_autonomous_funded_aid.py"
+      - "simulation/scenarios/test_village/test_play48_autonomous_aid_guards.py"
       - "simulation/docs/PLAY_48_AUTONOMOUS_AID.md"
   workflow_dispatch:
 permissions:
@@ -41,6 +42,7 @@ jobs:
           python -m compileall -q src scenarios
           PYTHONPATH=src python -m pytest -q -s \
             scenarios/test_village/test_play48_autonomous_funded_aid.py \
+            scenarios/test_village/test_play48_autonomous_aid_guards.py \
             scenarios/test_village/test_play48_funded_food_aid.py \
             tests/test_assistance_autonomy.py \
             tests/test_assistance_autonomy_review.py \
