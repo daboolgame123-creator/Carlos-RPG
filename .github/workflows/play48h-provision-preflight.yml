@@ -1,0 +1,39 @@
+name: PLAY-48H preventive courier provision contract preflight (real 13-NPC)
+on:
+  push:
+    branches: ["feature/play48h-preventive-provision-contract-20261110"]
+    paths:
+      - ".github/workflows/play48h-provision-preflight.yml"
+      - "simulation/scenarios/test_village/test_play48h_provision_preflight.py"
+      - "simulation/docs/PLAY_48_PREVENTIVE_PROVISION_CONTRACT.md"
+      - "simulation/docs/WORK_QUEUE.md"
+permissions:
+  contents: read
+concurrency:
+  group: play48h-preflight-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-courier-service-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Audit actual 13-NPC funded market food and immutable physical services from genesis to 72h
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -q -s \
+            scenarios/test_village/test_play48h_provision_preflight.py
