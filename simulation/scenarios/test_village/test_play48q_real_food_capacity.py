@@ -14,6 +14,7 @@ from math import ceil
 from carlos_sim import SQLiteEventStore
 from carlos_sim.consumption import HUNGER_RELIEF_PER_FOOD
 from carlos_sim.survival import hunger_period
+from carlos_sim.bakery_buffer import GRAIN_TARGET
 from test_play47_closure_endurance import DAY, WORLD
 from test_play48m_finite_employment import _seed_employed
 
@@ -123,6 +124,12 @@ def _capacity(state):
             max(0, steady_daily_required - steady_daily_grain_ceiling),
         "seven_day_not_all_healthy_even_with_perfect_logistics":
             min_meals_for_all_below_90 > initial_food + upper_grain,
+        # Pure counterfactual upper bound, NOT actual food at t=0 or license to mint.
+        "counterfactual_extra_preexisting_grain_reserve": GRAIN_TARGET,
+        "counterfactual_max_with_real_prior_funded_reserve":
+            initial_food + upper_grain + GRAIN_TARGET,
+        "reserve_alone_is_not_sufficient":
+            min_meals_for_all_below_90 > initial_food + upper_grain + GRAIN_TARGET,
         "not_a_survival_trajectory": True,
     }
 
@@ -139,6 +146,10 @@ def test_authentic_13_npc_seven_day_optimistic_food_capacity(tmp_path):
     assert report["total_seven_day_water_ceiling"] == 8
     assert report["optimistic_max_bread_units_in_7days"] == 55
     assert report["seven_day_not_all_healthy_even_with_perfect_logistics"]
+    assert report["minimum_real_meals_for_all_to_stay_below_hunger90"] == 61
+    assert report["counterfactual_extra_preexisting_grain_reserve"] == 3
+    assert report["counterfactual_max_with_real_prior_funded_reserve"] == 58
+    assert report["reserve_alone_is_not_sufficient"]
     assert before == state.to_dict()
     with SQLiteEventStore(path) as db:
         assert db.verify(WORLD).to_dict() == before
