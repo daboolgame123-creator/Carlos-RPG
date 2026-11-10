@@ -22,7 +22,7 @@ def _e(kind, data):
 def _joined_bootstrap(
     db, *, smith_hunger=10, water=2, staff_provisions=False,
     repair_shift_end=20_000, initial_market_food=3,
-    site_payroll_enabled=False,
+    site_payroll_enabled=False, site_payroll_wage_coin=1,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -33,6 +33,10 @@ def _joined_bootstrap(
     """
     if type(site_payroll_enabled) is not bool:
         raise ValueError("site_payroll_enabled must be boolean")
+    if (type(site_payroll_wage_coin) is not int
+            or site_payroll_wage_coin not in (1, 2)
+            or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
+        raise ValueError("site_payroll_wage_coin must be one or two existing copper")
     def extend(events):
         # Redistribute four of the twelve existing opening copper coins BEFORE
         # the one and only authoritative genesis is committed.
@@ -84,7 +88,7 @@ def _joined_bootstrap(
                             ("finite-harvest", "grain-to-bread")):
                     assert "wage_coin" not in ev.data
                     terms = dict(ev.data)
-                    terms["wage_coin"] = 1
+                    terms["wage_coin"] = site_payroll_wage_coin
                     events[idx] = _e("ProductionRecipeConfigured", terms)
                     signed.add(terms["id"])
             assert signed == {"finite-harvest", "grain-to-bread"}
@@ -222,7 +226,7 @@ def _joined_bootstrap(
         assert state.resources["farm"]["coin_copper"] == 1
         assert state.resources["bakery"]["coin_copper"] == 1
         for contract in ("finite-harvest", "grain-to-bread"):
-            assert state.production_recipes[contract]["wage_coin"] == 1
+            assert state.production_recipes[contract]["wage_coin"] == site_payroll_wage_coin
     assert db.verify(WORLD).to_dict() == state.to_dict()
     return state
 

@@ -111,6 +111,39 @@ def _physically_present(state: dict, who: str) -> bool:
                    for x in state["travels"].values())
 
 
+def _local_unpaid_bakery_wage_reserve(state: dict | WorldState) -> int:
+    """Protect only REAL finished, unpaid on-site bakery labor when remitting cash.
+
+    This is a local employer obligation, not a remote NPC market oracle.
+    No debt and no reservation for jobs that have not actually completed.
+    On older no-wage worlds it returns zero: their physical coin-return
+    semantics and original one-coin shop reserve remain untouched.
+    """
+    if isinstance(state, WorldState):
+        jobs, recipes = state.production_jobs, state.production_recipes
+    else:
+        jobs, recipes = state["production_jobs"], state["production_recipes"]
+    due = 0
+    for job in jobs.values():
+        if (job["site_id"] != "bakery" or job["status"] != "completed"
+                or "work_wage" in job):
+            continue
+        wage = recipes[job["recipe_id"]].get("wage_coin")
+        if type(wage) is int and wage > 0:
+            due += wage
+            if due > MAX_STOCK:
+                return MAX_STOCK
+    return due
+
+
+def _bakery_cash_remittance_minimum(state: dict | WorldState,
+                                    record: dict) -> int:
+    """Keep normal 1 bakery operating coin plus any already-earned wages."""
+    if record["index"] != 4:
+        return 1
+    return max(2, 1 + _local_unpaid_bakery_wage_reserve(state))
+
+
 def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -> None:
     p = event.data
     if (not supply_authorized or set(p) != {"courier_id", "resource"}
@@ -139,7 +172,8 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         from_balance = state["resources"][src][resource]
         to_balance = state["resources"][who][resource]
         if (not _quantity(from_balance) or not _quantity(to_balance)
-                or from_balance < (2 if resource == CASH and record["index"] == 4 else 1)
+                or from_balance < (_bakery_cash_remittance_minimum(state, record)
+                                   if resource == CASH else 1)
                 or to_balance >= MAX_STOCK
                 or (resource != "food" and to_balance != 0)):
             raise ValueError("courier cannot mint or double-load local cargo")
@@ -226,7 +260,8 @@ def choose_cargo(state: WorldState, who: str) -> str | None:
     if (lane is not None and here == lane[0]
             and _quantity(state.resources.get(here, {}).get(lane[2]))
             and state.resources[here][lane[2]] >= (
-                2 if lane[2] == CASH and record["index"] == 4 else 1
+                _bakery_cash_remittance_minimum(state, record)
+                if lane[2] == CASH else 1
             )):
         return "SupplyCargoPicked"
     return None
