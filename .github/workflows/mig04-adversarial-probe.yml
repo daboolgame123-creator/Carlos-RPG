@@ -2,7 +2,7 @@ name: MIG-04 corruption interruption and exclusive publish adversarial proof
 on:
   push:
     branches: ["engineering/ci-mig-baseline-20261110"]
-    paths: [".github/workflows/mig04-adversarial-probe.yml"]
+    paths: [".github/workflows/mig04-adversarial-probe.yml", "engineering/probes/mig04_*.py"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -86,3 +86,8 @@ jobs:
           PYTHONPATH: target/simulation/src
         run: |
           python contract/engineering/probes/mig04_adversarial_probe.py
+      - name: Kill real Linux worker processes and refuse live WAL source
+        env:
+          PYTHONPATH: target/simulation/src
+        run: |
+          python contract/engineering/probes/mig04_crash_wal_probe.py
