@@ -1,0 +1,38 @@
+name: PLAY-48 genuine thirteen-NPC day-four physical funded-aid fork
+on:
+  push:
+    branches: ["feature/play48-real-13npc-post72-proof-20261110"]
+    paths:
+      - ".github/workflows/play48-13npc-post72.yml"
+      - "simulation/scenarios/test_village/test_play48_13npc_post72_relay.py"
+      - "simulation/docs/PLAY_48_REAL_13NPC_POST72.md"
+permissions:
+  contents: read
+concurrency:
+  group: play48-real-13npc-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  post72:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 38
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Compare genuine original 13-NPC 72h evidence to parallel 96h aid-on and aid-off histories
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -q -s \
+            scenarios/test_village/test_play48_13npc_post72_relay.py
