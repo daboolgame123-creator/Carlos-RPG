@@ -20,7 +20,7 @@ from carlos_sim.economic_diagnostics import audit_npc_economy
 from carlos_sim.food_security_audit import audit_food_security
 from test_play47_closure_endurance import _seed, _day, WORLD, DAY
 from test_play47_joined_professions import _joined_bootstrap
-from test_play48h1_day4_control import _physical_conservation
+from test_play47_closure_endurance import _reading
 from test_play48_13npc_post72_relay import _stats
 import test_play38_multi_farm_couriers as east
 
@@ -181,8 +181,8 @@ def test_two_days_of_real_autonomy_pay_real_field_and_bakery_workers(tmp_path):
                         "treatment": paid_audit})
         # Real resource accounting includes the ORIGINAL opening finite food,
         # real newly matured grain, physical food and reserved jobs; no free food.
-        _physical_conservation(c)
-        _physical_conservation(p)
+        _reading(c)
+        _reading(p)
     wages = _site_wages(p)
     # We require a positive *actual* finished-work wage receipt for BOTH
     # productive roles. If the workers never earn one, the experiment FAILS.
@@ -214,8 +214,8 @@ def test_four_day_payroll_economy_receipt_audit_not_optimistic(tmp_path):
             "control_economy": _stats(c),
             "paid_economy": _stats(p),
         })
-        _physical_conservation(c)
-        _physical_conservation(p)
+        _reading(c)
+        _reading(p)
     # Crucial: never assert recovery or invent bread to make the test green.
     assert c.time == p.time == 4 * DAY
     assert p.resources["market"]["food"] >= 0
