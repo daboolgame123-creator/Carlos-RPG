@@ -6,7 +6,7 @@ on:
       - ".github/workflows/mig05a-restore-matrix.yml"
       - "engineering/probes/mig05a_restore_matrix.py"
       - "engineering/probes/mig04_adversarial_probe.py"
-      - "engineering/reports/MIG_04C_CONCURRENT_WAL_BACKUP_2026-11-10.md"
+      - "engineering/reports/MIG_05A_RESTORE_ACCEPTANCE_2026-11-10.md"
   workflow_dispatch:
 permissions:
   contents: read
