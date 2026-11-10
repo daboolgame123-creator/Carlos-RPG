@@ -148,6 +148,10 @@ def test_actual_twelve_hours_timbers_wages_and_material_trade(tmp_path):
     assert s["copper_total"] == 12
     assert s["wood_jobs"] >= 1, s
     assert s["woodcutter_wages"] >= 1, s
+    # A real charcoal buyer must physically visit the timber market and
+    # purchase at least one unit; a wage alone does not make the chain live.
+    assert s["wood_sales"] >= 1, s
+    assert s["charcoal_jobs"] >= 1, s
     assert s["forest_timber_left"] <= 2
     assert s["forest_timber_left"] + s["wood_jobs"] == 3
     assert all(v >= 0 for st in result.resources.values()

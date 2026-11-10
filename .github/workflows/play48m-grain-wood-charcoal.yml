@@ -7,6 +7,9 @@ on:
       - "simulation/scenarios/test_village/test_play47_joined_professions.py"
       - "simulation/scenarios/test_village/test_play48m_finite_employment.py"
       - "simulation/src/carlos_sim/bakery_buffer.py"
+      - "simulation/src/carlos_sim/multi_professional_trade.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/scenarios/test_village/test_play48h3_early_market_wage.py"
       - "simulation/docs/PLAY48M_JOBS_BUFFER_EXPERIMENT.md"
 permissions:
   contents: read
