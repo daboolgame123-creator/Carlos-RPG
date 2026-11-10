@@ -4,7 +4,7 @@
 **الدليل:** [Run 42789060820](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42789060820) — `SUCCESS` على SHA `db52450c1e38c99c6c0a43aeb7b3d8a45fbd1f76`.  
 **الحالة:** `CLASSIFICATION_PROOF_VERIFIED / RELEASE_TRIGGER_CHANGE_NOT_AUTHORIZED`.
 
-أنشئ workflow تجريبي مستقل `.github/workflows/ci01-change-classifier-proof.yml` دون تعديل `play47-economic-audit.yml` أو `simulation-tests.yml` أو أي check name/paths مطلوب. جلب GitHub أربع مراجعات حقيقية وقارن أشجار الملفات لتثبت أن مصنف التغييرات لا يتعامل مع وثائق قرار الإغلاق كأنها مجرد وثائق عادية.
+أنشئ workflow تجريبي مستقل [محفوظ في Git عند SHA الاختبار](https://github.com/daboolgame123-creator/Carlos-RPG/blob/db52450c1e38c99c6c0a43aeb7b3d8a45fbd1f76/.github/workflows/ci01-change-classifier-proof.yml) باسم `.github/workflows/ci01-change-classifier-proof.yml`، وأُزيل من رأس الفرع بعد نجاح التجربة لتجنب زيادة العدد الدائم للـWorkflows، دون تعديل `play47-economic-audit.yml` أو `simulation-tests.yml` أو أي check name/paths مطلوب. جلب GitHub أربع مراجعات حقيقية وقارن أشجار الملفات لتثبت أن مصنف التغييرات لا يتعامل مع وثائق قرار الإغلاق كأنها مجرد وثائق عادية.
 
 | عينة فعلية | الملفات المتغيرة | docs-only | Full release مطلوب | حكم التجربة |
 | --- | ---: | --- | --- | --- |
