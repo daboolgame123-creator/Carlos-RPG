@@ -1,0 +1,63 @@
+name: PLAY-48J2 combined market-affordable cash wages and real courier food service
+on:
+  push:
+    branches: ["feature/play48-j-affordable-wages-vs-one-coin-20261110"]
+    paths:
+      - ".github/workflows/play48j2-combined-wages.yml"
+      - "simulation/scenarios/test_village/test_play48j2_courier_and_cash_wages.py"
+      - "simulation/scenarios/test_village/test_play48j_affordable_payroll.py"
+      - "simulation/scenarios/test_village/test_play47_joined_professions.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/src/carlos_sim/supply.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48-j2-real-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  twelve-hour-courier-and-cash-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Historical H3 receipts plus true 13-NPC new mixed-wage 12h A/B
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs \
+            scenarios/test_village/test_play48j2_courier_and_cash_wages.py \
+            -k "first_twelve_hours"
+  real-finite-96h-control-and-treatment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - run: python -m pip install pytest
+      - name: Same 13-NPC 96h source-conserved payroll with late-vs-early real paid deliveries
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs \
+            scenarios/test_village/test_play48j2_courier_and_cash_wages.py \
+            -k "96h_causal_outcome"
