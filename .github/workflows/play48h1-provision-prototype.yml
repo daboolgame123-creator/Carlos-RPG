@@ -1,0 +1,41 @@
+name: PLAY-48H1 prototype verified funded courier food wages
+on:
+  push:
+    branches: ["feature/play48h1-funded-courier-provisions-20261110"]
+permissions:
+  contents: read
+concurrency:
+  group: play48h1-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-provision:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: 37a240ca9d16ae6d24740694c516189eb4041f82
+          path: legacy
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Run genuine thirteen-NPC prototype, hostile contracts, and authentic old-save refusal
+        env:
+          PLAY48H_LEGACY_SRC: ${{ github.workspace }}/legacy/simulation/src
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -q -s \
+            scenarios/test_village/test_play48h1_funded_courier_provision.py

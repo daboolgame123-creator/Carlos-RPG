@@ -37,7 +37,7 @@ def test_real_thirteen_npc_preventive_contract_funding_and_service_evidence(tmp_
     initial = _seed(path)
     assert len(initial.npcs) == 13
     assert initial.resources["market"]["food"] == 3
-    assert initial.schema_version == 42 and initial.rules_version == 57
+    assert initial.schema_version == 43 and initial.rules_version == 58
     assert audit_npc_economy(initial)["copper_known_total"] == 12
     # A hypothetical two-ration escrow MUST subtract from this finite stock;
     # the present unmodified market has no such reservation.
