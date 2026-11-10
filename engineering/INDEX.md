@@ -1,5 +1,43 @@
 # Carlos RPG — سجل الخطتين الهندسيتين قبل PLAY-48
 
+## دفعة الحماية والفشل — 10 نوفمبر 2026 (أدلة تنفيذية مثبتة)
+
+- **MIG-04 — فشل آمن ورفض فساد البيانات:** [التقرير الأساسي](reports/MIG_04_ADVERSARIAL_DISPOSABLE_PROOF_2026-11-10.md)، [Run #42793803908](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42793803908) **SUCCESS 3.10/3.13**؛ عالمين، 53 Event و7 Commands، 6 حالات فساد مرفوضة، 3 انقطاعات مصطنعة، منع overwrite/symlink، واستعادة هدف مستقل سليم. فشل إعداد سابق [#42793658276](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42793658276) أُصلح بإضافة `pytest` إلى fixture التاريخي.
+- **MIG-04b — قتل عملية حقيقي وWAL حي:** [التقرير الإضافي](reports/MIG_04B_PROCESS_CRASH_AND_WAL_2026-11-10.md)، [Run #42794524369](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42794524369) **SUCCESS 3.10/3.13**؛ SIGKILL حقيقي عند 3 مراحل، لا هدف ناقص قبل النشر، هدف متكامل بعد Hard Link، ورفض صريح لمصدر WAL نشط إلى أن توجد نسخة متسقة. **ليس اختبار انقطاع كهرباء، ولا Windows**؛ `MIG04_OPEN / P0_NO_GO`.
+- **CI-01b — سياسة تصنيف آمنة لا تنفَّذ على Release Check بعد:** [التقرير](reports/CI_01B_ADVERSARIAL_CLASSIFICATION_2026-11-10.md)، [Run #42794930046](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42794930046) **SUCCESS 3.10/3.13**، 14 حالة فحص وخط أساس Git حقيقي. `engineering/contracts/*.json` تُصنّف **`RELEASE`** لا `DOCS_FEEDBACK` لأنها قد تتضمن `migration_approved`. حقول Required Check محجوبة HTTP 403، فلا تغيير للـtriggers ولا وفورات CI معتمدة بعد.
+- **حدّ النطاق:** تجارب القراءة والكتابة استخدمت ملفات **اختبار اصطناعية** ناتجة من 41/56 الحقيقي؛ لا CLI لإدخال ملف مستخدم، ولا دخول قصة أصلية، ولا تعديل `simulation/src/` أو `main`. أدوات `engineering/probes/` مخصصة للاختبار فقط، لا للاستيراد الإنتاجي. كل Workflow اختبار مؤقت محفوظ بتاريخ Git ويجب إخراجه من رأس الفرع بعد توثيق النجاح.
+- **القادم:** حسم بيانات WAL عبر SQLite Backup API مع Provenance وعدم تغيّر المصدر، اختبارات Power-cut/Windows خارجية، وحصول owner على وضع Required Checks قبل تعديل CI الرسمي؛ ثم تغيير أداء صغير على فرع مستقل إن ثبت مكسب مع `full exact-SHA` وReplay ضد الانحدار.
+
+## دفعة التوافق التاريخي — 10 نوفمبر 2026 (أدلة منفذة)
+
+- **MIG-02b — فحص دلالة الأحداث القديمة:** [تقرير تجربتين فعليتين](reports/MIG_02B_GENUINE_EVENT_SEMANTICS_2026-11-10.md)، Run [#42790950606](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42790950606) و[#42791690586](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42791690586)، **SUCCESS 3.10/3.13**؛ تطابق `WorldState` المصدر بعد تغيير رقمي الإصدار **في الذاكرة فقط**: عينة 51 حدثًا للمخبز/السوق، وعينة 97 حدثًا للمندوب/النقل المادي. `TWO_LIMITED_FIXTURES_VERIFIED`، وليس كل التاريخ.
+- **MIG-03 — بناء ملف هدف منفصل:** [تقرير تجربتي التحويل المحدود](reports/MIG_03_TWO_ISOLATED_REBUILDS_2026-11-10.md)، Run [#42791318864](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42791318864) و[#42791885581](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42791885581)، **SUCCESS 3.10/3.13**. أعيد إنشاء ملفات SQLite جديدة 42/57 لعينتين مصطنعتين حقيقيتين 41/56، مع حفظ 51+97 حدثًا و6+2 أوامر، وتطابق إيصالاتها وبصماتها والـReplay وعدم مساس مصدر SQLite. لم يُنتج مهاجر عام ولا اعتماد P0.
+- **عقد التوافق الآلي:** [migration_41_56_to_42_57.json](contracts/migration_41_56_to_42_57.json) يضم نتائج Fixture SHA وRun IDs، لكنه **`migration_approved=false`**. ما زالت عهدة النحاس الشخصي والقروض والحقوق وملفات القصة، واختبارات السقوط/WAL وWindows غير معتمدة.
+- **حاجز التشغيل القادم:** `MIG-04` تعمدات فساد وتكرار ونشر هدف موجود وحماية المصدر وWAL وانقطاع؛ قبل ذلك لا يجوز استخدام هذه التجارب على ملف مستخدم. متابعة تحسين CI تتطلب قياس إصلاح على SHA حقيقي؛ لا تضف وظائف تجريبية دائمة. `P0_PRODUCTION_NOT_APPROVED`، و`main` ثابت.
+
+## الدفعة التالية المثبتة — 10 نوفمبر 2026 (نتائج GitHub الفعلية)
+
+**تنظيف ما بعد التحقق:** حُذفت ملفات التشغيل التجريبية الستة من رأس الفرع بعد اكتمال الاختبارات عبر commit تنظيف `5886f216b8dcc494b9efa7ff9cd01b1cb6d77ba1`، دون حذف سجلات GitHub Actions أو ملفات المصدر المثبتة في تاريخ Git. **لا يضيف PR النهائي Workflows دائمة** إلى الخمسين الموجودة؛ يمكن إعادة استعمال ملفات التجارب من SHA المُسجّل إذا لزم. إزالة الملف من رأس الفرع ليست «إلغاءً» لاختبار سبق ونجح، ولا تُغلق بقية بوابات الأداء/الترحيل.
+
+
+
+- **CI-03b — قياس 6h/24h:** [تقرير العالم الحقيقي](reports/CI_03B_REAL_24H_HOTSPOTS_2026-11-10.md)؛ [Run #42787883806](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42787883806) **SUCCESS على Python 3.10/3.13**. الأحداث الجديدة 2,416 مقابل 10,000 `apply_event` call في 24h؛ إعادة الإسقاط/التحميل والتجميد مواضع كلفة مثبتة. `BOUNDED_24H_PROFILE_VERIFIED`؛ ليس إثباتًا لسبب 7d بكامله.
+- **MIG-02a — عقد ترحيل مُعطّل:** [وثيقة دلالة الأحداث](reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md)، [JSON](contracts/migration_41_56_to_42_57.json)، [نتيجة التثبت](reports/MIG_02A_PINNED_CONTRACT_RUN_2026-11-10.md)؛ [Run #42788288670](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42788288670) **SUCCESS كلا الإصدارين**. 55 حقلًا و73 Event selector ثابتة بين 41/56 و42/57، لكن `migration_approved=false`. `MIG02A_CLOSED_TECHNICALLY / MIG02B_OPEN`.
+- **CI-04 — تجربة تعديل غير مجدية:** [تقرير رفض ترقيع `_freeze`](reports/CI_04_FREEZE_AB_NO_GO_2026-11-10.md)؛ [Run #42788654884](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42788654884) **SUCCESS** من حيث مقارنة A/B وصحة تطابق العالم، لكن البديل أبطأ ~2.4–2.6%، لذا `NO_GO`. لم يُعدّل المحرك.
+- **CI-01 — تصنيف تغييرات Git:** [تقرير 3 عينات تاريخية](reports/CI_01_PATH_CLASSIFICATION_PROOF_2026-11-10.md)؛ [Run #42789060820](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42789060820) **SUCCESS**. حدد docs engineering مقابل docs قرار إطلاق مقابل code؛ لم تُغيَّر triggers أو Required Checks. `CLASSIFIER_PROOF_VERIFIED / RELEASE_CHANGE_BLOCKED_BY_BRANCH_POLICY_403`.
+
+**المهام الآمنة التالية:** `CI-01b` اختبار PR مختلط وقراءة Required Status Checks من جهة مالك صلاحيات، `MIG-02b` دراسة أحداث أصلية ذات عهدة/سوق/إنتاج، ثم تصميم `CI-04b` بنية Snapshot/Replay على فرع أداء منفصل إذا أمكن ضمان صدق التحقق. لا تحسين قسري، ولا ترحيل عالم حقيقي، ولا انطلاق PLAY-48 بسبب تقارير جرد. `main` ثابت و`P0_PRODUCTION_NOT_APPROVED` مستمر.
+
+## تنفيذ دفعة الجرد والقياس — 10 نوفمبر 2026 (دليل فعلي)
+
+- **CI-00 (جزئي مثبت):** [جرد 50 Workflow وقياسات ستة تشغيلات ناجحة](reports/CI_00_BASELINE_2026-11-10.md)؛ ما زال التحقق من Required Checks محجوبًا بصلاحية GitHub API (403)، ولذلك لا تغييرات بعد على Required Gates أو حذف ملفات. `IN_PROGRESS / BASELINE_VERIFIED`.
+- **MIG-00 (تحليل المصدر مثبت):** [تدقيق الفرق الحقيقي 41/56 إلى 42/57](reports/MIG_00_41_56_TO_42_57_AUDIT.md). الحقول الأساسية ثابتة لكن عقود الإنتاج/السوق تغيرت؛ لا تحويل معتمد أو تلقائي. `IN_PROGRESS / SEMANTIC_INVENTORY_REQUIRED`.
+- **MIG-01 (عينة نسخ قديم مثبتة):** [فحص أصلي لإصدار 41/56 على Python 3.10 و3.13](reports/MIG_01_ORIGINAL_BACKUP_SAMPLE_2026-11-10.md)، [Run 42786900040](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42786900040) **SUCCESS**، 5 اختبارات لكل Python تشمل WAL/restore/الرفض وعدم تعديل المصدر. **لم تحدث هجرة لإصدار 42/57**؛ بقية مهام MIG-01 وMIG-02 مفتوحة.
+- **CI-03 (عينة فعلية مثبتة):** [41 اختبارًا + تجربة اقتصاد صغيرة على Python 3.10 و3.13 وتحليل cProfile](reports/CI_03_BOUNDED_PROFILE_2026-11-10.md)؛ [Run 42786344145](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42786344145) **SUCCESS** على SHA `d1b379b4c6c5ef4d8fe86a794501f2718939c4f2`. أظهر كثافة إعادة إسقاط الأحداث/التحميل؛ لم يثبت بعد اختناق تجربة الأيام السبعة. `BOUNDED_SAMPLE_VERIFIED`.
+- **بيئة التنفيذ:** فرع `engineering/ci-mig-baseline-20261110` مستقل؛ لا تغييرات في `simulation/src/` أو `simulation/tests/` أو `main`، ولا تغيير Schema/Rules أو ترحيل ملف حفظ. قياس الأداء يستعمل [workflow تاريخي مؤقت](https://github.com/daboolgame123-creator/Carlos-RPG/blob/d1b379b4c6c5ef4d8fe86a794501f2718939c4f2/.github/workflows/ci03-performance-probe.yml) على الفرع الهندسي فقط، وليس بوابة نشر.
+- **التتابع الصحيح:** `CI-03b` قياس 6h/24h، و`MIG-01` اختبار النسخة الأصلية، ثم تصميم `CI-01` بعد معرفة Required Checks أو تصعيد صلاحية القراءة، قبل أي CI-04 structural sharing. `P0_PRODUCTION_NOT_APPROVED` قائم.
+
+
 **تاريخ الإيداع:** 2026-11-10  
 **الحالة:** `PLANNED / NOT_IMPLEMENTED`، دون ترحيل حفظ أو تحسين CI مُنفذ.  
 **الأساس المعتمد:** `feature/play47-npc-economic-endurance-20261109` / `38ef0049478e4d62fd465dadc7c1eaf406b9b4d2`، Schema **42** / Rules **57**. PLAY-47 **CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER** بعد تحقق [CI كامل](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731120034) و[CI موجه](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731103345) وترقية fast-forward. `main` خارج العمل، وP0 غير معتمد.
@@ -35,6 +73,6 @@
 
 ## لماذا لا يغيّر هذا الفرع PLAY-47؟
 
-الأوراق هنا **توثيق تخطيط هندسي فقط**: لا تغيير في `simulation/src/` ولا اختبارات أو `.github/workflows/` أو Schema/Rules. لا يبدّل ذلك قرار إغلاق PLAY-47، ولا ينفذ PLAY-48، ولا يعني تشغيل migrations أو optimizations. بعد مراجعة وثائق الخطة يمكن ضمها للفرع المرجعي بعملية آمنة مع توثيق أثر CI؛ لا تمس `main` ولا ترفع بوابات P0.
+الوثائق الأساسية **خطط هندسية**، والتقارير المضافة تسجل **تجارب منفذة فعلًا** دون إضافة Workflows باقية في رأس الفرع: لا تغيير في `simulation/src/` أو ملفات الاختبارات أو `.github/workflows/` عند نهاية الدفعة أو Schema/Rules. لا يبدّل ذلك قرار إغلاق PLAY-47، ولا ينفذ PLAY-48، ولا يعني تشغيل migrations أو optimizations. بعد مراجعة وثائق الخطة يمكن ضمها للفرع المرجعي بعملية آمنة مع توثيق أثر CI؛ لا تمس `main` ولا ترفع بوابات P0.
 
 **تعريف النجاح لهذه الدفعة:** ظهور وثيقتَي الخطة في GitHub، ووجود فهرس واضح ومرجع من `AGENTS.md` و`README.md`، والتحقق من SHA/الفروقات. هذا معيار **إيداع خطة** وليس نجاح تنفيذها.

@@ -1,0 +1,132 @@
+{
+  "contract_version": 1,
+  "mode": "inventory_only",
+  "migration_approved": false,
+  "source": {
+    "commit": "a6c20e3edfbe85cc68819cd4fadd909472b21fd5",
+    "schema": 41,
+    "rules": 56
+  },
+  "target": {
+    "commit": "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2",
+    "schema": 42,
+    "rules": 57
+  },
+  "evidence": [
+    "engineering/reports/MIG_00_41_56_TO_42_57_AUDIT.md",
+    "engineering/reports/MIG_01_ORIGINAL_BACKUP_SAMPLE_2026-11-10.md",
+    "engineering/reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md",
+    "engineering/reports/MIG_02B_GENUINE_EVENT_SEMANTICS_2026-11-10.md",
+    "engineering/reports/MIG_03_TWO_ISOLATED_REBUILDS_2026-11-10.md",
+    "engineering/reports/MIG_04_ADVERSARIAL_DISPOSABLE_PROOF_2026-11-10.md",
+    "engineering/reports/MIG_04B_PROCESS_CRASH_AND_WAL_2026-11-10.md"
+  ],
+  "source_invariants": [
+    "original source-world database must remain byte-for-byte unchanged",
+    "SQLite original-reader verify and manifest validated",
+    "unknown resource values cannot be coerced to zero",
+    "no manufactured copper, resources, knowledge or ownership",
+    "no silent version header replacement",
+    "no silent migration in SQLiteEventStore.load",
+    "no replacement of existing target path"
+  ],
+  "semantic_review_required_for": [
+    {
+      "event_type": "ProductionRecipeConfigured",
+      "cause": "compound inputs shape vs legacy scalar shape"
+    },
+    {
+      "event_type": "ProductionStarted",
+      "cause": "scalar vs compound input reservation receipts"
+    },
+    {
+      "event_type": "ScheduledEventFired",
+      "cause": "scheduled production output and input invariants"
+    },
+    {
+      "event_type": "MarketOfferPosted",
+      "cause": "courier reservation-aware market offers"
+    },
+    {
+      "event_type": "MarketTradeExecuted",
+      "cause": "market trade can't consume courier reserved inventory or funds"
+    },
+    {
+      "event_type": "WorkshopMaterialDeposited",
+      "cause": "workshop procurement/local custody and receipt validation"
+    }
+  ],
+  "acceptance_gates": [
+    "MIG-02b exhaustive event/capability and actor provenance review",
+    "original 41/56 immutable SQLite backup and source-runtime verification",
+    "isolated target conversion with event-by-event migration ledger",
+    "full target replay and semantic value comparison",
+    "adversarial WAL/rollback/crash/duplicate/no-overwrite tests",
+    "independent P0 release decision for production worlds"
+  ],
+  "disposable_fixture_proofs": [
+    {
+      "fixture": "historical bakery and market",
+      "source_sha256": "1168508aaa04ff9c3e97b2c439a4dc7c74b1a1d668a6d684ef86b954bf505dfe",
+      "event_count": 51,
+      "command_count": 6,
+      "read_only_semantic_replay_run": 42790950606,
+      "isolated_target_rebuild_run": 42791318864,
+      "results": "both_pythons_success_and_full_state_equal",
+      "scope": "one legacy recipe and market trade, no physical courier"
+    },
+    {
+      "fixture": "historical seven NPC physical courier",
+      "source_sha256": "c142c11f5ec69a624f469429788fda6fd09eddf0f00a771288d761c8b52ee5d2",
+      "event_count": 97,
+      "command_count": 2,
+      "read_only_semantic_replay_run": 42791690586,
+      "isolated_target_rebuild_run": 42791885581,
+      "results": "both_pythons_success_and_full_state_equal",
+      "scope": "finite physical cargo water, travel, crop and production; no pledged copper spending"
+    }
+  ],
+  "unproven_risks": [
+    "copper cargo custody with personal cash spending",
+    "loans and legal ownership transitions",
+    "injuries and care plus player-controlled story",
+    "arbitrary historical schemas or unknown event types",
+    "crash-safe exclusive target publication and full backup preflight",
+    "WAL and concurrent producer during source backup",
+    "actual Windows and multiworld long-lived save restore"
+  ],
+  "mig04_disposable_proof": {
+    "run_id": 42793803908,
+    "source_version": [
+      41,
+      56
+    ],
+    "target_version": [
+      42,
+      57
+    ],
+    "world_count": 2,
+    "event_count": 53,
+    "command_count": 7,
+    "python_310": "success",
+    "python_313": "success",
+    "corrupt_variants_rejected": 6,
+    "simulated_failpoints_without_publish": 3,
+    "exclusive_target_and_symlink_refusal": true,
+    "source_unchanged": true,
+    "production_approval": false
+  },
+  "mig04b_process_crash_proof": {
+    "run_id": 42794524369,
+    "python_310": "success",
+    "python_313": "success",
+    "real_linux_sigkill_points": 3,
+    "unpublished_before_link": true,
+    "reopened_valid_target_after_link": true,
+    "live_wal_source_refused": true,
+    "concurrent_wal_backup_supported": false,
+    "windows_tested": false,
+    "power_outage_tested": false,
+    "production_approval": false
+  }
+}
