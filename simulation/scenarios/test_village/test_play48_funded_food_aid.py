@@ -142,7 +142,9 @@ def test_physically_funded_local_bread_assistance_restores_one_real_delivery(tmp
             )
             state = result.state
             assert state.supply_circuits["huda"]["deliveries"] >= 1
-            assert state.resources["huda"]["coin_copper"] if "coin_copper" in state.resources["huda"] else True
+            assert "coin_copper" not in state.resources["huda"], (
+                "A worker who receives bread never receives fictitious cash"
+            )
             audit_physical_supply(
                 state, seed=1, water=2, buyer_copper=2,
                 initial_market_food=3,
