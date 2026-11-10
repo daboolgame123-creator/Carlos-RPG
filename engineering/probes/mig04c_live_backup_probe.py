@@ -5,6 +5,7 @@ Destination: disposable 42 / 57 reconstruction. NEVER a player-save migrator.
 """
 from __future__ import annotations
 
+from contextlib import closing
 import hashlib
 import json
 from pathlib import Path
@@ -31,7 +32,7 @@ def domain_ledger_digest(connection: sqlite3.Connection) -> str:
 
 
 def check_sqlite(path: Path) -> None:
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db:
         assert db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
         assert db.execute("PRAGMA foreign_key_check").fetchall() == []
 
@@ -42,7 +43,7 @@ def prove_active_backup(source: Path, expected: dict, root: Path) -> dict:
     destination = root / "migrated-disposable.sqlite"
     shutil.copy2(source, live)
 
-    with sqlite3.connect(live, timeout=15) as anchor:
+    with closing(sqlite3.connect(live, timeout=15)) as anchor:
         assert anchor.execute("PRAGMA journal_mode=WAL").fetchone()[0].lower() == "wal"
         anchor.execute("CREATE TABLE migration_probe_bulk (id INTEGER PRIMARY KEY, bytes TEXT NOT NULL)")
         anchor.executemany(
@@ -68,7 +69,7 @@ def prove_active_backup(source: Path, expected: dict, root: Path) -> dict:
             try:
                 if not first_backup_page.wait(10):
                     raise AssertionError("backup did not begin before writer timeout")
-                with sqlite3.connect(live, timeout=15) as writer:
+                with closing(sqlite3.connect(live, timeout=15)) as writer:
                     for n in range(1, WRITE_COUNT + 1):
                         with writer:
                             writer.execute(
@@ -98,8 +99,8 @@ def prove_active_backup(source: Path, expected: dict, root: Path) -> dict:
         # Read-only connection still observes a coherent WAL snapshot; .backup()
         # is the essential step that physical shutil.copy2 cannot replace.
         try:
-            with sqlite3.connect(live.as_uri() + "?mode=ro", uri=True, timeout=15) as reader:
-                with sqlite3.connect(snapshot) as target:
+            with closing(sqlite3.connect(live.as_uri() + "?mode=ro", uri=True, timeout=15)) as reader:
+                with closing(sqlite3.connect(snapshot)) as target:
                     reader.backup(target, pages=5, sleep=0.001, progress=progress)
         finally:
             first_backup_page.set()
@@ -110,7 +111,7 @@ def prove_active_backup(source: Path, expected: dict, root: Path) -> dict:
         assert progress_calls[0] > 1, "must have multi-step Backup API"
         assert Path(str(live) + "-wal").exists(), "open WAL source must remain active"
         assert domain_ledger_digest(anchor) == original_game_digest
-        with sqlite3.connect(snapshot) as backed:
+        with closing(sqlite3.connect(snapshot)) as backed:
             snap_digest = domain_ledger_digest(backed)
             count, total = backed.execute(
                 "SELECT COUNT(*),COALESCE(SUM(amount),0) FROM migration_probe_ledger"
