@@ -17,7 +17,7 @@ from test_play45_multisector import (
 )
 
 
-def _two_real_contracts(db, *, material=2, worker_coins=2):
+def _two_real_contracts(db, *, material=2, worker_coins=2, second_shift=250):
     # Old and new buyers have separately owned, INITIALIZED money and
     # workplaces. No post-genesis transfer, subsidized loan or fiat wage.
     state = _seed(
@@ -64,7 +64,7 @@ def _two_real_contracts(db, *, material=2, worker_coins=2):
         events.extend([
             _e("NPCRoutineConfigured", {
                 "npc_id": who, "home_id": HOME,
-                "workplace_id": site, "work_start": 250,
+                "workplace_id": site, "work_start": second_shift,
                 "work_end": 20_000,
             }),
             _e("ProductionRecipeConfigured", {
@@ -85,12 +85,15 @@ def _two_real_contracts(db, *, material=2, worker_coins=2):
     return state
 
 
-@pytest.mark.parametrize("material,worker_coins", [(2, 2), (1, 2), (2, 0)])
+@pytest.mark.parametrize("material,worker_coins,second_shift", [
+    (2, 2, 250), (2, 2, 520), (1, 2, 520), (2, 0, 520),
+])
 def test_four_distinct_downstream_customers_preserve_economy(
-    tmp_path, material, worker_coins,
+    tmp_path, material, worker_coins, second_shift,
 ):
-    with SQLiteEventStore(tmp_path / f"four-real-customers-{material}-{worker_coins}.sqlite") as db:
-        start = _two_real_contracts(db, material=material, worker_coins=worker_coins)
+    with SQLiteEventStore(tmp_path / f"four-real-customers-{material}-{worker_coins}-{second_shift}.sqlite") as db:
+        start = _two_real_contracts(db, material=material, worker_coins=worker_coins,
+                                    second_shift=second_shift)
         money = _cash(start)
         clock = TimeEngine(db)
         clock.open_session(WORLD)
@@ -129,12 +132,25 @@ def test_four_distinct_downstream_customers_preserve_economy(
             for site, item in terminal.items():
                 assert item["quantity"] <= 1
                 assert item["quantity"] == len(item["workers"])
+            # When a second genuine worker has a later work shift they
+            # cannot arrive together and compete for the first single-item
+            # quote. Any second job must still buy its OWN second batch.
+            if material == 2 and worker_coins == 2 and second_shift == 520:
+                assert terminal["building"]["quantity"] == 1
+                assert terminal["building_east"]["quantity"] == 1
+                assert terminal["repair"]["quantity"] == 1
+                assert terminal["repair_east"]["quantity"] == 1
+                assert sum(t["resource"] == "plank"
+                           for t in start.market_trades.values()) == 2
+                assert sum(t["resource"] == "iron_fitting"
+                           for t in start.market_trades.values()) == 2
             if worker_coins == 0:
                 assert all(item["quantity"] == 0 for item in terminal.values()), (
                     "No downstream buyer may receive a free product"
                 )
             print("PLAY48_REAL_DEMAND_MATRIX " + json.dumps({
                 "source_units_per_resource": material,
+                "second_shift": second_shift,
                 "wallet_per_downstream_buyer": worker_coins,
                 "copper_total": money,
                 "completed_projects": terminal,
