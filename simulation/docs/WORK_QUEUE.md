@@ -1,5 +1,19 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48S — actual employer bread wages after physical courier service (2026-11-11)
+
+**PLAY48_OPEN / RELEASE_NO_GO, Schema 43 / Rules 58 unchanged, no main merge.** Current isolated branch `experiment/play48s-authentic-courier-food-wages-20261111`. Reviewed previous PLAY48R full comparison [CI #42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865) succeeded Python 3.10/3.13 at SHA `bb86167d`: fertile east plot yielded 15 vs 10 actual grain, 9 vs 7 baked loaves, but same 6 meals and same 4/13 at hunger100 at day2. Supply is a separate problem from food ownership. [Technical S wages and test limits](PLAY48S_FUNDED_COURIER_FOOD_WAGE.md).
+
+| Item | State | Verification |
+| --- | --- | --- |
+| S0: existing wages integration | CHAT_EXECUTABLE / BRANCH_COMMITTED | Same authentic 13 NPCs/12 copper/3 initial food, with one farm-owned bread for Huda after real water service, one market-owned for Hana after real logistics service. Employer food escrow debits initial site stock, does not print food; first payments secured by existing reducer. Wood/charcoal jobs, fertile yield and 2 real couriers remain |
+| S1: exact 12h A/B | CHAT_EXECUTABLE / VERIFICATION_PENDING | [run 42923109541](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42923109541), Python 3.10/3.13, no-service forgery rejection, real earned Huda meal and SQLite event provenance |
+| S2: exact 48h A/B | BLOCKED_BY_DEPENDENCY / VERIFICATION_PENDING | Same run after S1; control and intervention must share identical genesis, only food salary timing flag differs; output real meals, hunger, paid receipts, trade and transport |
+| S3: sustainable wages | BLOCKED_BY_DEPENDENCY / NOT_IMPLANTED | Current contract is **one-off** and cannot be declared repeatable; investigate new payer-funded later receipts only after S1/S2 and explicit auth/rules/version design. Not permitted to eat consigned cargo, mint bread, pay unearned service or bypass critical hunger guard |
+| S4: full 168h closing | BLOCKED_BY_DEPENDENCY / NOT_IMPLANTED | No 7day recovery, full latest-SHA test, or production release approval claimed. Older PLAY48R full suite [run 42919617997](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919617997) 3.13 green 1,694 tests, 3.10 must be checked independently |
+
+
+
 ## PLAY-48R — experimental physically harvested fertile-field comparison (2026-11-11)
 
 **Status: PLAY48_OPEN / RELEASE_NO_GO**, Schema 43 / Rules 58 unchanged. Branch `experiment/play48r-fertile-field-real-harvest-20261111`. This is NOT a production yield rule or claim that hunger is solved. [Full scope, hypotheses, and evidence](PLAY48R_FERTILE_FIELD_TRIAL.md).
