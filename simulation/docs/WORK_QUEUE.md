@@ -1,5 +1,26 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48 — repeated physical production, started 2026-11-10
+
+**Operative state: `PLAY48_OPEN / RELEASE_NO_GO`.** Independent experimental
+branch `feature/play48-repeatable-physical-loops-20261110`, based on verified
+PLAY-47 integration `1dd038d`. Schema **42** / Rules **57**, `main`
+unchanged; no production save approval.
+
+| ID | Task | Classification | State | Evidence / next gate |
+| --- | --- | --- | --- | --- |
+| PLAY48-A | Bounded two-run real wood/carpentry and ore/forge, real shop purchases, cash and wages, zero-funds failure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42808944705](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808944705); enhanced tests [42809457769](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42809457769) |
+| PLAY48-B | Two autonomous ore+charcoal smelts, actual repairer demand, one sale funds two distinct jobs | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42809457769](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42809457769) — 51 passed/1 external-fixture skip per Python; repeat end-product demand not solved |
+| PLAY48-C | Real 13-NPC 96-hour post-stall demand/food/courier diagnostics | CHAT_EXECUTABLE | VERIFICATION_PENDING | [Run 42808714301](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808714301) pending when written |
+| PLAY48-D | Genuine downstream need or funded courier food access, no consigned-money spending | BLOCKED_BY_DEPENDENCY | PLANNED | Depends on verified 96h cause and a bounded receipt/ownership contract; **not yet a runtime implementation** |
+| PLAY48-CLOSE | Full exact-SHA regressions, day-four recovery/negative case, independent review disposition | BLOCKED_BY_DEPENDENCY | OPEN | Test all relevant Python 3.10/3.13 + historical compatibility; P0 remains independent |
+
+[PLAY-48 evidence, diagnostics and accepted risks](PLAY_48_REPEATABLE_PRODUCTION.md).
+The **six earlier Draft engineering PRs #63–#68** remain unmerged and separate;
+MIG-05 production approval is not a prerequisite for disposable PLAY-48 trials.
+Do not call the new tests a complete seven-day recovery, adopt made-up wood or
+iron regeneration, or skip tests because a work queue line changed.
+
 ## PLAY-47 — closure verification batch (updated 2026-11-10 UTC)
 
 **Current unverified-candidate state: OPEN / RELEASE NO-GO**; Schema **42** /
