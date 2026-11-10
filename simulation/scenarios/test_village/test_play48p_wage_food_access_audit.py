@@ -110,3 +110,56 @@ def test_true_two_hour_charcoal_wages_food_access_causal_audit(tmp_path):
     }
     print("PLAY48P_ACTUAL_WAGE_TO_FOOD_ACCESS",
           json.dumps(report, sort_keys=True), flush=True)
+
+
+def test_true_first_day_bakery_grain_location_and_access_audit(tmp_path):
+    """Locate observed grain/food after a real day; never spawn a buffer."""
+    from test_play47_closure_endurance import DAY, WORLD
+    from test_play48h3_early_market_wage import _run
+    from carlos_sim import SQLiteEventStore
+
+    path = tmp_path / "physical-food-chain-day1.sqlite"
+    _seed_employed(path)
+    state, history = _run(
+        path, DAY, early=False,
+        hungry_woodcutter_work_enabled=True,
+        retry_known_supplier_enabled=True,
+    )
+    assert state.time == DAY and len(history) == 1
+    economy = audit_npc_economy(state)
+    access = audit_food_access_barriers(state)
+    before = state.to_dict()
+    assert economy["copper_known_total"] == 12
+    assert len(state.npcs) == access["npc_count"] == 13
+    per_site = {
+        owner: {
+            resource: stock[resource]
+            for resource in ("grain", "food", "crop_ready", "water")
+            if type(stock.get(resource)) is int and stock[resource] > 0
+        }
+        for owner, stock in sorted(state.resources.items())
+    }
+    per_site = {owner: stock for owner, stock in per_site.items() if stock}
+    baker = _real_stats(state)["bakery_buffer"]
+    assert baker["owned_local_grain"] == state.resources["bakery"]["grain"]
+    assert baker["missing_grain"] == max(0, 3 - baker["owned_local_grain"])
+    assert state.to_dict() == before
+    with SQLiteEventStore(path) as db:
+        assert db.verify(WORLD).to_dict() == before
+        assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
+    report = {
+        "time": DAY, "same_thirteen_people": True,
+        "same_twelve_existing_copper": True,
+        "positive_actual_physical_stock_by_site": per_site,
+        "bakery_three_grain_target": baker,
+        "market_food_site_stock": access["market_saleable_food_known"],
+        "hunger_100": access["hunger_at_100"],
+        "food_sales": _real_stats(state)["bread_sales"],
+        "meals": _real_stats(state)["meals"],
+        "farm_courier_deliveries": history[0]["economy"]["deliveries"],
+        "no_material_fabrication_or_npc_commands": True,
+        "production_and_7day_recovery_not_assumed": True,
+    }
+    print("PLAY48P_DAY1_BAKERY_REAL_GRAIN_CHAIN",
+          json.dumps(report, sort_keys=True), flush=True)
