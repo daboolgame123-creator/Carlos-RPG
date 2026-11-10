@@ -88,6 +88,14 @@ def choose_aid_relay(state: WorldState, who: str) -> AidRelayIntent | None:
     own_food, own_copper = owner.get("food"), owner.get(MONEY)
     if not _known(own_food):
         return None
+    already_promised = sum(
+        item["quantity"] for item in state.obligations.values()
+        if item["provider"] == who and item["resource"] == "food"
+        and item["status"] == "promised"
+    )
+    # These are not legally escrowed, but an autonomous NPC must honor
+    # its existing promise before making a competing one-loaf commitment.
+    unpromised_food = own_food - already_promised
     if any(stall["keeper_id"] == who and site == here
            for site, stall in state.market_stalls.items()):
         return None     # a market steward must not abandon their own till
@@ -107,7 +115,7 @@ def choose_aid_relay(state: WorldState, who: str) -> AidRelayIntent | None:
             continue  # donor's own negative trust is not overruled
         place = obligation["location_id"]   # witnessed when the request was made
         age = state.time - created
-        if own_food >= 1:
+        if unpromised_food >= 1:
             if here == place:
                 if (state.entities[recipient]["location_id"] == here
                         and _free(state, recipient)):
@@ -116,6 +124,10 @@ def choose_aid_relay(state: WorldState, who: str) -> AidRelayIntent | None:
             path = shortest_known_route(state, who, place)
             if path:
                 return AidRelayIntent(who, oid, "travel", route_id=path[0])
+            continue
+        if own_food > 0 and unpromised_food < 1:
+            # Never treat a loaf promised to a different requester as spare.
+            # Existing unescrowed help must be fulfilled or cancelled first.
             continue
         if not _known(own_copper) or age >= MAX_REQUEST_AGE:
             # If already away from the requester when a shop ran out, return
