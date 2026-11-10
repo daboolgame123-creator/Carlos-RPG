@@ -34,6 +34,9 @@ def seed_two_field_world(
     east_courier_provision=False,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
+    # 12 is an isolated, more fertile east-field test-world crop-yield
+    # contract, not free opening grain or a runtime subsidy. Old 3/7
+    # fixtures retain their exact behavior and historical saves.
     if type(east_courier_provision) is not bool:
         raise ValueError("east_courier_provision must be a boolean")
     if type(one_hungry_market_buyer) is not bool:
@@ -50,7 +53,7 @@ def seed_two_field_world(
     if (type(east_growth_seconds) is not int
             or east_growth_seconds not in (3600, 86400)
             or type(east_grain_yield) is not int
-            or east_grain_yield not in (3, 7)
+            or east_grain_yield not in (3, 7, 12)
             or type(market_wallets) is not bool
             or type(hungry_market_buyers) is not bool):
         raise ValueError("invalid fixed two-farm counterfactual")
