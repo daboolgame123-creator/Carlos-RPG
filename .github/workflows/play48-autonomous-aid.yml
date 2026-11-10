@@ -10,6 +10,7 @@ on:
       - "simulation/scenarios/test_village/test_play48_autonomous_funded_aid.py"
       - "simulation/scenarios/test_village/test_play48_autonomous_aid_guards.py"
       - "simulation/docs/PLAY_48_AUTONOMOUS_AID.md"
+      - "simulation/docs/WORK_QUEUE.md"
   workflow_dispatch:
 permissions:
   contents: read
