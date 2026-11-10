@@ -64,12 +64,19 @@ def _joined_bootstrap(
             funded = dict(old.data)
             funded["current"] = 0
             events[idx] = _e("ResourceChanged", funded)
-            for site in ("farm", "bakery"):
-                events.append(_e("ResourceChanged", {
+            # Wage-bearing recipes are strictly validated *as they enter
+            # the event stream*. Employer cash must already exist BEFORE
+            # the first ProductionRecipeConfigured event is projected.
+            first_recipe = next(i for i, ev in enumerate(events)
+                                if ev.event_type == "ProductionRecipeConfigured")
+            events[first_recipe:first_recipe] = [
+                _e("ResourceChanged", {
                     "owner_id": site, "resource": "coin_copper",
                     "previous": None, "current": 1,
                     "source": "initialization",
-                }))
+                })
+                for site in ("farm", "bakery")
+            ]
             signed = set()
             for idx, ev in enumerate(events):
                 if (ev.event_type == "ProductionRecipeConfigured"
