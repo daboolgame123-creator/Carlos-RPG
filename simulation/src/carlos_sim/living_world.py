@@ -83,7 +83,8 @@ class LivingWorldEngine:
                  professional_procurement_enabled: bool = False,
                  multi_professional_markets_enabled: bool = False,
                  compound_procurement_enabled: bool = False,
-                 professional_full_life_enabled: bool = False):
+                 professional_full_life_enabled: bool = False,
+                 early_courier_food_wage_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -222,6 +223,11 @@ class LivingWorldEngine:
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
+        if (type(early_courier_food_wage_enabled) is not bool
+                or (early_courier_food_wage_enabled and not
+                    (supply_enabled and consumption_enabled))):
+            raise ValueError("early courier food wage requires true flag, supply and consumption")
+        self.early_courier_food_wage_enabled = early_courier_food_wage_enabled
 
     def _professional_life_emergency(self, state: WorldState,
                                      npc_id: str) -> bool:
@@ -403,6 +409,25 @@ class LivingWorldEngine:
                                                    "courier_id": courier,
                                                    "service_deliveries": service_number}),
                                     supply_capability=True)
+                    # H3 opt-in: a worker PHYSICALLY present at the hiring
+                    # market after completed real supply receipts may collect
+                    # one previously reserved employer loaf before food is
+                    # necessarily available for delivery. No site stock is
+                    # read remotely; the employer already debited this food
+                    # when the trusted contract was signed. The reducer
+                    # verifies active circuit, local physical presence,
+                    # recorded service count and distinct paid receipt.
+                    if self.early_courier_food_wage_enabled:
+                        from .courier_provisions import choose_courier_provision
+                        eligible = choose_courier_provision(current, courier)
+                        if eligible is not None:
+                            contract_id, service_number = eligible
+                            append(DomainEvent("CourierProvisionPaid", None,
+                                "contracted courier earns real market food after completed service",
+                                current.time, {"id": contract_id,
+                                               "courier_id": courier,
+                                               "service_deliveries": service_number}),
+                                supply_capability=True)
                     # Survey only the currently visible adjacent roads
                     # BEFORE selecting the next leg. Otherwise an existing
                     # navigation profile blocks discovery of the next road.
