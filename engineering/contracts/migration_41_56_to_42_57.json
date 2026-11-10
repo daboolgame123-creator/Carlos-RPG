@@ -1,0 +1,63 @@
+{
+  "contract_version": 1,
+  "mode": "inventory_only",
+  "migration_approved": false,
+  "source": {
+    "commit": "a6c20e3edfbe85cc68819cd4fadd909472b21fd5",
+    "schema": 41,
+    "rules": 56
+  },
+  "target": {
+    "commit": "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2",
+    "schema": 42,
+    "rules": 57
+  },
+  "evidence": [
+    "engineering/reports/MIG_00_41_56_TO_42_57_AUDIT.md",
+    "engineering/reports/MIG_01_ORIGINAL_BACKUP_SAMPLE_2026-11-10.md",
+    "engineering/reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md"
+  ],
+  "source_invariants": [
+    "original source-world database must remain byte-for-byte unchanged",
+    "SQLite original-reader verify and manifest validated",
+    "unknown resource values cannot be coerced to zero",
+    "no manufactured copper, resources, knowledge or ownership",
+    "no silent version header replacement",
+    "no silent migration in SQLiteEventStore.load",
+    "no replacement of existing target path"
+  ],
+  "semantic_review_required_for": [
+    {
+      "event_type": "ProductionRecipeConfigured",
+      "cause": "compound inputs shape vs legacy scalar shape"
+    },
+    {
+      "event_type": "ProductionStarted",
+      "cause": "scalar vs compound input reservation receipts"
+    },
+    {
+      "event_type": "ScheduledEventFired",
+      "cause": "scheduled production output and input invariants"
+    },
+    {
+      "event_type": "MarketOfferPosted",
+      "cause": "courier reservation-aware market offers"
+    },
+    {
+      "event_type": "MarketTradeExecuted",
+      "cause": "market trade can't consume courier reserved inventory or funds"
+    },
+    {
+      "event_type": "WorkshopMaterialDeposited",
+      "cause": "workshop procurement/local custody and receipt validation"
+    }
+  ],
+  "acceptance_gates": [
+    "MIG-02b exhaustive event/capability and actor provenance review",
+    "original 41/56 immutable SQLite backup and source-runtime verification",
+    "isolated target conversion with event-by-event migration ledger",
+    "full target replay and semantic value comparison",
+    "adversarial WAL/rollback/crash/duplicate/no-overwrite tests",
+    "independent P0 release decision for production worlds"
+  ]
+}
