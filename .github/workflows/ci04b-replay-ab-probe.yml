@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/ci04b-replay-ab-probe.yml"
       - "engineering/probes/ci04b_head_snapshot_ab.py"
+      - "engineering/reports/CI_04B_HEAD_SNAPSHOT_AB_NO_GO_2026-11-10.md"
   workflow_dispatch:
 permissions:
   contents: read
