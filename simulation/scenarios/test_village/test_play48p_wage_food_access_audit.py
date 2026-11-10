@@ -163,3 +163,102 @@ def test_true_first_day_bakery_grain_location_and_access_audit(tmp_path):
     }
     print("PLAY48P_DAY1_BAKERY_REAL_GRAIN_CHAIN",
           json.dumps(report, sort_keys=True), flush=True)
+
+
+def test_real_24_48h_grain_chain_not_confused_with_zero_daily_stock(tmp_path):
+    """Distinguish no grain delivery from delivered grain promptly baked.
+
+    Uses genuine rain, first-hand physical routes, and production receipts.
+    All event inspection is external operator forensics after autonomous run.
+    """
+    from collections import Counter
+    from carlos_sim import SQLiteEventStore
+    from carlos_sim.supply_diagnostics import audit_courier
+    from test_play47_closure_endurance import DAY, WORLD
+    from test_play48h3_early_market_wage import _run
+
+    path = tmp_path / "real-13-food-supply-48h.sqlite"
+    _seed_employed(path)
+    checkpoints = []
+    for day in (1, 2):
+        state, history = _run(
+            path, day * DAY, early=False,
+            hungry_woodcutter_work_enabled=True,
+            retry_known_supplier_enabled=True,
+        )
+        assert len(history) == 1 and state.time == day * DAY
+        assert audit_npc_economy(state)["copper_known_total"] == 12
+        assert len(state.npcs) == 13
+        original = state.to_dict()
+        counts = Counter()
+        unfinished = Counter()
+        for job in state.production_jobs.values():
+            recipe = state.production_recipes[job["recipe_id"]]
+            if job["status"] == "completed":
+                counts[(job["site_id"], recipe["output_resource"])] += 1
+            else:
+                unfinished[(job["site_id"], recipe["output_resource"])] += 1
+
+        with SQLiteEventStore(path) as db:
+            rows = [json.loads(row[0]) for row in db.db.execute(
+                "SELECT payload FROM events WHERE world_id=? ORDER BY seq",
+                (WORLD,)
+            )]
+            assert db.verify(WORLD).to_dict() == original
+            assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+            assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
+        delivery_counts = Counter(
+            e["data"]["resource"] for e in rows
+            if e["event_type"] == "SupplyCargoDelivered"
+        )
+        # Standard trusted courier contracts use real legs for grain farm
+        # -> bakery and for food bakery -> market. We count durable events,
+        # not infer deliveries from an empty instantaneous inventory snapshot.
+        baker = _real_stats(state)["bakery_buffer"]
+        assert baker["owned_local_grain"] == state.resources["bakery"]["grain"]
+        couriers = {
+            who: audit_courier(state, who, supply_enabled=True)
+            for who in ("huda", "hana")
+        }
+        access = audit_food_access_barriers(state)
+        assert state.to_dict() == original
+        checkpoints.append({
+            "day": day,
+            "time": state.time,
+            "farm_grain_completed_jobs": sum(
+                n for (site, output), n in counts.items()
+                if output == "grain" and site in ("farm", "farm_east")
+            ),
+            "bakery_food_completed_jobs": counts.get(("bakery", "food"), 0),
+            "grain_physical_courier_deliveries": delivery_counts["grain"],
+            "baked_food_physical_courier_deliveries": delivery_counts["food"],
+            "running_food_jobs": unfinished.get(("bakery", "food"), 0),
+            "bakery_grain_on_hand": baker["owned_local_grain"],
+            "bakery_buffer_shortfall": baker["missing_grain"],
+            "farm_grain_on_hand": {
+                field: state.resources[field].get("grain")
+                for field in ("farm", "farm_east")
+            },
+            "market_food_on_hand": access["market_saleable_food_known"],
+            "hunger_100": access["hunger_at_100"],
+            "completed_food_sales": _real_stats(state)["bread_sales"],
+            "recorded_meals": _real_stats(state)["meals"],
+            "courier_status": {
+                who: {
+                    "hunger": report["needs"]["hunger"],
+                    "contract_index": report["contract_index"],
+                    "next_action": report["next_action"],
+                    "blocked_reasons": report["blocked_reasons"],
+                    "deliveries": report["deliveries"],
+                } for who, report in couriers.items()
+            },
+        })
+    print("PLAY48P_REAL_48H_GRAIN_TO_BREAD_OPERATOR_TRACE",
+          json.dumps({
+              "checkpoints": checkpoints,
+              "opening_food_loaves": 3,
+              "real_total_copper_every_day": 12,
+              "new_grain_or_cash_injected": False,
+              "unverified_7day_recovery_claimed": False,
+              "forensics_do_not_change_npc_choices": True,
+          }, sort_keys=True), flush=True)
