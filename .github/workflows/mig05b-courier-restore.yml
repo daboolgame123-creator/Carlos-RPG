@@ -1,0 +1,74 @@
+name: MIG-05b real courier 97-event backup restore acceptance (test only)
+on:
+  push:
+    branches: ["engineering/mig05b-courier-restore-20261110"]
+    paths:
+      - ".github/workflows/mig05b-courier-restore.yml"
+      - "engineering/probes/mig05b_courier_restore_matrix.py"
+      - "engineering/reports/MIG_05B_COURIER_RESTORE_2026-11-10.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mig05b-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  bounded-offline-rebuild:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: contract
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: a6c20e3edfbe85cc68819cd4fadd909472b21fd5
+          path: predecessor
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: 38ef0049478e4d62fd465dadc7c1eaf406b9b4d2
+          path: target
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Generate genuine 41-56 physical courier and delivery history with exact old runtime
+        env:
+          PYTHONPATH: predecessor/simulation/src:predecessor/simulation/tests:predecessor/simulation/scenarios/test_village
+        run: |
+          test "$(git -C predecessor rev-parse HEAD)" = "a6c20e3edfbe85cc68819cd4fadd909472b21fd5"
+          test "$(git -C target rev-parse HEAD)" = "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2"
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          from carlos_sim.domain import SCHEMA_VERSION,RULES_VERSION
+          from test_play_physical_supply_batch_27 import begin,tick
+          assert (SCHEMA_VERSION,RULES_VERSION)==(41,56)
+          path=Path("courier-original-41-56.sqlite")
+          db,clock,engine=begin(path,water=2)
+          try:
+              state=tick(db,engine,200,"mig03b-courier-200").state
+              assert state.time==200
+              assert state.supply_circuits and state.travels
+              assert db.verify(state.world_id).to_dict()==state.to_dict()
+              Path("courier-expected-original.json").write_text(json.dumps(state.to_dict(),sort_keys=True))
+          finally:
+              clock.close_session(state.world_id)
+              db.close()
+          print("MIG03B_SOURCE_SHA256",hashlib.sha256(path.read_bytes()).hexdigest(),flush=True)
+          PY
+      - name: Verify original and target checkouts, then run bounded courier acceptance
+        env:
+          PYTHONPATH: target/simulation/src
+        run: |
+          test "$(git -C contract rev-parse HEAD)" = "${{ github.sha }}"
+          python contract/engineering/probes/mig05b_courier_restore_matrix.py
