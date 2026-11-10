@@ -55,9 +55,16 @@ def test_two_real_compound_input_cycles_without_invented_second_buyer(tmp_path):
             assert state.resources[FORGE]["anvil"] == 1
             assert state.resources[FORGE]["iron_fitting"] == 1
             assert state.resources["repair_shop"]["repaired_gear"] == 1
-            assert sum("work_wage" in job for job in jobs) == 1, (
-                "only the first genuine sale finances the first wage"
-            )
+            # The single real fitting sale brings TWO copper into the forge.
+            # That strictly funded till may pay one coin to each of TWO
+            # separately finished jobs, not only the first job.
+            # It is legal because no wage is paid from nowhere or twice.
+            assert sum("work_wage" in job for job in jobs) == 2
+            wages = [job["work_wage"] for job in jobs]
+            assert sorted(w["site_before"] for w in wages) == [1, 2]
+            assert sorted(w["site_after"] for w in wages) == [0, 1]
+            assert sum(w["amount"] for w in wages) == 2
+            assert state.resources[FORGE]["coin_copper"] == 0
             for job in jobs:
                 assert dict(job["input_before_by_resource"]) == {
                     "iron_ore": 1, "charcoal": 1,
@@ -77,6 +84,7 @@ def test_two_real_compound_input_cycles_without_invented_second_buyer(tmp_path):
                 "repair_completed": len(repaired),
                 "smith_local_material_purchases": len(smith_trades),
                 "paid_smith_jobs": sum("work_wage" in j for j in jobs),
+                "two_wages_funded_by_one_real_two_copper_sale": True,
                 "unsold_fitting": state.resources[FORGE]["iron_fitting"],
                 "remaining_copper": _money(state),
                 "no_virtual_trade_or_materials": True,
