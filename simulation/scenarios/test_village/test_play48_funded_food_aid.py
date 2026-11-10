@@ -72,6 +72,8 @@ def test_physically_funded_local_bread_assistance_restores_one_real_delivery(tmp
             assert before["next_action"] is None
             assert "hunger_at_or_above_90" in before["blocked_reasons"]
             assert state.resources["huda"]["food"] == 0
+            market_food_before_help = state.resources["market"]["food"]
+            assert 0 <= market_food_before_help <= 2
 
             # Omar must carry the bought loaf for each adjacent road,
             # consuming all 150 simulated seconds of market -> bakery ->
@@ -134,7 +136,9 @@ def test_physically_funded_local_bread_assistance_restores_one_real_delivery(tmp
             assert state.resources["huda"]["food"] == 0
             eligible = audit_courier(state, "huda", supply_enabled=True)
             assert eligible["next_action"] == "SupplyCargoPicked"
-            assert state.resources["market"]["food"] == 2
+            assert state.resources["market"]["food"] == market_food_before_help, (
+                "Actual local help transfers personal bread, not site-owned stock"
+            )
             assert sum(x.get("coin_copper", 0)
                        for x in state.resources.values()) == 12
             # The first real local water leg and delivery can now be carried
@@ -166,7 +170,8 @@ def test_physically_funded_local_bread_assistance_restores_one_real_delivery(tmp
             print("PLAY48_REAL_FOOD_AID_FEASIBILITY " + json.dumps({
                 "travel_legs_by_real_buyer": 3,
                 "loaf_paid_copper": 2,
-                "market_food_after_real_sale": 2,
+                "market_food_after_omar_sale": 2,
+                "market_food_before_help": market_food_before_help,
                 "physical_food_transfer": 1,
                 "authentic_meal": 1,
                 "blocked_hunger_before": before["needs"]["hunger"],
