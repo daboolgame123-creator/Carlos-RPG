@@ -1,0 +1,42 @@
+name: MIG-01 genuine predecessor backup preflight (non-release)
+on:
+  push:
+    branches:
+      - "engineering/ci-mig-baseline-20261110"
+    paths:
+      - ".github/workflows/mig01-old-backup-probe.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  predecessor-backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: a6c20e3edfbe85cc68819cd4fadd909472b21fd5
+          persist-credentials: false
+      - name: Verify real Schema 41 / Rules 56 source, without editing it
+        run: |
+          test "$(git rev-parse HEAD)" = "a6c20e3edfbe85cc68819cd4fadd909472b21fd5"
+          PYTHONPATH=src python - <<'PY'
+          from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+          assert (SCHEMA_VERSION, RULES_VERSION) == (41, 56)
+          print("MIG01_GENUINE_PREDECESSOR", SCHEMA_VERSION, RULES_VERSION)
+          PY
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Test original runtime backup, WAL, no-overwrite, corrupt source and older-version refusal
+        run: |
+          PYTHONPATH=src python -m pytest -q --durations=10 tests/test_backup_resume.py \
+            -k "backup_live_wal_restore_frozen_state_and_resume or backup_records_and_verifies_every_world or corrupt_db_bundle_fails_before_restore_and_preserves_source or backup_or_restore_never_overwrites_existing_targets or wrong_version_reopen_preflight_does_not_modify_file"
