@@ -1,0 +1,61 @@
+name: PLAY-48I funded two-site payroll real 13-NPC experiment
+on:
+  push:
+    branches: ["feature/play48-i-funded-field-bakery-payroll-20261110"]
+    paths:
+      - ".github/workflows/play48i-funded-site-payroll.yml"
+      - "simulation/scenarios/test_village/test_play47_joined_professions.py"
+      - "simulation/scenarios/test_village/test_play48i_site_payroll.py"
+      - "simulation/docs/PLAY_48I_FUNDED_SITE_PAYROLL.md"
+permissions:
+  contents: read
+concurrency:
+  group: play48-i-payroll-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  genesis-security-and-short-economy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Verify true 12-copper custody, two real wages and fake-pay rejection
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs \
+            scenarios/test_village/test_play48i_site_payroll.py \
+            -k "prepaid_employer or fake_salary or two_days"
+  longer-96h-causal-counterfactual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - run: python -m pip install pytest
+      - name: Genuine four-day control-versus-wages physical 13-NPC economy
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs \
+            scenarios/test_village/test_play48i_site_payroll.py \
+            -k "four_day_payroll"
