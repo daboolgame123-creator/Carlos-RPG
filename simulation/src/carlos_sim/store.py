@@ -280,6 +280,21 @@ class SQLiteEventStore:
         if any(e.event_type == "RainWaterRecorded" for e in events):
             if not hydrology_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("rain needs active dedicated hydrology authority")
+        if any(e.event_type == "CourierProvisionPaid" for e in events):
+            if bootstrap or not supply_authorized or world_id not in self._active_worlds:
+                raise InvalidEvent("food wage requires active trusted supply service")
+            for i, wage in enumerate(events):
+                if wage.event_type != "CourierProvisionPaid":
+                    continue
+                if i == 0:
+                    raise InvalidEvent("food wage requires same-command delivery receipt")
+                source = events[i-1]
+                if (source.event_type != "SupplyCargoDelivered"
+                        or source.actor_id != wage.data.get("courier_id")
+                        or source.data.get("courier_id") != wage.data.get("courier_id")
+                        or source.data.get("resource") != "food"
+                        or source.time != wage.time):
+                    raise InvalidEvent("food wage must immediately follow its physical market delivery")
         if any(e.event_type in ("SupplyCargoPicked", "SupplyCargoDelivered") for e in events):
             if not supply_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("cargo needs active trusted physical supply capability")

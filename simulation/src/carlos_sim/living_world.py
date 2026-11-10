@@ -392,6 +392,17 @@ class LivingWorldEngine:
                                            {"courier_id": courier,
                                             "resource": resource}),
                                supply_capability=True)
+                        if act == "SupplyCargoDelivered" and resource == "food":
+                            from .courier_provisions import choose_courier_provision
+                            eligible = choose_courier_provision(current, courier)
+                            if eligible is not None:
+                                contract_id, service_number = eligible
+                                append(DomainEvent("CourierProvisionPaid", None,
+                                    "one signed escrowed loaf for completed physical food delivery",
+                                    current.time, {"id": contract_id,
+                                                   "courier_id": courier,
+                                                   "service_deliveries": service_number}),
+                                    supply_capability=True)
                     # Survey only the currently visible adjacent roads
                     # BEFORE selecting the next leg. Otherwise an existing
                     # navigation profile blocks discovery of the next road.

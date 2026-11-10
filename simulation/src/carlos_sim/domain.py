@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 42
-RULES_VERSION = 57
+SCHEMA_VERSION = 43
+RULES_VERSION = 58
 
 
 def _thaw(value: Any) -> Any:
@@ -92,6 +92,7 @@ class WorldState:
     environment_cycles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     farm_plots: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     supply_circuits: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    courier_provisions: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     hydrology_sources: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_recipes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     production_jobs: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
@@ -143,6 +144,7 @@ class WorldState:
         object.__setattr__(self, "environment_cycles", _freeze(_json_copy(self.environment_cycles)))
         object.__setattr__(self, "farm_plots", _freeze(_json_copy(self.farm_plots)))
         object.__setattr__(self, "supply_circuits", _freeze(_json_copy(self.supply_circuits)))
+        object.__setattr__(self, "courier_provisions", _freeze(_json_copy(self.courier_provisions)))
         object.__setattr__(self, "hydrology_sources", _freeze(_json_copy(self.hydrology_sources)))
         object.__setattr__(self, "production_recipes", _freeze(_json_copy(self.production_recipes)))
         object.__setattr__(self, "production_jobs", _freeze(_json_copy(self.production_jobs)))
@@ -189,6 +191,7 @@ class WorldState:
                             "metabolism_policy": self.metabolism_policy,
                            "rpg_profiles": self.rpg_profiles, "player_quests": self.player_quests, "injuries": self.injuries, "treatments": self.treatments,
                            "environment_cycles": self.environment_cycles, "farm_plots": self.farm_plots, "supply_circuits": self.supply_circuits,
+                           "courier_provisions": self.courier_provisions,
                             "hydrology_sources": self.hydrology_sources,
                            "production_recipes": self.production_recipes,
                            "production_jobs": self.production_jobs,
@@ -229,7 +232,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "courier_provisions", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -237,7 +240,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "courier_provisions", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -293,6 +296,8 @@ class WorldState:
         validate_farm_plots(d)
         from .supply import validate_supply_circuits
         validate_supply_circuits(d)
+        from .courier_provisions import validate_courier_provisions
+        validate_courier_provisions(d)
         from .hydrology import validate_sources
         validate_sources(d)
         from .production import validate_production_state
@@ -517,6 +522,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "SupplyCircuitConfigured":
         from .supply import configure_circuit
         configure_circuit(d, e, bootstrap=bootstrap)
+    elif kind == "CourierProvisionConfigured":
+        from .courier_provisions import configure_provision
+        configure_provision(d, e, bootstrap=bootstrap)
+    elif kind == "CourierProvisionPaid":
+        from .courier_provisions import pay_courier_provision
+        pay_courier_provision(d, e, supply_authorized=supply_authorized)
     elif kind in ("SupplyCargoPicked", "SupplyCargoDelivered"):
         from .supply import project_cargo
         project_cargo(d, e, supply_authorized=supply_authorized)

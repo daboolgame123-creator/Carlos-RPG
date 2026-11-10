@@ -115,6 +115,8 @@ def audit_food_security(state: WorldState, *, risk_threshold: int = 75) -> FoodS
             unknown_sites.append(site)
         else:
             known_site_food += value
+    # Escrow remains site-owned, not personal meals or market stock.
+    known_site_food += sum(p["remaining"] for p in state.courier_provisions.values())
     return FoodSecurityAudit(
         world_id=state.world_id, logical_time=state.time,
         npc_count=len(state.npcs), risk_threshold=risk_threshold,
