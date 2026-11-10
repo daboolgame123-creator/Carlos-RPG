@@ -22,10 +22,10 @@ CROP_YIELD = {"farm": 3, EAST: 7}
 CLOCKS = (0, 3600, DAY, DAY + 3600, 2 * DAY, 3 * DAY)
 
 
-def _bound_ledger(state, *, rain_units):
+def _bound_ledger(state, *, rain_units, people=PEOPLE):
     """Check all actual physical resources plus transforms and water receipts."""
     stock = state.resources
-    assert len(state.npcs) == PEOPLE
+    assert len(state.npcs) == people
     assert len(state.farm_plots) == len(state.supply_circuits) == 2
     assert state.hydrology_sources["well"]["received_total"] == rain_units
     observations = state.hydrology_sources["well"]["observations"]

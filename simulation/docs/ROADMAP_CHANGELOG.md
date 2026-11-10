@@ -1,5 +1,39 @@
 # سجل تغييرات خارطة الطريق — Carlos RPG
 
+## PLAY-47 final decision candidate — 2026-11-10 UTC
+
+- Source: the approved closure plan and owner's instruction to continue inside
+  PLAY-47. The #57–59 stack passed targeted/full checks on both Pythons and was
+  fast-forwarded without force from `b326c5e` to `77ddb54`.
+- Runtime baseline `0f8c31f` has full 1,694 + targeted audit 176 + genuine old-save
+  refusal 1 + endurance 2 green per Python. Its complete wet/dry seven-day reports
+  are identical across versions. After confirming the exact checked-out source
+  and both run conclusions, integration was fast-forwarded again to `0f8c31f`.
+- A separate documentation-only branch prepares the [gated technical decision](PLAY_47_TECHNICAL_CLOSURE_DECISION.md)
+  so it can be tested without cancelling the runtime baseline's long-running
+  validation. Full and targeted CI must pass on the exact decision commit
+  before that commit is fast-forwarded to integration and closure takes effect.
+- The proposed outcome is technical closure with an explicit measured finite
+  food/distribution failure. No recovery, sustainable village, recurrent courier
+  pay, independent review or production approval is claimed.
+- Schema 42 / Rules 57, `main`, original story and runtime/test/workflow code
+  remain unchanged by this decision candidate. PLAY-48 remains gated.
+
+## PLAY-47 closure verification — 2026-11-09
+
+- Source: owner's approved closure plan and direct request to finish PLAY-47.
+- Reproduced: settling a personal courier loaf/ore quote credits copper into a
+  consignment-only slot. Reject incoming custody conflicts before writes and
+  skip these food/grain/material quotes; site-owned goods remain tradable.
+- Alternatives: personal wages in the current cash slot are invalid. A new
+  payer/delivery/idempotency/beneficiary contract is documented but not added.
+- Verification: local market/custody probes, authentic 41/56 save refusal and
+  PLAY-44/45 regressions; final exact-head CI and seven-day controls pending.
+- Schema **42** / Rules **57** unchanged. PLAY-47 **OPEN / RELEASE NO-GO**;
+  PLAY-48 stays blocked until an evidenced technical decision. External review
+  deferred by owner; P0 not approved. No `main` or canonical story changes.
+- Recheck at final CI: [closure evidence](PLAY_47_CLOSURE_EVIDENCE.md).
+
 ## Latest verified milestone — PLAY-29 (2026-11-08)
 
 - **Technical decision:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`, **no self-sufficiency claim**. World version **Schema 39 / Rules 51**, disposable worlds; source `1a4a4021367c670781eea5dee030fe9d93e65f37`, seven-day test-only SHA `d67fefc09dddb17175e3799492167e4d4b03196c`.

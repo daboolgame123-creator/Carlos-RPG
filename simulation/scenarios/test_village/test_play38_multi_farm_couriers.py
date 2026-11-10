@@ -30,9 +30,12 @@ def seed_two_field_world(
     market_wallets=False, hungry_market_buyers=False,
     cash_return=False, waged_harvest=False,
     hungry_waged_farmer=False, harvest_wage_copper=1,
-    one_hungry_market_buyer=False,
+    one_hungry_market_buyer=False, bootstrap=seed_physical_supply,
+    east_courier_provision=False,
 ):
     # Explicit bounded time-zero economy variations, not runtime gifts.
+    if type(east_courier_provision) is not bool:
+        raise ValueError("east_courier_provision must be a boolean")
     if type(one_hungry_market_buyer) is not bool:
         raise ValueError('one_hungry_market_buyer must be a test-only boolean')
     if type(waged_harvest) is not bool or (waged_harvest and not cash_return):
@@ -51,7 +54,7 @@ def seed_two_field_world(
             or type(market_wallets) is not bool
             or type(hungry_market_buyers) is not bool):
         raise ValueError("invalid fixed two-farm counterfactual")
-    seed_physical_supply(
+    bootstrap(
         db, water=initial_water, seed=1,
         initial_market_food=initial_market_food,
         harvest_yield=3, personal_food=0,
@@ -88,7 +91,7 @@ def seed_two_field_world(
         for resource in ("labor_units", "investigation_attempts", "food"):
             extra.append(_event("ResourceChanged", {
                 "owner_id": who, "resource": resource,
-                "previous": None, "current": 0,
+                "previous": None, "current": int(east_courier_provision and who == COURIER and resource == "food"),
                 "source": "initialization",
             }))
     if type(cash_return) is not bool or (cash_return and not market_wallets):
@@ -102,8 +105,9 @@ def seed_two_field_world(
     if cash_return:
         # This is a ZERO opening depot balance, not a treasury injection.
         # The market already owns a zero initialized coin ledger in PLAY-27.
+        if "coin_copper" not in db.load(WORLD).resources["bakery"]:
+            physical_stock.append(("bakery", "coin_copper", 0))
         physical_stock.extend((
-            ("bakery", "coin_copper", 0),
             (EAST, "coin_copper", 0),
             (COURIER, "coin_copper", 0),
         ))

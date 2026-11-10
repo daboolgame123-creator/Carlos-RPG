@@ -21,7 +21,9 @@ from .knowledge import make_observation_events, choose_food_sharing_round, known
 from .food_navigation import choose_food_route
 from .market_navigation import (choose_known_market_walk, choose_known_market_return,
                                 wants_local_market)
-from .routines import choose_routine_route, routine_allows_work, next_routine_boundary
+from .routines import (
+    choose_routine_route, is_work_shift, next_routine_boundary, routine_allows_work,
+)
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
 from .supply import choose_cargo, choose_courier_leg, next_courier_departure
@@ -79,7 +81,8 @@ class LivingWorldEngine:
                  supply_enabled: bool = False,
                  professional_procurement_enabled: bool = False,
                  multi_professional_markets_enabled: bool = False,
-                 compound_procurement_enabled: bool = False):
+                 compound_procurement_enabled: bool = False,
+                 professional_full_life_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -156,9 +159,12 @@ class LivingWorldEngine:
         self.agriculture_enabled = agriculture_enabled
         self.economy_only_enabled = economy_only_enabled
         if type(shopping_routes_enabled) is not bool or (shopping_routes_enabled and not (
-                economy_only_enabled and navigation_enabled
-                and consumption_enabled and survival_enabled)):
-            raise ValueError('shopping_routes_enabled requires focused economy, navigation, consumption and survival')
+                (economy_only_enabled or professional_full_life_enabled)
+                and navigation_enabled and consumption_enabled and survival_enabled)):
+            raise ValueError(
+                'shopping_routes_enabled requires focused economy or full-life '
+                'professions, with navigation, consumption and survival'
+            )
         self.shopping_routes_enabled = shopping_routes_enabled
         if (type(professional_procurement_enabled) is not bool or
                 (professional_procurement_enabled and not (
@@ -172,13 +178,15 @@ class LivingWorldEngine:
         self.professional_procurement_enabled = professional_procurement_enabled
         if (type(multi_professional_markets_enabled) is not bool or
                 (multi_professional_markets_enabled and not (
-                    economic_enabled and agriculture_enabled and economy_only_enabled
+                    economic_enabled and agriculture_enabled
+                    and (economy_only_enabled or professional_full_life_enabled)
                     and navigation_enabled and routines_enabled
-                    and not shopping_routes_enabled
+                    and (not shopping_routes_enabled or professional_full_life_enabled)
                     and not professional_procurement_enabled))):
             raise ValueError(
-                'multi_professional_markets_enabled requires focused economic '
-                'simulation and cannot share another professional/shopping planner'
+                'multi_professional_markets_enabled requires focused economy or full-life '
+                'opt-in; separate procurement is incompatible, and concurrent shopping '
+                'requires full-life professions'
             )
         self.multi_professional_markets_enabled = multi_professional_markets_enabled
         if (type(compound_procurement_enabled) is not bool or
@@ -189,9 +197,38 @@ class LivingWorldEngine:
                 "multi_professional_markets_enabled=True"
             )
         self.compound_procurement_enabled = compound_procurement_enabled
+        if (type(professional_full_life_enabled) is not bool or
+                (professional_full_life_enabled and not (
+                    multi_professional_markets_enabled
+                    and compound_procurement_enabled
+                    and economic_enabled and agriculture_enabled
+                    and survival_enabled and consumption_enabled
+                    and navigation_enabled and routines_enabled
+                    and not economy_only_enabled))):
+            raise ValueError(
+                "professional_full_life_enabled requires full survival, "
+                "consumption, navigation, routines and compound markets; "
+                "economy_only is incompatible"
+            )
+        self.professional_full_life_enabled = professional_full_life_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
+
+    def _professional_life_emergency(self, state: WorldState,
+                                     npc_id: str) -> bool:
+        """Safety/food/rest overrides optional material trade and production.
+
+        This never gives the worker remote knowledge or changes reducer rules;
+        only opt-in full-life NPCs use this precedence.
+        """
+        if not self.professional_full_life_enabled:
+            return False
+        from .npc import _injury_rest_decision
+        needs = state.npcs[npc_id]["needs"]
+        return (needs["hunger"] >= 75 or needs["fatigue"] >= 70
+                or needs["safety"] >= 75
+                or _injury_rest_decision(state.injuries, npc_id) is not None)
 
     def advance(self, world_id: str, *, seconds: int, command_id: str,
                 expected_revision: int,
@@ -407,6 +444,8 @@ class LivingWorldEngine:
                     # physically deposited; only then may ordinary production
                     # consume workshop-owned grain on the same local tick.
                     for worker_id in sorted(current.npcs):
+                        if self._professional_life_emergency(current, worker_id):
+                            continue
                         intent = choose_workshop_input_deposit(current, worker_id)
                         if intent is None:
                             continue
@@ -420,6 +459,8 @@ class LivingWorldEngine:
                 # capabilities as explicit local production and market commands.
                 # Each pass sees only state already changed by previous events.
                 for worker_id in sorted(current.npcs):
+                    if self._professional_life_emergency(current, worker_id):
+                        continue
                     intent = choose_local_production(current, worker_id,
                                                      agriculture_enabled=self.agriculture_enabled)
                     if intent is None:
@@ -520,6 +561,8 @@ class LivingWorldEngine:
                                     if has_compound_recipe(state, buyer)
                                     else old_purchase(state, buyer))
                     for buyer_id in sorted(current.npcs):
+                        if self._professional_life_emergency(current, buyer_id):
+                            continue
                         grain_buy = choose_local_grain_purchase(current, buyer_id)
                         if grain_buy is None:
                             continue
@@ -611,6 +654,73 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
+            if self.shopping_routes_enabled:
+                from .npc import _injury_rest_decision
+
+                # Food errands get first choice of travel when both planners run.
+                # PLAY-42: only hungry solvent NPCs look for a LOCAL market.
+                # An unvisited road can be surveyed only from their real site;
+                # each physical leg has a deterministic clock cost. This
+                # pass neither reads a distant quote nor reserves food.
+                repeat_errands = self.professional_full_life_enabled
+                for shopper_id in sorted(current.npcs):
+                    if (self.professional_full_life_enabled and
+                            _injury_rest_decision(current.injuries, shopper_id) is not None):
+                        continue
+                    # Physically reaching a market is a FIRST-HAND visit even
+                    # if the buyer cannot afford anything. Record its nearby
+                    # roads and visited tile once, preventing a hungry worker
+                    # from rediscovering the same market after returning home.
+                    market_here = current.entities[shopper_id]['location_id']
+                    if (shopper_id not in busy and market_here in current.market_stalls
+                            and any(t['npc_id'] == shopper_id
+                                    and t['status'] == 'arrived'
+                                    and t['destination'] == market_here
+                                    for t in current.travels.values())
+                            and needs_survey(current, shopper_id)):
+                        append(DomainEvent('NPCNavigationSurveyed', shopper_id,
+                            'shopper surveys the physically reached local market',
+                            current.time, {'npc_id': shopper_id}),
+                            movement_capability=True)
+                    # An initiated homeward journey has priority over a
+                    # second hungry exploration impulse at each intermediate
+                    # road tile. This remains a pure projection of completed
+                    # physical travel history; no teleport or new schema.
+                    walk = choose_known_market_return(
+                        current, shopper_id, repeat_errands=repeat_errands,
+                    )
+                    if walk is None and wants_local_market(
+                            current, shopper_id, repeat_errands=repeat_errands):
+                        if needs_survey(current, shopper_id):
+                            append(DomainEvent('NPCNavigationSurveyed', shopper_id,
+                                'shopper sees roads adjoining their physical location',
+                                current.time, {'npc_id': shopper_id}),
+                                movement_capability=True)
+                        walk = choose_known_market_walk(
+                            current, shopper_id, repeat_errands=repeat_errands,
+                        )
+                    if walk is None:
+                        continue
+                    route = current.routes[walk.route_id]
+                    here = current.entities[shopper_id]['location_id']
+                    there = route['b'] if route['a'] == here else route['a']
+                    tid = f'auto-nav:{shopper_id}:{current.time}'
+                    if tid in current.travels:
+                        raise InvalidEvent('duplicate market shopping travel ID')
+                    due_at = current.time + route['seconds']
+                    sid = 'npc-travel:' + tid
+                    append(DomainEvent('ScheduledEventCreated', None,
+                        'physical market search arrival appointment', current.time,
+                        {'id': sid, 'due': due_at,
+                         'order': current.next_schedule_order, 'kind': 'signal',
+                         'payload': {'__npc_travel_id': tid}, 'interrupt': False}),
+                         movement_capability=True)
+                    append(DomainEvent('NPCTravelStarted', shopper_id,
+                        walk.reason, current.time,
+                        {'id': tid, 'npc_id': shopper_id, 'route_id': walk.route_id,
+                         'origin': here, 'destination': there, 'due': due_at,
+                         'schedule_id': sid}), movement_capability=True)
+                    busy.add(shopper_id)
             if (self.professional_procurement_enabled or
                     self.multi_professional_markets_enabled):
                 from .professional_trade import (has_workshop_recipe,
@@ -631,7 +741,15 @@ class LivingWorldEngine:
                                 if has_compound_recipe(state, worker)
                                 else old_walk(state, worker))
                 for buyer_id in sorted(current.npcs):
-                    if buyer_id in busy or not has_workshop_recipe(current, buyer_id):
+                    if (buyer_id in busy
+                            or self._professional_life_emergency(current, buyer_id)
+                            or not has_workshop_recipe(current, buyer_id)):
+                        continue
+                    routine = current.npc_routines.get(buyer_id)
+                    if (self.professional_full_life_enabled and routine is not None
+                            and not is_work_shift(routine, current.time)):
+                        # Optional procurement must yield to a full-life
+                        # worker's homeward commute once their shift ends.
                         continue
                     if needs_survey(current, buyer_id):
                         append(DomainEvent('NPCNavigationSurveyed', buyer_id,
@@ -665,61 +783,6 @@ class LivingWorldEngine:
                          'schedule_id': sid}),
                          movement_capability=True)
                     busy.add(buyer_id)
-            if self.shopping_routes_enabled:
-                # PLAY-42: only hungry solvent NPCs look for a LOCAL market.
-                # An unvisited road can be surveyed only from their real site;
-                # each physical leg has a deterministic clock cost. This
-                # pass neither reads a distant quote nor reserves food.
-                for shopper_id in sorted(current.npcs):
-                    # Physically reaching a market is a FIRST-HAND visit even
-                    # if the buyer cannot afford anything. Record its nearby
-                    # roads and visited tile once, preventing a hungry worker
-                    # from rediscovering the same market after returning home.
-                    market_here = current.entities[shopper_id]['location_id']
-                    if (shopper_id not in busy and market_here in current.market_stalls
-                            and any(t['npc_id'] == shopper_id
-                                    and t['status'] == 'arrived'
-                                    and t['destination'] == market_here
-                                    for t in current.travels.values())
-                            and needs_survey(current, shopper_id)):
-                        append(DomainEvent('NPCNavigationSurveyed', shopper_id,
-                            'shopper surveys the physically reached local market',
-                            current.time, {'npc_id': shopper_id}),
-                            movement_capability=True)
-                    # An initiated homeward journey has priority over a
-                    # second hungry exploration impulse at each intermediate
-                    # road tile. This remains a pure projection of completed
-                    # physical travel history; no teleport or new schema.
-                    walk = choose_known_market_return(current, shopper_id)
-                    if walk is None and wants_local_market(current, shopper_id):
-                        if needs_survey(current, shopper_id):
-                            append(DomainEvent('NPCNavigationSurveyed', shopper_id,
-                                'shopper sees roads adjoining their physical location',
-                                current.time, {'npc_id': shopper_id}),
-                                movement_capability=True)
-                        walk = choose_known_market_walk(current, shopper_id)
-                    if walk is None:
-                        continue
-                    route = current.routes[walk.route_id]
-                    here = current.entities[shopper_id]['location_id']
-                    there = route['b'] if route['a'] == here else route['a']
-                    tid = f'auto-nav:{shopper_id}:{current.time}'
-                    if tid in current.travels:
-                        raise InvalidEvent('duplicate market shopping travel ID')
-                    due_at = current.time + route['seconds']
-                    sid = 'npc-travel:' + tid
-                    append(DomainEvent('ScheduledEventCreated', None,
-                        'physical market search arrival appointment', current.time,
-                        {'id': sid, 'due': due_at,
-                         'order': current.next_schedule_order, 'kind': 'signal',
-                         'payload': {'__npc_travel_id': tid}, 'interrupt': False}),
-                         movement_capability=True)
-                    append(DomainEvent('NPCTravelStarted', shopper_id,
-                        walk.reason, current.time,
-                        {'id': tid, 'npc_id': shopper_id, 'route_id': walk.route_id,
-                         'origin': here, 'destination': there, 'due': due_at,
-                         'schedule_id': sid}), movement_capability=True)
-                    busy.add(shopper_id)
             if self.knowledge_enabled:
                 # Bounded, deterministic food-knowledge sharing pass. Never
                 # touches next_decision_at, never adds to busy, never emits a
@@ -746,6 +809,27 @@ class LivingWorldEngine:
                     continue
                 existing = current.npcs[npc_id]['last_decision']
                 pending_action = existing is not None and existing['at'] == current.time
+                if (self.professional_full_life_enabled and not pending_action
+                        and not self._professional_life_emergency(current, npc_id)):
+                    # A real on-duty stall keeper cannot simultaneously run a
+                    # generic NPC action and trade at their own physical till:
+                    # market._present() explicitly rejects busy sellers.
+                    # Likewise, a professional on shift should remain free
+                    # for the existing production/road selectors, not start a
+                    # fictitious generic 'work' action. Once food, fatigue,
+                    # danger or injury is urgent, ordinary full-life decisions
+                    # take precedence instead.
+                    site = current.entities[npc_id]["location_id"]
+                    stall = current.market_stalls.get(site)
+                    keeper = stall is not None and stall["keeper_id"] == npc_id
+                    professional = (
+                        routine_allows_work(current, npc_id)
+                        and any(recipe["site_id"] == site
+                                and recipe["role"] == current.npcs[npc_id]["role"]
+                                for recipe in current.production_recipes.values())
+                    )
+                    if keeper or professional:
+                        continue
                 # A social exchange is an instantaneous *speech act*, not an
                 # executed favor. Both events share this one authorized command.
                 if self.social_enabled and not pending_action:

@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from hashlib import sha256
 
 from .domain import WorldState
-from .market import MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present
+from .market import (MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present,
+                     reserved_trade_units, trade_receipt_allowed)
 from .npc import _injury_rest_decision
 from .production import MAX_QUANTITY as PRODUCTION_MAX, recipe_inputs
 from .routines import DAY_SECONDS, routine_allows_work
@@ -231,6 +232,7 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
     coins = state.resources.get(buyer_id, {}).get(MONEY)
     if not _known(own_food) or own_food != 0 or not _known(coins):
         return None
+    coins -= reserved_trade_units(state.supply_circuits, buyer_id, MONEY)
     candidates: list[tuple[int, str, PurchaseIntent]] = []
     # At extreme hunger an NPC accepts a higher posted price, never credit.
     max_price = 4 if npc["needs"]["hunger"] >= 95 else (
@@ -241,6 +243,7 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
                 or offer["payment_resource"] != MONEY
                 or offer["seller_id"] == buyer_id
                 or offer["stock_owner_id"] == buyer_id
+                or not trade_receipt_allowed(state.supply_circuits, offer["stock_owner_id"], MONEY)
                 or offer["remaining"] < 1
                 or not _present(raw, offer["seller_id"], here)):
             continue
@@ -248,7 +251,8 @@ def choose_local_food_purchase(state: WorldState, buyer_id: str, *,
         source = state.resources.get(offer["stock_owner_id"], {})
         stock = source.get("food")
         seller_coins = source.get(MONEY)
-        if (not _known(stock) or stock < 1 or not _known(seller_coins)
+        reserved_food = reserved_trade_units(state.supply_circuits, offer["stock_owner_id"], "food")
+        if (not _known(stock) or stock - reserved_food < 1 or not _known(seller_coins)
                 or not _known(price) or price < 1 or coins < price
                 or seller_coins + price > MAX_AMOUNT
                 or (adaptive and price > max_price)):

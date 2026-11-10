@@ -37,7 +37,8 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          hungry_market_buyers: bool = False,
                          one_hungry_market_buyer: bool = False,
                          staff_provisions: bool = False,
-                         playable_demo: bool = False) -> None:
+                         playable_demo: bool = False,
+                         trusted_genesis_hook=None) -> None:
     if type(playable_demo) is not bool:
         raise ValueError('playable_demo must be a boolean trusted setup flag')
     if type(market_wallets) is not bool:
@@ -208,6 +209,14 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             ],
             "period_seconds": PERIOD,
         }))
+    # Test-only extension: append extra *trusted time-zero* fixture events
+    # before the FIRST authoritative bootstrap. Never retrofit existing wallets
+    # using ResourceChanged(initialization) after they have been initialized.
+    # This is not an in-world command/API and is off by default.
+    if trusted_genesis_hook is not None:
+        if not callable(trusted_genesis_hook):
+            raise ValueError("trusted_genesis_hook must be callable")
+        trusted_genesis_hook(events)
     store.append(WORLD, "play27-physical-bootstrap", 0, events, bootstrap=True)
 
 
@@ -243,7 +252,7 @@ def audit_physical_supply(state, *, seed: int, water: int, buyer_copper: int,
     food = (farm["crop_ready"] * harvest_yield + farm["grain"] + bakery["grain"]
             + bakery["food"] + market["food"] + huda["grain"]
             + in_flight
-            + sum(rs[who]["food"] for who, *_ in PEOPLE)
+            + sum(rs[who]["food"] for who in state.npcs)
             # In PLAY-31 the human can purchase physical market food. Include
             # only *initialized* player-owned food: missing is not a resource.
             + (rs.get(PLAYER, {}).get("food") or 0)

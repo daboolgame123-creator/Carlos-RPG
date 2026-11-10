@@ -1,5 +1,12 @@
 # تعليمات عامة لأي وكيل — كارلوس RPG
 
+## تحديث تخطيط هندسي — 2026-11-10: ترحيل الحفظ وتحسين CI/CD
+
+**مرجع أحدث للمسارين قبل فتح PLAY-48:** [فهرس الخطتين](engineering/INDEX.md)، [خطة الترحيل الآمن](engineering/SAVE_MIGRATION_PLAN.md)، [خطة تحسين CI والأداء](engineering/CI_PERFORMANCE_PLAN.md). هذه وثائق تخطيط **لم يبدأ تنفيذها**؛ لا تمثل ترحيلًا جاهزًا أو تخفيضًا معتمدًا للاختبارات أو اعتماد P0.
+
+ثبت إغلاق PLAY-47 تقنيًا على فرع التكامل `feature/play47-npc-economic-endurance-20261109` عند `38ef0049478e4d62fd465dadc7c1eaf406b9b4d2` مع Schema 42 / Rules 57؛ [الفحص الشامل](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731120034) و[الموجّه](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731103345) ناجحان لكلا إصداري Python. المراجعة المستقلة مؤجلة، و`P0_PRODUCTION_NOT_APPROVED` قائم. ما زال `main` خارج نطاق التعديل. **بداية أي تنفيذ لاحق**: تحقق من GitHub واقرأ الخطتين وتصنيف المهام؛ لا تستبدل اختبار SHA الفعلي بخطة أو تقرير قديم.
+
+
 ## تسليم المشروع والنماذج — تحديث 2026-11-09
 
 **في كل محادثة جديدة:** اقرأ [تسليم المحادثة](simulation/docs/CARLOS_NEXT_CHAT_HANDOFF.md)، [خطة التسريع PLAY-46→51](simulation/docs/CARLOS_ACCELERATION_PLAN_2026-11-09.md)، و[قائمة نماذج OpenCode ومستويات Low–Max](simulation/docs/OPENCODE_AVAILABLE_MODELS_2026-11-09.md)، **ثم تحقّق من GitHub مباشرة**. هذه ملفات تخطيط وإرشاد، لا دليل إغلاق مراحل. لا تتجاوز بوابة PLAY-46 أو متطلبات الأمان والمراجعة؛ ChatGPT القائد التنفيذي الافتراضي وOpenCode يُستخدم عند وجود حاجة موثقة.
