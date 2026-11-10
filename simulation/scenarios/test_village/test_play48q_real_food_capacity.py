@@ -91,7 +91,7 @@ def _capacity(state):
     courier_market_upper = sum(
         DAY // circuit["period_seconds"]
         for circuit in state.supply_circuits.values()
-        if circuit["stops"][2:4] == ["bakery", "market"]
+        if tuple(circuit["stops"][2:4]) == ("bakery", "market")
     )
 
     # If none of these 13 citizens ever reaches hunger 90, every citizen
