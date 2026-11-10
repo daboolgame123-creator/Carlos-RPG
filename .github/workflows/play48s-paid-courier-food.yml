@@ -1,0 +1,61 @@
+name: PLAY-48S true paid courier bread vs unpaid control, fertile world
+on:
+  push:
+    branches: ["experiment/play48s-authentic-courier-food-wages-20261111"]
+    paths:
+      - ".github/workflows/play48s-paid-courier-food.yml"
+      - "simulation/scenarios/test_village/test_play48s_authentic_courier_food_wages.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48s-finite-wages-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  true-initial-escrow-and-first-water-service:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Real scarce wages, no service forgery, exact verified SHA
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m compileall -q scenarios/test_village/test_play48s_authentic_courier_food_wages.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48s_authentic_courier_food_wages.py -k "not true_13npc_48h"
+  measured-forty-eight-hour-real-economic-comparison:
+    needs: true-initial-escrow-and-first-water-service
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Same economy, same 13 people, paid vs escrowed-unpaid bread, real 48h
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48s_authentic_courier_food_wages.py -k "true_13npc_48h"
