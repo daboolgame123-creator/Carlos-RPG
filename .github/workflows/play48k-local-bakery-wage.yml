@@ -1,0 +1,60 @@
+name: PLAY-48K proof-backed on-site bakery courier food wage A/B
+on:
+  push:
+    branches: ["feature/play48k-local-bakery-earned-courier-meal-20261110"]
+    paths:
+      - ".github/workflows/play48k-local-bakery-wage.yml"
+      - "simulation/src/carlos_sim/courier_provisions.py"
+      - "simulation/src/carlos_sim/store.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/scenarios/test_village/test_play47_joined_professions.py"
+      - "simulation/scenarios/test_village/test_play48k_local_bakery_courier_wage.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48k-bakery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  no-forgery-and-12h-true-delivery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Exact source compile, forged pay refusal, true 13-NPC 12h receipt
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m compileall -q src/carlos_sim/courier_provisions.py src/carlos_sim/store.py src/carlos_sim/living_world.py scenarios/test_village/test_play48k_local_bakery_courier_wage.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48k_local_bakery_courier_wage.py -k "not real_bakery_funded_grain_courier_96h"
+  genuine-real-96h-economy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+      - run: python -m pip install pytest
+      - name: True 13 NPC 96h real rain, local employer cash and bread escrow
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48k_local_bakery_courier_wage.py -k "real_bakery_funded_grain_courier_96h"
