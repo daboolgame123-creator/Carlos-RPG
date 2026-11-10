@@ -1,5 +1,21 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48Q — food carrying-capacity and real 48h courier lockup (2026-11-10)
+
+**Authoritative current evidence:** [PLAY48Q_CAUSAL_FOOD_CAPACITY_DECISION.md](PLAY48Q_CAUSAL_FOOD_CAPACITY_DECISION.md). Phase remains `PLAY48_OPEN / RELEASE_NO_GO`, Schema 43 / Rules 58, experimental branch `analysis/play48q-seven-day-physical-food-capacity-20261110`. No `main` merge, no P0 approval. Prior PLAY48H0 entries below are historical and not authoritative current status.
+
+| Task | Classification / state | Exact evidence / next gate |
+| --- | --- | --- |
+| PLAY48-O | CHAT_EXECUTABLE / VERIFIED_NEGATIVE | 13-NPC 96h A/B #42907827424 SUCCESS 3.10/3.13 at `066a084b`; no deliveries or jobs after hour 72; 12/13 hunger100 day4 |
+| PLAY48-P | CHAT_EXECUTABLE / VERIFIED_CAUSAL_AUDIT | Food receipt #42914270367 SUCCESS at `fc400a80`; 7 real bakes/deliveries by day2, 4 unsold loaves, both couriers hunger100 and disabled by safety threshold |
+| PLAY48-Q | CHAT_EXECUTABLE / VERIFIED_CAPACITY_BOUND | #42916907455 SUCCESS at code SHA `5ac20345` Python3.10/3.13; ≥61 meals needed to keep 13 below hunger90 at day7; ≤55 physical bread-equivalent units with observed eight-water scenario, and even hypothetical fully pre-funded 3-grain opening buffer is ≤58. Transport 52/day nominal schedule is NOT actual delivery. Test-only branch doc follow-up is not a newer CI assertion |
+| PLAY48-R | CHAT_EXECUTABLE / PLANNED | Prove real production and documented water/material sources sufficient for 13 without minted resources or adding hidden labor, plus adversarial feasibility tests |
+| PLAY48-S | CHAT_EXECUTABLE / PLANNED | Employer-owned, physically earned repeatable courier food access with paid services, not entrusted-cargo consumption, double-payment or threshold bypass |
+| PLAY48-T | BLOCKED_BY_DEPENDENCY / PLANNED | Actual 3-grain bakery storage target from true surplus after R; never falsify stock during famine |
+| PLAY48-U | BLOCKED_BY_DEPENDENCY / PLANNED | Honest identical or explicitly difference-controlled 0–168h A/B, physical replay, all receipts/necessity, final same-SHA full CI + disposition; no premature stage closure |
+
+
+
 ## PLAY-48H — Preventive food compensation for genuine courier services (2026-11-10)
 
 **Current:** `PLAY48H_H0_ANALYSIS_COMMITTED / H1_IMPLEMENTATION_NOT_STARTED / PLAY48_OPEN / RELEASE_NO_GO`.  
