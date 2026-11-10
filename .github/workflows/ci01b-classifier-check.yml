@@ -1,0 +1,29 @@
+name: CI-01b adversarial path classification check (research only)
+on:
+  push:
+    branches: ["engineering/ci-mig-baseline-20261110"]
+    paths: [".github/workflows/ci01b-classifier-check.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  classify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Assert exact code and compare migration contract to integration reference
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          git fetch --no-tags --depth=1 origin 1dd038d731c5072edb9eea43d29e5b3e70436d79
+          python engineering/probes/ci01b_classifier.py --git-compare 1dd038d731c5072edb9eea43d29e5b3e70436d79
