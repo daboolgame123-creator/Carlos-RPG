@@ -2,6 +2,10 @@
 
 ## الدفعة التالية المثبتة — 10 نوفمبر 2026 (نتائج GitHub الفعلية)
 
+**تنظيف ما بعد التحقق:** حُذفت ملفات التشغيل التجريبية الستة من رأس الفرع بعد اكتمال الاختبارات عبر commit تنظيف `5886f216b8dcc494b9efa7ff9cd01b1cb6d77ba1`، دون حذف سجلات GitHub Actions أو ملفات المصدر المثبتة في تاريخ Git. **لا يضيف PR النهائي Workflows دائمة** إلى الخمسين الموجودة؛ يمكن إعادة استعمال ملفات التجارب من SHA المُسجّل إذا لزم. إزالة الملف من رأس الفرع ليست «إلغاءً» لاختبار سبق ونجح، ولا تُغلق بقية بوابات الأداء/الترحيل.
+
+
+
 - **CI-03b — قياس 6h/24h:** [تقرير العالم الحقيقي](reports/CI_03B_REAL_24H_HOTSPOTS_2026-11-10.md)؛ [Run #42787883806](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42787883806) **SUCCESS على Python 3.10/3.13**. الأحداث الجديدة 2,416 مقابل 10,000 `apply_event` call في 24h؛ إعادة الإسقاط/التحميل والتجميد مواضع كلفة مثبتة. `BOUNDED_24H_PROFILE_VERIFIED`؛ ليس إثباتًا لسبب 7d بكامله.
 - **MIG-02a — عقد ترحيل مُعطّل:** [وثيقة دلالة الأحداث](reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md)، [JSON](contracts/migration_41_56_to_42_57.json)، [نتيجة التثبت](reports/MIG_02A_PINNED_CONTRACT_RUN_2026-11-10.md)؛ [Run #42788288670](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42788288670) **SUCCESS كلا الإصدارين**. 55 حقلًا و73 Event selector ثابتة بين 41/56 و42/57، لكن `migration_approved=false`. `MIG02A_CLOSED_TECHNICALLY / MIG02B_OPEN`.
 - **CI-04 — تجربة تعديل غير مجدية:** [تقرير رفض ترقيع `_freeze`](reports/CI_04_FREEZE_AB_NO_GO_2026-11-10.md)؛ [Run #42788654884](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42788654884) **SUCCESS** من حيث مقارنة A/B وصحة تطابق العالم، لكن البديل أبطأ ~2.4–2.6%، لذا `NO_GO`. لم يُعدّل المحرك.
@@ -15,7 +19,7 @@
 - **MIG-00 (تحليل المصدر مثبت):** [تدقيق الفرق الحقيقي 41/56 إلى 42/57](reports/MIG_00_41_56_TO_42_57_AUDIT.md). الحقول الأساسية ثابتة لكن عقود الإنتاج/السوق تغيرت؛ لا تحويل معتمد أو تلقائي. `IN_PROGRESS / SEMANTIC_INVENTORY_REQUIRED`.
 - **MIG-01 (عينة نسخ قديم مثبتة):** [فحص أصلي لإصدار 41/56 على Python 3.10 و3.13](reports/MIG_01_ORIGINAL_BACKUP_SAMPLE_2026-11-10.md)، [Run 42786900040](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42786900040) **SUCCESS**، 5 اختبارات لكل Python تشمل WAL/restore/الرفض وعدم تعديل المصدر. **لم تحدث هجرة لإصدار 42/57**؛ بقية مهام MIG-01 وMIG-02 مفتوحة.
 - **CI-03 (عينة فعلية مثبتة):** [41 اختبارًا + تجربة اقتصاد صغيرة على Python 3.10 و3.13 وتحليل cProfile](reports/CI_03_BOUNDED_PROFILE_2026-11-10.md)؛ [Run 42786344145](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42786344145) **SUCCESS** على SHA `d1b379b4c6c5ef4d8fe86a794501f2718939c4f2`. أظهر كثافة إعادة إسقاط الأحداث/التحميل؛ لم يثبت بعد اختناق تجربة الأيام السبعة. `BOUNDED_SAMPLE_VERIFIED`.
-- **بيئة التنفيذ:** فرع `engineering/ci-mig-baseline-20261110` مستقل؛ لا تغييرات في `simulation/src/` أو `simulation/tests/` أو `main`، ولا تغيير Schema/Rules أو ترحيل ملف حفظ. قياس الأداء يستعمل [workflow محدود](../.github/workflows/ci03-performance-probe.yml) على الفرع الهندسي فقط، وليس بوابة نشر.
+- **بيئة التنفيذ:** فرع `engineering/ci-mig-baseline-20261110` مستقل؛ لا تغييرات في `simulation/src/` أو `simulation/tests/` أو `main`، ولا تغيير Schema/Rules أو ترحيل ملف حفظ. قياس الأداء يستعمل [workflow تاريخي مؤقت](https://github.com/daboolgame123-creator/Carlos-RPG/blob/d1b379b4c6c5ef4d8fe86a794501f2718939c4f2/.github/workflows/ci03-performance-probe.yml) على الفرع الهندسي فقط، وليس بوابة نشر.
 - **التتابع الصحيح:** `CI-03b` قياس 6h/24h، و`MIG-01` اختبار النسخة الأصلية، ثم تصميم `CI-01` بعد معرفة Required Checks أو تصعيد صلاحية القراءة، قبل أي CI-04 structural sharing. `P0_PRODUCTION_NOT_APPROVED` قائم.
 
 
@@ -54,6 +58,6 @@
 
 ## لماذا لا يغيّر هذا الفرع PLAY-47؟
 
-الأوراق هنا **توثيق تخطيط هندسي فقط**: لا تغيير في `simulation/src/` ولا اختبارات أو `.github/workflows/` أو Schema/Rules. لا يبدّل ذلك قرار إغلاق PLAY-47، ولا ينفذ PLAY-48، ولا يعني تشغيل migrations أو optimizations. بعد مراجعة وثائق الخطة يمكن ضمها للفرع المرجعي بعملية آمنة مع توثيق أثر CI؛ لا تمس `main` ولا ترفع بوابات P0.
+الوثائق الأساسية **خطط هندسية**، والتقارير المضافة تسجل **تجارب منفذة فعلًا** دون إضافة Workflows باقية في رأس الفرع: لا تغيير في `simulation/src/` أو ملفات الاختبارات أو `.github/workflows/` عند نهاية الدفعة أو Schema/Rules. لا يبدّل ذلك قرار إغلاق PLAY-47، ولا ينفذ PLAY-48، ولا يعني تشغيل migrations أو optimizations. بعد مراجعة وثائق الخطة يمكن ضمها للفرع المرجعي بعملية آمنة مع توثيق أثر CI؛ لا تمس `main` ولا ترفع بوابات P0.
 
 **تعريف النجاح لهذه الدفعة:** ظهور وثيقتَي الخطة في GitHub، ووجود فهرس واضح ومرجع من `AGENTS.md` و`README.md`، والتحقق من SHA/الفروقات. هذا معيار **إيداع خطة** وليس نجاح تنفيذها.
