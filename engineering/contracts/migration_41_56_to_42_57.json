@@ -17,7 +17,9 @@
     "engineering/reports/MIG_01_ORIGINAL_BACKUP_SAMPLE_2026-11-10.md",
     "engineering/reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md",
     "engineering/reports/MIG_02B_GENUINE_EVENT_SEMANTICS_2026-11-10.md",
-    "engineering/reports/MIG_03_TWO_ISOLATED_REBUILDS_2026-11-10.md"
+    "engineering/reports/MIG_03_TWO_ISOLATED_REBUILDS_2026-11-10.md",
+    "engineering/reports/MIG_04_ADVERSARIAL_DISPOSABLE_PROOF_2026-11-10.md",
+    "engineering/reports/MIG_04B_PROCESS_CRASH_AND_WAL_2026-11-10.md"
   ],
   "source_invariants": [
     "original source-world database must remain byte-for-byte unchanged",
@@ -92,5 +94,39 @@
     "crash-safe exclusive target publication and full backup preflight",
     "WAL and concurrent producer during source backup",
     "actual Windows and multiworld long-lived save restore"
-  ]
+  ],
+  "mig04_disposable_proof": {
+    "run_id": 42793803908,
+    "source_version": [
+      41,
+      56
+    ],
+    "target_version": [
+      42,
+      57
+    ],
+    "world_count": 2,
+    "event_count": 53,
+    "command_count": 7,
+    "python_310": "success",
+    "python_313": "success",
+    "corrupt_variants_rejected": 6,
+    "simulated_failpoints_without_publish": 3,
+    "exclusive_target_and_symlink_refusal": true,
+    "source_unchanged": true,
+    "production_approval": false
+  },
+  "mig04b_process_crash_proof": {
+    "run_id": 42794524369,
+    "python_310": "success",
+    "python_313": "success",
+    "real_linux_sigkill_points": 3,
+    "unpublished_before_link": true,
+    "reopened_valid_target_after_link": true,
+    "live_wal_source_refused": true,
+    "concurrent_wal_backup_supported": false,
+    "windows_tested": false,
+    "power_outage_tested": false,
+    "production_approval": false
+  }
 }
