@@ -148,7 +148,7 @@ def test_autonomous_request_buy_walk_consent_meal_and_courier_restart(tmp_path):
         assert purchases[0]["unit_price"] <= 2
         assert purchases[0]["quantity"] == 1
         trips = [t for t in state.travels.values()
-                 if t["npc_id"] == "omar" and t["started_at"] > first_time]
+                 if t["npc_id"] == "omar" and t["start"] > first_time]
         assert len(trips) == 6  # well -> market -> well on learned roads
         assert all(t["status"] == "arrived" for t in trips)
         assert sum(state.routes[t["route_id"]]["seconds"] for t in trips) == 300
