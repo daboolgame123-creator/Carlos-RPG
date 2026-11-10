@@ -238,6 +238,9 @@ def _joined_bootstrap(
             resources["charcoal_kiln"] = {
                 "wood": 0, "charcoal": 0, "kiln_tool": 1,
             }
+            # A legitimate traveling buyer needs an initialized EMPTY
+            # private bag slot; unknown material custody must not be guessed.
+            resources["burner"]["wood"] = 0
             resources["burner"]["coin_copper"] = 1
             resources["repairman"]["coin_copper"] = 1
             # Old 1 charcoal unit is deliberately excluded from the
