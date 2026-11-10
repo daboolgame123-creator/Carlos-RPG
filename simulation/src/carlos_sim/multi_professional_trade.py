@@ -238,6 +238,23 @@ def choose_material_known_road(state: WorldState, who: str) -> MaterialWalk | No
     last_work = _latest_work_arrival(state, who, site)
 
     if here != site:
+        # A buyer who has WALKED into a real local stall can see the
+        # shopkeeper actually finishing the exact wanted good. Waiting for
+        # that already-running, bounded work is sensible; immediately
+        # walking home from an empty stall makes the later product unsold.
+        # Never look at remote jobs, infer future demand or block forever.
+        if bag == 0 and here in state.market_stalls:
+            seller = state.market_stalls[here]["keeper_id"]
+            if any(
+                job["status"] == "running"
+                and job["npc_id"] == seller
+                and job["site_id"] == here
+                and 0 < job["due"]-state.time <= 900
+                and state.production_recipes[job["recipe_id"]]["output_resource"]
+                    == item
+                for job in state.production_jobs.values()
+            ):
+                return None
         if bag > 0 or last_supplier > last_work:
             path = shortest_known_route(state, who, site)
             if path:
