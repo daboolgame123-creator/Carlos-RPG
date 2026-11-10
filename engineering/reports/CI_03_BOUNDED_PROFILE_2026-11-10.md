@@ -3,7 +3,7 @@
 **Date:** 2026-11-10 UTC  
 **State:** `BOUNDED_SAMPLE_VERIFIED / SEVEN_DAY_HOTSPOT_NOT_YET_PROVEN`.  
 **Exact tested SHA:** `d1b379b4c6c5ef4d8fe86a794501f2718939c4f2`.  
-**Actual CI:** [42786344145 — SUCCESS](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42786344145), with both `sample-profile (3.10)` and `sample-profile (3.13)` **SUCCESS**. The workflow is `.github/workflows/ci03-performance-probe.yml`, branch-scoped to `engineering/ci-mig-baseline-20261110` and limited to 15 minutes per job. This probe is **not** a release-gate replacement.
+**Actual CI:** [42786344145 — SUCCESS](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42786344145), with both `sample-profile (3.10)` and `sample-profile (3.13)` **SUCCESS**. The temporary workflow was `.github/workflows/ci03-performance-probe.yml`, [preserved at tested SHA](https://github.com/daboolgame123-creator/Carlos-RPG/blob/d1b379b4c6c5ef4d8fe86a794501f2718939c4f2/.github/workflows/ci03-performance-probe.yml), branch-scoped to `engineering/ci-mig-baseline-20261110` and limited to 15 minutes per job. It was deliberately retired from the final branch after verification to avoid increasing the permanent workflow count. This probe is **not** a release-gate replacement.
 
 ## Evidence from actual job logs
 
