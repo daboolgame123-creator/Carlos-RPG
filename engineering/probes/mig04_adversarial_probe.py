@@ -43,6 +43,10 @@ def preflight(source: Path) -> dict:
     """Read-only integrity and provenance verification before creating target."""
     if not source.is_file() or source.is_symlink():
         raise ValueError("missing, unsafe or symlink source")
+    # Test-only fail-closed policy. A real migrator must use an atomic SQLite
+    # Backup API snapshot of a live WAL database; this probe is not that tool.
+    if any(Path(str(source) + suffix).exists() for suffix in ("-wal", "-shm")):
+        raise ValueError("live WAL/SHM requires consistent snapshot before migration")
     url = source.resolve().as_uri() + "?mode=ro"
     conn = sqlite3.connect(url, uri=True)
     conn.row_factory = sqlite3.Row
