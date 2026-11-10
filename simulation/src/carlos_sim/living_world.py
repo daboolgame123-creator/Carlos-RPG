@@ -940,6 +940,18 @@ class LivingWorldEngine:
                             movement_capability=True)
                     journey = choose_professional_known_road(current, buyer_id)
                     if journey is None:
+                        # Merely returning no professional route is not
+                        # enough: the generic routine commute below would
+                        # immediately send this real customer home before
+                        # the visible shopkeeper finishes the needed wood.
+                        # Suppress movement ONLY while they physically see
+                        # a bounded, authenticated local production job.
+                        if self.multi_professional_markets_enabled:
+                            from .multi_professional_trade import (
+                                is_waiting_at_actual_local_material_job
+                            )
+                            if is_waiting_at_actual_local_material_job(current, buyer_id):
+                                busy.add(buyer_id)
                         continue
                     edge = current.routes[journey.route_id]
                     here = current.entities[buyer_id]['location_id']
