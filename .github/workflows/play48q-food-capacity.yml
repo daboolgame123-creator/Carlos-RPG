@@ -1,0 +1,37 @@
+name: PLAY-48Q bound 13-person food capacity against actual crops and water
+on:
+  push:
+    branches: ["analysis/play48q-seven-day-physical-food-capacity-20261110"]
+    paths:
+      - ".github/workflows/play48q-food-capacity.yml"
+      - "simulation/scenarios/test_village/test_play48q_real_food_capacity.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48q-capacity-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  seven-day-food-bound:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Exact-SHA archived-world capacity audit with no NPC commands
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m compileall -q scenarios/test_village/test_play48q_real_food_capacity.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48q_real_food_capacity.py
