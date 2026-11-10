@@ -24,7 +24,14 @@ HORIZON_DAYS = 7
 OBSERVED_BOUNDED_FUTURE_RAIN = (2, 2, 2)
 
 
-def _capacity(state):
+def _capacity(state, *, recorded_future_rain=None):
+    # Explicit operator-only *bounded weather scenario*, not an event or
+    # a writable resource change. Default keeps the original known 2+2+2
+    # rain receipts; 0 means a genuine no-future-rain upper-bound analysis.
+    if recorded_future_rain is None:
+        recorded_future_rain = sum(OBSERVED_BOUNDED_FUTURE_RAIN)
+    if type(recorded_future_rain) is not int or not 0 <= recorded_future_rain <= 6:
+        raise ValueError("rain bound must be explicitly recorded 0..6 units")
     frozen = state.to_dict()
     assert len(state.npcs) == 13
     assert state.time == 0
@@ -69,7 +76,7 @@ def _capacity(state):
     assert initial_grain == 0
     assert initial_water == 2
     assert set(OBSERVED_BOUNDED_FUTURE_RAIN) == {2}
-    water_ceiling = initial_water + sum(OBSERVED_BOUNDED_FUTURE_RAIN)
+    water_ceiling = initial_water + recorded_future_rain
 
     # Optimistic allocation: use each of the strictly finite water units
     # where the physically configured grain yield is greatest. This ignores
@@ -121,7 +128,7 @@ def _capacity(state):
         "real_initial_bread": initial_food,
         "real_initial_grain": initial_grain,
         "real_initial_water": initial_water,
-        "assumed_observed_later_rain_total": sum(OBSERVED_BOUNDED_FUTURE_RAIN),
+        "assumed_observed_later_rain_total": recorded_future_rain,
         "total_seven_day_water_ceiling": water_ceiling,
         "farm_yields": farm_caps,
         "optimistic_water_allocation": allocation,
