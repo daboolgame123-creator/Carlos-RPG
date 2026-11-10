@@ -105,6 +105,15 @@ def prove_active_backup(source: Path, expected: dict, root: Path) -> dict:
         finally:
             first_backup_page.set()
             thread.join(timeout=20)
+        # Backup API can preserve the *source* WAL journal_mode in the copied
+        # database header. Normalize ONLY this isolated, fully closed copy,
+        # otherwise a strict read-only preflight can leave WAL/SHM sidecars.
+        with closing(sqlite3.connect(snapshot, timeout=15)) as normalized:
+            normalized.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            assert normalized.execute("PRAGMA journal_mode=DELETE").fetchone()[0].lower() == "delete"
+        assert not any(
+            Path(str(snapshot) + suffix).exists() for suffix in ("-wal", "-shm")
+        ), "offline backup must have no sidecars"
         assert not thread.is_alive(), "writer did not finish"
         assert not errors, f"writer errors: {errors!r}"
         assert write_commits[0] == WRITE_COUNT
