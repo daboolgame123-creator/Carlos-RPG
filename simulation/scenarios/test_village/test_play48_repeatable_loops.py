@@ -45,11 +45,11 @@ def _audit(state, total, starting_wood, starting_iron):
     assert (state.resources[WOOD]["wood"] +
             state.resources[CARP]["wood"] +
             state.resources["carpenter"]["wood"] +
-            len(_jobs(state, "saw-board")) == starting_wood)
+            sum(job["recipe_id"] == "saw-board" for job in state.production_jobs.values()) == starting_wood)
     assert (state.resources[IRON]["iron_ore"] +
             state.resources[SMITH]["iron_ore"] +
             state.resources["smith"]["iron_ore"] +
-            len(_jobs(state, "forge-fitting")) == starting_iron)
+            sum(job["recipe_id"] == "forge-fitting" for job in state.production_jobs.values()) == starting_iron)
 
 
 @pytest.mark.parametrize("raw_stock,cash", [
@@ -95,7 +95,7 @@ def test_two_cycle_physical_material_bottleneck_diagnosis(tmp_path, raw_stock, c
                 "trades": trades,
                 "final_resources": {owner: dict(state.resources[owner])
                                     for owner in (WOOD, IRON, CARP, SMITH, BUILD, REPAIR)},
-                "tools_not_consummed": all(
+                "tools_not_consumed": all(
                     state.resources[site][tool] == 1 for site, tool in
                     ((CARP, "saw"), (SMITH, "anvil"),
                      (BUILD, "hammer"), (REPAIR, "wrench"))
