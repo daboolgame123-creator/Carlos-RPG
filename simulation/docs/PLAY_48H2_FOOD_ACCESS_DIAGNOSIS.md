@@ -22,3 +22,8 @@ The module is explicitly not importable by NPC planning pathways and never suppl
 Use this audit at the real 72h checkpoint and at the first wage/market access cutoff. Classify who is hungry, cash-stranded, geographically blocked, or holding entrusted rather than personal money; then design a **physically delivered, actually funded, accountable food-access route or professional contract** that can act *before* a courier reaches the 90-hunger cutoff. If the source cannot support it with original finite stocks, report the economic scarcity rather than modifying the scenario. Compare 0→96h with unchanged input copper/food/rain and require actual new post72 delivery **plus** attributable later work/meal/sale and preserved world replay.
 
 **Not a recovery, not a P0 release, not a PLAY-48 closure, no merge to main.**
+
+
+## Full genuine 72-hour causal cut-off experiment
+
+`test_play48h2_72h_access_cutoff.py` runs the exact existing 13-NPC world with the original three market loaves and twelve copper; only two **existing** opening market loaves are signed into escrow. It replays 24/48/72h with each original rain receipt, then emits every worker's actual current location, physically known route to market, cash ownership/custody, hunger, and employer escrow in an **operator-only** log. Runtime behavior remains unchanged. **A passed test is a verified diagnosis, not a remedy.**

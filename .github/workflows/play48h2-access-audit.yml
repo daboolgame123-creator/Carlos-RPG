@@ -6,13 +6,14 @@ on:
       - ".github/workflows/play48h2-access-audit.yml"
       - "simulation/src/carlos_sim/food_access_diagnostics.py"
       - "simulation/scenarios/test_village/test_play48h2_access_diagnostic.py"
+      - "simulation/scenarios/test_village/test_play48h2_72h_access_cutoff.py"
       - "simulation/docs/PLAY_48H2_FOOD_ACCESS_DIAGNOSIS.md"
 permissions:
   contents: read
 jobs:
   food-access:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
@@ -33,4 +34,5 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           PYTHONPATH=src python -m pytest -q \
-            scenarios/test_village/test_play48h2_access_diagnostic.py
+            scenarios/test_village/test_play48h2_access_diagnostic.py \
+            scenarios/test_village/test_play48h2_72h_access_cutoff.py
