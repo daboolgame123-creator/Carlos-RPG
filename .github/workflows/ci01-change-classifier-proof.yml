@@ -1,0 +1,85 @@
+name: CI-01 historical change classification proof (non-release)
+
+on:
+  push:
+    branches:
+      - "engineering/ci-mig-baseline-20261110"
+    paths:
+      - ".github/workflows/ci01-change-classifier-proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  classify-historical:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Compare three frozen historical Git trees without changing required checks
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          for sha in \
+            a6c20e3edfbe85cc68819cd4fadd909472b21fd5 \
+            0f8c31f15e065cdc2d101bdfa6ca9b67d3331bdf \
+            38ef0049478e4d62fd465dadc7c1eaf406b9b4d2 \
+            1dd038d731c5072edb9eea43d29e5b3e70436d79
+          do
+            git fetch --no-tags --depth=1 origin "$sha"
+          done
+          python - <<'PY'
+          import json
+          import subprocess
+
+          def files(a, b):
+              return subprocess.check_output(
+                  ["git", "diff", "--name-only", a, b], text=True
+              ).splitlines()
+
+          def docs_only(name):
+              if name in ("AGENTS.md", "README.md"):
+                  return True
+              if name.startswith("engineering/") and name.endswith((".md", ".json")):
+                  return True
+              if name.startswith("simulation/docs/") and name.endswith(".md"):
+                  return True
+              return False
+
+          def release_note(name):
+              return name.startswith("simulation/docs/") and (
+                  "PLAY_" in name or "ROADMAP" in name or "WORK_QUEUE" in name
+              )
+
+          cases = [
+              ("engineering_docs_promotion",
+               "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2",
+               "1dd038d731c5072edb9eea43d29e5b3e70436d79",
+               True, False),
+              ("play47_release_decision",
+               "0f8c31f15e065cdc2d101bdfa6ca9b67d3331bdf",
+               "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2",
+               True, True),
+              ("old_to_new_runtime",
+               "a6c20e3edfbe85cc68819cd4fadd909472b21fd5",
+               "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2",
+               False, True),
+          ]
+          for label, source, target, expected_docs, expected_release in cases:
+              names = files(source, target)
+              assert names, label
+              is_docs = all(docs_only(x) for x in names)
+              must_full = not is_docs or any(release_note(x) for x in names)
+              assert (is_docs, must_full) == (expected_docs, expected_release), (
+                  label, is_docs, must_full, names
+              )
+              print("CI01_POLICY_PROOF " + json.dumps({
+                  "case": label, "changed_files": len(names),
+                  "docs_only": is_docs, "full_release_required": must_full,
+              }, sort_keys=True))
+
+          print("CI01_INFO no existing release check or trigger was modified")
+          PY
