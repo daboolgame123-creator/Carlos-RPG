@@ -292,7 +292,20 @@ class SQLiteEventStore:
                 # water/grain/food receipt in THIS SAME atomic command
                 # also proves completed work, with payment at market checked
                 # by the state reducer. Never trust a caller's counter alone.
-                if wage.data.get("proof") == "bakery_grain_delivery":
+                if wage.data.get("proof") == "farm_water_delivery":
+                    # A farm can pay a ration only when its courier really
+                    # dropped off WATER here, after physically walking the
+                    # well→field road in this very trusted atomic command.
+                    if i == 0:
+                        raise InvalidEvent("farm courier wage needs real water delivered")
+                    source = events[i-1]
+                    if (source.event_type != "SupplyCargoDelivered"
+                            or source.actor_id != wage.data.get("courier_id")
+                            or source.data.get("courier_id") != wage.data.get("courier_id")
+                            or source.data.get("resource") != "water"
+                            or source.time != wage.time):
+                        raise InvalidEvent("farm courier wage requires immediate authentic water delivery")
+                elif wage.data.get("proof") == "bakery_grain_delivery":
                     # This distinct site-owned bakery wage is earned ONLY
                     # immediately after the same courier has physically
                     # delivered authentic GRAIN to that same bakery stop.

@@ -23,7 +23,7 @@ def _joined_bootstrap(
     db, *, smith_hunger=10, water=2, staff_provisions=False,
     repair_shift_end=20_000, initial_market_food=3,
     site_payroll_enabled=False, site_payroll_wage_coin=1,
-    bakery_opening_food_wage=False,
+    bakery_opening_food_wage=False, farm_opening_food_wage=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -35,13 +35,37 @@ def _joined_bootstrap(
     if type(site_payroll_enabled) is not bool:
         raise ValueError("site_payroll_enabled must be boolean")
     if (type(bakery_opening_food_wage) is not bool
-            or (bakery_opening_food_wage and initial_market_food != 3)):
+            or (bakery_opening_food_wage and initial_market_food != 3)
+            or type(farm_opening_food_wage) is not bool
+            or (farm_opening_food_wage and
+                (initial_market_food != 3 or bakery_opening_food_wage))):
         raise ValueError("bakery payroll needs exactly three original opening loaves")
     if (type(site_payroll_wage_coin) is not int
             or site_payroll_wage_coin not in (1, 2)
             or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
         raise ValueError("site_payroll_wage_coin must be one or two existing copper")
     def extend(events):
+        if farm_opening_food_wage:
+            # The original three opening loaves remain exactly THREE:
+            # 2 in the market, 1 already physically stored at the field
+            # before time zero. Its owner will pre-fund one real courier
+            # wage. No runtime relief packet or fake well-to-market trip.
+            saw_market = False
+            for i, ev in enumerate(events):
+                if (ev.event_type == "ResourceChanged"
+                        and ev.data.get("owner_id") == "market"
+                        and ev.data.get("resource") == "food"):
+                    assert ev.data["previous"] is None
+                    assert ev.data["current"] == 3 and not saw_market
+                    replacement = dict(ev.data)
+                    replacement["current"] = 2
+                    events[i] = _e("ResourceChanged", replacement)
+                    saw_market = True
+            assert saw_market
+            events.append(_e("ResourceChanged", {
+                "owner_id": "farm", "resource": "food",
+                "previous": None, "current": 1, "source": "initialization",
+            }))
         if bakery_opening_food_wage:
             # This is a time-zero ownership experiment: ONE of the THREE
             # pre-existing market loaves instead starts in the baker's own
