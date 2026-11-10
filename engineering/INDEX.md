@@ -1,5 +1,14 @@
 # Carlos RPG — سجل الخطتين الهندسيتين قبل PLAY-48
 
+## الدفعة التالية المثبتة — 10 نوفمبر 2026 (نتائج GitHub الفعلية)
+
+- **CI-03b — قياس 6h/24h:** [تقرير العالم الحقيقي](reports/CI_03B_REAL_24H_HOTSPOTS_2026-11-10.md)؛ [Run #42787883806](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42787883806) **SUCCESS على Python 3.10/3.13**. الأحداث الجديدة 2,416 مقابل 10,000 `apply_event` call في 24h؛ إعادة الإسقاط/التحميل والتجميد مواضع كلفة مثبتة. `BOUNDED_24H_PROFILE_VERIFIED`؛ ليس إثباتًا لسبب 7d بكامله.
+- **MIG-02a — عقد ترحيل مُعطّل:** [وثيقة دلالة الأحداث](reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md)، [JSON](contracts/migration_41_56_to_42_57.json)، [نتيجة التثبت](reports/MIG_02A_PINNED_CONTRACT_RUN_2026-11-10.md)؛ [Run #42788288670](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42788288670) **SUCCESS كلا الإصدارين**. 55 حقلًا و73 Event selector ثابتة بين 41/56 و42/57، لكن `migration_approved=false`. `MIG02A_CLOSED_TECHNICALLY / MIG02B_OPEN`.
+- **CI-04 — تجربة تعديل غير مجدية:** [تقرير رفض ترقيع `_freeze`](reports/CI_04_FREEZE_AB_NO_GO_2026-11-10.md)؛ [Run #42788654884](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42788654884) **SUCCESS** من حيث مقارنة A/B وصحة تطابق العالم، لكن البديل أبطأ ~2.4–2.6%، لذا `NO_GO`. لم يُعدّل المحرك.
+- **CI-01 — تصنيف تغييرات Git:** [تقرير 3 عينات تاريخية](reports/CI_01_PATH_CLASSIFICATION_PROOF_2026-11-10.md)؛ [Run #42789060820](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42789060820) **SUCCESS**. حدد docs engineering مقابل docs قرار إطلاق مقابل code؛ لم تُغيَّر triggers أو Required Checks. `CLASSIFIER_PROOF_VERIFIED / RELEASE_CHANGE_BLOCKED_BY_BRANCH_POLICY_403`.
+
+**المهام الآمنة التالية:** `CI-01b` اختبار PR مختلط وقراءة Required Status Checks من جهة مالك صلاحيات، `MIG-02b` دراسة أحداث أصلية ذات عهدة/سوق/إنتاج، ثم تصميم `CI-04b` بنية Snapshot/Replay على فرع أداء منفصل إذا أمكن ضمان صدق التحقق. لا تحسين قسري، ولا ترحيل عالم حقيقي، ولا انطلاق PLAY-48 بسبب تقارير جرد. `main` ثابت و`P0_PRODUCTION_NOT_APPROVED` مستمر.
+
 ## تنفيذ دفعة الجرد والقياس — 10 نوفمبر 2026 (دليل فعلي)
 
 - **CI-00 (جزئي مثبت):** [جرد 50 Workflow وقياسات ستة تشغيلات ناجحة](reports/CI_00_BASELINE_2026-11-10.md)؛ ما زال التحقق من Required Checks محجوبًا بصلاحية GitHub API (403)، ولذلك لا تغييرات بعد على Required Gates أو حذف ملفات. `IN_PROGRESS / BASELINE_VERIFIED`.
