@@ -1,0 +1,37 @@
+name: PLAY-48R full Python regression on isolated fertile field experiment
+on:
+  push:
+    branches: ["experiment/play48r-fertile-field-real-harvest-20261111"]
+    paths:
+      - ".github/workflows/play48r-regression.yml"
+permissions:
+  contents: read
+concurrency:
+  group: play48r-full-regression-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  full-pytest-same-head:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify exact SHA
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Complete Python source and historical test-suite regression
+        run: |
+          python -m compileall -q src tests scenarios
+          python -m pytest -q
