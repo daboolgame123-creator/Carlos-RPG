@@ -5,6 +5,7 @@ from carlos_sim import SQLiteEventStore, TimeEngine, LivingWorldEngine
 from carlos_sim.assistance import NPCAssistanceService
 from carlos_sim.market import NPCMarketService
 from carlos_sim.movement import NPCMovementService
+from carlos_sim.navigation import NPCNavigationService
 from carlos_sim.npc_food_relief import choose_aid_relay
 from play_physical_supply import WORLD, seed_physical_supply
 from test_play48_autonomous_funded_aid import (
@@ -154,5 +155,77 @@ def test_existing_assistance_behavior_unchanged_with_relay_disabled(tmp_path):
         assert not any(t["npc_id"] == "omar" and t["start"] > 3600
                        for t in state.travels.values())
         assert _own_copper(state) == 12
+        assert db.verify(WORLD).to_dict() == state.to_dict()
+        clock.close_session(WORLD)
+
+
+def test_one_personally_bought_loaf_cannot_be_pledged_to_two_requesters(tmp_path):
+    """A prior real unfulfilled promise has first claim on donor-owned food."""
+    with SQLiteEventStore(tmp_path / "competing-aid-pledges.sqlite") as db:
+        seed_physical_supply(
+            db, market_wallets=True, initial_market_food=3,
+            courier_hunger=89,
+        )
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        state = db.load(WORLD)
+        aid = NPCAssistanceService(db, clock)
+        # Layla and Omar really start co-present at the market.
+        assert state.entities["layla"]["location_id"] == "market"
+        state = aid.request(
+            WORLD, "layla", "omar", "food", 1, "already-promised",
+            expected_revision=state.revision,
+        ).state
+        market = NPCMarketService(db, clock)
+        offer = market.post(
+            WORLD, "salma", "market", "market", "first-request-food",
+            "food", 1, "coin_copper", 2,
+            expected_revision=state.revision,
+        ).state
+        state = market.buy(
+            WORLD, "omar", "first-loaf", "first-request-food", 1, 2,
+            expected_revision=offer.revision,
+        ).state
+        state = aid.respond(
+            WORLD, "omar", "already-promised", accept=True,
+            command_id="first-accept", expected_revision=state.revision,
+        ).state
+        assert state.obligations["already-promised"]["status"] == "promised"
+        assert state.resources["omar"]["food"] == 1
+        assert state.resources["omar"]["coin_copper"] == 2
+        nav = NPCNavigationService(db, clock)
+        mover = NPCMovementService(db, clock)
+        for place, rid, next_place in (
+            ("market", "bakery-market", "bakery"),
+            ("bakery", "farm-bakery", "farm"),
+            ("farm", "well-farm", "well"),
+        ):
+            state = nav.survey(
+                WORLD, "omar", command_id="older-learn-" + place,
+                expected_revision=state.revision,
+            )
+            trip = mover.start(
+                WORLD, "omar", rid, "older-trip-" + next_place,
+                expected_revision=state.revision,
+            )
+            state = clock.advance(
+                WORLD, seconds=trip.due-state.time,
+                command_id="older-arrive-" + next_place,
+                expected_revision=trip.state.revision,
+            ).state
+        state = nav.survey(
+            WORLD, "omar", command_id="older-learn-well",
+            expected_revision=state.revision,
+        )
+        state = aid.request(
+            WORLD, "huda", "omar", "food", 1, "second-hungry-request",
+            expected_revision=state.revision,
+        ).state
+        assert state.obligations["second-hungry-request"]["status"] == "requested"
+        assert choose_aid_relay(state, "omar") is None, (
+            "one personally owned loaf was already promised to Layla"
+        )
+        assert _own_copper(state) == 12
+        assert db.snapshot(WORLD).to_dict() == state.to_dict()
         assert db.verify(WORLD).to_dict() == state.to_dict()
         clock.close_session(WORLD)
