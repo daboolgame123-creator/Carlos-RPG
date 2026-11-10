@@ -24,7 +24,7 @@ def _physical_conservation(state):
     holdings = state.resources
     escrowed = sum(p["remaining"] for p in state.courier_provisions.values())
     water = sum(holdings[who]["water"] for who in
-                ("well", "farm", "east_field", "huda", "hana")
+                ("well", "farm", "farm_east", "huda", "hana")
                 if who in holdings and "water" in holdings[who])
     # Cross-check the water with all actual recorded authorized rain and crop
     # starts; avoid counting unknown slots as free water.
