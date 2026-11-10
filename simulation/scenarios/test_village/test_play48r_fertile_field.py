@@ -142,12 +142,20 @@ def test_authentic_genesis_fertile_field_capacity_with_existing_finite_water(tmp
     assert new_cap["optimistic_max_bread_units_in_7days"] == 90
     assert old_cap["seven_day_not_all_healthy_even_with_perfect_logistics"]
     assert not new_cap["seven_day_not_all_healthy_even_with_perfect_logistics"]
+    drought_cap = _capacity(treatment, recorded_future_rain=0)
+    assert drought_cap["total_seven_day_water_ceiling"] == 2
+    assert drought_cap["optimistic_max_bread_units_in_7days"] == 27
+    assert drought_cap["seven_day_not_all_healthy_even_with_perfect_logistics"]
+    for bad in (-1, 7, True, 3.5, "rain"):
+        with pytest.raises(ValueError, match="rain bound"):
+            _capacity(treatment, recorded_future_rain=bad)
     assert old_cap["real_initial_water"] == new_cap["real_initial_water"] == 2
     assert old_cap["total_seven_day_water_ceiling"] == new_cap["total_seven_day_water_ceiling"] == 8
     assert old_cap["minimum_real_meals_for_all_to_stay_below_hunger90"] == new_cap["minimum_real_meals_for_all_to_stay_below_hunger90"] == 61
     print("PLAY48R_FERTILE_FIELD_THEORETICAL_ONLY",
           json.dumps({
               "baseline": old_cap, "declared_fertile_field": new_cap,
+              "fertile_but_no_future_rain": drought_cap,
               "changed_harvest_recipe_only_at_time_zero": True,
               "same_opening_food_seed_water_labor_and_money": True,
               "real_meals_improvement_claimed": False,
