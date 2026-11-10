@@ -6,6 +6,7 @@ on:
       - ".github/workflows/mig04c-live-backup-probe.yml"
       - "engineering/probes/mig04c_live_backup_probe.py"
       - "engineering/probes/mig04_adversarial_probe.py"
+      - "engineering/reports/MIG_04C_CONCURRENT_WAL_BACKUP_2026-11-10.md"
   workflow_dispatch:
 permissions:
   contents: read
