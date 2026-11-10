@@ -55,7 +55,8 @@ def _together(state: WorldState, a: str, b: str) -> bool:
 
 
 def choose_assistance_intent(state: WorldState, npc_id: str, phase: str, *,
-                             scarcity_enabled: bool = False) -> AssistanceIntent | None:
+                             scarcity_enabled: bool = False,
+                             single_loaf_requests: bool = False) -> AssistanceIntent | None:
     """Evaluate one actor for one phase, without mutating world state.
 
     Phases: settle promised help; respond to existing requests; initiate a
@@ -63,6 +64,8 @@ def choose_assistance_intent(state: WorldState, npc_id: str, phase: str, *,
     """
     if phase not in ('settle', 'respond', 'request'):
         raise ValueError('unknown assistance planning phase')
+    if type(single_loaf_requests) is not bool:
+        raise ValueError('single_loaf_requests must be boolean')
     if not _ready(state, npc_id):
         return None
 
@@ -135,7 +138,9 @@ def choose_assistance_intent(state: WorldState, npc_id: str, phase: str, *,
     if not peers:
         return None
     _, recipient = min(peers)
-    quantity = min(3, 4 - own_stock)
+    # Optional funded-relay mode asks for one individually affordable loaf.
+    # Default legacy autonomous help still asks for up to three.
+    quantity = min(1 if single_loaf_requests else 3, 4 - own_stock)
     oid = f'auto-help:{npc_id}:{state.time}'
     # Valid NPC IDs may be longer than an obligation ID. Use a deterministic
     # content-derived identifier instead of freezing the entire simulation.
