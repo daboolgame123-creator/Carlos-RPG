@@ -84,6 +84,16 @@ def _capacity(state):
         water_remaining -= watered_cycles
         allocation.append({"farm": farm["farm"], "watered_cycles": watered_cycles})
 
+    # An optimistic logistics ceiling for the configured courier circuits.
+    # It assumes each physical circuit completes every scheduled departure,
+    # carries one real bakery food unit, and all workers remain capable.
+    # The actual simulation proves those optimistic assumptions fail.
+    courier_market_upper = sum(
+        DAY // circuit["period_seconds"]
+        for circuit in state.supply_circuits.values()
+        if circuit["stops"][2:4] == ["bakery", "market"]
+    )
+
     # If none of these 13 citizens ever reaches hunger 90, every citizen
     # must consume at least this many genuine loaves by the end of day 7,
     # even with PERFECT distribution and ignoring additional work hunger.
@@ -120,6 +130,10 @@ def _capacity(state):
         "minimum_meals_per_person": minimum_meals_by_actor,
         "necessary_steady_daily_meals": steady_daily_required,
         "optimistic_steady_daily_two_farm_grain": steady_daily_grain_ceiling,
+        "optimistic_scheduled_courier_market_loaves_per_day":
+            courier_market_upper,
+        "market_transport_not_theoretical_capacity_bottleneck":
+            courier_market_upper >= steady_daily_required,
         "structural_daily_deficit_even_with_unlimited_water":
             max(0, steady_daily_required - steady_daily_grain_ceiling),
         "seven_day_not_all_healthy_even_with_perfect_logistics":
@@ -143,6 +157,8 @@ def test_authentic_13_npc_seven_day_optimistic_food_capacity(tmp_path):
     assert report["necessary_steady_daily_meals"] == 13
     assert report["optimistic_steady_daily_two_farm_grain"] == 10
     assert report["structural_daily_deficit_even_with_unlimited_water"] == 3
+    assert report["optimistic_scheduled_courier_market_loaves_per_day"] == 52
+    assert report["market_transport_not_theoretical_capacity_bottleneck"]
     assert report["total_seven_day_water_ceiling"] == 8
     assert report["optimistic_max_bread_units_in_7days"] == 55
     assert report["seven_day_not_all_healthy_even_with_perfect_logistics"]
