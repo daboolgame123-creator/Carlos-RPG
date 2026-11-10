@@ -1,5 +1,20 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48H — Preventive food compensation for genuine courier services (2026-11-10)
+
+**Current:** `PLAY48H_H0_ANALYSIS_COMMITTED / H1_IMPLEMENTATION_NOT_STARTED / PLAY48_OPEN / RELEASE_NO_GO`.  
+**Independent analysis branch:** `feature/play48h-preventive-provision-contract-20261110`; parent `37a240ca9d16ae6d24740694c516189eb4041f82` (PLAY-48G exact tested 13-NPC negative-control). Schema **42** / Rules **57** unchanged by H0.
+
+| ID | Task | Verified status | Next gate |
+| --- | --- | --- | --- |
+| PLAY48-F-FULL | 7-NPC autonomous aid, historical full regression | **SUCCESS** [42820514763](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42820514763), 1,694 Python 3.10 + 1,694 Python 3.13, exact `5cde7f17d989658d501b4145c1e8fabb40255ae3` | Not evidence of 13-NPC recovery |
+| PLAY48-G | Genuine 13-NPC 72→96h relief-enabled vs identical blocked control | **SUCCESS as negative result** [42821426908](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42821426908), exact `37a240ca9d16ae6d24740694c516189eb4041f82` | No new work/sale/meal; five unsold market loaves; avoid fabricated donor |
+| PLAY48-H0 | Audit actual service receipts, market stock ownership, wage authority and version impact; executable 13-NPC preflight | **DESIGN + TEST SOURCE COMMITTED; H0 CI PENDING** | [contract decision](PLAY_48_PREVENTIVE_PROVISION_CONTRACT.md) and `test_play48h_provision_preflight.py` must pass on exact H0 HEAD |
+| PLAY48-H1 | Implement contract-backed, funded, single-redemption preventive food provisioning without inventing stock; test in 13-NPC world from t=0 | **NOT STARTED / DESIGN GATE** | Confirm market-offer/escrow interaction first, choose justified Schema/Rules bump and isolated old-save refusal test |
+| PLAY48-CLOSE | Genuine post-72h attributable delivery plus later job/sale/meal, physical/cash/food custody and full historical exact-SHA green | **BLOCKED / RELEASE_NO_GO** | Review exact final implementation and dispose of external review independently; P0 and `main` remain unchanged |
+
+No acceptance of PLAY-49 or production migration follows from the H0 probe. The existing source has verified production wages, but **not** a signed food-for-delivery contract. Do not call a merely unreserved market loaf a wage, or invent an income source.
+
 ## PLAY-48 — repeated physical production, started 2026-11-10
 
 **Operative state: `PLAY48_OPEN / RELEASE_NO_GO`.** Independent experimental
@@ -15,7 +30,7 @@ unchanged; no production save approval.
 | PLAY48-D | Real 8-NPC funded downstream demand in 2 construction/2 repair sites with delayed shifts | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42812662593](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42812662593), [time parity 42813190428](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42813190428); 8 real trades, 4 terminal jobs, 12 copper, no engine changes |
 | PLAY48-E | Physically paid food assistance using existing event types: purchase → 3 roads → promise → handover → meal → courier delivery | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_AS_MANUAL_SERVICE_PROOF | [CI 42814104944](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42814104944) SUCCESS each Python, 57 pass/1 skip; **manual driver, not autonomous day-four relief** |
 | PLAY48-F | Opt-in NPC-funded one-loaf request → personally known market → own-copper sale → six physical donor legs → voluntary assistance → meal → courier restart | CHAT_EXECUTABLE | TARGETED_CLOSED_IN_7_NPC_EXPERIMENT / FULL_NO_GO | [90 passed per Python 42820201025](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42820201025); [proof and constraints](PLAY_48_AUTONOMOUS_AID.md); independent 13-NPC post72 proof still absent |\n| PLAY48-AUTO-13NPC | Establish legitimate personally funded co-present relief + physically learned delivery routes in **genuine 13-NPC** world after hour 72 | BLOCKED_BY_DEPENDENCY | OPEN / NO_PRODUCTION_CLAIM | No synthetic ownership, supplier omniscience, unwitnessed contact, spent consignment cash, or free employer subsidy; compare identical-weather control before claiming recovery |
-| PLAY48-CLOSE | Final exact-SHA targeted/full regressions, honest day-four unresolved limitation, external review disposition | BLOCKED_BY_DEPENDENCY | OPEN / RELEASE_NO_GO | No stable full GitHub Actions SUCCESS on latest report-bearing SHA yet. P0, genuine historic-save migration and `main` still independent. |
+| PLAY48-CLOSE | Final exact-SHA targeted/full regressions, honest day-four unresolved limitation, external review disposition | BLOCKED_BY_DEPENDENCY | OPEN / RELEASE_NO_GO | Historical F full CI and G genuine negative-control CI are SUCCESS on their own exact SHAs; H1 and final combined exact-SHA tests are still outstanding. P0, genuine historic-save migration and `main` still independent. |
 
 [PLAY-48 evidence, diagnostics and accepted risks](PLAY_48_REPEATABLE_PRODUCTION.md).
 The **six earlier Draft engineering PRs #63–#68** remain unmerged and separate;
