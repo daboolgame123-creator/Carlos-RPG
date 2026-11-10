@@ -113,6 +113,7 @@ def test_only_real_12_copper_and_same_three_loaves_with_fixed_target(tmp_path):
         "stock_filled": False,
     }
     assert b.npcs["layla"]["role"] == "woodcutter"
+    assert b.npcs["layla"]["needs"]["hunger"] == 80  # No fake hunger reset
     assert b.resources["lumberyard"]["standing_timber"] == 3
     assert b.resources["lumberyard"]["wood"] == 0
     assert b.resources["charcoal_kiln"]["charcoal"] == 0
@@ -165,8 +166,9 @@ def test_real_two_day_extended_professions_vs_unemployed_resident(tmp_path):
     _seed_employed(path_b)
     report = []
     for day in (1, 2):
-        a = _day(path_a, day*DAY, rain=True)
-        b = _day(path_b, day*DAY, rain=True)
+        a, _ = _run(path_a, day*DAY, early=False)
+        b, _ = _run(path_b, day*DAY, early=False,
+                    hungry_woodcutter_work_enabled=True)
         _reading(a)
         _reading(b)
         old, new = _real_stats(a), _real_stats(b)
