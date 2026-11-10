@@ -292,7 +292,35 @@ class SQLiteEventStore:
                 # water/grain/food receipt in THIS SAME atomic command
                 # also proves completed work, with payment at market checked
                 # by the state reducer. Never trust a caller's counter alone.
-                if wage.data.get("proof") == "prior_market_service":
+                if wage.data.get("proof") == "farm_water_delivery":
+                    # A farm can pay a ration only when its courier really
+                    # dropped off WATER here, after physically walking the
+                    # well→field road in this very trusted atomic command.
+                    if i == 0:
+                        raise InvalidEvent("farm courier wage needs real water delivered")
+                    source = events[i-1]
+                    if (source.event_type != "SupplyCargoDelivered"
+                            or source.actor_id != wage.data.get("courier_id")
+                            or source.data.get("courier_id") != wage.data.get("courier_id")
+                            or source.data.get("resource") != "water"
+                            or source.time != wage.time):
+                        raise InvalidEvent("farm courier wage requires immediate authentic water delivery")
+                elif wage.data.get("proof") == "bakery_grain_delivery":
+                    # This distinct site-owned bakery wage is earned ONLY
+                    # immediately after the same courier has physically
+                    # delivered authentic GRAIN to that same bakery stop.
+                    # The reducer further verifies site, route index, escrow,
+                    # unique receipt and presence; no old-market shortcut.
+                    if i == 0:
+                        raise InvalidEvent("bakery wage requires same-command grain delivery")
+                    source = events[i-1]
+                    if (source.event_type != "SupplyCargoDelivered"
+                            or source.actor_id != wage.data.get("courier_id")
+                            or source.data.get("courier_id") != wage.data.get("courier_id")
+                            or source.data.get("resource") != "grain"
+                            or source.time != wage.time):
+                        raise InvalidEvent("bakery wage requires immediate real grain delivery")
+                elif wage.data.get("proof") == "prior_market_service":
                     witnessed = any(
                         source.event_type == "SupplyCargoDelivered"
                         and source.actor_id == wage.data.get("courier_id")

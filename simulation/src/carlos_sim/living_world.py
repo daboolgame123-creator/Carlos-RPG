@@ -398,6 +398,44 @@ class LivingWorldEngine:
                                            {"courier_id": courier,
                                             "resource": resource}),
                                supply_capability=True)
+                        if (self.early_courier_food_wage_enabled
+                                and act == "SupplyCargoDelivered"
+                                and resource == "water"):
+                            # Water must actually arrive at the farm first.
+                            # Its OWN prepaid bread is already escrowed in
+                            # that exact farm contract; this is not an in-world
+                            # market→field teleport or a second wage for idling.
+                            from .courier_provisions import choose_courier_provision
+                            earned = choose_courier_provision(current, courier)
+                            if (earned is not None
+                                    and current.courier_provisions[earned[0]]["payer_site"]
+                                    == current.supply_circuits[courier]["stops"][1]):
+                                append(DomainEvent("CourierProvisionPaid", None,
+                                    "farm's already-owned bread for a real water delivery",
+                                    current.time, {"id": earned[0],
+                                                   "courier_id": courier,
+                                                   "service_deliveries": earned[1],
+                                                   "proof": "farm_water_delivery"}),
+                                    supply_capability=True)
+                        if (self.early_courier_food_wage_enabled
+                                and act == "SupplyCargoDelivered"
+                                and resource == "grain"):
+                            # The bakery must have PRE-FUNDED its own in-kind
+                            # wage at genesis. No transfer from a distant
+                            # market and no pay without a real local grain
+                            # delivery in this very atomic command.
+                            from .courier_provisions import choose_courier_provision
+                            earned = choose_courier_provision(current, courier)
+                            if (earned is not None
+                                    and current.courier_provisions[earned[0]]["payer_site"]
+                                    == "bakery"):
+                                append(DomainEvent("CourierProvisionPaid", None,
+                                    "one pre-funded bakery loaf after delivered grain",
+                                    current.time, {"id": earned[0],
+                                                   "courier_id": courier,
+                                                   "service_deliveries": earned[1],
+                                                   "proof": "bakery_grain_delivery"}),
+                                    supply_capability=True)
                         if act == "SupplyCargoDelivered" and resource == "food":
                             from .courier_provisions import choose_courier_provision
                             eligible = choose_courier_provision(current, courier)
@@ -420,7 +458,9 @@ class LivingWorldEngine:
                     if self.early_courier_food_wage_enabled:
                         from .courier_provisions import choose_courier_provision
                         eligible = choose_courier_provision(current, courier)
-                        if eligible is not None and any(
+                        if (eligible is not None
+                                and current.courier_provisions[eligible[0]]["payer_site"]
+                                == "market") and any(
                                 e.event_type == "SupplyCargoDelivered"
                                 and e.actor_id == courier
                                 and e.data.get("courier_id") == courier

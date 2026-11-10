@@ -36,7 +36,9 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
             or p["id"] in state["courier_provisions"]
             or any(c["courier_id"] == p["courier_id"]
                    for c in state["courier_provisions"].values())
-            or p["payer_site"] != "market"
+            or p["payer_site"] not in
+                ("market", "bakery", state["supply_circuits"].get(
+                    p["courier_id"], {}).get("stops", ["", ""])[1])
             or type(p["units"]) is not int
             or not 1 <= p["units"] <= MAX_UNIT):
         raise ValueError("provision requires unique funded time-zero contract")
@@ -45,9 +47,13 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
             or who not in state["npcs"]
             or state["npcs"][who]["role"] != "courier"
             or "market" not in state["market_stalls"]
-            or state["supply_circuits"][who]["stops"][3] != "market"):
-        raise ValueError("provision needs an actual market employer and courier")
-    food = state["resources"].get("market", {}).get("food")
+            or state["supply_circuits"][who]["stops"][3] != "market"
+            or (p["payer_site"] == "bakery"
+                and state["supply_circuits"][who]["stops"][2] != "bakery")
+            or (p["payer_site"] not in ("market", "bakery")
+                and p["payer_site"] != state["supply_circuits"][who]["stops"][1])):
+        raise ValueError("provision needs an actual named worksite and courier")
+    food = state["resources"].get(p["payer_site"], {}).get("food")
     worker_food = state["resources"].get(who, {}).get("food")
     if (type(food) is not int or food < p["units"]
             or type(worker_food) is not int
@@ -56,9 +62,9 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
     # All uncommitted market sales, gathering and cargo routes now see a
     # physically REDUCED market balance. Escrow is in this durable record,
     # still owned by the employer and unavailable for ordinary market sale.
-    state["resources"]["market"]["food"] -= p["units"]
+    state["resources"][p["payer_site"]]["food"] -= p["units"]
     state["courier_provisions"][p["id"]] = {
-        "courier_id": who, "payer_site": "market",
+        "courier_id": who, "payer_site": p["payer_site"],
         "total_units": p["units"], "remaining": p["units"],
         "created_at": state["time"], "payments": [],
     }
@@ -67,15 +73,18 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
 def choose_courier_provision(state: WorldState, courier_id: str
                              ) -> tuple[str, int] | None:
     circuit = state.supply_circuits.get(courier_id)
-    if (circuit is None or circuit["index"] != 3
-            or circuit["carry"] is not None
-            or state.entities[courier_id]["location_id"] != "market"):
+    if circuit is None or circuit["carry"] is not None:
         return None
     delivery_count = circuit["deliveries"]
     if delivery_count < 1:
         return None  # Never pay for an empty route or mere hired presence.
+    here = state.entities[courier_id]["location_id"]
     for contract_id, contract in sorted(state.courier_provisions.items()):
+        site = contract["payer_site"]
+        expected_stop = (2 if site == "bakery" else 3 if site == "market"
+                         else 1 if site == circuit["stops"][1] else -1)
         if (contract["courier_id"] == courier_id
+                and circuit["index"] == expected_stop and here == site
                 and contract["remaining"] > 0
                 and not any(row["service_deliveries"] == delivery_count
                             for row in contract["payments"])):
@@ -91,7 +100,9 @@ def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
             or fields not in ({"id", "courier_id", "service_deliveries"},
                               {"id", "courier_id", "service_deliveries", "proof"})
             or (fields == {"id", "courier_id", "service_deliveries", "proof"}
-                and p["proof"] != "prior_market_service")
+                and p["proof"] not in ("prior_market_service",
+                                       "bakery_grain_delivery",
+                                       "farm_water_delivery"))
             or not _id(p["id"])
             or type(p["service_deliveries"]) is not int):
         raise ValueError("courier food wage needs trusted physical-service proof")
@@ -102,10 +113,19 @@ def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
     if p["courier_id"] != who:
         raise ValueError("wage contract worker identity does not match")
     circuit = state["supply_circuits"][who]
+    site = contract["payer_site"]
     service = p["service_deliveries"]
-    if (service < 1 or circuit["deliveries"] != service
-            or circuit["index"] != 3 or circuit["carry"] is not None
-            or state["entities"][who]["location_id"] != "market"
+    expected_stop = (2 if site == "bakery" else 3 if site == "market"
+                     else 1 if site == circuit["stops"][1] else -1)
+    proof = p.get("proof")
+    if ((site == "bakery" and proof != "bakery_grain_delivery")
+            or (site not in ("bakery", "market")
+                and proof != "farm_water_delivery")
+            or (site == "market" and proof in
+                ("bakery_grain_delivery", "farm_water_delivery"))
+            or service < 1 or circuit["deliveries"] != service
+            or circuit["index"] != expected_stop or circuit["carry"] is not None
+            or state["entities"][who]["location_id"] != site
             or any(t["npc_id"] == who and t["status"] == "traveling"
                    for t in state["travels"].values())
             or any(a["npc_id"] == who and a["status"] == "running"
@@ -139,8 +159,13 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
         if (not _id(ident) or type(c) is not dict
                 or set(c) != {"courier_id", "payer_site", "total_units",
                               "remaining", "created_at", "payments"}
-                or c["payer_site"] != "market"
+                or c["payer_site"] not in (
+                    "market", "bakery",
+                    state["supply_circuits"].get(c["courier_id"], {})
+                        .get("stops", ["", ""])[1])
                 or "market" not in state["market_stalls"]
+                or (c["payer_site"] == "bakery" and
+                    state["supply_circuits"][c["courier_id"]]["stops"][2] != "bakery")
                 or c["courier_id"] not in state["supply_circuits"]
                 or c["courier_id"] in worker_ids
                 or state["npcs"][c["courier_id"]]["role"] != "courier"
