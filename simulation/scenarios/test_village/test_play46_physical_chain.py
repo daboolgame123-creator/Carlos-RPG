@@ -21,7 +21,7 @@ def _e(kind, data):
     return DomainEvent(kind, None, "finite trusted setup", 0, data)
 
 
-def _initialize(db):
+def _initialize(db, *, ore_stock=1, charcoal_stock=1, smith_copper=2):
     db.create_world(WORLD)
     events = [_e("LocationCreated", {"id": x, "name": x})
               for x in (FORGE, MINE, KILN)]
@@ -52,9 +52,9 @@ def _initialize(db):
     resources = {
         FORGE: {"iron_ore": 0, "charcoal": 0, "anvil": 1,
                 "iron_fitting": 0, "coin_copper": 0},
-        MINE: {"iron_ore": 1, "coin_copper": 0},
-        KILN: {"charcoal": 1, "coin_copper": 0},
-        SMITH: {"coin_copper": 2, "iron_ore": 0, "charcoal": 0},
+        MINE: {"iron_ore": ore_stock, "coin_copper": 0},
+        KILN: {"charcoal": charcoal_stock, "coin_copper": 0},
+        SMITH: {"coin_copper": smith_copper, "iron_ore": 0, "charcoal": 0},
         CUSTOMER: {"coin_copper": 2, "iron_fitting": 0},
     }
     for owner, owned in resources.items():
@@ -182,9 +182,10 @@ def test_purchased_ore_and_charcoal_cross_4_roads_and_fund_smith_wage(tmp_path):
 
 
 
-def _auto_boot(db):
+def _auto_boot(db, *, ore_stock=1, charcoal_stock=1, smith_copper=2):
     """Smith's actual work shift and contract are initialized at time zero."""
-    state = _initialize(db)
+    state = _initialize(db, ore_stock=ore_stock,
+                        charcoal_stock=charcoal_stock, smith_copper=smith_copper)
     return db.append(WORLD, "auto:work-contract", state.revision, [
         _e("NPCRoutineConfigured", {
             "npc_id": SMITH, "home_id": MINE,
