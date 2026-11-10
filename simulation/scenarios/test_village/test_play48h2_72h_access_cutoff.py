@@ -50,6 +50,28 @@ def test_genuine_treatment_thirteen_residents_causal_access_at_72h(tmp_path):
                 audit = audit_food_access_barriers(state)
                 cash = audit_npc_economy(state)
                 assert cash["copper_scope_complete"] and cash["copper_known_total"] == 12
+                # Actual personal wallets and employer/site treasuries are
+                # separate. The consigned courier pocket is NOT freely
+                # spendable even when it has a physical copper entry.
+                known_coins = {
+                    owner: bag["coin_copper"]
+                    for owner, bag in sorted(state.resources.items())
+                    if type(bag.get("coin_copper")) is int
+                    and bag["coin_copper"] > 0
+                }
+                assert sum(known_coins.values()) == 12
+                private_coin_holders = {
+                    who: amount for who, amount in known_coins.items()
+                    if who in state.npcs and who not in state.supply_circuits
+                }
+                site_coin_holders = {
+                    who: amount for who, amount in known_coins.items()
+                    if who not in state.npcs
+                }
+                entrusted_coin_holders = {
+                    who: amount for who, amount in known_coins.items()
+                    if who in state.supply_circuits
+                }
                 assert audit["npc_count"] == 13
                 assert audit["schema"] == 43 and audit["rules"] == 58
                 assert db.snapshot(WORLD).to_dict() == state.to_dict()
@@ -63,6 +85,11 @@ def test_genuine_treatment_thirteen_residents_causal_access_at_72h(tmp_path):
                     "market_saleable_loaves": audit["market_saleable_food_known"],
                     "market_employer_food_escrow": audit["market_site_owned_escrow_food"],
                     "hunger_at_cap": audit["hunger_at_100"],
+                    "known_coin_by_personal_owner": private_coin_holders,
+                    "known_coin_by_site_or_non_npc_owner": site_coin_holders,
+                    "known_consignment_copper_pockets": entrusted_coin_holders,
+                    "known_personal_coin_total": sum(private_coin_holders.values()),
+                    "known_site_or_non_npc_coin_total": sum(site_coin_holders.values()),
                     "personally_spendable_copper_known_actors": sum(
                         x["personally_spendable_copper"] is not None
                         and x["personally_spendable_copper"] >= 2
