@@ -214,6 +214,36 @@ def choose_workshop_material_deposit(state: WorldState, who: str) -> MaterialDep
     return MaterialDeposit(site, item, quantity) if quantity >= 1 else None
 
 
+def is_waiting_at_actual_local_material_job(state: WorldState, who: str) -> bool:
+    """Observe only physically present, ACTIVE, bounded local supply work.
+
+    A traveling buyer may wait for a witnessed shopkeeper production batch;
+    distant worksite stock, unrealized futures and idle shops NEVER qualify.
+    The clock's existing recorded job completion awakens the buyer.
+    """
+    recipe = _recipe(state, who)
+    if recipe is None or not _free(state, who) or not _healthy(state, who):
+        return False
+    here = state.entities[who]["location_id"]
+    if here == recipe["site_id"]:
+        return False
+    stall = state.market_stalls.get(here)
+    if stall is None:
+        return False
+    item = recipe["input_resource"]
+    if _unreserved_personal(state, who, item) != 0:
+        return False
+    seller = stall["keeper_id"]
+    return any(
+        job["status"] == "running"
+        and job["npc_id"] == seller
+        and job["site_id"] == here
+        and 0 < job["due"] - state.time <= 900
+        and state.production_recipes[job["recipe_id"]]["output_resource"] == item
+        for job in state.production_jobs.values()
+    )
+
+
 def choose_material_known_road(state: WorldState, who: str) -> MaterialWalk | None:
     """Explore only the person's own visited/surveyed route graph.
 
@@ -238,6 +268,8 @@ def choose_material_known_road(state: WorldState, who: str) -> MaterialWalk | No
     last_work = _latest_work_arrival(state, who, site)
 
     if here != site:
+        if is_waiting_at_actual_local_material_job(state, who):
+            return None
         if bag > 0 or last_supplier > last_work:
             path = shortest_known_route(state, who, site)
             if path:

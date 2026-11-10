@@ -165,8 +165,14 @@ def choose_compound_purchase(state: WorldState, who: str) -> MaterialPurchase | 
     )
 
 
-def choose_compound_known_road(state: WorldState, who: str) -> MaterialWalk | None:
+def choose_compound_known_road(
+    state: WorldState, who: str, *, retry_after_seconds: int | None = None
+) -> MaterialWalk | None:
     """Contract-driven real travel without remote stock inspection."""
+    if (retry_after_seconds is not None
+            and (type(retry_after_seconds) is not int
+                 or not 600 <= retry_after_seconds <= 86400)):
+        raise ValueError("known supplier revisit needs bounded positive interval")
     rec = _compound_recipe(state, who)
     if rec is None or not _free(state, who) or not _healthy(state, who):
         return None
@@ -228,6 +234,40 @@ def choose_compound_known_road(state: WorldState, who: str) -> MaterialWalk | No
             if path:
                 return MaterialWalk(path[0], place,
                                     f"firsthand_supplier_of={item}")
+    # PLAY48-N opt-in: ONE HOUR after an actual first-hand unsuccessful
+    # shop visit, a solvent worker may walk there again. This is not a
+    # remotely read stock/quote. A real medieval shop may replenish while
+    # its customer is away. Require a personally VISITED and still reachable
+    # supplier with a publicly observed occupational trade; no absent
+    # shop can be found solely through omniscient global market listings.
+    if retry_after_seconds is not None:
+        source_role = {
+            "charcoal": "charcoal_burner",
+            "iron_ore": "miner",
+            "wood": "woodcutter",
+        }
+        options = []
+        visited = set(nav["visited"])
+        for item in missing:
+            required_role = source_role.get(item)
+            if required_role is None:
+                continue
+            for place in visited:
+                if place == work or place not in state.market_stalls:
+                    continue
+                keeper = state.market_stalls[place]["keeper_id"]
+                if state.npcs[keeper]["role"] != required_role:
+                    continue
+                arrival = _last_visit(state, who, place)
+                if arrival < 0 or state.time-arrival < retry_after_seconds:
+                    continue
+                path = shortest_known_route(state, who, place)
+                if path:
+                    options.append((path[0], place, item))
+        if options:
+            route_id, place, item = min(options)
+            return MaterialWalk(route_id, place,
+                                f"bounded_firsthand_shop_retry_for={item}")
     unknown = _known_frontier(state, who)
     if unknown is None:
         return None

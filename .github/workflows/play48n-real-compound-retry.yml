@@ -1,0 +1,39 @@
+name: PLAY-48N real 2-hour smith visited charcoal shop retry
+on:
+  push:
+    branches: ["feature/play48n-hourly-firsthand-charcoal-revisit-20261110"]
+    paths:
+      - ".github/workflows/play48n-real-compound-retry.yml"
+      - "simulation/src/carlos_sim/compound_professional_trade.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/scenarios/test_village/test_play48h3_early_market_wage.py"
+      - "simulation/scenarios/test_village/test_play48n_smith_visited_kiln.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48-n-real-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  actual-twenty-fourth-of-four-days:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m compileall -q src/carlos_sim/compound_professional_trade.py src/carlos_sim/living_world.py scenarios/test_village/test_play48n_smith_visited_kiln.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48n_smith_visited_kiln.py
