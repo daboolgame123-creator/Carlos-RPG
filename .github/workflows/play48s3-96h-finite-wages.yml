@@ -1,0 +1,37 @@
+name: PLAY-48S3 genuine 13-NPC finite courier wages four-day A-B
+on:
+  push:
+    branches: ["experiment/play48s3-courier-wages-96h-endurance-20261111"]
+    paths:
+      - ".github/workflows/play48s3-96h-finite-wages.yml"
+      - "simulation/scenarios/test_village/test_play48s3_fourday_finite_courier_wages.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48s3-96h-actual-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  four-day-independent-replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Exact SHA and four-day genuine 13-NPC no-money-printing A-B
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m compileall -q scenarios/test_village/test_play48s3_fourday_finite_courier_wages.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48s3_fourday_finite_courier_wages.py
