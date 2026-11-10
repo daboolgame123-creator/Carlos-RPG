@@ -84,6 +84,35 @@ def test_two_cycle_physical_material_bottleneck_diagnosis(tmp_path, raw_stock, c
                 name: len(_jobs(state, name)) for name in
                 ("saw-board", "forge-fitting", "build-frame", "repair-gear")
             }
+            if raw_stock == 2:
+                # Two real extraction-to-workshop purchases / production cycles
+                # for both professions. Downstream tools have no second real
+                # buyer/work order: prove and preserve that bottleneck instead
+                # of silently disposing of unsold finished goods.
+                assert counts == {
+                    "saw-board": 2, "forge-fitting": 2,
+                    "build-frame": 1, "repair-gear": 1,
+                }
+                assert state.resources[CARP]["plank"] == 1
+                assert state.resources[SMITH]["iron_fitting"] == 1
+                assert state.resources[BUILD]["frame"] == 1
+                assert state.resources[REPAIR]["fixed_gear"] == 1
+                for recipe in ("saw-board", "forge-fitting"):
+                    jobs = _jobs(state, recipe)
+                    assert len({j["started_at"] for j in jobs}) == 2
+                    assert all(j["input_before"] == j["input_after"] + 1 for j in jobs)
+                    assert all("work_wage" in j for j in jobs)
+                    assert sum(j["work_wage"]["amount"] for j in jobs) == 2
+                assert sum(trade["resource"] == "wood"
+                           for trade in state.market_trades.values()) == 2
+                assert sum(trade["resource"] == "iron_ore"
+                           for trade in state.market_trades.values()) == 2
+            elif raw_stock == 1:
+                assert counts == {k: 1 for k in counts}
+            else:
+                assert counts == {k: 0 for k in counts}
+                assert not state.market_trades
+
             trades = [
                 {"buyer": trade["buyer_id"], "resource": trade["resource"],
                  "time": trade["executed_at"]}
