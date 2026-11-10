@@ -13,6 +13,7 @@ on:
       - "experiment/play30c-stocked-market-proof-20261108"
       - "feature/play31-seven-npc-offline-vertical-slice-20261108"
       - "feature/play31-acceptance-player-journey-20261108"
+      - "integration/play48h1-43-58-regression-gates-20261110"
   pull_request:
     paths:
       - "simulation/**"
