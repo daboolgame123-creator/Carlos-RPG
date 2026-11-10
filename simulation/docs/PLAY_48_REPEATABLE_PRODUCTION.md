@@ -33,15 +33,43 @@ Result: [GitHub Actions 42809457769](https://github.com/daboolgame123-creator/Ca
 
 ## Third strand: 48-C, real 96h systemic blocker
 
-A separate negative-control test `test_play48_post72_blockers.py` runs the *actual PLAY-47 13-resident* world to 96 simulated hours, daily SQLite close/reopen/full-replay, with only documented 2+2+2 bounded units of rain. It compares days three and four, courier health, deliveries, food stocks, sales, wages, job output, and copper conservation. **The 96h job is not yet a verified success at the time of this report**: [GitHub Actions run 42808714301](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808714301). Its exact SHA is `20170febecc72657293c9fd8b4f3e9ef4e0fa119`.
+A separate negative-control test `test_play48_post72_blockers.py` runs the *actual PLAY-47 13-resident* world to 96 simulated hours, daily SQLite close/reopen/full-replay, with only documented 2+2+2 bounded units of rain. It compares days three and four, courier health, deliveries, food stocks, sales, wages, job output, and copper conservation. **Verified green:** [GitHub Actions run 42808714301](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808714301), both Python 3.10 and 3.13, one test passed on each at exact SHA `20170febecc72657293c9fd8b4f3e9ef4e0fa119`. At both 72h and 96h the two couriers are at hunger 100, with zero added deliveries, trades, finished jobs or wages. Five loaves remain in the market while copper stays at twelve. **No autonomous post-72h recovery has been demonstrated.**
 
 Even a green negative-control run would not be a fix. PLAY-47 already demonstrated that hunger and lack of locally owned affordable food halt couriers despite unsold food; reserved consignment copper cannot be used as an NPC wallet. A valid next **gameplay implementation** needs a documented, funded and uniquely receipted food-access/transport contract and/or a genuine locally backed construction/repair buyer. It cannot inject food at t>0, let the courier spend entrusted copper or create free sales merely to show activity.
 
+## Verified scope: 48-D, two genuine downstream customers and scheduled demand
+
+A separate 8-NPC scenario `test_play48_funded_downstream.py` initializes two distinct buyer-owned construction sites and two distinct repair sites with exactly two finite wood/ore units and **twelve known copper units**. The extra construction/repair crews have actual site recipes, physical tools, roads, opening wallets, and independently observed shifts; no NPC is moved or told to purchase after trusted time-zero initialization.
+
+A simultaneous 250-second second-worker shift is a **negative control**: the second workers arrive while the first units are sold, acquire no stock, return and cannot rely on remote stock changes. Merely giving them money and demand **does not** grant market omniscience.
+
+With the later second-worker shift at 520 simulated seconds and the unchanged original 250-second first shift, the world completes **two independent frame-construction jobs and two independent repair jobs**, in four distinct sites, after **eight actually paid and physically reached trades**: 2 wood, 2 ore, 2 plank and 2 iron fittings. Both buyers' own wallets decrease by two copper; all producer and buyer site resources balance, while total copper remains twelve. The frames are **physical site outputs, not complete houses**. Zero-cash buyers make no downstream purchases or jobs; a one-unit source cannot fill the second set of orders. Separate single-versus-segmented 6,500-second advances produce identical full states apart from the extra explicit clock revisions, and both pass SQLite reopening and genesis replay.
+
+- [Acceptance run 42812662593](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42812662593) **SUCCESS**, Python 3.10/3.13, 55 pass + one intentional old-save skip per version.
+- [Stronger receipt test 42813027213](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42813027213) **SUCCESS**, both versions, actual wallet debits and four physical customer round trips.
+- [Clock partition parity 42813190428](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42813190428) **SUCCESS**, both versions.
+
+This is a time-zero **real demand scheduling** solution in a finite disposable world, not a 96-hour hunger recovery or new universal demand-planning AI. Neither producer nor buyer can know future market stock without a real physical visit. No engine rule or persisted data format is changed.
+
+## Verified scope: 48-E, locally paid food aid without a new event type
+
+A separate small genuine PLAY-27 world proves a feasible **existing event-ledger route** to help a stranded hungry courier:
+
+1. At market, actual NPC Omar spends **2 of his 4 real opening copper** to purchase one actual site-owned loaf from a co-present merchant. This transfers loaf ownership to Omar and pays the site.
+2. The authorized survival coordinator raises Huda's actual hunger to **100**, and `audit_courier` confirms **no eligible courier action** at the hunger threshold, without starting the supply planner.
+3. Under an explicitly operator-directed local trial, Omar carries his personally bought loaf along **three scheduled, adjacent physical road legs** to the well, consuming 150 in-world seconds. It is never teleported.
+4. Huda makes an authorized `AssistanceRequested`; Omar accepts and physically hands over one loaf through existing `AssistanceFulfilled` receipts. Duplicate fulfilment fails closed. Site-owned market food is never reassigned without an actual purchase.
+5. Huda eats **her own** loaf through `NPCFoodConsumed`, lowering genuine hunger from 100 to 75. The **existing** autonomous supply coordinator then records **one real delivery**. Original resource and food conservation audits pass; total copper remains twelve; no courier personal wallet is fabricated.
+
+[Final executable targeted acceptance 42814104944](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42814104944) **SUCCESS**, 57 tests passed and one intentionally skipped per Python 3.10 and 3.13, exact SHA `54270a4dccb7203c9ed586cabe2ac9ad8127310f`.
+
+**Crucial distinction:** purchase, 3-leg transport and assistance were **explicitly initiated by a trusted test driver**, unlike production loops in 48-A/B/D. This is a reducer/custody feasibility proof, **not** an autonomous relief policy, market salary, or 96h economic recovery. Any future autonomous support must decide **who volunteers/pays**, use personally known routes and real local inventories, honor courier consignment exclusions and prevent repetitive out-of-thin-air contracts. An employer-funded recurring compensation rule needs its own explicit contract and tests; no new event type or Schema/Rules change is approved here.
+
 ## Remaining gates before PLAY-48 technical closure
 
-1. Close/check the real 96h run and any failing assertions on its exact source; document whether day-four recovery exists (do **not** assume yes).
-2. Develop and test at least one **legitimate downstream demand/consumption or contracted funding** path that allows a second *full* builder/repair cycle, if physical resources and finance permit. Terminal goods must be used/sold for a real reason, not deleted by a test.
-3. A true post-72h recovery claim needs at least **one real delivery after hour 72 plus attributable later work, sale or meal**, independently compared against the unrecovered control; if not physically feasible, document quantified blocker instead.
+1. The real 96h run is green as an **unrecovered negative control**, not a recovery; retain its fixed causal findings (five unsold loaves, starving couriers, zero new receipts on day four).
+2. Two full **frame-and-repair** iterations now pass in an 8-NPC bounded world with distinct, funded customer work orders; terminal frames/gear remain tangible site assets, **not completed houses**. The general NPC market demand/need lifecycle beyond these contracted projects remains open.
+3. The manually instructed local food assistance successfully restores **one physically delivered courier leg** in a smaller world; it does **not** count as autonomous day-four recovery. That claim still needs a real post-72h delivery plus attributable later work, sale or meal in the 13-person world against the unrecovered control, with a funded human-compatible purchase/delivery policy.
 4. Run targeted + full historical suites, including authentic old-world refusal, replay, aliasing and 7-day endurance as relevant, Python 3.10 + 3.13 on final exact HEAD. Follow branch's work queue, review and protection gates.
 5. External independent review, real Windows/power-loss production saves and `P0_PRODUCTION_NOT_APPROVED` remain separate release restrictions. No auto merge into `main`.
 
