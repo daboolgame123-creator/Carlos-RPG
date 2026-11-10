@@ -1,5 +1,19 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48R — experimental physically harvested fertile-field comparison (2026-11-11)
+
+**Status: PLAY48_OPEN / RELEASE_NO_GO**, Schema 43 / Rules 58 unchanged. Branch `experiment/play48r-fertile-field-real-harvest-20261111`. This is NOT a production yield rule or claim that hunger is solved. [Full scope, hypotheses, and evidence](PLAY48R_FERTILE_FIELD_TRIAL.md).
+
+| Task | Classification / state | Evidence and next gate |
+| --- | --- | --- |
+| PLAY48-R0 | CHAT_EXECUTABLE / VERIFIED | Trusted opt-in fertile east-field 12-unit crop harvest vs original 7, same 13 NPCs, 12 copper, 3 opening bread, finite seed/water, original roads and 24h time. Dual-Python 3.10/3.13 genesis/provenance checks passed [run 42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865), code SHA `bb86167d`. Necessary 7d upper bound 55→90 with observed rain; zero-future-rain upper bound only 27 in new trial, no recovery inferred |
+| PLAY48-R1 | CHAT_EXECUTABLE / VERIFICATION_PENDING | Same [run 42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865), actual two physical 13-NPC villages through 24/48h, crop/event/wage and SQLite replay; do NOT claim food-sales improvement until result verified |
+| PLAY48-R2 | CHAT_EXECUTABLE / VERIFICATION_PENDING | [full Python regression #42919617997](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919617997), code unchanged after `bb86167d` with extra workflow, exact source-based SHA `aa836e46`. Await actual 3.10/3.13 final |
+| PLAY48-R3 | BLOCKED_BY_DEPENDENCY / PLANNED | Select a physically credible sustainable resource/soil/water input contract after genuine R1 results, with causality and no time-zero invisible subsidy; 72–168h A/B and independent review still required |
+| PLAY48-S onward | BLOCKED_BY_DEPENDENCY / PLANNED | Credible recurring actual courier food access, bakery grain reserve and 7-day acceptance rely on durable R outcomes. Do not bypass hunger safety or start PLAY49 |
+
+
+
 ## PLAY-48Q — food carrying-capacity and real 48h courier lockup (2026-11-10)
 
 **Authoritative current evidence:** [PLAY48Q_CAUSAL_FOOD_CAPACITY_DECISION.md](PLAY48Q_CAUSAL_FOOD_CAPACITY_DECISION.md). Phase remains `PLAY48_OPEN / RELEASE_NO_GO`, Schema 43 / Rules 58, experimental branch `analysis/play48q-seven-day-physical-food-capacity-20261110`. No `main` merge, no P0 approval. Prior PLAY48H0 entries below are historical and not authoritative current status.
