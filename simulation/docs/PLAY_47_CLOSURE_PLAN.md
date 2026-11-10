@@ -1,14 +1,18 @@
 # PLAY-47 closure plan
 
-**Status:** OPEN / RELEASE NO-GO. Work stays in PLAY-47 until its technical gates pass.
+**Status before gated promotion:** OPEN / RELEASE NO-GO. The
+[technical closure decision](PLAY_47_TECHNICAL_CLOSURE_DECISION.md) proposes
+`CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER` only after every required
+check passes on the exact decision commit and that commit is fast-forwarded to
+the integration branch. Work stays in PLAY-47 until those gates pass.
 
 | Order | Work | Acceptance | Status |
 | --- | --- | --- | --- |
-| 1 | Integrate the verified PLAY-47 stack | Check targeted and full CI on the exact heads of PRs #53, #54 and #55 for Python 3.10 and 3.13. Advance the PLAY-47 branch only by verified fast-forwards. | In progress |
-| 2 | Isolate the fourth-day delivery failure | Compare the same 13-resident world with and without a finite worker provision. Fix opening copper, total opening bread, roads, labor, weather and clock policy. Move existing bread into a named worker's ownership at genesis, debiting opening market stock by the same amount. Measure the effect on early market revenue as well as courier hunger, successful deliveries, harvesting, wages and actual meals. | Design checked against the supply reducer |
-| 3 | Choose the smallest supported recovery | Keep provisions as an experimental initial allocation. Consider a local fee from actual market proceeds only if the comparison shows food access is the bottleneck and workers can buy food on their routes. A courier fee needs a separate ownership contract before implementation because the current copper slot is used for reserved cash consignments. If the limiting factor is physical capacity, record the observed deficit and stop the repair branch at that evidence. | Depends on step 2 |
-| 4 | Verify endurance and adverse cases | Use the same 72-hour and 96-hour checkpoints. A recovery claim requires a real post-stall delivery and subsequent production or purchase attributable to it. Run seven days where feasible with recorded resource sources, keeping the unrecovered control. Cover drought, depleted treasury, missing road, unavailable seller, duplicate payment, attempted use of consigned cargo, old-save rejection, default-off parity, SQLite reopen/replay and clock partition equivalence. | Pending |
-| 5 | Decide and record technical closure | Targeted and full CI must pass on the final exact SHA on both Python versions. Record verified outcomes, any capacity limits and review status in the phase report and work queue. The established criteria allow documented finite-resource failure as an experimental outcome. An unexplained divergence or violated accounting invariant blocks closure. | Pending |
+| 1 | Integrate the verified PLAY-47 stack | Check targeted and full CI on the exact heads of PRs #53–55 and follow-up candidates #57–60 for Python 3.10 and 3.13. Advance the PLAY-47 branch only by verified fast-forwards. | #53–60 verified; integration fast-forwarded b326c5e → 77ddb54 → 0f8c31f; final documentation decision awaits its own exact-head checks |
+| 2 | Isolate the fourth-day delivery failure | Compare the same 13-resident world with and without a finite worker provision. Fix opening copper, total opening bread, roads, labor, weather and clock policy. Move existing bread into a named worker's ownership at genesis, debiting opening market stock by the same amount. Measure the effect on early market revenue as well as courier hunger, successful deliveries, harvesting, wages and actual meals. | Negative control verified in #57 on both Python versions |
+| 3 | Choose the smallest supported recovery | Keep provisions as an experimental initial allocation. Consider a local fee from actual market proceeds only if the comparison shows food access is the bottleneck and workers can buy food on their routes. A courier fee needs a separate ownership contract before implementation because the current copper slot is used for reserved cash consignments. If the limiting factor is physical capacity, record the observed deficit and stop the repair branch at that evidence. | Existing funding/custody boundary tested locally before immobility; no supported recurring compensation added; finite failure is the measured outcome |
+| 4 | Verify endurance and adverse cases | Use the same 72-hour and 96-hour checkpoints. A recovery claim requires a real post-stall delivery and subsequent production or purchase attributable to it. Run seven days where feasible with recorded resource sources, keeping the unrecovered control. Cover drought, depleted treasury, missing road, unavailable seller, duplicate payment, attempted use of consigned cargo, old-save rejection, default-off parity, SQLite reopen/replay and clock partition equivalence. | Complete runtime 0f8c31f matrix passed on both Pythons, with identical seven-day reports. Final decision commit must repeat all required checks |
+| 5 | Decide and record technical closure | Targeted and full CI must pass on the final exact SHA on both Python versions. Record verified outcomes, any capacity limits and review status in the phase report and work queue. The established criteria allow documented finite-resource failure as an experimental outcome. An unexplained divergence or violated accounting invariant blocks closure. | Runtime 0f8c31f has 1,694 full + 179 targeted per Python green. The prepared decision activates only after its own exact-SHA checks and verified promotion |
 
 ## First experiment
 
@@ -67,3 +71,14 @@ delivery receipt and a separate personal balance. Its first proof must show
 a worker physically buying or receiving food while the route can still run.
 The day-four evidence alone does not authorize a remote transfer, a payment
 out of cargo, or a recurring fee under the existing rules.
+
+## Settlement correction and closure evidence
+
+The extra-personal-loaf case above describes #59's quote-selection result.
+Executing that accepted quote exposed an incoming-payment custody violation:
+the courier cannot retain personal copper in its consignment slot. Candidate
+`0f8c31f15e065cdc2d101bdfa6ca9b67d3331bdf` rejects that settlement before writes
+and skips equivalent food/grain/material quotes. A courier can still steward
+site-owned stock because its price belongs to the site. See the
+[closure evidence](PLAY_47_CLOSURE_EVIDENCE.md) for the reproduced failures,
+receipt ownership contract, exact tested source identities and gate coverage.
