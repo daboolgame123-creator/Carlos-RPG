@@ -1,0 +1,52 @@
+name: PLAY-48 bounded two-cycle physical production diagnostics
+on:
+  push:
+    branches: ["feature/play48-repeatable-physical-loops-20261110"]
+    paths:
+      - ".github/workflows/play48-repeatable-production.yml"
+      - "simulation/scenarios/test_village/test_play48_repeatable_loops.py"
+      - "simulation/scenarios/test_village/test_play48_compound_repeat.py"
+      - "simulation/scenarios/test_village/test_play48_funded_downstream.py"
+      - "simulation/scenarios/test_village/test_play48_funded_food_aid.py"
+      - "simulation/scenarios/test_village/test_play46_physical_chain.py"
+      - "simulation/src/**"
+      - "simulation/docs/PLAY_48_REPEATABLE_PRODUCTION.md"
+      - "simulation/docs/WORK_QUEUE.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  bounded:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Assert exact HEAD, compile and run PLAY-48 baseline with PLAY-45 regression
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src scenarios
+          PYTHONPATH=src python -m pytest -q -s scenarios/test_village/test_play48_repeatable_loops.py \
+            scenarios/test_village/test_play48_compound_repeat.py \
+            scenarios/test_village/test_play48_funded_downstream.py \
+            scenarios/test_village/test_play48_funded_food_aid.py \
+            scenarios/test_village/test_play45_multisector.py \
+            scenarios/test_village/test_play46_physical_chain.py \
+            scenarios/test_village/test_play46_multi_input.py
