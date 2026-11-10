@@ -70,12 +70,17 @@ def test_actual_2h_real_same_money_fuel_sale_and_wage(tmp_path):
                for v in stock.values() if type(v) is int)
     with SQLiteEventStore(choice) as db:
         assert db.verify(WORLD).to_dict()==observed.to_dict()
-        visits = [t for t in observed.travels.values()
-                  if t["npc_id"]=="smith"
-                  and t["destination"]=="charcoal_kiln"
-                  and t["status"]=="arrived"]
-        assert len(visits)>=2
-        assert visits[-1]["arrived_at"]-visits[0]["arrived_at"]>=3600
+        visits = sorted(
+            (t["arrived_at"] for t in observed.travels.values()
+             if t["npc_id"] == "smith"
+             and t["destination"] == "charcoal_kiln"
+             and t["status"] == "arrived")
+        )
+        assert len(visits) >= 2
+        # Stored travel IDs sort lexically, not by arrival chronology.
+        # A later physical re-visit must follow the first actual visit
+        # after the strict configured simulated-time cooldown.
+        assert visits[-1] - visits[0] >= 3600, visits
         assert db.db.execute("PRAGMA integrity_check").fetchone()==("ok",)
         assert db.db.execute("PRAGMA foreign_key_check").fetchall()==[]
     print("PLAY48N_2H_ACTUAL_FIRSTHAND_FUEL_REVISIT",
