@@ -144,6 +144,35 @@ def test_four_distinct_downstream_customers_preserve_economy(
                            for t in start.market_trades.values()) == 2
                 assert sum(t["resource"] == "iron_fitting"
                            for t in start.market_trades.values()) == 2
+                assert len(start.market_trades) == 8, (
+                    "two ore/wood procurements plus two plank/fitting purchases"
+                )
+                for buyer in ("builder", "builder_east", "repairer", "repairer_east"):
+                    sales = [t for t in start.market_trades.values()
+                             if t["buyer_id"] == buyer]
+                    assert len(sales) == 1 and sales[0]["total_paid"] == 2
+                    assert start.resources[buyer]["coin_copper"] == 0
+                for site, tool in ((BUILD, "hammer"),
+                                   ("building_east", "hammer"),
+                                   (REPAIR, "wrench"),
+                                   ("repair_east", "wrench")):
+                    assert start.resources[site][tool] == 1
+                # Count only real, durable jobs; a second completed
+                # construction project is a FRAME, not an entire house.
+                assert len([job for job in start.production_jobs.values()
+                            if job["status"] == "completed"
+                            and job["recipe_id"] in (
+                                "build-frame", "building_east-project",
+                                "repair-gear", "repair_east-project"
+                            )]) == 4
+                for who in ("builder", "builder_east", "repairer", "repairer_east"):
+                    legs = [t for t in start.travels.values() if t["npc_id"] == who]
+                    assert len(legs) >= 2
+                    assert all(t["status"] == "arrived"
+                               and t["due"]-t["start"] ==
+                                   start.routes[t["route_id"]]["seconds"]
+                               for t in legs)
+
             if worker_coins == 0:
                 assert all(item["quantity"] == 0 for item in terminal.values()), (
                     "No downstream buyer may receive a free product"
