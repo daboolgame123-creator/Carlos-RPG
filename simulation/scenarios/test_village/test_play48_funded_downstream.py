@@ -195,3 +195,43 @@ def test_four_distinct_downstream_customers_preserve_economy(
             }, sort_keys=True), flush=True)
         finally:
             clock.close_session(WORLD)
+
+
+def test_second_project_contracts_partition_and_reopen_parity(tmp_path):
+    """NPCs use the same known roads and cash in one long or split wait."""
+    observed = []
+    for name, checkpoints in (
+        ("single", (6500,)),
+        ("split", (700, 1400, 2600, 4300, 6500)),
+    ):
+        path = tmp_path / f"contract-{name}.sqlite"
+        with SQLiteEventStore(path) as db:
+            state = _two_real_contracts(db, material=2, worker_coins=2,
+                                        second_shift=520)
+            clock = TimeEngine(db)
+            clock.open_session(WORLD)
+            try:
+                engine = _engine(db, clock)
+                for checkpoint in checkpoints:
+                    state = engine.advance(
+                        WORLD, seconds=checkpoint-state.time,
+                        command_id=f"play48:parity:{name}:{checkpoint}",
+                        expected_revision=state.revision,
+                    ).state
+                assert state.time == 6500
+                assert _cash(state) == 12
+                assert db.snapshot(WORLD).to_dict() == state.to_dict()
+                assert db.verify(WORLD).to_dict() == state.to_dict()
+                state_dict = state.to_dict()
+                state_dict.pop("revision")  # extra explicit clock partition receipts
+                observed.append(state_dict)
+            finally:
+                clock.close_session(WORLD)
+        with SQLiteEventStore(path) as reopened:
+            checked = reopened.verify(WORLD).to_dict()
+            checked.pop("revision")
+            assert checked == observed[-1]
+            assert reopened.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+    assert observed[0] == observed[1], (
+        "same physical market and independent contracts must be clock-partition invariant"
+    )
