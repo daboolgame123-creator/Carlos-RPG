@@ -188,8 +188,11 @@ def create_destination(source: Path, destination: Path, expected: dict,
         # Linux CI: same-filesystem hard-link creation is exclusive and atomic.
         # Existing target/symlink cannot be overwritten by os.link().
         os.link(staging, destination)
-        with os.fdopen(os.open(destination.parent, os.O_RDONLY), "rb") as directory:
-            os.fsync(directory.fileno())
+        parent_fd = os.open(destination.parent, os.O_RDONLY)
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
         with SQLiteEventStore(destination) as reopened:
             for world_id in WORLD_IDS:
                 actual = reopened.verify(world_id).to_dict()
