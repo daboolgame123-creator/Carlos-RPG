@@ -86,8 +86,12 @@ def choose_courier_provision(state: WorldState, courier_id: str
 def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
                           supply_authorized: bool) -> None:
     p = event.data
+    fields = set(p)
     if (not supply_authorized or event.actor_id is not None
-            or set(p) != {"id", "courier_id", "service_deliveries"}
+            or fields not in ({"id", "courier_id", "service_deliveries"},
+                              {"id", "courier_id", "service_deliveries", "proof"})
+            or (fields == {"id", "courier_id", "service_deliveries", "proof"}
+                and p["proof"] != "prior_market_service")
             or not _id(p["id"])
             or type(p["service_deliveries"]) is not int):
         raise ValueError("courier food wage needs trusted physical-service proof")

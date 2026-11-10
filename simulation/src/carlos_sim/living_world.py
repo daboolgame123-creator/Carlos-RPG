@@ -420,13 +420,22 @@ class LivingWorldEngine:
                     if self.early_courier_food_wage_enabled:
                         from .courier_provisions import choose_courier_provision
                         eligible = choose_courier_provision(current, courier)
-                        if eligible is not None:
+                        if eligible is not None and any(
+                                e.event_type == "SupplyCargoDelivered"
+                                and e.actor_id == courier
+                                and e.data.get("courier_id") == courier
+                                and e.data.get("resource") in ("water", "grain", "food")
+                                and e.time <= current.time for e in events):
+                            # Same-command receipts are indispensable:
+                            # an employer cannot pay on the basis of an
+                            # unverified prior-command or forged delivery.
                             contract_id, service_number = eligible
                             append(DomainEvent("CourierProvisionPaid", None,
                                 "contracted courier earns real market food after completed service",
                                 current.time, {"id": contract_id,
                                                "courier_id": courier,
-                                               "service_deliveries": service_number}),
+                                               "service_deliveries": service_number,
+                                               "proof": "prior_market_service"}),
                                 supply_capability=True)
                     # Survey only the currently visible adjacent roads
                     # BEFORE selecting the next leg. Otherwise an existing
