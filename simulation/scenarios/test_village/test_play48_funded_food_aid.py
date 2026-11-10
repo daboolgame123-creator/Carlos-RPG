@@ -54,7 +54,16 @@ def test_physically_funded_local_bread_assistance_restores_one_real_delivery(tmp
 
             # Only the trusted clock runs. The courier's unmet hunger reaches
             # the actual supply selector cutoff; no NPC is moved by fiat.
-            state = clock.advance(
+            # A bare TimeEngine is intentionally NOT a survival clock:
+            # hunger ages only under the authorized opt-in survival coordinator.
+            # Disable the supply coordinator during this causal blockade setup
+            # so no courier trips occur before the recovery comparison.
+            aging_engine = LivingWorldEngine(
+                db, clock, economic_enabled=True, agriculture_enabled=True,
+                economy_only_enabled=True, survival_enabled=True,
+                supply_enabled=False, max_events_per_advance=5000,
+            )
+            state = aging_engine.advance(
                 WORLD, seconds=3600, command_id="play48:aid:starve",
                 expected_revision=state.revision,
             ).state
@@ -134,7 +143,7 @@ def test_physically_funded_local_bread_assistance_restores_one_real_delivery(tmp
                 db, clock, economic_enabled=True, agriculture_enabled=True,
                 economy_only_enabled=True, navigation_enabled=True,
                 routines_enabled=True, supply_enabled=True,
-                max_events_per_advance=5000,
+                survival_enabled=True, max_events_per_advance=5000,
             )
             result = engine.advance(
                 WORLD, seconds=350, command_id="play48:aid:resume",
