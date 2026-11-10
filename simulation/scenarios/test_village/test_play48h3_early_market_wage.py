@@ -189,3 +189,38 @@ def test_h3_13_npc_two_matching_contracts_genuine_96h_counterfactual(tmp_path):
     assert all(outcome["early"]["deliveries"][who] >= 0
                for who in ("huda","hana"))
     print("PLAY48H3_GENUINE_96H_A_B", json.dumps(outcome, sort_keys=True))
+
+
+def test_h3_early_payment_cannot_be_claimed_without_real_same_command_service(tmp_path):
+    import pytest
+    from carlos_sim import DomainEvent
+    from carlos_sim.store import InvalidEvent
+
+    path = tmp_path / "forged-early-wage.sqlite"
+    _seed(path)
+    with SQLiteEventStore(path) as db:
+        opening = _sign(db, workers=("huda",), units=1)
+        frozen = db.verify(WORLD).to_dict()
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            claim = DomainEvent(
+                "CourierProvisionPaid", None, "forged early wage without service", 0,
+                {"id": "food-wage-huda", "courier_id": "huda",
+                 "service_deliveries": 1, "proof": "prior_market_service"},
+            )
+            with pytest.raises((InvalidEvent, ValueError)):
+                db.append(WORLD, "h3:forged-no-delivery",
+                          opening.revision, [claim], supply_authorized=True)
+            assert db.verify(WORLD).to_dict() == frozen
+
+            fake_delivery = DomainEvent(
+                "SupplyCargoDelivered", "huda", "pretend unloaded nonexistent food", 0,
+                {"courier_id": "huda", "resource": "food"},
+            )
+            with pytest.raises((InvalidEvent, ValueError)):
+                db.append(WORLD, "h3:forged-with-untrue-cargo",
+                          opening.revision, [fake_delivery, claim], supply_authorized=True)
+            assert db.verify(WORLD).to_dict() == frozen
+        finally:
+            clock.close_session(WORLD)
