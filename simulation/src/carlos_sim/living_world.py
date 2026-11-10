@@ -84,7 +84,8 @@ class LivingWorldEngine:
                  multi_professional_markets_enabled: bool = False,
                  compound_procurement_enabled: bool = False,
                  professional_full_life_enabled: bool = False,
-                 early_courier_food_wage_enabled: bool = False):
+                 early_courier_food_wage_enabled: bool = False,
+                 hungry_woodcutter_work_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -220,6 +221,11 @@ class LivingWorldEngine:
                 "economy_only is incompatible"
             )
         self.professional_full_life_enabled = professional_full_life_enabled
+        if (type(hungry_woodcutter_work_enabled) is not bool
+                or (hungry_woodcutter_work_enabled
+                    and not professional_full_life_enabled)):
+            raise ValueError("hungry_woodcutter_work_enabled requires real full-life jobs")
+        self.hungry_woodcutter_work_enabled = hungry_woodcutter_work_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
@@ -240,6 +246,18 @@ class LivingWorldEngine:
             return False
         from .npc import _injury_rest_decision
         needs = state.npcs[npc_id]["needs"]
+        # PLAY48-M opt-in: a hungry *but still capable* woodcutter may
+        # CHOOSE genuine paid work before severe hunger (90). Merely having
+        # a real job does not transfer food/copper or override injuries,
+        # danger, fatigue, or the engine's existing work limit of 89.
+        # Default unchanged: hunger>=75 causes safety-first precedence.
+        if (self.hungry_woodcutter_work_enabled
+                and state.npcs[npc_id]["role"] == "woodcutter"
+                and 75 <= needs["hunger"] < 90
+                and needs["fatigue"] < 70 and needs["safety"] < 75):
+            from .npc import _injury_rest_decision
+            if _injury_rest_decision(state.injuries, npc_id) is None:
+                return False
         return (needs["hunger"] >= 75 or needs["fatigue"] >= 70
                 or needs["safety"] >= 75
                 or _injury_rest_decision(state.injuries, npc_id) is not None)
