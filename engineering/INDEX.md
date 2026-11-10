@@ -1,5 +1,14 @@
 # Carlos RPG — سجل الخطتين الهندسيتين قبل PLAY-48
 
+## تنفيذ دفعة الجرد والقياس — 10 نوفمبر 2026 (دليل فعلي)
+
+- **CI-00 (جزئي مثبت):** [جرد 50 Workflow وقياسات ستة تشغيلات ناجحة](reports/CI_00_BASELINE_2026-11-10.md)؛ ما زال التحقق من Required Checks محجوبًا بصلاحية GitHub API (403)، ولذلك لا تغييرات بعد على Required Gates أو حذف ملفات. `IN_PROGRESS / BASELINE_VERIFIED`.
+- **MIG-00 (تحليل المصدر مثبت):** [تدقيق الفرق الحقيقي 41/56 إلى 42/57](reports/MIG_00_41_56_TO_42_57_AUDIT.md). الحقول الأساسية ثابتة لكن عقود الإنتاج/السوق تغيرت؛ لا تحويل معتمد أو تلقائي. `IN_PROGRESS / SEMANTIC_INVENTORY_REQUIRED`.
+- **CI-03 (عينة فعلية مثبتة):** [41 اختبارًا + تجربة اقتصاد صغيرة على Python 3.10 و3.13 وتحليل cProfile](reports/CI_03_BOUNDED_PROFILE_2026-11-10.md)؛ [Run 42786344145](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42786344145) **SUCCESS** على SHA `d1b379b4c6c5ef4d8fe86a794501f2718939c4f2`. أظهر كثافة إعادة إسقاط الأحداث/التحميل؛ لم يثبت بعد اختناق تجربة الأيام السبعة. `BOUNDED_SAMPLE_VERIFIED`.
+- **بيئة التنفيذ:** فرع `engineering/ci-mig-baseline-20261110` مستقل؛ لا تغييرات في `simulation/src/` أو `simulation/tests/` أو `main`، ولا تغيير Schema/Rules أو ترحيل ملف حفظ. قياس الأداء يستعمل [workflow محدود](../.github/workflows/ci03-performance-probe.yml) على الفرع الهندسي فقط، وليس بوابة نشر.
+- **التتابع الصحيح:** `CI-03b` قياس 6h/24h، و`MIG-01` اختبار النسخة الأصلية، ثم تصميم `CI-01` بعد معرفة Required Checks أو تصعيد صلاحية القراءة، قبل أي CI-04 structural sharing. `P0_PRODUCTION_NOT_APPROVED` قائم.
+
+
 **تاريخ الإيداع:** 2026-11-10  
 **الحالة:** `PLANNED / NOT_IMPLEMENTED`، دون ترحيل حفظ أو تحسين CI مُنفذ.  
 **الأساس المعتمد:** `feature/play47-npc-economic-endurance-20261109` / `38ef0049478e4d62fd465dadc7c1eaf406b9b4d2`، Schema **42** / Rules **57**. PLAY-47 **CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER** بعد تحقق [CI كامل](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731120034) و[CI موجه](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731103345) وترقية fast-forward. `main` خارج العمل، وP0 غير معتمد.
