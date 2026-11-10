@@ -24,6 +24,7 @@ def _joined_bootstrap(
     repair_shift_end=20_000, initial_market_food=3,
     site_payroll_enabled=False, site_payroll_wage_coin=1,
     bakery_opening_food_wage=False, farm_opening_food_wage=False,
+    wood_charcoal_jobs_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -34,6 +35,10 @@ def _joined_bootstrap(
     """
     if type(site_payroll_enabled) is not bool:
         raise ValueError("site_payroll_enabled must be boolean")
+    if type(wood_charcoal_jobs_enabled) is not bool:
+        raise ValueError("wood_charcoal_jobs_enabled must be boolean")
+    if wood_charcoal_jobs_enabled and not site_payroll_enabled:
+        raise ValueError("wood/charcoal employment needs existing funded salary loop")
     if (type(bakery_opening_food_wage) is not bool
             or (bakery_opening_food_wage and initial_market_food != 3)
             or type(farm_opening_food_wage) is not bool
@@ -137,6 +142,38 @@ def _joined_bootstrap(
                     signed.add(terms["id"])
             assert signed == {"finite-harvest", "grain-to-bread"}
 
+        if wood_charcoal_jobs_enabled:
+            # ONE of the thirteen existing people, Layla, takes an actual
+            # finite-timber job. The forest location is created before her
+            # time-zero entity, not via unrecorded teleport later.
+            layla_at = next(i for i, ev in enumerate(events)
+                            if ev.event_type == "EntityCreated"
+                            and ev.data.get("id") == "layla")
+            events.insert(layla_at, _e("LocationCreated", {
+                "id": "lumberyard", "name": "Lumberyard",
+            }))
+            changed = set()
+            for i, ev in enumerate(events):
+                if ev.data.get("owner_id") == "layla" and (
+                        ev.event_type == "ResourceChanged"
+                        and ev.data.get("resource") == "coin_copper"):
+                    assert ev.data["current"] == 2
+                    updated = dict(ev.data)
+                    updated["current"] = 0
+                    events[i] = _e(ev.event_type, updated)
+                    changed.add("layla-wallet")
+                if ev.event_type == "EntityCreated" and ev.data.get("id") == "layla":
+                    updated = dict(ev.data)
+                    updated["location_id"] = "lumberyard"
+                    events[i] = _e(ev.event_type, updated)
+                    changed.add("layla-location")
+                if ev.event_type == "NPCConfigured" and ev.data.get("npc_id") == "layla":
+                    updated = dict(ev.data)
+                    updated["role"] = "woodcutter"
+                    events[i] = _e(ev.event_type, updated)
+                    changed.add("layla-role")
+            assert changed == {"layla-wallet", "layla-location", "layla-role"}
+
         sites = ("smithy", "iron_mine", "charcoal_kiln", "repair_shop")
         staff = (
             ("smith", "blacksmith", "smithy"),
@@ -151,6 +188,9 @@ def _joined_bootstrap(
             ("smith-mine", "smithy", "iron_mine", 30),
             ("smith-kiln", "smithy", "charcoal_kiln", 40),
             ("smith-repair", "smithy", "repair_shop", 50),
+            *((("kiln-lumberyard", "charcoal_kiln", "lumberyard", 35),
+                ("market-lumberyard", "market", "lumberyard", 45))
+              if wood_charcoal_jobs_enabled else ()),
         ):
             events.append(_e("RouteCreated", {
                 "id": rid, "a": a, "b": b, "seconds": duration,
@@ -186,6 +226,22 @@ def _joined_bootstrap(
             "burner": {"food": 0, "labor_units": 0,
                        "investigation_attempts": 0},
         }
+        if wood_charcoal_jobs_enabled:
+            # The two original coins of Layla are deposited as real employer
+            # working capital at the forest. One of the repairer's coins is
+            # likewise moved to the charcoal maker's purchasing wallet.
+            # Neither money nor raw lumber appears after genesis.
+            resources["lumberyard"] = {
+                "standing_timber": 3, "wood": 0, "axe": 1,
+                "coin_copper": 2,
+            }
+            resources["charcoal_kiln"] = {
+                "wood": 0, "charcoal": 0, "kiln_tool": 1,
+            }
+            resources["burner"]["coin_copper"] = 1
+            resources["repairman"]["coin_copper"] = 1
+            # Old 1 charcoal unit is deliberately excluded from the
+            # treatment: real charcoal must require actual purchased wood.
         for owner, owned in resources.items():
             for resource, amount in owned.items():
                 events.append(_e("ResourceChanged", {
@@ -210,6 +266,12 @@ def _joined_bootstrap(
                 "previous": None, "current": 0, "source": "initialization",
             }))
 
+        if wood_charcoal_jobs_enabled:
+            events.append(_e("NPCRoutineConfigured", {
+                "npc_id": "layla", "home_id": "market",
+                "workplace_id": "lumberyard", "work_start": 0,
+                "work_end": 20_000,
+            }))
         for owner, home, workplace, start in (
             ("smith", "iron_mine", "smithy", 0),
             ("miner", "bakery", "iron_mine", 0),
@@ -226,6 +288,7 @@ def _joined_bootstrap(
             ("iron_mine", "miner"),
             ("charcoal_kiln", "burner"),
             ("smithy", "smith"),
+            *((("lumberyard", "layla"),) if wood_charcoal_jobs_enabled else ()),
         ):
             events.append(_e("MarketStallConfigured", {
                 "site_id": site, "keeper_id": keeper,
@@ -251,6 +314,23 @@ def _joined_bootstrap(
                 "tool_resource": "wrench", "duration_seconds": 90,
             }),
         ))
+        if wood_charcoal_jobs_enabled:
+            events.extend((
+                _e("ProductionRecipeConfigured", {
+                    "id": "finite-timber-cutting", "site_id": "lumberyard",
+                    "role": "woodcutter", "input_resource": "standing_timber",
+                    "input_amount": 1, "output_resource": "wood",
+                    "output_amount": 1, "tool_resource": "axe",
+                    "duration_seconds": 120, "wage_coin": 2,
+                }),
+                _e("ProductionRecipeConfigured", {
+                    "id": "finite-wood-charcoal", "site_id": "charcoal_kiln",
+                    "role": "charcoal_burner", "input_resource": "wood",
+                    "input_amount": 1, "output_resource": "charcoal",
+                    "output_amount": 1, "tool_resource": "kiln_tool",
+                    "duration_seconds": 120, "wage_coin": 1,
+                }),
+            ))
 
     seed_physical_supply(
         db, water=water, harvest_yield=3,
@@ -262,9 +342,18 @@ def _joined_bootstrap(
     audit = audit_npc_economy(state)
     assert len(state.npcs) == 11
     assert state.resources["omar"]["coin_copper"] == 2
-    assert state.resources["layla"]["coin_copper"] == 2
+    assert state.resources["layla"]["coin_copper"] == (
+        0 if wood_charcoal_jobs_enabled else 2
+    )
     assert audit["copper_scope_complete"] is True
     assert audit["copper_known_total"] == 12
+    if wood_charcoal_jobs_enabled:
+        assert state.npcs["layla"]["role"] == "woodcutter"
+        assert state.resources["lumberyard"]["standing_timber"] == 3
+        assert state.resources["lumberyard"]["coin_copper"] == 2
+        assert state.resources["burner"]["coin_copper"] == 1
+        assert state.resources["repairman"]["coin_copper"] == 1
+        assert state.resources["charcoal_kiln"]["charcoal"] == 0
     if site_payroll_enabled:
         assert state.resources["carlos"]["coin_copper"] == 0
         assert state.resources["farm"]["coin_copper"] == 1
