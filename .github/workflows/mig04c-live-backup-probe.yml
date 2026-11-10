@@ -1,0 +1,92 @@
+name: MIG-04c isolated SQLite Online Backup WAL proof (not production)
+on:
+  push:
+    branches: ["engineering/mig04c-wal-backup-20261110"]
+    paths:
+      - ".github/workflows/mig04c-live-backup-probe.yml"
+      - "engineering/probes/mig04c_live_backup_probe.py"
+      - "engineering/probes/mig04_adversarial_probe.py"
+      - "engineering/reports/MIG_04C_CONCURRENT_WAL_BACKUP_2026-11-10.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mig04c-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  online-backup-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: contract
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: a6c20e3edfbe85cc68819cd4fadd909472b21fd5
+          path: predecessor
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: 38ef0049478e4d62fd465dadc7c1eaf406b9b4d2
+          path: target
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install historical fixture dependency
+        run: python -m pip install pytest
+      - name: Construct authentic two-world 41/56 disposable source
+        env:
+          PYTHONPATH: predecessor/simulation/src:predecessor/simulation/tests
+        run: |
+          test "$(git -C predecessor rev-parse HEAD)" = "a6c20e3edfbe85cc68819cd4fadd909472b21fd5"
+          test "$(git -C target rev-parse HEAD)" = "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2"
+          test "$(git -C contract rev-parse HEAD)" = "${{ github.sha }}"
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine, NPCMarketService
+          from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+          from test_market_02c import prepare, _bake, _offer, _buy
+          assert (SCHEMA_VERSION, RULES_VERSION) == (41, 56)
+          original = Path("fixture-old-41-56.sqlite")
+          with SQLiteEventStore(original) as db:
+              prepare(db)
+              clock = TimeEngine(db)
+              clock.open_session("village")
+              try:
+                  _bake(db, clock)
+                  service = NPCMarketService(db, clock)
+                  _offer(db, service)
+                  village = _buy(db, service)
+                  assert db.verify("village").to_dict() == village.to_dict()
+                  assert db.snapshot("village").to_dict() == village.to_dict()
+              finally:
+                  clock.close_session("village")
+              secondary = db.create_world("secondary-41-56")
+              secondary = db.append("secondary-41-56", "secondary:bootstrap", 0, [
+                  DomainEvent("LocationCreated", None, "second world genuine bootstrap", 0,
+                              {"id": "second-site", "name": "Second"}),
+                  DomainEvent("ResourceChanged", None, "second world authentic resources", 0,
+                              {"owner_id": "second-site", "resource": "coin_copper",
+                               "previous": None, "current": 3, "source": "initialization"}),
+              ], bootstrap=True)
+              assert db.snapshot("secondary-41-56").to_dict() == db.verify("secondary-41-56").to_dict() == secondary.to_dict()
+              assert db.db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+              Path("fixture-expected.json").write_text(json.dumps({
+                  "village": village.to_dict(), "secondary-41-56": secondary.to_dict()
+              }, sort_keys=True))
+          print("MIG04C_PINNED_SOURCE", hashlib.sha256(original.read_bytes()).hexdigest(), flush=True)
+          PY
+      - name: Exercise WAL writer and SQLite Backup API then verified isolated rebuild
+        env:
+          PYTHONPATH: target/simulation/src
+        run: |
+          python contract/engineering/probes/mig04c_live_backup_probe.py
