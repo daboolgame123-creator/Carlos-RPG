@@ -11,6 +11,7 @@ on:
       - "simulation/scenarios/test_village/test_play46_physical_chain.py"
       - "simulation/src/**"
       - "simulation/docs/PLAY_48_REPEATABLE_PRODUCTION.md"
+      - "simulation/docs/WORK_QUEUE.md"
   workflow_dispatch:
 permissions:
   contents: read
