@@ -11,6 +11,7 @@ import json
 import pytest
 
 from carlos_sim import SQLiteEventStore, TimeEngine
+from carlos_sim.store import DuplicateCommand
 from test_play45_multisector import (
     _seed, _engine, _cash, WORLD, CARP, SMITH, BUILD, REPAIR, WOOD, IRON,
 )
@@ -80,6 +81,24 @@ def test_two_cycle_physical_material_bottleneck_diagnosis(tmp_path, raw_stock, c
             assert db.verify(WORLD).to_dict() == state.to_dict()
             assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
             assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
+
+            # Reusing an accepted engine command must never replay wages,
+            # copy outputs or create a second transaction ledger receipt.
+            head = state.to_dict()
+            known_receipts = db.db.execute(
+                "SELECT count(*) FROM events WHERE world_id=?", (WORLD,)
+            ).fetchone()[0]
+            with pytest.raises(DuplicateCommand):
+                engine.advance(
+                    WORLD, seconds=1,
+                    command_id=f"play48:diagnose:{raw_stock}:4300",
+                    expected_revision=state.revision,
+                )
+            assert db.load(WORLD).to_dict() == head
+            assert db.db.execute(
+                "SELECT count(*) FROM events WHERE world_id=?", (WORLD,)
+            ).fetchone()[0] == known_receipts
+
             counts = {
                 name: len(_jobs(state, name)) for name in
                 ("saw-board", "forge-fitting", "build-frame", "repair-gear")
@@ -133,5 +152,53 @@ def test_two_cycle_physical_material_bottleneck_diagnosis(tmp_path, raw_stock, c
                 "manual_npc_actions": 0,
             }
             print("PLAY48A_BOTTLENECK " + json.dumps(report, sort_keys=True), flush=True)
+        finally:
+            clock.close_session(WORLD)
+
+
+@pytest.mark.parametrize("carpenter_cash,smith_cash", [(0, 0), (0, 2), (2, 0)])
+def test_full_raw_inventory_does_not_create_free_trade_or_unfunded_wages(
+    tmp_path, carpenter_cash, smith_cash,
+):
+    """A stock-rich supplier alone cannot fund an insolvent worker's order."""
+    with SQLiteEventStore(tmp_path / f"cash-{carpenter_cash}-{smith_cash}.sqlite") as db:
+        start = _seed(
+            db, wood=2, iron=2,
+            carpenter_cash=carpenter_cash, smith_cash=smith_cash,
+            builder_cash=4, repairer_cash=4,
+        )
+        opening = _cash(start)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = _engine(db, clock)
+            final = engine.advance(
+                WORLD, seconds=700, command_id="play48:credit-negative",
+                expected_revision=start.revision,
+            ).state
+            _audit(final, opening, 2, 2)
+            completed = {
+                recipe: len(_jobs(final, recipe)) for recipe in
+                ("saw-board", "forge-fitting", "build-frame", "repair-gear")
+            }
+            assert (completed["saw-board"] == 0) == (carpenter_cash == 0)
+            assert (completed["forge-fitting"] == 0) == (smith_cash == 0)
+            if carpenter_cash == 0:
+                assert final.resources[WOOD]["wood"] == 2
+                assert final.resources[BUILD]["frame"] == 0
+                assert not any(t["buyer_id"] == "carpenter"
+                               for t in final.market_trades.values())
+            if smith_cash == 0:
+                assert final.resources[IRON]["iron_ore"] == 2
+                assert final.resources[REPAIR]["fixed_gear"] == 0
+                assert not any(t["buyer_id"] == "smith"
+                               for t in final.market_trades.values())
+            assert db.verify(WORLD).to_dict() == final.to_dict()
+            print("PLAY48_NEGATIVE_FINANCING " + json.dumps({
+                "carpenter_cash": carpenter_cash, "smith_cash": smith_cash,
+                "copper_conserved": opening == _cash(final),
+                "completed": completed,
+                "no_silent_credit": True,
+            }, sort_keys=True), flush=True)
         finally:
             clock.close_session(WORLD)
