@@ -90,8 +90,12 @@ def test_s3_true_four_day_employer_food_wage_causal_endurance(tmp_path):
     _check_wage_receipts(paid_path, new)
     assert sum(len(p["payments"]) for p in
                new.courier_provisions.values()) <= 2
-    assert all(c["remaining"] == 1 and not c["payments"]
-               for c in old.courier_provisions.values())
+    # The control still has the original H1 market food-delivery wage:
+    # Hana may earn a real meal for a genuine food delivery even if early
+    # payment is disabled. Huda's farm-water early wage is the distinction.
+    assert len(old.courier_provisions["farm-water-huda"]["payments"]) == 0
+    assert sum(len(c["payments"]) for c in
+               old.courier_provisions.values()) <= 2
     unpaid_post72 = _delta(checkpoints[2]["control"], checkpoints[3]["control"])
     paid_post72 = _delta(checkpoints[2]["paid"], checkpoints[3]["paid"])
     genuine_post72_recovery = (
