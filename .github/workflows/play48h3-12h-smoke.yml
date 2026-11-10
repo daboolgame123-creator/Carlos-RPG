@@ -1,0 +1,42 @@
+name: PLAY-48H3 proof-of-service wage small and real twelve-hour window
+on:
+  push:
+    branches:
+      - "feature/play48h3-earlier-backed-courier-wage-20261110"
+    paths:
+      - ".github/workflows/play48h3-12h-smoke.yml"
+      - "simulation/src/carlos_sim/courier_provisions.py"
+      - "simulation/src/carlos_sim/store.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/scenarios/test_village/test_play48h3_early_market_wage.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48h3-small-proof-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  claim-and-first-wage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Falsifiable real delivered service, early wage and fraud guard
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs \
+            scenarios/test_village/test_play48h3_early_market_wage.py \
+            -k 'early_service_wages_first_twelve_hours or early_payment_cannot_be_claimed'

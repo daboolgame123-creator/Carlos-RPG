@@ -286,15 +286,33 @@ class SQLiteEventStore:
             for i, wage in enumerate(events):
                 if wage.event_type != "CourierProvisionPaid":
                     continue
-                if i == 0:
-                    raise InvalidEvent("food wage requires same-command delivery receipt")
-                source = events[i-1]
-                if (source.event_type != "SupplyCargoDelivered"
-                        or source.actor_id != wage.data.get("courier_id")
-                        or source.data.get("courier_id") != wage.data.get("courier_id")
-                        or source.data.get("resource") != "food"
-                        or source.time != wage.time):
-                    raise InvalidEvent("food wage must immediately follow its physical market delivery")
+                # H1 default: preserve the original strict immediately
+                # preceding FOOD delivery evidence byte-for-byte.
+                # H3 explicit opt-in: a prior authenticated physical
+                # water/grain/food receipt in THIS SAME atomic command
+                # also proves completed work, with payment at market checked
+                # by the state reducer. Never trust a caller's counter alone.
+                if wage.data.get("proof") == "prior_market_service":
+                    witnessed = any(
+                        source.event_type == "SupplyCargoDelivered"
+                        and source.actor_id == wage.data.get("courier_id")
+                        and source.data.get("courier_id") == wage.data.get("courier_id")
+                        and source.data.get("resource") in ("water", "grain", "food")
+                        and source.time <= wage.time
+                        for source in events[:i]
+                    )
+                    if not witnessed:
+                        raise InvalidEvent("early courier food wage needs an earlier same-command physical delivery")
+                else:
+                    if i == 0:
+                        raise InvalidEvent("food wage requires same-command delivery receipt")
+                    source = events[i-1]
+                    if (source.event_type != "SupplyCargoDelivered"
+                            or source.actor_id != wage.data.get("courier_id")
+                            or source.data.get("courier_id") != wage.data.get("courier_id")
+                            or source.data.get("resource") != "food"
+                            or source.time != wage.time):
+                        raise InvalidEvent("food wage must immediately follow its physical market delivery")
         if any(e.event_type in ("SupplyCargoPicked", "SupplyCargoDelivered") for e in events):
             if not supply_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("cargo needs active trusted physical supply capability")

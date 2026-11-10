@@ -72,6 +72,8 @@ def choose_courier_provision(state: WorldState, courier_id: str
             or state.entities[courier_id]["location_id"] != "market"):
         return None
     delivery_count = circuit["deliveries"]
+    if delivery_count < 1:
+        return None  # Never pay for an empty route or mere hired presence.
     for contract_id, contract in sorted(state.courier_provisions.items()):
         if (contract["courier_id"] == courier_id
                 and contract["remaining"] > 0
@@ -84,8 +86,12 @@ def choose_courier_provision(state: WorldState, courier_id: str
 def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
                           supply_authorized: bool) -> None:
     p = event.data
+    fields = set(p)
     if (not supply_authorized or event.actor_id is not None
-            or set(p) != {"id", "courier_id", "service_deliveries"}
+            or fields not in ({"id", "courier_id", "service_deliveries"},
+                              {"id", "courier_id", "service_deliveries", "proof"})
+            or (fields == {"id", "courier_id", "service_deliveries", "proof"}
+                and p["proof"] != "prior_market_service")
             or not _id(p["id"])
             or type(p["service_deliveries"]) is not int):
         raise ValueError("courier food wage needs trusted physical-service proof")
@@ -108,7 +114,7 @@ def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
                    for job in state["production_jobs"].values())
             or any(row["service_deliveries"] == service
                    for row in contract["payments"])):
-        raise ValueError("wage cannot be paid without fresh local food delivery")
+        raise ValueError("wage cannot be paid without completed service at the actual hiring market")
     food = state["resources"].get(who, {}).get("food")
     if type(food) is not int or food < 0 or food >= MAX_BALANCE:
         raise ValueError("worker must have bounded initialized personal food")

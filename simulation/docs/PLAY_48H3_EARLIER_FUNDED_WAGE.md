@@ -1,0 +1,13 @@
+# PLAY-48H3 — Early *earned* food wage at market, controlled test
+
+**Experimental branch:** `feature/play48h3-earlier-backed-courier-wage-20261110`. **Disposables only. Schema 43 / Rules 58.**
+
+The existing H1 legitimate contract reserves one *original* market loaf for each of two real couriers at t=0. H1 only allowed payout after a *food* delivery, which requires the 13-NPC farm→bakery→market chain to reach the delivery threshold and may happen after hunger has undermined the workforce. A real market employer can instead pay an agreed wage **on site at the market**, once the courier has completed at least one actual physical water/grain/food delivery on their entrusted route. This is not charity or a fake purchase; it is a prepaid, noncash wage funded by stock the original employer already owned at signing. Every payout moves one counted escrow loaf into worker **personal** inventory; the normal meal policy may then consume it and reduce hunger. Two total obligations remain exactly two, the market initial saleable stock remains one, and opening copper stays twelve.
+
+For isolation, the new `early_courier_food_wage_enabled` runtime flag defaults **False**, requires actual courier supply and real food consumption opt-ins, and changes no world save shape or security authority. When enabled, the existing receipt validator confirms local market presence, no active delivery cargo, a recorded positive count of delivered actual parcels and a distinct, not-yet-paid receipt; duplicate service and forged payments are rejected. The original H1 path remains enabled with flag disabled, with its food-delivery proof unchanged.
+
+**Hypothesis, not verdict:** moving the *timing* of a real wage may keep essential couriers under hunger=90 early enough to survive a full route and enable later self-sufficient work. A 13-NPC counterfactual starts from copied identical genesis, signs **the same two contracts in both arms**, keeps the same six-hour simulation cadence, starting bread/cash/roads and recorded rain, and changes **only** the H3 flag. We measure true delivery, meals, sales, job and wage receipts at twelve hours and 96h, with physical food/grain/water/copper conservation, SQLite replay/restore and event-based proof that no worker earned anything without any service.
+
+**Do not call 96h improvement sustained economic health.** If both variants still fail, the next direction is genuinely affordable autonomous consumption/work access with employers paying from real revenues, not silently giving away original stock.
+
+**No main merge. No PLAY-49. No production save release.** `PLAY48_OPEN / RELEASE_NO_GO`.
