@@ -20,7 +20,8 @@ from test_play48_13npc_post72_relay import _stats
 import test_play39_rain_drought_real_day as ref
 
 
-def _original_engine(db, clock, *, early: bool):
+def _original_engine(db, clock, *, early: bool,
+                     hungry_woodcutter_work_enabled=False):
     return LivingWorldEngine(
         db, clock, max_events_per_advance=5000,
         decision_cooldown=3600,
@@ -34,6 +35,7 @@ def _original_engine(db, clock, *, early: bool):
         shopping_routes_enabled=True,
         professional_full_life_enabled=True,
         early_courier_food_wage_enabled=early,
+        hungry_woodcutter_work_enabled=hungry_woodcutter_work_enabled,
     )
 
 
@@ -73,13 +75,17 @@ def _conserve(state):
     return escrow
 
 
-def _run(path, end, *, early: bool):
+def _run(path, end, *, early: bool,
+         hungry_woodcutter_work_enabled=False):
     day_summaries = []
     with SQLiteEventStore(path) as db:
         clock = TimeEngine(db)
         clock.open_session(WORLD)
         state = db.verify(WORLD)
-        engine = _original_engine(db, clock, early=early)
+        engine = _original_engine(
+            db, clock, early=early,
+            hungry_woodcutter_work_enabled=hungry_woodcutter_work_enabled,
+        )
         try:
             for t in range(DAY // 4, end + 1, DAY // 4):
                 # Six-hour simulation slices, original deterministic NPC autonomy.
