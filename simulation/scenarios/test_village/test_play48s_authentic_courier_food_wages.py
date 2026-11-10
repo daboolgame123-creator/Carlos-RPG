@@ -131,7 +131,7 @@ def _check_wage_receipts(path, state):
         # The trusted reducer validates the same committed command as the
         # actual service. A legitimate ScheduledEventFired or other causal
         # event can appear between service and payment, so adjacency alone is
-        # an incorrect test oracle. SQLite's command_id is durable provenance.
+        # an incorrect test oracle. For a market prior-service wage even the\n        # service TIME can be earlier in the same atomic advance; farm/bakery\n        # deliveries remain immediate. SQLite command_id is durable proof.
         rows = list(db.db.execute(
             "SELECT command_id, payload FROM events WHERE world_id=? ORDER BY seq",
             (WORLD,),
@@ -157,7 +157,11 @@ def _check_wage_receipts(path, state):
                 if service_cmd == command
                 and delivery["event_type"] == "SupplyCargoDelivered"
                 and delivery["actor_id"] == who
-                and delivery["time"] == paid["time"]
+                and (
+                    delivery["time"] <= paid["time"]
+                    if proof == "prior_market_service"
+                    else delivery["time"] == paid["time"]
+                )
                 and delivery["data"]["courier_id"] == who
                 and delivery["data"]["resource"] in allowed_resource
             ]
