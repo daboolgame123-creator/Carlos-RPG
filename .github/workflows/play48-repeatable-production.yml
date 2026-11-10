@@ -5,6 +5,8 @@ on:
     paths:
       - ".github/workflows/play48-repeatable-production.yml"
       - "simulation/scenarios/test_village/test_play48_repeatable_loops.py"
+      - "simulation/scenarios/test_village/test_play48_compound_repeat.py"
+      - "simulation/scenarios/test_village/test_play46_physical_chain.py"
       - "simulation/src/**"
       - "simulation/docs/PLAY_48_REPEATABLE_PRODUCTION.md"
   workflow_dispatch:
@@ -38,4 +40,8 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           python -m compileall -q src scenarios
-          PYTHONPATH=src python -m pytest -q -s scenarios/test_village/test_play48_repeatable_loops.py scenarios/test_village/test_play45_multisector.py
+          PYTHONPATH=src python -m pytest -q -s scenarios/test_village/test_play48_repeatable_loops.py \
+            scenarios/test_village/test_play48_compound_repeat.py \
+            scenarios/test_village/test_play45_multisector.py \
+            scenarios/test_village/test_play46_physical_chain.py \
+            scenarios/test_village/test_play46_multi_input.py
