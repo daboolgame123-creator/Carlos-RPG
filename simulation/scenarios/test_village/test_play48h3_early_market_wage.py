@@ -56,15 +56,29 @@ def _conserve(state):
         if j["status"] == "running"
         and state.production_recipes[j["recipe_id"]]["output_resource"] == "food"
     )
+    # Read each frozen, authenticated physical harvest recipe, never a
+    # hardcoded fixture yield: the 3/7 historic worlds and the isolated
+    # fertile-field 3/12 experiment must use their OWN true grain ledgers.
+    # Reading is forensic only and cannot alter a running crop or actor.
+    yields = {}
+    for site_id in sorted(state.farm_plots):
+        candidates = [
+            rec["output_amount"] for rec in state.production_recipes.values()
+            if rec["site_id"] == site_id
+            and rec.get("input_resource") == "crop_ready"
+            and rec["output_resource"] == "grain"
+        ]
+        assert len(candidates) == 1 and candidates[0] > 0
+        yields[site_id] = candidates[0]
+    assert set(yields) == set(ref.CROP_YIELD)
     pending_harvest = sum(
-        ref.CROP_YIELD[j["site_id"]]
+        yields[j["site_id"]]
         for j in state.production_jobs.values()
         if j["status"] == "running"
-        and state.production_recipes[j["recipe_id"]]["input_resource"] == "crop_ready"
+        and state.production_recipes[j["recipe_id"]].get("input_resource") == "crop_ready"
     )
-    ripe = sum(stock[f]["crop_ready"] * ref.CROP_YIELD[f]
-               for f in ref.CROP_YIELD)
-    grown = sum(plot["matured"] * ref.CROP_YIELD[f]
+    ripe = sum(stock[f]["crop_ready"] * yields[f] for f in yields)
+    grown = sum(plot["matured"] * yields[f]
                 for f, plot in state.farm_plots.items())
     assert food + grain + consumed + pending_bakes + pending_harvest + ripe == (
         ref.START_FOOD + grown
