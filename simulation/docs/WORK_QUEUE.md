@@ -11,9 +11,11 @@ unchanged; no production save approval.
 | --- | --- | --- | --- | --- |
 | PLAY48-A | Bounded two-run real wood/carpentry and ore/forge, real shop purchases, cash and wages, zero-funds failure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42808944705](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808944705); enhanced tests [42809457769](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42809457769) |
 | PLAY48-B | Two autonomous ore+charcoal smelts, actual repairer demand, one sale funds two distinct jobs | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42809457769](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42809457769) — 51 passed/1 external-fixture skip per Python; repeat end-product demand not solved |
-| PLAY48-C | Real 13-NPC 96-hour post-stall demand/food/courier diagnostics | CHAT_EXECUTABLE | VERIFICATION_PENDING | [Run 42808714301](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808714301) pending when written |
-| PLAY48-D | Genuine downstream need or funded courier food access, no consigned-money spending | BLOCKED_BY_DEPENDENCY | PLANNED | Depends on verified 96h cause and a bounded receipt/ownership contract; **not yet a runtime implementation** |
-| PLAY48-CLOSE | Full exact-SHA regressions, day-four recovery/negative case, independent review disposition | BLOCKED_BY_DEPENDENCY | OPEN | Test all relevant Python 3.10/3.13 + historical compatibility; P0 remains independent |
+| PLAY48-C | Genuine 13-NPC 96-hour scarcity/hunger/courier blockade, no claimed recovery | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_AS_NEGATIVE_CONTROL | [CI 42808714301](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808714301) — SUCCESS each Python; 5 unsold loaves, 12 copper, no day-4 new work or deliveries |
+| PLAY48-D | Real 8-NPC funded downstream demand in 2 construction/2 repair sites with delayed shifts | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42812662593](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42812662593), [time parity 42813190428](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42813190428); 8 real trades, 4 terminal jobs, 12 copper, no engine changes |
+| PLAY48-E | Physically paid food assistance using existing event types: purchase → 3 roads → promise → handover → meal → courier delivery | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_AS_MANUAL_SERVICE_PROOF | [CI 42814104944](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42814104944) SUCCESS each Python, 57 pass/1 skip; **manual driver, not autonomous day-four relief** |
+| PLAY48-AUTO-AID | Model employer-funded or individually motivated lawful automatic aid with physically known road and personal ownership | DECISION_REQUIRED | PLANNED / NO_PRODUCTION_PATCH | No magic cargo, no access to courier consignment cash, no claimed 96h recovery; real employer/courier contract and independent acceptance needed |
+| PLAY48-CLOSE | Final exact-SHA targeted/full regressions, honest day-four unresolved limitation, external review disposition | BLOCKED_BY_DEPENDENCY | OPEN / RELEASE_NO_GO | No stable full GitHub Actions SUCCESS on latest report-bearing SHA yet. P0, genuine historic-save migration and `main` still independent. |
 
 [PLAY-48 evidence, diagnostics and accepted risks](PLAY_48_REPEATABLE_PRODUCTION.md).
 The **six earlier Draft engineering PRs #63–#68** remain unmerged and separate;
@@ -21,6 +23,15 @@ MIG-05 production approval is not a prerequisite for disposable PLAY-48 trials.
 Do not call the new tests a complete seven-day recovery, adopt made-up wood or
 iron regeneration, or skip tests because a work queue line changed.
 
+> **Historical record below:** the PLAY-47 pre-promotion queue was written
+> before its closure gate. The verified technical promotion later landed at
+> `38ef0049478e4d62fd465dadc7c1eaf406b9b4d2` on the integration
+> history, with full [CI 42731120034](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731120034)
+> and targeted [CI 42731103345](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731103345)
+> green for Python 3.10/3.13. The PLAY-47 entries are retained as archival
+> decision context and **do not re-open PLAY-47 or block disposable PLAY-48**.
+> Schema 42/Rules 57 remain the current simulation versions.
+>
 ## PLAY-47 — closure verification batch (updated 2026-11-10 UTC)
 
 **Current unverified-candidate state: OPEN / RELEASE NO-GO**; Schema **42** /
