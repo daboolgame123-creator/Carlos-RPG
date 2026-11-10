@@ -13,7 +13,32 @@ from carlos_sim import SQLiteEventStore, TimeEngine
 from carlos_sim.economic_diagnostics import audit_npc_economy
 from carlos_sim.compound_professional_trade import choose_compound_known_road
 from test_play48m_finite_employment import _seed_employed, _real_stats, WORLD
-from test_play48h3_early_market_wage import _run
+from test_play48h3_early_market_wage import _original_engine
+
+
+def _actual_two_hours(path, *, retry: bool):
+    """H3's helper advances only on 6h slices: it cannot run a 2h test."""
+    with SQLiteEventStore(path) as db:
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = _original_engine(
+                db, clock, early=False,
+                hungry_woodcutter_work_enabled=True,
+                retry_known_supplier_enabled=retry,
+            )
+            state = db.load(WORLD)
+            for target in (1800, 3600, 5400, 7200):
+                state = engine.advance(
+                    WORLD, seconds=target-state.time,
+                    command_id=f"play48n:real:{target}",
+                    expected_revision=state.revision,
+                ).state
+                assert state.time == target
+            assert db.verify(WORLD).to_dict() == state.to_dict()
+        finally:
+            clock.close_session(WORLD)
+    return state
 
 
 def test_retry_contract_rejects_non_bounded_interval(tmp_path):
@@ -28,11 +53,9 @@ def test_actual_2h_real_same_money_fuel_sale_and_wage(tmp_path):
     choice=tmp_path/"firsthand-one-hour-revisit.sqlite"
     _seed_employed(control)
     _seed_employed(choice)
-    original,_=_run(control,7200,early=False,
-                    hungry_woodcutter_work_enabled=True)
-    observed,_=_run(choice,7200,early=False,
-                    hungry_woodcutter_work_enabled=True,
-                    retry_known_supplier_enabled=True)
+    original = _actual_two_hours(control, retry=False)
+    observed = _actual_two_hours(choice, retry=True)
+    assert original.time == observed.time == 7200
     base,treatment=_real_stats(original),_real_stats(observed)
     assert base["copper_total"]==treatment["copper_total"]==12
     assert base["people"]==treatment["people"]==13
