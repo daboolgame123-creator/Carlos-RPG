@@ -1,0 +1,46 @@
+name: CI-04c measure PLAY-47 load caller replay hot paths (research only)
+on:
+  push:
+    branches: ["engineering/ci04c-load-callmap-20261110"]
+    paths:
+      - ".github/workflows/ci04c-load-callmap.yml"
+      - "engineering/probes/ci04c_load_callmap.py"
+      - "engineering/reports/CI_04C_LOAD_CALLMAP_2026-11-10.md"
+      - "engineering/reports/CI_04B_HEAD_SNAPSHOT_AB_NO_GO_2026-11-10.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci04c-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  callmap-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: contract
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: 38ef0049478e4d62fd465dadc7c1eaf406b9b4d2
+          path: target
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install pytest for genuine scenario imports
+        run: python -m pip install pytest
+      - name: Run 6h bounded source-parity and caller counters
+        env:
+          PYTHONPATH: target/simulation/src:target/simulation/scenarios/test_village
+        run: |
+          test "$(git -C contract rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git -C target rev-parse HEAD)" = "38ef0049478e4d62fd465dadc7c1eaf406b9b4d2"
+          python contract/engineering/probes/ci04c_load_callmap.py
