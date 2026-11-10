@@ -139,7 +139,8 @@ def db_guard_not_needed(state):
 def test_actual_twelve_hours_timbers_wages_and_material_trade(tmp_path):
     path = tmp_path / "real-13npc-work-money.sqlite"
     _seed_employed(path)
-    result, _ = _run(path, DAY // 2, early=False)
+    result, _ = _run(path, DAY // 2, early=False,
+                     hungry_woodcutter_work_enabled=True)
     assert result.time == DAY//2
     s = _real_stats(result)
     assert s["people"] == 13
