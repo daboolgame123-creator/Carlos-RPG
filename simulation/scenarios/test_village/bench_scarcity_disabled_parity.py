@@ -97,6 +97,7 @@ def main():
             assert not snapshot.get("treatments", {}), "feature-off parity must contain no treatments"
             assert not snapshot.get("farm_plots", {}), "feature-off must have zero active farm plots"
             assert not snapshot.get("supply_circuits", {}), "feature-off must have zero courier contracts"
+            assert not snapshot.get("courier_provisions", {}), "feature-off must have no courier wage contracts"
             assert not snapshot.get("hydrology_sources", {}), "feature-off must have no rain sources"
             assert not snapshot.get("metabolism_policy", {}), "feature-off must have baseline metabolism"
             assert not snapshot.get("player_quests", {}), "feature-off parity must not hide active player quests"
@@ -112,7 +113,7 @@ def main():
                 "rules_version": snapshot["rules_version"],
                 "state_digest": canonical_hash(snapshot),
                 "state_semantic_digest": canonical_hash({
-                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "metabolism_policy", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")
+                    k: v for k, v in snapshot.items() if k not in ("schema_version", "rules_version", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "hydrology_sources", "metabolism_policy", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers", "courier_provisions")
                 }),
                 "replay_equal": True,
             }
