@@ -7,6 +7,7 @@ on:
       - "simulation/scenarios/test_village/test_play38_multi_farm_couriers.py"
       - "simulation/scenarios/test_village/test_play48h3_early_market_wage.py"
       - "simulation/scenarios/test_village/test_play48r_fertile_field.py"
+      - "simulation/scenarios/test_village/test_play48q_real_food_capacity.py"
 permissions:
   contents: read
 concurrency:
