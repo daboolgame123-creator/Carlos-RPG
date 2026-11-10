@@ -1,0 +1,36 @@
+name: PLAY-48H2 no-omniscience spatial food/custody audit
+on:
+  push:
+    branches: ["analysis/play48h2-causal-food-access-20261110"]
+    paths:
+      - ".github/workflows/play48h2-access-audit.yml"
+      - "simulation/src/carlos_sim/food_access_diagnostics.py"
+      - "simulation/scenarios/test_village/test_play48h2_access_diagnostic.py"
+      - "simulation/docs/PLAY_48H2_FOOD_ACCESS_DIAGNOSIS.md"
+permissions:
+  contents: read
+jobs:
+  food-access:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Prove locally sourced finances, roads and actual food custody, no mutation
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -q \
+            scenarios/test_village/test_play48h2_access_diagnostic.py
