@@ -66,7 +66,8 @@ class LivingWorldEngine:
                  decision_cooldown: int = MIN_DECISION_COOLDOWN,
                  navigation_enabled: bool = False, social_enabled: bool = False,
                  social_cooldown: int = MIN_SOCIAL_COOLDOWN,
-                 assistance_enabled: bool = False, consumption_enabled: bool = False,
+                 assistance_enabled: bool = False, aid_relay_enabled: bool = False,
+                 consumption_enabled: bool = False,
                  survival_enabled: bool = False, gathering_enabled: bool = False,
                  foraging_enabled: bool = False, knowledge_enabled: bool = False,
                  food_navigation_enabled: bool = False,
@@ -105,6 +106,13 @@ class LivingWorldEngine:
         if type(assistance_enabled) is not bool:
             raise ValueError("assistance_enabled must be boolean")
         self.assistance_enabled = assistance_enabled
+        if (type(aid_relay_enabled) is not bool or
+                (aid_relay_enabled and not (
+                    assistance_enabled and consumption_enabled and survival_enabled
+                    and navigation_enabled and economic_enabled))):
+            raise ValueError("aid_relay_enabled requires assistance, consumption, "
+                             "survival, navigation and economy; and boolean flag")
+        self.aid_relay_enabled = aid_relay_enabled
         if type(consumption_enabled) is not bool:
             raise ValueError("consumption_enabled must be boolean")
         self.consumption_enabled = consumption_enabled
@@ -590,6 +598,10 @@ class LivingWorldEngine:
                             current.time, {'job_id': job_id, 'amount': wage}),
                             production_capability=True)
             if self.assistance_enabled:
+                if self.aid_relay_enabled:
+                    from .npc_food_relief import (
+                        choose_aid_relay, defer_regular_reply, event_id as aid_event_id
+                    )
                 # The fixed passes are independent of lexical NPC ID ordering:
                 # settle old promises, then respond, request, and respond to
                 # requests created in this tick. A provider can only make one
@@ -598,13 +610,80 @@ class LivingWorldEngine:
                     j['npc_id'] for j in current.production_jobs.values()
                     if j['status'] == 'running'
                 }
-                for phase in ('settle', 'respond', 'request', 'respond'):
+                # Relay mission decisions use only a previously co-present
+                # request, the provider's own purse and learned roads.
+                # They remain bounded to existing market/movement/help events.
+                if self.aid_relay_enabled:
+                    for donor_id in sorted(current.npcs):
+                        intent = choose_aid_relay(current, donor_id)
+                        if intent is None:
+                            continue
+                        if intent.kind == 'travel':
+                            rid = intent.route_id
+                            route = current.routes[rid]
+                            here = current.entities[donor_id]['location_id']
+                            destination = route['b'] if route['a'] == here else route['a']
+                            travel_id = aid_event_id('route', donor_id, current.time)
+                            sid = 'npc-travel:' + travel_id
+                            due_at = current.time + route['seconds']
+                            if travel_id in current.travels or sid in current.scheduled:
+                                raise InvalidEvent('duplicate aid-journey identifier')
+                            append(DomainEvent('ScheduledEventCreated', None,
+                                'learned road in response to local food plea',
+                                current.time,
+                                {'id': sid, 'due': due_at,
+                                 'order': current.next_schedule_order, 'kind': 'signal',
+                                 'payload': {'__npc_travel_id': travel_id},
+                                 'interrupt': False}), movement_capability=True)
+                            append(DomainEvent('NPCTravelStarted', donor_id,
+                                'personally funded aid across surveyed roads',
+                                current.time, {'id': travel_id, 'npc_id': donor_id,
+                                               'route_id': rid, 'origin': here,
+                                               'destination': destination, 'due': due_at,
+                                               'schedule_id': sid}),
+                                movement_capability=True)
+                            acted.add(donor_id)
+                            busy.add(donor_id)
+                        elif intent.kind == 'buy':
+                            trade_id = aid_event_id('buy', donor_id, current.time)
+                            if trade_id in current.market_trades:
+                                raise InvalidEvent('duplicate local aid-market receipt')
+                            append(DomainEvent('MarketTradeExecuted', donor_id,
+                                'donor pays for locally observed food from own funds',
+                                current.time, {'id': trade_id,
+                                               'offer_id': intent.offer_id,
+                                               'buyer_id': donor_id, 'quantity': 1,
+                                               'expected_unit_price': intent.price}),
+                                market_capability=True)
+                            economic_trades.append(trade_id)
+                            acted.add(donor_id)
+                        elif intent.kind == 'respond':
+                            append(DomainEvent('AssistanceResponded', donor_id,
+                                'voluntary acceptance after verified personal purchase',
+                                current.time,
+                                {'id': intent.request_id, 'accept': True}),
+                                assistance_capability=True)
+                            acted.add(donor_id)
+                            assistance_transitions.append((intent.request_id, 'promised'))
+                        else:
+                            raise InvalidEvent('unknown autonomous aid intent')
+                # Preserve default same-tick help when the relief flag is off.
+                # Under relay, a newly signed plea is allowed one subsequent
+                # planning tick before a penniless provider can decline.
+                phases = (('settle', 'respond', 'request')
+                          if self.aid_relay_enabled else
+                          ('settle', 'respond', 'request', 'respond'))
+                for phase in phases:
                     for actor_id in sorted(current.npcs):
                         if actor_id in acted:
                             continue
+                        if (self.aid_relay_enabled and phase == 'respond'
+                                and defer_regular_reply(current, actor_id)):
+                            continue
                         intent = choose_assistance_intent(
                             current, actor_id, phase,
-                            scarcity_enabled=self.scarcity_enabled)
+                            scarcity_enabled=self.scarcity_enabled,
+                            single_loaf_requests=self.aid_relay_enabled)
                         if intent is None:
                             continue
                         append(DomainEvent(intent.event_type, actor_id,
