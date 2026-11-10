@@ -15,7 +15,9 @@
   "evidence": [
     "engineering/reports/MIG_00_41_56_TO_42_57_AUDIT.md",
     "engineering/reports/MIG_01_ORIGINAL_BACKUP_SAMPLE_2026-11-10.md",
-    "engineering/reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md"
+    "engineering/reports/MIG_02_SEMANTIC_CONTRACT_2026-11-10.md",
+    "engineering/reports/MIG_02B_GENUINE_EVENT_SEMANTICS_2026-11-10.md",
+    "engineering/reports/MIG_03_TWO_ISOLATED_REBUILDS_2026-11-10.md"
   ],
   "source_invariants": [
     "original source-world database must remain byte-for-byte unchanged",
@@ -59,5 +61,36 @@
     "full target replay and semantic value comparison",
     "adversarial WAL/rollback/crash/duplicate/no-overwrite tests",
     "independent P0 release decision for production worlds"
+  ],
+  "disposable_fixture_proofs": [
+    {
+      "fixture": "historical bakery and market",
+      "source_sha256": "1168508aaa04ff9c3e97b2c439a4dc7c74b1a1d668a6d684ef86b954bf505dfe",
+      "event_count": 51,
+      "command_count": 6,
+      "read_only_semantic_replay_run": 42790950606,
+      "isolated_target_rebuild_run": 42791318864,
+      "results": "both_pythons_success_and_full_state_equal",
+      "scope": "one legacy recipe and market trade, no physical courier"
+    },
+    {
+      "fixture": "historical seven NPC physical courier",
+      "source_sha256": "c142c11f5ec69a624f469429788fda6fd09eddf0f00a771288d761c8b52ee5d2",
+      "event_count": 97,
+      "command_count": 2,
+      "read_only_semantic_replay_run": 42791690586,
+      "isolated_target_rebuild_run": 42791885581,
+      "results": "both_pythons_success_and_full_state_equal",
+      "scope": "finite physical cargo water, travel, crop and production; no pledged copper spending"
+    }
+  ],
+  "unproven_risks": [
+    "copper cargo custody with personal cash spending",
+    "loans and legal ownership transitions",
+    "injuries and care plus player-controlled story",
+    "arbitrary historical schemas or unknown event types",
+    "crash-safe exclusive target publication and full backup preflight",
+    "WAL and concurrent producer during source backup",
+    "actual Windows and multiworld long-lived save restore"
   ]
 }
