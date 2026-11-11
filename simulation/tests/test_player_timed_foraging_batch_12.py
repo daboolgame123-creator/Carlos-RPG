@@ -22,8 +22,8 @@ def wait(db, gateway, seconds, cid="wait"):
 
 
 def test_new_rules_without_changing_schema_or_unknown_resources():
-    assert SCHEMA_VERSION == 44
-    assert RULES_VERSION == 59
+    assert SCHEMA_VERSION == 45
+    assert RULES_VERSION == 60
     assert FORAGE_SECONDS == 60
 
 
@@ -55,7 +55,7 @@ def test_partial_clock_and_npc_autonomy_continue_without_autoplayer(tmp_path):
         mid = db.load(WORLD)
         assert first.status == "foraging"
         assert first.details["forage_remaining_seconds"] == 1
-        assert mid.time == 59
+        assert mid.time == 60
         assert mid.resources[PLAYER]["food"] == 0
         assert mid.resources["square"]["wild_food"] == 2
         assert PLAYER not in mid.npcs
