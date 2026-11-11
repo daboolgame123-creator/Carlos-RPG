@@ -1,0 +1,61 @@
+name: PLAY-48Y real 13-person Huda farm-site food wages
+on:
+  push:
+    branches: ["experiment/play48y-farm-worksite-paid-courier-20261111"]
+    paths:
+      - ".github/workflows/play48y-farm-food-wage.yml"
+      - "simulation/scenarios/test_village/test_play48y_huda_farm_worksite_food_wage.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48y-farm-owned-rations-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-two-loaf-farm-genesis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Exactly three opening loaves, two owned at farm, immutable world
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q scenarios/test_village/test_play48y_huda_farm_worksite_food_wage.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48y_huda_farm_worksite_food_wage.py -k "not authentic_13npc_48h"
+  genuine-farm-delivery-forty-eight-hour-a-b:
+    needs: real-two-loaf-farm-genesis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Two actual thirteen-NPC worlds up to 48h, farm worksite wage
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48y_huda_farm_worksite_food_wage.py -k "authentic_13npc_48h"
