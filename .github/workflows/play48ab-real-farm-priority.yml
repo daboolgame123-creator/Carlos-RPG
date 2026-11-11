@@ -1,0 +1,63 @@
+name: PLAY-48AB genuine pre-reserved farm grain barter 13 NPC acceptance
+on:
+  push:
+    branches: ["experiment/play48ab-bakery-obligation-physical-priority-20261111"]
+    paths:
+      - ".github/workflows/play48ab-real-farm-priority.yml"
+      - "simulation/src/carlos_sim/supply.py"
+      - "simulation/scenarios/test_village/test_play48ab_bakery_farm_bread_priority.py"
+      - "simulation/scenarios/test_village/test_play48aa_actual_barter_bread_return.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48ab-real-farm-priority-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-sha-reservation-and-property-guards:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: One real bakery share beats market shipment; no forged delivery
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src scenarios/test_village/test_play48ab_bakery_farm_bread_priority.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48ab_bakery_farm_bread_priority.py scenarios/test_village/test_play48aa_actual_barter_bread_return.py -k "not true_48h"
+  actual-48hour-bakery-to-farm-grain-share:
+    needs: exact-sha-reservation-and-property-guards
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Real identical 13-person origin 24/48h signed bread rights and actual deliveries
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48aa_actual_barter_bread_return.py -k "true_48h"
