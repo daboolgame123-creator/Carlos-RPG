@@ -374,6 +374,34 @@ def choose_cargo(state: WorldState, who: str) -> str | None:
     return None
 
 
+
+def choose_cargo_manifest(state: WorldState, who: str
+                          ) -> tuple[str, str] | None:
+    """One deterministic single-source cargo action + resource intent.
+
+    The courier policy and its projected reducer MUST agree on resource.
+    Never reconstruct a prospective parcel from a fixed leg-index map:
+    a signed farm-grain barter may carry actual bread instead of copper
+    on bakery→farm, and it may hold back quoted bakery loaves.
+    This read-only function neither grants local knowledge nor custody.
+    """
+    action = choose_cargo(state, who)
+    if action is None:
+        return None
+    rec = state.supply_circuits[who]
+    if action == "SupplyCargoDelivered":
+        cargo = rec["carry"]
+        if cargo is None:
+            raise ValueError("delivered cargo manifest missing physical parcel")
+        return action, cargo["resource"]
+    if action == "SupplyCargoPicked":
+        lane = _signed_physical_lane(state, rec, who)
+        if lane is None:
+            raise ValueError("cargo manifest chose an absent local freight leg")
+        return action, lane[2]
+    raise ValueError("unrecognized courier cargo manifest action")
+
+
 def _traveling(state: WorldState, who: str) -> bool:
     return (any(t["npc_id"] == who and t["status"] == "traveling"
                 for t in state.travels.values())
