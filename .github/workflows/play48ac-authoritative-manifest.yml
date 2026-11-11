@@ -1,0 +1,63 @@
+name: PLAY-48AC authoritative local cargo manifest, real 48-hour village
+on:
+  push:
+    branches: ["experiment/play48ac-authoritative-cargo-manifest-20261111"]
+    paths:
+      - ".github/workflows/play48ac-authoritative-manifest.yml"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/src/carlos_sim/supply.py"
+      - "simulation/scenarios/test_village/test_play48ac_authoritative_cargo_manifest.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48ac-manifest-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  actual-lane-vs-authenticated-event:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Same courier policy and reducer cargo manifest; real site genesis
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src scenarios/test_village/test_play48ac_authoritative_cargo_manifest.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48ac_authoritative_cargo_manifest.py scenarios/test_village/test_play48ab_bakery_farm_bread_priority.py scenarios/test_village/test_play48aa_barter_security.py -k "not true_48h"
+  true-two-day-bakery-return:
+    needs: actual-lane-vs-authenticated-event
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Actual 13 NPC 48-hour independent SQLite physical exchange and replay
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48aa_actual_barter_bread_return.py -k "true_48h"
