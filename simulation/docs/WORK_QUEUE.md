@@ -1,5 +1,20 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48 bounded transport termination decision — 11 Nov 2026
+
+**Do not reopen endless PLAY48 wage/transport experiment branches.** This bounded transport task has a real positive Python3.13 outcome and is only waiting on existing CI acceptance gates, not new simulation features. [PLAY48_FINAL_BOUNDED_ACCEPTANCE_AND_STOP.md](PLAY48_FINAL_BOUNDED_ACCEPTANCE_AND_STOP.md)
+
+| Scope | Decision | Source |
+| --- | --- | --- |
+| Signed 13-NPC physical bakery→farm shipment | **REAL_POSITIVE_ON_PY313 / DUAL_ACCEPTANCE_PENDING** | [PLAY48AC CI #43041990878](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43041990878), SHA `c9577d98`: Python3.13 verified **2 physically delivered bread** from genuine 3 claims over actual road at 48h; baseline0, true market food5 vs7, bakery10 completed, 12 copper unchanged. Python3.10 genuine 48h result pending |
+| Exact Rules61 both-Python save safety and short property protections | **VERIFIED** | [#43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) code SHA `e3db72d8`: all short manifest, quoted offers, cargo and legacy **45/60 byte-identical rejection** jobs SUCCESS 3.10/3.13 |
+| Exact Rules61 historical regression and true A/B | **PENDING FINAL CI** | [#43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485), no claim of new-head full passing or dual 48h result until those jobs finish |
+| Historical previous Rules60 regression | **VERIFIED** | [#43037819648](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037819648) 1696/1696 each Python3.10 and3.13, does not certify Rules61 |
+| Village 96h/endurance and independent 168h sustainability | **CONFIRMED NEGATIVE / RELEASE_NO_GO** | [#43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) genuine 96h: 13/13 starving and ZERO post72 deliveries/jobs/consumption/trade on BOTH arms; no verified 7-day recovery. Separate future approval required, never relabel this a passed recovery |
+| Production `main` merge and save migration | **NO-GO** | No merge, no migration, no fabricated older-world compatibility. Stop transport scope after exact-head acceptance. No PLAY49 while phase-wide closure is unresolved |
+
+
+
 ## PLAY-48AC — authoritative manifest and explicit Rules61 gate (11 Nov 2026)
 
 **Stage `PLAY48_OPEN / RELEASE_NO_GO`.** Source code remains Schema45 but is now **Rules61**, preventing silent changes to already persisted AA/AB Rules60 worlds. Neither old saves nor `main` were modified. Full provenance and QA: [PLAY48AC_RULES61_AUTHORITATIVE_CARGO_AND_RECOVERY.md](PLAY48AC_RULES61_AUTHORITATIVE_CARGO_AND_RECOVERY.md).
