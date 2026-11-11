@@ -26,7 +26,7 @@ def test_historical_farm_one_market_two_default_unchanged(tmp_path):
         )
         s = db.verify(WORLD)
         assert len(s.npcs) == 13
-        assert (s.schema_version, s.rules_version) == (45, 61)
+        assert (s.schema_version, s.rules_version) == (45, 62)
         assert s.resources["market"]["food"] == 2
         assert s.resources["farm"]["food"] == 1
         assert sum(v.get("food", 0) for v in s.resources.values()) == 3
