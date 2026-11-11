@@ -1,5 +1,21 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48U — signed, capped, physically market-funded wages (2026-11-11)
+
+**Highest-priority current experimental integration — PLAY48_OPEN / RELEASE_NO_GO.** [Documented implementation/limits](PLAY48U_EXPLICIT_MARKET_WAGE_EXPERIMENT.md). The `main` baseline remains at its independently authorized release state; new experimental contract **Schema44 / Rules59** intentionally breaks automatic loading of previous **Schema43 / Rules58** saves, and **P0 migration is not approved**.
+
+| Work | Actual status | Evidence or next gate |
+| --- | --- | --- |
+| S3 96h causal control | VERIFIED_NEGATIVE | [GitHub CI #42926808427](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42926808427) Python3.10/3.13 SUCCESS: 13/13 starvation and 0 new jobs, trades, meals or deliveries after hour72 in BOTH finite-wage A/B arms |
+| T physical market access | VERIFIED_CAUSAL_AUDIT | [CI #42931612578](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42931612578) Python3.10/3.13 SUCCESS: 10 site-owned bread and 10 open quoted at hour48; 0 of 5 hunger100 NPCs have personally spendable 2 copper, courier workers hunger100 at well, real merchant temporarily busy |
+| U1 genuine signed employer | VERIFIED_IN_TARGETED_SECURITY | Optional signed max defaults to already-paid units; opt-in only existing market contract; no food created at signature, market one-worker cap at most 3 true earned units; signed market authorization recorded in persisted contract, experimental Schema44 / Rules59 |
+| U2 physical receipt and customer rights | VERIFIED_IN_TARGETED_SECURITY | Trusted `delivery(food)→replenish→pay` event sequence; same worker/time/site and authenticated supply capability; refuses forged, duplicate, absent market stock or open customer offers, keeps one unlisted spare loaf. [Current CI #42999941836](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42999941836) short checks passed dual-Python at exact code SHA `81b8446a` |
+| U3 genuine 48h food wage A/B | VERIFICATION_PENDING | Same [CI #42999941836](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42999941836) Python3.10/3.13: compare same 13 people, 12 copper, 3 initial food, actual grain/rain, market quoted stock, authenticated later bread wages, 13 real mouths and normal safety guards. Do not assert increase until result `PLAY48U_GENUINE_MARKET_BACKED_COURIER_REFUND_48H` |
+| U4 sustained job and transport financing | BLOCKED_BY_DEPENDENCY | Genuine distributed earned food for Huda and other starving NPCs is still missing; Hana-only capped market wages are NOT village recovery. Evaluate after actual U3 results, then independent multi-day/drought/insolvency tests |
+| U5 release closure | RELEASE_NO_GO | No 96/168h true recovery proof, no P0 save migration, no exact-head full historical regression in Schema44/Rules59, no authorized merge, no PLAY49 |
+
+
+
 ## PLAY-48S — actual employer bread wages after physical courier service (2026-11-11)
 
 **PLAY48_OPEN / RELEASE_NO_GO, Schema 43 / Rules 58 unchanged, no main merge.** Current isolated branch `experiment/play48s-authentic-courier-food-wages-20261111`. Reviewed previous PLAY48R full comparison [CI #42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865) succeeded Python 3.10/3.13 at SHA `bb86167d`: fertile east plot yielded 15 vs 10 actual grain, 9 vs 7 baked loaves, but same 6 meals and same 4/13 at hunger100 at day2. Supply is a separate problem from food ownership. [Technical S wages and test limits](PLAY48S_FUNDED_COURIER_FOOD_WAGE.md).
