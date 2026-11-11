@@ -1,0 +1,33 @@
+name: PLAY-48Z actual bakery-farm route and payroll provenance gate
+on:
+  push:
+    branches: ["experiment/play48y2-farm-wage-96h-and-workforce-20261111"]
+    paths:
+      - ".github/workflows/play48z-bakery-to-farm-route-gate.yml"
+      - "simulation/scenarios/test_village/test_play48z_real_bakery_farm_route_blocker.py"
+permissions:
+  contents: read
+jobs:
+  real-source-route-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Real bakery return road holds copper, cannot transport food invisibly
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48z_real_bakery_farm_route_blocker.py
