@@ -1,0 +1,37 @@
+name: PLAY-48T genuine 13-NPC 48h market bread access forensic
+on:
+  push:
+    branches: ["analysis/play48t-market-bread-access-20261111"]
+    paths:
+      - ".github/workflows/play48t-market-bread-access.yml"
+      - "simulation/scenarios/test_village/test_play48t_market_bread_access.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48t-actual-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  operator-only-real-48h-access:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Exact SHA, physical seller/offer cash-and-bread 24h/48h trace
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m compileall -q scenarios/test_village/test_play48t_market_bread_access.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48t_market_bread_access.py
