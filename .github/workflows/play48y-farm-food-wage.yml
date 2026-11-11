@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/play48y-farm-food-wage.yml"
       - "simulation/scenarios/test_village/test_play48y_huda_farm_worksite_food_wage.py"
+      - "simulation/scenarios/test_village/test_play47_joined_professions.py"
 permissions:
   contents: read
 concurrency:
