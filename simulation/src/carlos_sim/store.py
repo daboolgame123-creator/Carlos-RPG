@@ -280,6 +280,25 @@ class SQLiteEventStore:
         if any(e.event_type == "RainWaterRecorded" for e in events):
             if not hydrology_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("rain needs active dedicated hydrology authority")
+        # A newly produced MARKET loaf can re-fund an EXISTING signed
+        # food wage only after an immediately preceding, verified physical
+        # food delivery in this exact, authorized, active supply command.
+        # This extension never grants the right to create a new contract.
+        if any(e.event_type == "CourierProvisionReplenished" for e in events):
+            if bootstrap or not supply_authorized or world_id not in self._active_worlds:
+                raise InvalidEvent("market food re-funding requires trusted active supply")
+            for i, refill in enumerate(events):
+                if refill.event_type != "CourierProvisionReplenished":
+                    continue
+                if i == 0:
+                    raise InvalidEvent("food wage refill requires earlier actual delivery")
+                delivered = events[i-1]
+                if (delivered.event_type != "SupplyCargoDelivered"
+                        or delivered.actor_id != refill.data.get("courier_id")
+                        or delivered.data.get("courier_id") != refill.data.get("courier_id")
+                        or delivered.data.get("resource") != "food"
+                        or delivered.time != refill.time):
+                    raise InvalidEvent("food wage refill must immediately follow real market food delivery")
         if any(e.event_type == "CourierProvisionPaid" for e in events):
             if bootstrap or not supply_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("food wage requires active trusted supply service")
@@ -335,6 +354,17 @@ class SQLiteEventStore:
                     if i == 0:
                         raise InvalidEvent("food wage requires same-command delivery receipt")
                     source = events[i-1]
+                    if source.event_type == "CourierProvisionReplenished":
+                        # One legal alternative to the strict H1 adjacency:
+                        # verified DELIVERY -> site-OWNED refill -> PAY,
+                        # all three adjacent in this one SQLite command.
+                        if (i < 2 or source.time != wage.time
+                                or source.data.get("id") != wage.data.get("id")
+                                or source.data.get("courier_id") != wage.data.get("courier_id")
+                                or source.data.get("service_deliveries")
+                                    != wage.data.get("service_deliveries")):
+                            raise InvalidEvent("re-funded food wage does not match proven service")
+                        source = events[i-2]
                     if (source.event_type != "SupplyCargoDelivered"
                             or source.actor_id != wage.data.get("courier_id")
                             or source.data.get("courier_id") != wage.data.get("courier_id")
