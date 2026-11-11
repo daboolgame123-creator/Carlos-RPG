@@ -24,7 +24,7 @@ def _joined_bootstrap(
     repair_shift_end=20_000, initial_market_food=3,
     site_payroll_enabled=False, site_payroll_wage_coin=1,
     bakery_opening_food_wage=False, farm_opening_food_wage=False,
-    farm_initial_food_loaves=1, wood_charcoal_jobs_enabled=False,
+    farm_initial_food_loaves=1, farm_bread_share_enabled=False, wood_charcoal_jobs_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -35,6 +35,8 @@ def _joined_bootstrap(
     """
     if type(site_payroll_enabled) is not bool:
         raise ValueError("site_payroll_enabled must be boolean")
+    if type(farm_bread_share_enabled) is not bool:
+        raise ValueError("signed grain-for-bread choice must be boolean")
     if type(wood_charcoal_jobs_enabled) is not bool:
         raise ValueError("wood_charcoal_jobs_enabled must be boolean")
     if wood_charcoal_jobs_enabled and not site_payroll_enabled:
@@ -341,6 +343,17 @@ def _joined_bootstrap(
                     "duration_seconds": 120, "wage_coin": 1,
                 }),
             ))
+
+        if farm_bread_share_enabled:
+            signed = []
+            for index, ev in enumerate(events):
+                if (ev.event_type == "SupplyCircuitConfigured"
+                        and ev.data.get("courier_id") == "huda"):
+                    assert "farm_bread_share" not in ev.data
+                    p = dict(ev.data, farm_bread_share=True)
+                    events[index] = _e("SupplyCircuitConfigured", p)
+                    signed.append("huda")
+            assert signed == ["huda"]  # Site-specific trusted genesis.
 
     seed_physical_supply(
         db, water=water, harvest_yield=3,
