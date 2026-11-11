@@ -51,8 +51,8 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
     # historic one-shot contracts CANNOT be secretly renewed at runtime.
     maximum = p.get("authorized_total_units", p["units"])
     if (type(maximum) is not int or not p["units"] <= maximum <= MAX_UNIT
-            or (maximum > p["units"] and p["payer_site"] != "market")):
-        raise ValueError("only a signed market employer can authorize later real-food payroll")
+            or (maximum > p["units"] and p["payer_site"] == "bakery")):
+        raise ValueError("future payroll needs a signed market or physical farm employer")
     who = p["courier_id"]
     if (who not in state["supply_circuits"]
             or who not in state["npcs"]
@@ -221,6 +221,80 @@ def replenish_provision_from_delivered_market_food(
     contract["remaining"] += 1
 
 
+
+def choose_farm_owned_food_refill(state: WorldState, courier_id: str
+                                  ) -> tuple[str, int] | None:
+    """Pure local intent after an actual bakery->farm FOOD arrival.
+
+    This consumes no remote inventory and never signs a new promise.
+    A separate pre-signed ceiling is mandatory, and payment still requires
+    a *subsequent* authenticated water delivery at the farm.
+    """
+    circuit = state.supply_circuits.get(courier_id)
+    if (circuit is None or circuit["carry"] is not None
+            or circuit["index"] != 5
+            or len(circuit["stops"]) < 6
+            or circuit["stops"][5] != circuit["stops"][1]):
+        return None
+    site = circuit["stops"][1]
+    if (state.entities[courier_id]["location_id"] != site
+            or any(t["npc_id"] == courier_id and t["status"] == "traveling"
+                   for t in state.travels.values())
+            or type(state.resources.get(site, {}).get("food")) is not int
+            or state.resources[site]["food"] < 1):
+        return None
+    for ident, c in sorted(state.courier_provisions.items()):
+        if (c["courier_id"] == courier_id and c["payer_site"] == site
+                and c["total_units"] < c["authorized_total_units"]):
+            return ident, circuit["deliveries"]
+    return None
+
+
+def replenish_farm_provision_from_returned_bread(
+    state: dict[str, Any], event: DomainEvent, *, supply_authorized: bool,
+) -> None:
+    """Escrow ONE farm-owned loaf after the immediately prior physical return.
+
+    Store validates event adjacency to a real FOOD delivery in the same
+    atomic trusted command. Reducer independently checks the real endpoint,
+    signed ceiling, worker, stock and physical custody.
+    """
+    p = event.data
+    if (not supply_authorized or event.actor_id is not None
+            or set(p) != {"id", "courier_id", "service_deliveries"}
+            or not _id(p.get("id")) or not _id(p.get("courier_id"))
+            or type(p.get("service_deliveries")) is not int):
+        raise ValueError("farm food wage renewal requires trusted physical receipt")
+    contract = state["courier_provisions"].get(p["id"])
+    who = p["courier_id"]
+    circuit = state["supply_circuits"].get(who)
+    if (contract is None or circuit is None
+            or contract["courier_id"] != who
+            or contract["payer_site"] != circuit["stops"][1]
+            or circuit["index"] != 5 or len(circuit["stops"]) < 6
+            or circuit["stops"][5] != circuit["stops"][1]
+            or circuit["carry"] is not None
+            or circuit["deliveries"] != p["service_deliveries"]
+            or circuit["deliveries"] < 1
+            or contract["total_units"] >= contract["authorized_total_units"]):
+        raise ValueError("farm wage renewal needs a genuine signed return")
+    site = contract["payer_site"]
+    if (state["entities"][who]["location_id"] != site
+            or any(t["npc_id"] == who and t["status"] == "traveling"
+                   for t in state["travels"].values())
+            or any(a["npc_id"] == who and a["status"] == "running"
+                   for a in state["actions"].values())
+            or any(j["npc_id"] == who and j["status"] == "running"
+                   for j in state["production_jobs"].values())):
+        raise ValueError("farm wage funding requires worker actually present")
+    stock = state["resources"].get(site, {}).get("food")
+    if type(stock) is not int or stock < 1:
+        raise ValueError("farm cannot escrow absent, unowned bread")
+    state["resources"][site]["food"] -= 1
+    contract["total_units"] += 1
+    contract["remaining"] += 1
+
+
 def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
                           supply_authorized: bool) -> None:
     p = event.data
@@ -304,7 +378,7 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
                 or type(c["authorized_total_units"]) is not int
                 or not c["total_units"] <= c["authorized_total_units"] <= MAX_UNIT
                 or (c["authorized_total_units"] > c["total_units"]
-                    and c["payer_site"] != "market")
+                    and c["payer_site"] == "bakery")
                 or type(c["remaining"]) is not int
                 or not 0 <= c["remaining"] <= c["total_units"]
                 or c["created_at"] != 0

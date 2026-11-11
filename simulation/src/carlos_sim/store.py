@@ -299,6 +299,24 @@ class SQLiteEventStore:
                         or delivered.data.get("resource") != "food"
                         or delivered.time != refill.time):
                     raise InvalidEvent("food wage refill must immediately follow real market food delivery")
+        # A physically delivered bakery loaf may be escrowed by its FARM
+        # owner only immediately after the corresponding authentic return.
+        # It is not a wage yet: a future water delivery must be proven again.
+        if any(e.event_type == "CourierFarmProvisionReplenished" for e in events):
+            if bootstrap or not supply_authorized or world_id not in self._active_worlds:
+                raise InvalidEvent("farm bread escrow requires trusted active supply")
+            for i, fund in enumerate(events):
+                if fund.event_type != "CourierFarmProvisionReplenished":
+                    continue
+                if i == 0:
+                    raise InvalidEvent("farm escrow requires immediately preceding food arrival")
+                arrived = events[i - 1]
+                if (arrived.event_type != "SupplyCargoDelivered"
+                        or arrived.actor_id != fund.data.get("courier_id")
+                        or arrived.data.get("courier_id") != fund.data.get("courier_id")
+                        or arrived.data.get("resource") != "food"
+                        or arrived.time != fund.time):
+                    raise InvalidEvent("farm escrow must follow actual same-courier bread delivery")
         if any(e.event_type == "CourierProvisionPaid" for e in events):
             if bootstrap or not supply_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("food wage requires active trusted supply service")

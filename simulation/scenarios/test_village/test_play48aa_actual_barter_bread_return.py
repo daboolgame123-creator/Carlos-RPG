@@ -44,7 +44,7 @@ def _bootstrap_for_share(enabled):
     return _actual
 
 
-def _seed_signed_share(path, *, share):
+def _seed_signed_share(path, *, share, farm_refill_authority=False):
     with SQLiteEventStore(path) as db:
         east.seed_two_field_world(
             db, east_growth_seconds=DAY, east_grain_yield=12,
@@ -71,9 +71,10 @@ def _seed_signed_share(path, *, share):
                 DomainEvent("CourierProvisionConfigured", None,
                     "signed original two employer-owned loaves only", 0,
                     {"id": "farm-water-huda", "courier_id": "huda",
-                     "payer_site": "farm", "units": 2}),
+                     "payer_site": "farm", "units": 2,
+                     **({"authorized_total_units": 3} if farm_refill_authority else {})}),
             ], bootstrap=True)
-        assert (original.schema_version, original.rules_version) == (45, 61)
+        assert (original.schema_version, original.rules_version) == (45, 62)
         assert original.resources["farm"]["food"] == 0
         assert original.resources["market"]["food"] == 1
         assert _conserve(original) == 2
@@ -175,7 +176,7 @@ def test_true_48h_grain_for_bread_with_two_original_farm_wages(tmp_path):
             "bakery_copper": b.resources["bakery"]["coin_copper"],
             "farm_copper": b.resources["farm"]["coin_copper"],
         })
-    assert treatment.schema_version == 45 and treatment.rules_version == 61
+    assert treatment.schema_version == 45 and treatment.rules_version == 62
     print("PLAY48AA_GENUINE_13NPC_BAKERY_TO_FARM_GRAIN_FOR_BREAD",
         json.dumps({
             "same_thirteen_people": True,
