@@ -1,5 +1,22 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48AB — bakery obligation priority prevents real bread being sent away first (2026-11-11)
+
+**`PLAY48_OPEN / RELEASE_NO_GO`**, new experimental shared source **Schema45 / Rules60**, `main` untouched, production saves unmigrated. Because AB changes Rule60 courier selection relative to AA, require a **new explicit RULES_VERSION before any acceptance/merge**; do not load previously saved AA worlds into changed semantics.
+
+| Task | Status | Evidence / next gate |
+| --- | --- | --- |
+| AA true 48h legal bakery→farm barley/grain exchange | **VERIFIED NEGATIVE ECONOMIC RESULT** | [#43032756266](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43032756266) SUCCESS both Python3.10/3.13: three authentic pending bread obligations, **0 bread delivered to FARM**, bakery0, market7, 12 copper unchanged. Green diagnostic test != economic acceptance |
+| AB bakery-local actual loaf reservation | **IMPLEMENTED / SHORT TEST PASS** | Source branch `experiment/play48ab-bakery-obligation-physical-priority-20261111`; [CI #43037662900](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037662900) fast same-genesis/quote/cargo tests PASS 3.10/3.13. Signed claim reserves ONE physically baked, unquoted bakery loaf against market-bound pickup. Other bakery food remains saleable. No invented loaf, worker, road, payment or copied claims |
+| AB true 13-NPC physical bakery return 48h | **VERIFICATION_PENDING** | Same [#43037662900](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037662900) long 48h A/B, compare `actual_bread_returned_to_farm` with control and market/coin losses before acceptance; do not infer positive movement from green status |
+| AB integrated exact-head contract/security and all historic tests | **SHORT PASS / FULL PENDING** | Integration branch `integration/play48ab-warehouse-priority-exact-regression-20261111`, [CI #43038336009](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43038336009): fast multi-module freight/shop/adversarial checks PASS both Python3.10+3.13, full historic suite pending. Old 59s partial-foraging expectation restored after mistaken broad pin replace |
+| AA real 44/59 old save byte-for-byte rejection | **VERIFIED** | [#43037819648](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037819648) short gates pass dual-Python. No migration |
+| Y2 true farm salary 96h | **VERIFIED NEGATIVE ENDURANCE** | [#43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) SUCCESS both Python: paid worker made 12 vs3 shipments and 24 vs20 completed jobs but 13/13 starving and zero post72 activity both arms |
+| Future legitimate restock→earned Huda wage | **BLOCKED / NOT IMPLEMENTED** | First prove genuine AB bread physically reaches FARM and ownership changes. Then require pre-authorized farm contract, real site debit + escrow, *fresh* physical WATER delivery, and non-double paid worker, no retroactive salary, no profitless bakery contract. 96/168h plus drought/insolvency still required |
+| PLAY-48 release | **RELEASE_NO_GO** | No stable economy through 168h, no full production version/migration or independently approved merge, no PLAY49 |
+
+
+
 ## PLAY-48AA — lawful grain-for-bread freight physically returned to farm (2026-11-11)
 
 **Stage PLAY48_OPEN / RELEASE_NO_GO; isolated Schema45/Rules60 experiment, no old save migration, no `main` modification.** [Current detailed provenance and results](PLAY48AA_INTEGRATION_SECURITY_AND_RECOVERY.md).
