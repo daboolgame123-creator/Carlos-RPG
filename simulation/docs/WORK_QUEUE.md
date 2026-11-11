@@ -1,5 +1,20 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48X — current version regression contract (2026-11-11)
+
+**Priority:** Current, isolated integration branch `integration/play48x-schema44-regression-contract-20261111`. Stage `PLAY48_OPEN / RELEASE_NO_GO`, old production saves never migrated and `main` unmodified. Detailed [PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md](PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md).
+
+| Task | State / objective | Verified evidence / pending gate |
+| --- | --- | --- |
+| PLAY48U real new Hana market wage | VERIFIED_CAUSAL_POSITIVE_48H | [CI 42999941836](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42999941836) SUCCESS Python3.10/3.13: +2 physically earned Hana meals, Hana hunger100→60, 5→4 villagers at hunger100; no extra deliveries |
+| PLAY48W both market courier contracts | VERIFIED_NEGATIVE_HUDA_48H | [CI 43007695830](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007695830) SUCCESS both Python versions: Hana food wages real; Huda never meets market-service payout conditions, earns 0 and remains hunger100 |
+| PLAY48V actual 96h | VERIFICATION_PENDING | [CI 43007291657](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007291657), check both Python runs and actual post72 jobs, deliveries, sales, personal meals. Do not infer success from prior green 48h |
+| PLAY48X full historical schema44/rules59 regression | VERIFICATION_PENDING | Old [full run 43007340412](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007340412) 33 **version pins** failed / 1661 passed per Python. Explicitly upgraded current-version assertions in 23 test files and two candidate-current CI pins only; [new full run 43014260381](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43014260381) pending final on 3.10/3.13 |
+| PLAY48X legacy save safety | VERIFIED_NEGATIVE_GATE | [new run 43014260381](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43014260381) successful short gate both Pythons: real save created under frozen original 43/58, rejected without byte mutation by new 44/59; two additional new-world tests pass each |
+| Release / phase | **RELEASE_NO_GO** | No old-world migration approval, no merge, no 168h independent physical recovery proof, no PLAY49 |
+
+
+
 ## PLAY-48S — actual employer bread wages after physical courier service (2026-11-11)
 
 **PLAY48_OPEN / RELEASE_NO_GO, Schema 43 / Rules 58 unchanged, no main merge.** Current isolated branch `experiment/play48s-authentic-courier-food-wages-20261111`. Reviewed previous PLAY48R full comparison [CI #42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865) succeeded Python 3.10/3.13 at SHA `bb86167d`: fertile east plot yielded 15 vs 10 actual grain, 9 vs 7 baked loaves, but same 6 meals and same 4/13 at hunger100 at day2. Supply is a separate problem from food ownership. [Technical S wages and test limits](PLAY48S_FUNDED_COURIER_FOOD_WAGE.md).
