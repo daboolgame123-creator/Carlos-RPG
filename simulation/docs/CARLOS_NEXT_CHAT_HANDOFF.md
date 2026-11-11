@@ -1,3 +1,13 @@
+## Final verified acceptance update — 2026-11-11
+
+**`PLAY48_TRANSPORT_CLOSED_TECHNICALLY / PLAY48_ECONOMY_NO_GO / RELEASE_NO_GO`**. The authoritative [final acceptance record](PLAY48_FINAL_BOUNDED_ACCEPTANCE_AND_STOP.md) supersedes older PENDING declarations in the historical sections below.
+
+[Exact-head Rules61 CI #43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) **SUCCESS** Python3.10+3.13: **1,696 historic tests passed in each version**, both actual 13-NPC 48h A/B jobs PASS, real grain share produced **3 entitlements and 2 genuine bakery→farm delivered loaves**, market stock **7→5**, all **12 copper conserved**, and old 45/60 saved worlds rejected with unchanged bytes. [Original independent AC #43041990878](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43041990878) also **SUCCESS** both versions. The bounded transport investigation is **CLOSED**; don't reopen it or invent a payroll fix.
+
+**Explicit remaining phase-wide blocker:** [96h #43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) proves 13/13 starving by day4 and zero new work/deliveries/meals after hour72; no new farm wage funding, seven-day recovery, migration, release, or `main` merge. Treat future economic sustainability as a separate approved scope. No PLAY49 until a separate phase decision.
+
+---
+
 # Carlos RPG — قرار إيقاف توسّع PLAY-48 وإغلاق مهمة النقل ضمن شروطها
 
 **11 نوفمبر 2026.** المستخدم طلب إنهاء المهمة المطوّلة، لذلك **لا تبدأ تجارب اقتصادية جديدة بلا قرار مستقل**. الحالة: `PLAY48_TRANSPORT_IMPLEMENTED_REAL_POSITIVE_PY313 / DUAL_ACCEPTANCE_PENDING`. و`PLAY48_ENDURANCE_NO_GO / MAIN_NO_MERGE`. 
