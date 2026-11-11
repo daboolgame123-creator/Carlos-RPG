@@ -71,7 +71,8 @@ def _seed_employed_paid_couriers(path):
                 DomainEvent("CourierProvisionConfigured", None,
                             "market employer's existing loaf for delivered goods", 0,
                             {"id": "market-service-hana", "courier_id": "hana",
-                             "payer_site": "market", "units": 1}),
+                             "payer_site": "market", "units": 1,
+                             "authorized_total_units": 3}),
             ], bootstrap=True,
         )
         assert signed.resources["farm"]["food"] == 0
