@@ -1,5 +1,21 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48 — final execution termination decision (2026-11-11)
+
+**Latest authoritative status: `PLAY48_EXECUTION_ENDED / PLAY48_ACCEPTANCE_FAILED / RELEASE_NO_GO`**. Bounded production and real bakery→farm transport features are **verified complete**; phase-wide 13-NPC multi-day economic recovery is **failed**. The old historical OPEN/PENDING lines below are archival and superseded by this terminal decision, **not** authorization to close the phase as technically passed. No more PLAY48 iterations unless a new owner decision explicitly reopens or changes this blocked scope.
+
+| Final gate | Evidence / decision |
+| --- | --- |
+| Real workshop, smelting, construction and repair iterations | [#42808944705](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808944705), [#42809457769](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42809457769), [#42812662593](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42812662593) SUCCESS both Python |
+| Final Rules61 freight, real 2 bakery→farm loaves, historic suite 1696×2, genuine old-save rejection | [#43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) SUCCESS |
+| 96h living 13-NPC economy acceptance | [#43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) NEGATIVE: all 13 hunger100, zero post72 work, transport, eating or sales |
+| Stage advance and production | `PLAY49_NOT_AUTHORIZED / MAIN_UNCHANGED / P0_PRODUCTION_NOT_APPROVED` |
+
+[Full terminal decision](PLAY_48_PHASE_TERMINAL_DISPOSITION_2026-11-11.md).
+
+---
+
+
 ## Final verified acceptance update — 2026-11-11
 
 **`PLAY48_TRANSPORT_CLOSED_TECHNICALLY / PLAY48_ECONOMY_NO_GO / RELEASE_NO_GO`**. The authoritative [final acceptance record](PLAY48_FINAL_BOUNDED_ACCEPTANCE_AND_STOP.md) supersedes older PENDING declarations in the historical sections below.
