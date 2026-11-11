@@ -13,24 +13,43 @@ from tempfile import TemporaryDirectory
 
 from carlos_sim import SQLiteEventStore
 from carlos_sim.economic_diagnostics import audit_npc_economy
+from carlos_sim.food_access_diagnostics import audit_food_access_barriers
 from test_play48aa_actual_barter_bread_return import _seed_signed_share
 from test_play48h3_early_market_wage import _run, _conserve
 from test_play48_13npc_post72_relay import _stats
 from test_play47_closure_endurance import WORLD
 
 HOUR = 3600
-CHECKPOINTS = (72 * HOUR, 96 * HOUR, 168 * HOUR)
+CHECKPOINTS = tuple(h * HOUR for h in (24, 48, 72, 96, 120, 144, 168))
 
 
 def summary(state):
     data = _stats(state)
+    # Operator-only verified access audit: a courier's entrusted copper/food
+    # is NOT personal spending power. Preserve unknown slots as None.
+    access = audit_food_access_barriers(state)
     data["personal"] = [{
-        "npc": who,
-        "hunger": npc["needs"]["hunger"],
-        "location": state.entities[who]["location_id"],
-        "personal_food": state.resources.get(who, {}).get("food"),
-        "personal_copper": state.resources.get(who, {}).get("coin_copper"),
-    } for who, npc in sorted(state.npcs.items())]
+        "npc": who["npc_id"],
+        "hunger": who["hunger"],
+        "location": who["location"],
+        "personal_food": who["known_personal_food"],
+        "personally_spendable_copper": who["personally_spendable_copper"],
+        "copper_scope": who["copper_scope"],
+        "known_road_path_to_market": who["known_road_path_to_market"],
+        "locally_affordable_now": who["locally_affordable_now"],
+        "courier_leg_blockers": who["courier_leg_blockers"],
+    } for who in access["actors"]]
+    assert len(data["personal"]) == 13
+    data["people_locally_affording_food"] = sum(
+        who["locally_affordable_now"] for who in access["actors"])
+    data["people_personally_solvent_at_two_copper"] = sum(
+        who["personally_spendable_copper"] is not None
+        and who["personally_spendable_copper"] >= 2
+        for who in access["actors"])
+    data["people_with_known_market_route"] = sum(
+        who["known_road_path_to_market"] is not None
+        for who in access["actors"])
+    data["escrow_food"] = sum(c["remaining"] for c in state.courier_provisions.values())
     data["farm_owned_food"] = state.resources["farm"]["food"]
     data["huda_wage_total"] = state.courier_provisions["farm-water-huda"]["total_units"]
     data["huda_wages_paid"] = len(state.courier_provisions["farm-water-huda"]["payments"])
@@ -72,7 +91,8 @@ def run_economy_trial():
                 "control": results["control"][-1],
                 "candidate": results["candidate"][-1],
             }, sort_keys=True), flush=True)
-        first, mid, last = results["candidate"]
+        by_hour = {point["time"] // HOUR: point for point in results["candidate"]}
+        first, mid, last = (by_hour[hour] for hour in (72, 96, 168))
         def activity(after, before):
             return {
                 "jobs": after["jobs"] - before["jobs"],

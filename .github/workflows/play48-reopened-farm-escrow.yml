@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/play48-reopened-income-food-168h-20261111
+      - fix/play48-rules62-ledger-20261111
     paths:
       - ".github/workflows/play48-reopened-farm-escrow.yml"
       - "simulation/src/carlos_sim/courier_provisions.py"
