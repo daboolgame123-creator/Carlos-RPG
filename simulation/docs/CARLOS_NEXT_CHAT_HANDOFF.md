@@ -1,3 +1,22 @@
+# Carlos RPG — handoff | 2026-11-11 | PLAY48 still OPEN
+
+**CHECK LIVE GITHUB CI FIRST; this dated page is not a final release stamp.** Owner's world-first/causal rules remain: 13 actual villagers, physical foods/roads, real signed employer-payroll, 12 conserved copper; no magic stock, no hunger-threshold bypass, no auto-merge.
+
+**Latest integration branch**: `integration/play48x-schema44-regression-contract-20261111`, code/test SHA `b939992d9d342175d042cb206e4c545fc4ea2a15` plus subsequent documentation-only commits. **Experimental persist schema 44 / rules 59**, old approved 43/58; no migration, no `main` merge, PLAY48_OPEN / RELEASE_NO_GO.
+
+**Verified completed facts:**
+- [PLAY48U real 13NPC 48h market-owned wages #42999941836](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42999941836) **SUCCESS both 3.10/3.13**. Hana truly earned two additional employer-funded bread meals; hunger100→60, whole-village meals6→8, 5→4 starving. **No increase** in her physical delivery count (35), Huda still hunger100. Signed max 3 total salaries, physically preserves shop offers and original 12 copper.
+- [PLAY48W two signed market-couriers real 48h #43007695830](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007695830) **SUCCESS 3.10/3.13**. Both A/B start identically with original 3 loaves and 12 coins. **Huda received zero** even pre-signed, because actual traveled service never reached the needed market wage conditions; Hana paid 3 total, 2 extra earned, her meals3. Unreachable market contract is NOT real worker income.
+- [PLAY48S3 original 96h finite-wage diagnostic #42926808427](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42926808427) **SUCCESS 3.10/3.13**, negative economic result: 13/13 hungry100 at day4, zero post72 jobs, trades, deliveries or meals. [PLAY48T market-access audit #42931612578](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42931612578) **SUCCESS**: 10 genuine loaves open listed at market but none of five hunger100 people can personally afford 2 copper; Huda/Hana hunger100 at well.
+- [New PLAY48X save-compat and full test #43014260381](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43014260381): old regression [#43007340412](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007340412) had **33 version-pinning failures / 1661 passed** on EACH Python. Replaced ONLY explicit current-world 43/58 assertions in 23 older tests and two candidate-current 58 version pins in existing workflow; all historical predecessor values and malicious old-version case numbers stay pinned. **New short safety gate SUCCESS Python3.10/3.13**: real world save created under verified old SHA `aa836e46...` cannot be loaded by 44/59 and remains byte-identical; two additional fresh/legacy-version rejection tests PASS per Python. **Full 44/59 suite was STILL RUNNING**; never assert 1696 passes until final CI.
+- [PLAY48V actual 96h signed market-wage A/B #43007291657](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007291657) was **still running** Python3.10/3.13. Need parse log `PLAY48V_TRUE_FOUR_DAY_MARKET_WAGES_CAUSAL_PROOF` to decide actual post72 jobs/deliveries/meals — do not extrapolate from day2.
+
+**Next high-leverage work**: verify latest CI exact SHA and explain any remaining failures; devise actual physical, legitimate **farm-worksite nourishment** for Huda and cash/food earning for other 11 villagers, rather than adding another unreachable market salary. Reuse real baked food, labor receipts, roads and employer ownership; no refill from open customer offers or consigned cargo. Then authentic 168h 13-NPC A/B, drought/insolvency, exact-head full dual-Python regression and explicit save migration decision. No PLAY49 until PLAY48 ends.
+
+Detailed current contracts: [PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md](PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md) and [WORK_QUEUE.md](WORK_QUEUE.md). The rest of this historical handoff is below for provenance.
+
+---
+
 # Carlos RPG — handoff (2026-11-11; current PLAY-48S experiment)
 
 **Do not trust a handoff without independently checking GitHub branch and exact-head CI.** Read root `AGENTS.md`, `simulation/docs/WORK_ROUTING_PROTOCOL.md` and `simulation/docs/WORK_QUEUE.md`. **PLAY48_OPEN / RELEASE_NO_GO**, Schema 43 / Rules 58. `main` and P0 saved-game migration remain untouched.
