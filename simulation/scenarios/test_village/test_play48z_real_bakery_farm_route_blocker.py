@@ -23,7 +23,7 @@ def test_real_bakery_to_farm_road_is_cash_lane_not_food_lane(tmp_path):
             lane = _lane(edited, cash_enabled="coin_copper" in s.resources[who])
             per_worker.append(lane)
             if idx == 4:
-                assert rec["stops"][idx:idx+2] == ["bakery", rec["stops"][1]]
+                assert tuple(rec["stops"][idx:idx+2]) == ("bakery", rec["stops"][1])
                 rid = rec["route_ids"][idx]
                 road = s.routes[rid]
                 assert {road["a"], road["b"]} == {
