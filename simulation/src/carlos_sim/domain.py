@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 43
-RULES_VERSION = 58
+RULES_VERSION = 59
 
 
 def _thaw(value: Any) -> Any:
@@ -525,6 +525,10 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "CourierProvisionConfigured":
         from .courier_provisions import configure_provision
         configure_provision(d, e, bootstrap=bootstrap)
+    elif kind == "CourierProvisionReplenished":
+        from .courier_provisions import replenish_provision_from_delivered_market_food
+        replenish_provision_from_delivered_market_food(
+            d, e, supply_authorized=supply_authorized)
     elif kind == "CourierProvisionPaid":
         from .courier_provisions import pay_courier_provision
         pay_courier_provision(d, e, supply_authorized=supply_authorized)
