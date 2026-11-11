@@ -1,5 +1,22 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48Y2 / Z — verified physical wage causality and real transport blocker (2026-11-11)
+
+**Current branch** `experiment/play48y2-farm-wage-96h-and-workforce-20261111`; stage **PLAY48_OPEN / RELEASE_NO_GO**, experimental **Schema 44 / Rules 59**, original 43/58 saves **NOT MIGRATED**; no `main` merge. Detailed evidence: [PLAY48Y2_Z_VERIFIED_CAUSAL_RESULT.md](PLAY48Y2_Z_VERIFIED_CAUSAL_RESULT.md). Jobs classified before launch; don't infer success of 96h/full regression from shorter checks.
+
+| ID / task | Classification / verification | Last evidence and next gate |
+| --- | --- | --- |
+| PLAY48Y genuine farm wages 48h | CHAT_EXECUTABLE / VERIFIED_CAUSAL_POSITIVE | [CI #43017271741](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43017271741) SUCCESS on Python3.10/3.13 SHA `81cddebb`: 13 NPC and 12 copper unchanged, same true 3 opening bread (2 farm/1 market in BOTH arms). Huda physically earned and ate **two** genuine farm-water-delivery wages, hunger100→86 at day2, actual deliveries3→10, bakery batches9→10, village meals4→6, hunger100 residents5→4. Finite 2 wage ceiling, no bakery-to-farm replenishment |
+| PLAY48V genuine Hana wages 96h | CHAT_EXECUTABLE / VERIFIED_NEGATIVE_ENDURANCE | [CI #43007291657](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007291657) SUCCESS on 3.10/3.13 at `37cd8fb5`: authentic 2 new Hana market-owned food wages, but BOTH A/B arms 13/13 hunger100 by day4 and **0** deliveries, jobs, meals and trade in hours72-96. This is *not* recovery |
+| PLAY48X full 44/59 version regression | CHAT_EXECUTABLE / VERIFIED | [CI #43014260381](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43014260381) 1696/1696 tests PASS **each 3.10/3.13** at code SHA `b939992d`; authentic old43/58 SQLite save rejected without a byte change. This is rejection, NOT migration |
+| PLAY48Y2 96h all-employment income | CHAT_EXECUTABLE / VERIFICATION_PENDING | [CI #43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) true same-genesis 13-NPC 24/48/72/96h Huda farm wages A/B, genuine per-profession personal copper, market affordability and post72 activity, 3.10/3.13, code SHA `5a2e1472`; check final log `PLAY48Y2_AUTHENTIC_96H_HUDA_FARM_WAGE_AND_THIRTEEN_INCOMES` before claim |
+| PLAY48Z missing farm food route | CHAT_EXECUTABLE / VERIFIED_NEGATIVE_BARRIER | [CI #43028314540](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028314540) SUCCESS 2/2 tests on each Python at source SHA `df833e9f`: bakery→farm road is real but return freight is **coin_copper**, while food lane is bakery→market. No trusted food freight exists to refill farm pay. Earlier tuple/list test-oracle failed; corrected without engine change |
+| PLAY48Y2 full source regression | CHAT_EXECUTABLE / VERIFICATION_PENDING | [CI #43028515837](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028515837) Python3.10+3.13 full historical+new suite at code SHA `abe2e976`, no claim before final results |
+| PLAY48Z real bakery→farm procurement | BLOCKED_BY_DEPENDENCY / DESIGN_ONLY | [Physical supply design](PLAY48Z_BAKERY_TO_FARM_PHYSICAL_SUPPLY_DESIGN.md). Requires trusted bakery/farm sale or barter, real farm ownership, cargo on bakery→farm road, conflict with coin remittance, physical receipt, Huda proven worksite service and safety guards. **Do not fabricate return bread**; resolve after Y2 results |
+| PLAY48 release | RELEASE_NO_GO | No confirmed 168h independent recovery, no approved save migration, full final integrative review nor `main` merge, no PLAY49 |
+
+
+
 ## PLAY-48X — current version regression contract (2026-11-11)
 
 **Priority:** Current, isolated integration branch `integration/play48x-schema44-regression-contract-20261111`. Stage `PLAY48_OPEN / RELEASE_NO_GO`, old production saves never migrated and `main` unmodified. Detailed [PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md](PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md).
