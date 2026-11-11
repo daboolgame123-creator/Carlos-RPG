@@ -1,3 +1,15 @@
+# كارلوس RPG — قرار إنهاء دورة PLAY-48 (11 نوفمبر 2026)
+
+**لا تبدأ PLAY-49 أو تجارب PLAY-48 جديدة تلقائيًا.** `PLAY48_EXECUTION_ENDED / PLAY48_ACCEPTANCE_FAILED / RELEASE_NO_GO`. أُنجزت مكونات تكرار الإنتاج والنقل تقنيًا، لكن **شرط الاستدامة الاقتصادية للمرحلة فشل**، ولذلك هذه نهاية دورة تجريبية بنتيجة سلبية، **وليست** `PLAY48_CLOSED_TECHNICALLY`.
+
+**أدلة محسومة:** [قواعد 61، 1696×2 اختبار كامل ورغيفان فعليان للمزرعة #43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) SUCCESS Python3.10+3.13، مع ثبات 12 نحاسًا ورفض حفظ Rules60 القديم دون تعديل. [محاكاة الاستدامة 96 ساعة #43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) أثبتت جوع **13/13** وتوقف النقل والأعمال والوجبات والمبيعات بعد الساعة72. لا تغطية للانهيار ولا ادعاء بقاء 168 ساعة.
+
+**المستودع والنسخ:** `integration/play48ac-rules61-verified-20261111`، شيفرة المحرك المختبرة `e3db72d8584de1076b78ebba27cfe4c82714235a`، Schema45/Rules61 تجريبيان، `main` دون تغيير، ولا ترحيل للحفظ. المراجعة المستقلة مؤجلة بقرار المالك ولم تُجرَ.
+
+**ما يترتب عليه:** لا استمرار تلقائي في PLAY-48 ولا انتقال PLAY-49 قبل قرار مالك مستقل يعالج شرط التعافي الاقتصادي أو يعيد اعتماد نطاق المرحلة. [ملف قرار المرحلة النهائي](PLAY_48_PHASE_TERMINAL_DISPOSITION_2026-11-11.md) هو المرجع الأعلى، والقوائم القديمة تاريخية.
+
+---
+
 ## Final verified acceptance update — 2026-11-11
 
 **`PLAY48_TRANSPORT_CLOSED_TECHNICALLY / PLAY48_ECONOMY_NO_GO / RELEASE_NO_GO`**. The authoritative [final acceptance record](PLAY48_FINAL_BOUNDED_ACCEPTANCE_AND_STOP.md) supersedes older PENDING declarations in the historical sections below.
