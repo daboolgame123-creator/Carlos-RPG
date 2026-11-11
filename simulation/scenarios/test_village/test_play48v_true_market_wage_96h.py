@@ -46,7 +46,7 @@ def test_true_four_day_market_sourced_wage_vs_same_bounded_control(tmp_path):
     base = _seed_employed_paid_couriers(control_path)
     trial = _seed_employed_paid_couriers(funded_path)
     assert base.to_dict() == trial.to_dict()
-    assert (base.schema_version, base.rules_version) == (45, 61)
+    assert (base.schema_version, base.rules_version) == (45, 62)
     assert len(base.npcs) == 13
     assert audit_npc_economy(base)["copper_known_total"] == 12
     assert _conserve(base) == _conserve(trial) == 2
