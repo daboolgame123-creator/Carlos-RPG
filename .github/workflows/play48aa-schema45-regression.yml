@@ -1,0 +1,95 @@
+name: PLAY-48AA explicit 45-60 full regression plus real old-44-59 save guard
+on:
+  push:
+    branches: ["integration/play48aa-schema45-regression-20261111"]
+    paths:
+      - ".github/workflows/play48aa-schema45-regression.yml"
+permissions:
+  contents: read
+concurrency:
+  group: play48aa-schema45-regression-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  physically-created-old-44-59-save-immutable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: 1ca9edd7842db924985da9367499cc5183582563
+          path: verified-old-44-59
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Actual prior 44/59 code builds its actual durable saved world
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git -C ../verified-old-44-59 rev-parse HEAD)" = "1ca9edd7842db924985da9367499cc5183582563"
+          PYTHONPATH=../verified-old-44-59/simulation/src python - <<'PY'
+          from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+          from carlos_sim import SQLiteEventStore
+          assert (SCHEMA_VERSION, RULES_VERSION) == (44,59)
+          with SQLiteEventStore("actual-original-44-59.sqlite") as db:
+              world = db.create_world("old-version")
+              db.snapshot("old-version")
+              assert db.verify("old-version").to_dict() == world.to_dict()
+          PY
+      - name: New engine refuses unsafe old 44/59 world and preserves exact disk bytes
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import sqlite3
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.domain import SCHEMA_VERSION,RULES_VERSION
+          from carlos_sim.store import UnsupportedVersion
+          assert (SCHEMA_VERSION,RULES_VERSION) == (45,60)
+          path=Path("actual-original-44-59.sqlite")
+          original=sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              try: db.verify("old-version")
+              except UnsupportedVersion: pass
+              else: raise AssertionError("Old world accepted without signed migration!")
+          assert sha256(path.read_bytes()).hexdigest()==original
+          with sqlite3.connect(path) as c:
+              assert c.execute("SELECT schema_version,rules_version FROM worlds").fetchone()==(44,59)
+              assert c.execute("PRAGMA integrity_check").fetchone()==("ok",)
+          print("PLAY48AA_REAL_44_59_SAVE_REJECTED_BYTE_IDENTICAL",original,flush=True)
+          PY
+  complete-1696-plus-historical-tests-current-45-60:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Exact same SHA all historical tests, no shortcuts or excludes
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src tests scenarios
+          python -m pytest -q --tb=line
