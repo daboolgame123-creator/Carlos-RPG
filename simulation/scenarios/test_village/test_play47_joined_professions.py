@@ -24,7 +24,7 @@ def _joined_bootstrap(
     repair_shift_end=20_000, initial_market_food=3,
     site_payroll_enabled=False, site_payroll_wage_coin=1,
     bakery_opening_food_wage=False, farm_opening_food_wage=False,
-    wood_charcoal_jobs_enabled=False,
+    farm_initial_food_loaves=1, wood_charcoal_jobs_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -45,6 +45,12 @@ def _joined_bootstrap(
             or (farm_opening_food_wage and
                 (initial_market_food != 3 or bakery_opening_food_wage))):
         raise ValueError("bakery payroll needs exactly three original opening loaves")
+    # Controlled initial ownership variation: 1 or 2 of the same
+    # 3 existing loaves start at the farm, never a time-running gift.
+    if (type(farm_initial_food_loaves) is not int
+            or farm_initial_food_loaves not in (1, 2)
+            or (farm_initial_food_loaves != 1 and not farm_opening_food_wage)):
+        raise ValueError("farm 2-loaf start requires signed farm provision")
     if (type(site_payroll_wage_coin) is not int
             or site_payroll_wage_coin not in (1, 2)
             or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
@@ -63,13 +69,14 @@ def _joined_bootstrap(
                     assert ev.data["previous"] is None
                     assert ev.data["current"] == 3 and not saw_market
                     replacement = dict(ev.data)
-                    replacement["current"] = 2
+                    replacement["current"] = 3 - farm_initial_food_loaves
                     events[i] = _e("ResourceChanged", replacement)
                     saw_market = True
             assert saw_market
             events.append(_e("ResourceChanged", {
                 "owner_id": "farm", "resource": "food",
-                "previous": None, "current": 1, "source": "initialization",
+                "previous": None, "current": farm_initial_food_loaves,
+                "source": "initialization",
             }))
         if bakery_opening_food_wage:
             # This is a time-zero ownership experiment: ONE of the THREE
