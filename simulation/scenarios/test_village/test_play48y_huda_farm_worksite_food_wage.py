@@ -14,7 +14,7 @@ import json
 from carlos_sim import DomainEvent, SQLiteEventStore
 from carlos_sim.economic_diagnostics import audit_npc_economy
 from test_play47_closure_endurance import DAY, WORLD
-from test_play47_joined_professions import _e, _joined_bootstrap
+from test_play47_joined_professions import _joined_bootstrap
 from test_play48h3_early_market_wage import _run, _conserve
 from test_play48s_authentic_courier_food_wages import _stats, _check_wage_receipts
 import test_play38_multi_farm_couriers as east
@@ -28,30 +28,13 @@ def _two_existing_loaves_owned_at_farm(db, *, initial_market_food, **opts):
         "hungry_market_buyers": True,
         "one_hungry_market_buyer": False,
     }
-    original = _joined_bootstrap(
+    # This fixture CREATES the world; it does not return an event-transformer.
+    # Two farm loaves, one market loaf are physically declared at genesis.
+    return _joined_bootstrap(
         db, initial_market_food=3, site_payroll_enabled=True,
         site_payroll_wage_coin=2, wood_charcoal_jobs_enabled=True,
-        farm_opening_food_wage=True,
+        farm_opening_food_wage=True, farm_initial_food_loaves=2,
     )
-
-    def extend(events):
-        original(events)
-        changed = set()
-        for index, ev in enumerate(events):
-            if (ev.event_type == "ResourceChanged"
-                    and ev.data.get("resource") == "food"
-                    and ev.data.get("owner_id") in ("farm", "market")):
-                who = ev.data["owner_id"]
-                expected = 1 if who == "farm" else 2
-                desired = 2 if who == "farm" else 1
-                assert who not in changed and ev.data["previous"] is None
-                assert ev.data["current"] == expected
-                adjusted = dict(ev.data, current=desired)
-                events[index] = _e("ResourceChanged", adjusted)
-                changed.add(who)
-        assert changed == {"farm", "market"}
-    return extend
-
 
 def _seed_farm_two_prepaid(path):
     with SQLiteEventStore(path) as db:
