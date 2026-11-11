@@ -31,7 +31,11 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
                         bootstrap: bool) -> None:
     p = event.data
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
-            or set(p) != {"id", "courier_id", "payer_site", "units"}
+            or set(p) not in (
+                {"id", "courier_id", "payer_site", "units"},
+                {"id", "courier_id", "payer_site", "units",
+                 "authorized_total_units"},
+            )
             or not _id(p["id"]) or not _id(p["courier_id"])
             or p["id"] in state["courier_provisions"]
             or any(c["courier_id"] == p["courier_id"]
@@ -42,6 +46,13 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
             or type(p["units"]) is not int
             or not 1 <= p["units"] <= MAX_UNIT):
         raise ValueError("provision requires unique funded time-zero contract")
+    # Explicit, owner-authorized future wage ceiling at trusted signing.
+    # The default remains exactly the pre-paid opening number, so all
+    # historic one-shot contracts CANNOT be secretly renewed at runtime.
+    maximum = p.get("authorized_total_units", p["units"])
+    if (type(maximum) is not int or not p["units"] <= maximum <= MAX_UNIT
+            or (maximum > p["units"] and p["payer_site"] != "market")):
+        raise ValueError("only a signed market employer can authorize later real-food payroll")
     who = p["courier_id"]
     if (who not in state["supply_circuits"]
             or who not in state["npcs"]
@@ -66,6 +77,7 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
     state["courier_provisions"][p["id"]] = {
         "courier_id": who, "payer_site": p["payer_site"],
         "total_units": p["units"], "remaining": p["units"],
+        "authorized_total_units": maximum,
         "created_at": state["time"], "payments": [],
     }
 
@@ -122,7 +134,7 @@ def choose_market_owned_food_refill(state: WorldState, courier_id: str
     for ident, c in sorted(state.courier_provisions.items()):
         if (c["courier_id"] == courier_id and c["payer_site"] == "market"
                 and c["remaining"] == 0
-                and c["total_units"] < MAX_UNIT
+                and c["total_units"] < c["authorized_total_units"]
                 and service >= 1
                 and not any(pay["service_deliveries"] == service
                             for pay in c["payments"])):
@@ -153,7 +165,7 @@ def replenish_provision_from_delivered_market_food(
     if (contract is None or contract["payer_site"] != "market"
             or contract["courier_id"] != p["courier_id"]
             or contract["remaining"] != 0
-            or contract["total_units"] >= MAX_UNIT):
+            or contract["total_units"] >= contract["authorized_total_units"]):
         raise ValueError("only a spent, pre-signed market wage may be re-funded")
     who = p["courier_id"]
     circuit = state["supply_circuits"].get(who)
@@ -252,7 +264,8 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
     for ident, c in contracts.items():
         if (not _id(ident) or type(c) is not dict
                 or set(c) != {"courier_id", "payer_site", "total_units",
-                              "remaining", "created_at", "payments"}
+                              "remaining", "authorized_total_units",
+                              "created_at", "payments"}
                 or c["payer_site"] not in (
                     "market", "bakery",
                     state["supply_circuits"].get(c["courier_id"], {})
@@ -265,6 +278,10 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
                 or state["npcs"][c["courier_id"]]["role"] != "courier"
                 or type(c["total_units"]) is not int
                 or not 1 <= c["total_units"] <= MAX_UNIT
+                or type(c["authorized_total_units"]) is not int
+                or not c["total_units"] <= c["authorized_total_units"] <= MAX_UNIT
+                or (c["authorized_total_units"] > c["total_units"]
+                    and c["payer_site"] != "market")
                 or type(c["remaining"]) is not int
                 or not 0 <= c["remaining"] <= c["total_units"]
                 or c["created_at"] != 0
