@@ -1,0 +1,62 @@
+name: PLAY-48AB exact integrated historical and bakery obligations
+on:
+  push:
+    branches: ["integration/play48ab-warehouse-priority-exact-regression-20261111"]
+    paths:
+      - ".github/workflows/play48ab-integrated-regression.yml"
+      - "simulation/src/carlos_sim/supply.py"
+      - "simulation/scenarios/test_village/test_play48ab_bakery_farm_bread_priority.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48ab-integrated-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  exact-head-priority-and-barter-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Real signed source and hostile customer food custody guards
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48ab_bakery_farm_bread_priority.py scenarios/test_village/test_play48aa_barter_security.py scenarios/test_village/test_play48aa_actual_barter_bread_return.py -k "not true_48h"
+  exact-head-all-historical:
+    needs: exact-head-priority-and-barter-security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: All 1696 historical tests, exact same integrated code/fixtures
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src tests scenarios
+          python -m pytest -q --tb=line
