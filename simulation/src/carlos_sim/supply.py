@@ -90,13 +90,11 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
             or any(not _quantity(stock.get(site, {}).get(CASH))
                    for site in (stops[1], "bakery", "market"))):
         raise ValueError("cash return contract needs zero courier cash and known depot balances")
-    if share and (
-            not _quantity(stock.get(stops[1], {}).get("food"))
-            or not _quantity(stock.get("bakery", {}).get("food"))
-            or not _quantity(stock.get(stops[1], {}).get("grain"))
-            or CASH not in stock.get(who, {})
-            or not _quantity(stock.get(who, {}).get("food"))):
-        raise ValueError("real signed grain-share requires owned farm/bakery stock and coin-return route")
+    if share and not _quantity(stock.get(stops[1], {}).get("grain")):
+        raise ValueError("real signed grain-share needs initialized actual farm grain")
+    # Farm FOOD and courier cash slots can be initialized later inside the
+    # SAME trusted time-zero event batch. The new contract creates no bread,
+    # and the actual pickup is withheld until the destination FOOD slot exists.
     state["supply_circuits"][who] = {
         "stops": list(stops), "route_ids": list(routes),
         "period_seconds": period, "index": 0, "rounds": 0,
@@ -199,6 +197,8 @@ def _signed_physical_lane(state: dict | WorldState, record: dict, who: str
     if (record["index"] != 4 or "bread_share_earned" not in record
             or record["bread_share_earned"] <= record["bread_share_delivered"]):
         return old
+    if not _quantity(inventory.get(record["stops"][5], {}).get("food")):
+        return old  # Farm's durable receiving warehouse must be initialized.
     if _bakery_return_unpromised_food(state) < 2:
         return old  # Keeper retains one unpromised real loaf for local use.
     # Copper and bread compete for the same physical trip. Alternate whenever
@@ -413,9 +413,7 @@ def validate_supply_circuits(state: dict) -> None:
                     or type(rec["bread_share_delivered"]) is not int
                     or not 0 <= rec["bread_share_delivered"] <= rec["bread_share_earned"]
                     or rec["bread_share_earned"] > rec["deliveries"]
-                    or CASH not in state["resources"].get(who, {})
-                    or not _quantity(state["resources"].get(rec["stops"][1], {}).get("food"))
-                    or not _quantity(state["resources"].get("bakery", {}).get("food"))):
+                    or not _quantity(state["resources"].get(rec["stops"][1], {}).get("grain"))):
                 raise ValueError("invalid persisted real farm-bread barter account")
         for idx, rid in enumerate(rec["route_ids"]):
             route = state["routes"].get(rid)
