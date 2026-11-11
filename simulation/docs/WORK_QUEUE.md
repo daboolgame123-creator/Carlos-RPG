@@ -1,5 +1,23 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48AC — authoritative manifest and explicit Rules61 gate (11 Nov 2026)
+
+**Stage `PLAY48_OPEN / RELEASE_NO_GO`.** Source code remains Schema45 but is now **Rules61**, preventing silent changes to already persisted AA/AB Rules60 worlds. Neither old saves nor `main` were modified. Full provenance and QA: [PLAY48AC_RULES61_AUTHORITATIVE_CARGO_AND_RECOVERY.md](PLAY48AC_RULES61_AUTHORITATIVE_CARGO_AND_RECOVERY.md).
+
+| Task | Status | Exact evidence / decision |
+| --- | --- | --- |
+| AB first 48h physical return | **VERIFIED DEFECT** | [#43037662900](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037662900), Python3.10 and3.13 both fail `pickup must use the local planned shipping lane`; the reducer was CORRECT to reject the controller's hard-coded index4 COPPER instead of signed FOOD. Do not suppress validator |
+| AC one authoritative freight manifest | **IMPLEMENTED / SECURITY GREEN** | `choose_cargo_manifest` gives action+resource directly from same signed local transport lane. LivingWorld now uses it instead of hard-coded resource-by-stop index. [#43041990878](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43041990878) Python3.10 &3.13 fast tests SUCCESS on exact code SHA `c9577d98` |
+| AC real 13-NPC food movement for 48h | **VERIFICATION_PENDING** | Same [#43041990878](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43041990878), true autonomous 24/48h A/B under Rules60; read `PLAY48AA_GENUINE_13NPC_BAKERY_TO_FARM_GRAIN_FOR_BREAD` after both versions complete before any positive outcome claim |
+| Rules61 version boundary | **VERIFIED SAFE REJECTION** | [#43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) Python3.10/3.13 short security pass and authentic Rules60 SQLite-save rejected byte-identically by Rules61, zero migration |
+| Rules61 full suite and actual 48h | **VERIFICATION_PENDING** | [#43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) runs complete historical suite and actual 13-NPC A/B on same Rules61 head under both Python versions; inspect job conclusions and individual logged evidence |
+| Prior Rules60 full regression | **VERIFIED** | [#43037819648](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037819648) 1696/1696 PASSED on EACH Python3.10/3.13, after restoring accidental test partial wait to actual 59s |
+| Huda wage/13NPC 96h | **VERIFIED NO-GO** | [#43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) both Python3.10/3.13 SUCCESS diagnostically; even with genuine 2 farm wages, **13/13 hunger100** and **0** deliveries/production/meals/sales after hour72 |
+| New farm payroll replenishment | **NOT IMPLEMENTED** | Only after verified real physical bakery→farm bread receipt: require farm owned stock, fresh employer signed authorization, new real WATER delivery proof, no employee cargo consumption/double pay. Consider 1 grain:1 loaf fairness, bankruptcy, no rain and durable inventory |
+| PLAY48 release | **RELEASE_NO_GO** | No 168h viable independent 13NPC test, no tested migration / production authorization, no `main` merge or PLAY49 |
+
+
+
 ## PLAY-48AA — lawful grain-for-bread freight physically returned to farm (2026-11-11)
 
 **Stage PLAY48_OPEN / RELEASE_NO_GO; isolated Schema45/Rules60 experiment, no old save migration, no `main` modification.** [Current detailed provenance and results](PLAY48AA_INTEGRATION_SECURITY_AND_RECOVERY.md).
