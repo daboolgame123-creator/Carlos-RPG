@@ -75,7 +75,7 @@ def _seed_farm_two_prepaid(path):
 
 def test_actual_two_farm_owned_loaves_genesis_preserves_all_resources(tmp_path):
     s = _seed_farm_two_prepaid(tmp_path / "y-genesis.sqlite")
-    assert (s.schema_version, s.rules_version) == (44, 59)
+    assert (s.schema_version, s.rules_version) == (45, 60)
     assert len(s.npcs) == 13
     assert audit_npc_economy(s)["copper_known_total"] == 12
     assert sum(v.get("food", 0) for v in s.resources.values()) + sum(
