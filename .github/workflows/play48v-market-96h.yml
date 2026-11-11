@@ -1,0 +1,37 @@
+name: PLAY-48V real 96-hour 13-NPC market-funded wage acceptance
+on:
+  push:
+    branches: ["experiment/play48v-genuine-market-wages-96h-20261111"]
+    paths:
+      - ".github/workflows/play48v-market-96h.yml"
+      - "simulation/scenarios/test_village/test_play48v_true_market_wage_96h.py"
+permissions:
+  contents: read
+concurrency:
+  group: play48v-four-day-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  actual-four-day-replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: True market-funded 13 NPC 96 hour same-genesis A/B
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q scenarios/test_village/test_play48v_true_market_wage_96h.py
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48v_true_market_wage_96h.py
