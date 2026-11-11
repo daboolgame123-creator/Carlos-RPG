@@ -86,6 +86,7 @@ class LivingWorldEngine:
                  professional_full_life_enabled: bool = False,
                  early_courier_food_wage_enabled: bool = False,
                  market_sourced_wage_refill_enabled: bool = False,
+                 farm_sourced_wage_refill_enabled: bool = False,
                  hungry_woodcutter_work_enabled: bool = False,
                  retry_known_supplier_enabled: bool = False):
         if clock.store is not store:
@@ -247,6 +248,12 @@ class LivingWorldEngine:
                     and early_courier_food_wage_enabled))):
             raise ValueError("market wage refill requires opt-in active paid economy")
         self.market_sourced_wage_refill_enabled = market_sourced_wage_refill_enabled
+        if (type(farm_sourced_wage_refill_enabled) is not bool
+                or (farm_sourced_wage_refill_enabled and not (
+                    supply_enabled and consumption_enabled and economic_enabled
+                    and early_courier_food_wage_enabled))):
+            raise ValueError("farm wage renewal requires opted-in real paid supply economy")
+        self.farm_sourced_wage_refill_enabled = farm_sourced_wage_refill_enabled
 
     def _professional_life_emergency(self, state: WorldState,
                                      npc_id: str) -> bool:
@@ -499,6 +506,21 @@ class LivingWorldEngine:
                                                        "courier_id": courier,
                                                        "service_deliveries": service_number}),
                                         supply_capability=True)
+                        if self.farm_sourced_wage_refill_enabled:
+                            # The return leg arrived physically at FARM.
+                            # Only a specifically PRE-SIGNED higher wage
+                            # ceiling permits a single genuine returned
+                            # loaf to enter escrow; NO immediate worker pay.
+                            from .courier_provisions import choose_farm_owned_food_refill
+                            refill = choose_farm_owned_food_refill(current, courier)
+                            if refill is not None:
+                                contract_id, service_number = refill
+                                append(DomainEvent("CourierFarmProvisionReplenished", None,
+                                    "farm escrows an owned returned loaf against future water service",
+                                    current.time, {"id": contract_id,
+                                                   "courier_id": courier,
+                                                   "service_deliveries": service_number}),
+                                    supply_capability=True)
                     # H3 opt-in: a worker PHYSICALLY present at the hiring
                     # market after completed real supply receipts may collect
                     # one previously reserved employer loaf before food is
