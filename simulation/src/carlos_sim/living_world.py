@@ -506,7 +506,8 @@ class LivingWorldEngine:
                                                        "courier_id": courier,
                                                        "service_deliveries": service_number}),
                                         supply_capability=True)
-                        if self.farm_sourced_wage_refill_enabled:
+                        if (self.farm_sourced_wage_refill_enabled
+                                and act == "SupplyCargoDelivered" and resource == "food"):
                             # The return leg arrived physically at FARM.
                             # Only a specifically PRE-SIGNED higher wage
                             # ceiling permits a single genuine returned
