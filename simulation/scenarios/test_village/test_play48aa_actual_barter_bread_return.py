@@ -74,7 +74,7 @@ def _seed_signed_share(path, *, share, farm_refill_authority=False):
                      "payer_site": "farm", "units": 2,
                      **({"authorized_total_units": 3} if farm_refill_authority else {})}),
             ], bootstrap=True)
-        assert (original.schema_version, original.rules_version) == (45, 61)
+        assert (original.schema_version, original.rules_version) == (45, 62)
         assert original.resources["farm"]["food"] == 0
         assert original.resources["market"]["food"] == 1
         assert _conserve(original) == 2
