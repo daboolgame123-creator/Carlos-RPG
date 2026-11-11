@@ -106,6 +106,33 @@ def choose_courier_provision(state: WorldState, courier_id: str
 
 
 
+def _market_uncommitted_bread_after_sales(state: WorldState | dict[str, Any]) -> int:
+    """Available market bread excluding physical consignments and OPEN quotes.
+
+    An outstanding open food offer is a real obligation to customers, not
+    unclaimed bakery surplus. A courier wage must not cannibalize it.
+    """
+    if isinstance(state, WorldState):
+        goods, offers, circuits = (
+            state.resources, state.market_offers, state.supply_circuits)
+    else:
+        goods, offers, circuits = (
+            state["resources"], state["market_offers"], state["supply_circuits"])
+    stock = goods.get("market", {}).get("food")
+    if type(stock) is not int or stock < 0:
+        return -1
+    open_promises = sum(
+        offer["remaining"] for offer in offers.values()
+        if offer["status"] == "open"
+        and offer["stock_owner_id"] == "market"
+        and offer["site_id"] == "market"
+        and offer["resource"] == "food"
+    )
+    from .market import reserved_trade_units
+    return stock - open_promises - reserved_trade_units(
+        circuits, "market", "food")
+
+
 def choose_market_owned_food_refill(state: WorldState, courier_id: str
                                   ) -> tuple[str, int] | None:
     """Existing signed *market* employer may fund one more verified service.
@@ -122,14 +149,12 @@ def choose_market_owned_food_refill(state: WorldState, courier_id: str
     if any(trip["npc_id"] == courier_id and trip["status"] == "traveling"
            for trip in state.travels.values()):
         return None
-    from .market import _present, reserved_trade_units
+    from .market import _present
     keeper = state.market_stalls.get("market", {}).get("keeper_id")
     if not keeper or not _present(state.to_dict(), keeper, "market"):
         return None
-    stock = state.resources.get("market", {}).get("food")
-    if (type(stock) is not int
-            or stock - reserved_trade_units(state.supply_circuits, "market", "food") < 2):
-        return None  # Leave at least one authentic loaf at the market.
+    if _market_uncommitted_bread_after_sales(state) < 2:
+        return None  # Protect ALL open customer quotes plus one spare loaf.
     service = circuit["deliveries"]
     for ident, c in sorted(state.courier_provisions.items()):
         if (c["courier_id"] == courier_id and c["payer_site"] == "market"
@@ -183,14 +208,12 @@ def replenish_provision_from_delivered_market_food(
             or any(j["npc_id"] == who and j["status"] == "running"
                    for j in state["production_jobs"].values())):
         raise ValueError("renewal requires local completed, unpaid delivery")
-    from .market import _present, reserved_trade_units
+    from .market import _present
     keeper = state["market_stalls"].get("market", {}).get("keeper_id")
     if not keeper or not _present(state, keeper, "market"):
         raise ValueError("market owner is not locally available to fund a wage")
-    food = state["resources"].get("market", {}).get("food")
-    if (type(food) is not int
-            or food - reserved_trade_units(state["supply_circuits"], "market", "food") < 2):
-        raise ValueError("market cannot pay the worker from absent or committed food")
+    if _market_uncommitted_bread_after_sales(state) < 2:
+        raise ValueError("market wage cannot take listed, reserved, or absent customer food")
     # The signed employer owns these physically produced/transported goods.
     # Decrease site stock BEFORE increasing contractual escrow, atomically.
     state["resources"]["market"]["food"] -= 1
