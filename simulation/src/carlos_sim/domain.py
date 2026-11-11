@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 43
+SCHEMA_VERSION = 44
 RULES_VERSION = 59
 
 
