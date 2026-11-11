@@ -29,7 +29,7 @@ def scenario(db, *, configured=True, work_start=0, work_end=300, route=True):
 
 
 def test_routine_is_opt_in_and_cannot_teleport_to_unlearned_workplace(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (43, 58)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (44, 59)
     with SQLiteEventStore(tmp_path / "unlearned.sqlite") as db:
         scenario(db)
         original = db.load("test")

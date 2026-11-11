@@ -86,7 +86,7 @@ def world(tmp_path):
 
 
 def test_versions_and_no_recipe_cannot_produce(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (43, 58)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (44, 59)
     with SQLiteEventStore(tmp_path / "off.sqlite") as db:
         setup(db, recipe=False)
         clock = TimeEngine(db)
