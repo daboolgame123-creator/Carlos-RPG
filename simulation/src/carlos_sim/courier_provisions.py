@@ -92,6 +92,100 @@ def choose_courier_provision(state: WorldState, courier_id: str
     return None
 
 
+
+
+def choose_market_owned_food_refill(state: WorldState, courier_id: str
+                                  ) -> tuple[str, int] | None:
+    """Existing signed *market* employer may fund one more verified service.
+
+    Returns a pure, local intent only: never reads any distant stock.
+    The option is enabled separately by the trusted LivingWorld engine.
+    Old one-shot wage contracts remain unchanged with the option off.
+    """
+    circuit = state.supply_circuits.get(courier_id)
+    if circuit is None or circuit["carry"] is not None:
+        return None
+    if circuit["index"] != 3 or state.entities[courier_id]["location_id"] != "market":
+        return None
+    if any(trip["npc_id"] == courier_id and trip["status"] == "traveling"
+           for trip in state.travels.values()):
+        return None
+    from .market import _present, reserved_trade_units
+    keeper = state.market_stalls.get("market", {}).get("keeper_id")
+    if not keeper or not _present(state.to_dict(), keeper, "market"):
+        return None
+    stock = state.resources.get("market", {}).get("food")
+    if (type(stock) is not int
+            or stock - reserved_trade_units(state.supply_circuits, "market", "food") < 2):
+        return None  # Leave at least one authentic loaf at the market.
+    service = circuit["deliveries"]
+    for ident, c in sorted(state.courier_provisions.items()):
+        if (c["courier_id"] == courier_id and c["payer_site"] == "market"
+                and c["remaining"] == 0
+                and c["total_units"] < MAX_UNIT
+                and service >= 1
+                and not any(pay["service_deliveries"] == service
+                            for pay in c["payments"])):
+            return ident, service
+    return None
+
+
+def replenish_provision_from_delivered_market_food(
+    state: dict[str, Any], event: DomainEvent, *,
+    supply_authorized: bool,
+) -> None:
+    """Transfer exactly one real employer-owned market loaf into existing escrow.
+
+    The store separately requires this event to immediately follow the SAME
+    atomic command's authenticated food-delivery receipt by this worker.
+    The reducer independently checks the physical location, contract, worker
+    identity, service count, employer stock and known remaining obligations.
+    A second event without another completed delivery must fail closed.
+    """
+    p = event.data
+    if (not supply_authorized or event.actor_id is not None
+            or set(p) != {"id", "courier_id", "service_deliveries"}
+            or not _id(p.get("id"))
+            or type(p.get("service_deliveries")) is not int
+            or type(p.get("courier_id")) is not str):
+        raise ValueError("market food wage renewal needs trusted exact service receipt")
+    contract = state["courier_provisions"].get(p["id"])
+    if (contract is None or contract["payer_site"] != "market"
+            or contract["courier_id"] != p["courier_id"]
+            or contract["remaining"] != 0
+            or contract["total_units"] >= MAX_UNIT):
+        raise ValueError("only a spent, pre-signed market wage may be re-funded")
+    who = p["courier_id"]
+    circuit = state["supply_circuits"].get(who)
+    if (circuit is None or circuit["index"] != 3
+            or circuit["carry"] is not None
+            or circuit["deliveries"] != p["service_deliveries"]
+            or circuit["deliveries"] < 1
+            or state["entities"][who]["location_id"] != "market"
+            or any(row["service_deliveries"] == p["service_deliveries"]
+                   for row in contract["payments"])
+            or any(t["npc_id"] == who and t["status"] == "traveling"
+                   for t in state["travels"].values())
+            or any(a["npc_id"] == who and a["status"] == "running"
+                   for a in state["actions"].values())
+            or any(j["npc_id"] == who and j["status"] == "running"
+                   for j in state["production_jobs"].values())):
+        raise ValueError("renewal requires local completed, unpaid delivery")
+    from .market import _present, reserved_trade_units
+    keeper = state["market_stalls"].get("market", {}).get("keeper_id")
+    if not keeper or not _present(state, keeper, "market"):
+        raise ValueError("market owner is not locally available to fund a wage")
+    food = state["resources"].get("market", {}).get("food")
+    if (type(food) is not int
+            or food - reserved_trade_units(state["supply_circuits"], "market", "food") < 2):
+        raise ValueError("market cannot pay the worker from absent or committed food")
+    # The signed employer owns these physically produced/transported goods.
+    # Decrease site stock BEFORE increasing contractual escrow, atomically.
+    state["resources"]["market"]["food"] -= 1
+    contract["total_units"] += 1
+    contract["remaining"] += 1
+
+
 def pay_courier_provision(state: dict[str, Any], event: DomainEvent, *,
                           supply_authorized: bool) -> None:
     p = event.data
