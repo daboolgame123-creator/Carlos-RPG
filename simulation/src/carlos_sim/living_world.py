@@ -26,7 +26,7 @@ from .routines import (
 )
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
-from .supply import choose_cargo, choose_courier_leg, next_courier_departure
+from .supply import choose_cargo_manifest, choose_courier_leg, next_courier_departure
 from .production import choose_local_production_wage
 from .economic_autonomy import (choose_local_production, choose_local_food_offer,
                                 choose_local_food_purchase, choose_local_offer_retirement)
@@ -414,15 +414,14 @@ class LivingWorldEngine:
                 # stop and then traverse a physically configured adjacent road.
                 for courier in sorted(current.supply_circuits):
                     for _ in range(2):
-                        act = choose_cargo(current, courier)
-                        if act is None:
+                        # One authoritative manifest for both policy and
+                        # reducer. A signed grain/bread farm-return leg can
+                        # carry actual FOOD instead of the old index-4 COPPER.
+                        # Never guess cargo type from the fixed stop index.
+                        manifest = choose_cargo_manifest(current, courier)
+                        if manifest is None:
                             break
-                        rec = current.supply_circuits[courier]
-                        if act == "SupplyCargoDelivered":
-                            resource = rec["carry"]["resource"]
-                        else:
-                            resource = {0:"water", 1:"grain", 2:"food",
-                                        3:"coin_copper", 4:"coin_copper"}[rec["index"]]
+                        act, resource = manifest
                         append(DomainEvent(act, courier,
                                            "courier physically transfers known local owned cargo",
                                            current.time,
