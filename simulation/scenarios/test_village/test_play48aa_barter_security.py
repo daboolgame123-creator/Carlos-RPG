@@ -112,11 +112,14 @@ def test_invented_first_turn_bread_pickup_fails_closed_in_real_store(tmp_path):
     s = _seed_signed_share(path, share=True)
     with SQLiteEventStore(path) as db:
         original = db.verify(WORLD).to_dict()
-        with TimeEngine(db) as clock:
-            clock.open_session(WORLD)
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
             with pytest.raises((ValueError, InvalidEvent)):
                 db.append(WORLD, "forged-early-return-loaf", s.revision,
                     [_fake_event("SupplyCargoPicked", "food")],
                     supply_authorized=True)
             assert db.verify(WORLD).to_dict() == original
             assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        finally:
+            clock.close_session(WORLD)
