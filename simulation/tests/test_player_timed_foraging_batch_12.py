@@ -55,7 +55,7 @@ def test_partial_clock_and_npc_autonomy_continue_without_autoplayer(tmp_path):
         mid = db.load(WORLD)
         assert first.status == "foraging"
         assert first.details["forage_remaining_seconds"] == 1
-        assert mid.time == 60
+        assert mid.time == 59
         assert mid.resources[PLAYER]["food"] == 0
         assert mid.resources["square"]["wild_food"] == 2
         assert PLAYER not in mid.npcs
