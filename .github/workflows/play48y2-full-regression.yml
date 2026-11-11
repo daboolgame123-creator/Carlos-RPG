@@ -1,4 +1,4 @@
-name: PLAY-48Y2 complete historic regression under current experimental 44 59
+name: PLAY-48Y2 complete historic regression except separate true 96h A-B
 on:
   push:
     branches: ["experiment/play48y2-farm-wage-96h-and-workforce-20261111"]
@@ -29,8 +29,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install pytest
-      - name: Historic and current source, immutable exact-SHA full regression
+      - name: All historic and new tests, separate 96h scenario in independent exact-SHA workflow
         run: |
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           python -m compileall -q src tests scenarios
-          python -m pytest -q --tb=line
+          # The exact same SHA is covered by the separate 96h Y2 A/B
+          # workflow. Do not execute that heavy test AGAIN here: this
+          # regression covers all other historical and new tests.
+          python -m pytest -q --tb=line -k 'not test_96h_huda_farm_wages_vs_true_identical_unpaid_world'
