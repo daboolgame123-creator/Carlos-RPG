@@ -69,7 +69,7 @@ def test_default_old_employer_contract_cannot_authorize_future_meals():
 def test_signed_market_wage_still_needs_real_service_and_local_stock(tmp_path):
     path = tmp_path / "u-no-forged-service.sqlite"
     world = _seed_employed_paid_couriers(path)
-    assert (world.schema_version, world.rules_version) == (45, 60)
+    assert (world.schema_version, world.rules_version) == (45, 61)
     c = world.courier_provisions["market-service-hana"]
     assert (c["authorized_total_units"], c["total_units"], c["remaining"]) == (3, 1, 1)
     assert world.courier_provisions["farm-water-huda"]["authorized_total_units"] == 1
@@ -106,7 +106,7 @@ def test_true_48h_13npc_pre_authorized_market_refill_vs_one_shot(tmp_path):
     original = _seed_employed_paid_couriers(control_path)
     treatment = _seed_employed_paid_couriers(treatment_path)
     assert original.to_dict() == treatment.to_dict()
-    assert (original.schema_version, original.rules_version) == (45, 60)
+    assert (original.schema_version, original.rules_version) == (45, 61)
     assert _read_receipts(control_path, original) == 0
     assert _read_receipts(treatment_path, treatment) == 0
 

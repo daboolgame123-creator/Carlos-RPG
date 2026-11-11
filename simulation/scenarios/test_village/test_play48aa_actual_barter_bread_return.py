@@ -73,7 +73,7 @@ def _seed_signed_share(path, *, share):
                     {"id": "farm-water-huda", "courier_id": "huda",
                      "payer_site": "farm", "units": 2}),
             ], bootstrap=True)
-        assert (original.schema_version, original.rules_version) == (45, 60)
+        assert (original.schema_version, original.rules_version) == (45, 61)
         assert original.resources["farm"]["food"] == 0
         assert original.resources["market"]["food"] == 1
         assert _conserve(original) == 2
@@ -175,7 +175,7 @@ def test_true_48h_grain_for_bread_with_two_original_farm_wages(tmp_path):
             "bakery_copper": b.resources["bakery"]["coin_copper"],
             "farm_copper": b.resources["farm"]["coin_copper"],
         })
-    assert treatment.schema_version == 45 and treatment.rules_version == 60
+    assert treatment.schema_version == 45 and treatment.rules_version == 61
     print("PLAY48AA_GENUINE_13NPC_BAKERY_TO_FARM_GRAIN_FOR_BREAD",
         json.dumps({
             "same_thirteen_people": True,

@@ -91,7 +91,7 @@ def test_96h_huda_farm_wages_vs_true_identical_unpaid_world(tmp_path):
     control = _seed_farm_two_prepaid(unpaid_path)
     paid = _seed_farm_two_prepaid(farm_paid_path)
     assert control.to_dict() == paid.to_dict()
-    assert (control.schema_version, control.rules_version) == (45, 60)
+    assert (control.schema_version, control.rules_version) == (45, 61)
     assert len(control.npcs) == 13
     assert _conserve(control) == _conserve(paid) == 2
 
