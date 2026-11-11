@@ -1,5 +1,21 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## PLAY-48AA — lawful grain-for-bread freight physically returned to farm (2026-11-11)
+
+**Stage PLAY48_OPEN / RELEASE_NO_GO; isolated Schema45/Rules60 experiment, no old save migration, no `main` modification.** [Current detailed provenance and results](PLAY48AA_INTEGRATION_SECURITY_AND_RECOVERY.md).
+
+| ID | Classification / status | Verified evidence / next gate |
+| --- | --- | --- |
+| AA0 actual trusted farm-grain share configuration | CHAT_EXECUTABLE / VERIFIED | [CI 43032756266](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43032756266) on tested source `4b4c8b66`: dual Python3.10/3.13 fast genesis and unauthorized cargo tests SUCCESS. No new grain, bread, money, paths or NPC knowledge; claim only earned after physical grain delivered |
+| AA1 physical return/copper competition and customer property guards | CHAT_EXECUTABLE / VERIFIED_SECURITY_GATES | [CI 43034249899](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43034249899) Python3.10/3.13 **7/7 each**: reject already-quoted bakery loaves, one cargo per actual return lane, tampered claim counters, double delivery and forged first trip. These synthetic adversarial state tests are not themselves actual NPC journey evidence |
+| AA2 true 13-NPC 48h food procurement | CHAT_EXECUTABLE / VERIFICATION_PENDING | [CI 43032756266](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43032756266) two real 13-NPC worlds with same 3 starting loaves and 12 coins, bakery food and copper ledger, Huda freight, SQLite replay. Check result log `PLAY48AA_GENUINE_13NPC_BAKERY_TO_FARM_GRAIN_FOR_BREAD`; do not claim bakery-to-farm loaf physically delivered until tested |
+| AA3 old 44/59 save protected under new 45/60 | CHAT_EXECUTABLE / VERIFIED_NEGATIVE | [CI 43033787068](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43033787068) both Python versions: genuine old saved world from frozen 44/59 source must reject in 45/60 **byte-identically**, no P0 migration |
+| AA4 full 45/60 historical regression | CHAT_EXECUTABLE / VERIFICATION_PENDING | [CI 43033787068](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43033787068) source SHA `a9001058`; all `simulation/tests` historic tests, 23 current-world version assertion pins updated explicitly. Old 43/58 security fixture remains |
+| AA5 real farm food→Huda earned wage and viable 7 days | BLOCKED_BY_DEPENDENCY / DESIGN_ONLY | A returned loaf belongs to FARM; its arrival does NOT silently replenish the pre-signed finite two wage units. Requires new signed employer food reservation, authentic water-service entitlement, adversarial drought/bankruptcy, real bakery production, legitimate market/customer quotes, and no cargo eating. Compare actual 1:1 barter impact and potentially 2 grain per loaf before any permanent rule |
+| PLAY48 closure | RELEASE_NO_GO | No actual 168h work, deliveries and meals after hour72; no safe migration or approved merge. Remain within PLAY48, not PLAY49 |
+
+
+
 ## PLAY-48Y2 / Z — verified physical wage causality and real transport blocker (2026-11-11)
 
 **Current branch** `experiment/play48y2-farm-wage-96h-and-workforce-20261111`; stage **PLAY48_OPEN / RELEASE_NO_GO**, experimental **Schema 44 / Rules 59**, original 43/58 saves **NOT MIGRATED**; no `main` merge. Detailed evidence: [PLAY48Y2_Z_VERIFIED_CAUSAL_RESULT.md](PLAY48Y2_Z_VERIFIED_CAUSAL_RESULT.md). Jobs classified before launch; don't infer success of 96h/full regression from shorter checks.
