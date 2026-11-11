@@ -1,3 +1,26 @@
+# Carlos RPG — أحدث نقطة مؤكدة: PLAY48AC / Rules61 (11 نوفمبر 2026)
+
+**الحالة:** `PLAY48_OPEN / RELEASE_NO_GO`، لا دمج في `main` ولا ترحيل للحفظ القديم ولا بدء PLAY49. عند الاستئناف افحص GitHub CI مباشرة؛ هذا المستند سجل بتاريخ ثابت.
+
+### حقائق مؤكدة من الاختبارات
+
+- [PLAY48AB محاكاة 48 ساعة #43037662900](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037662900) **FAILED Python3.10 +3.13** في العالم الحقيقي: `pickup must use the local planned shipping lane`. السبب مشخص في فرق نوع الحمولة: مُقرر النقل يختار FOOD في رجعة المخبز→المزرعة (index4) لكن LivingWorld كان يرسل حدثًا بموارد COPPER من خريطة أرقام قديمة. تمسك الـReducer بمنع الحمولة الوهمية كان سلوكًا صحيحًا.
+- **PLAY48AC إصلاح فعلي:** محرك النقل الآن يخرج `choose_cargo_manifest` (الفعل + نوع الحمولة من المسار الحقيقي ذاته)، ولا يستنتج نوع البضاعة من رقم المحطة. فرع الكود `experiment/play48ac-authoritative-cargo-manifest-20261111`، SHA المختبَر `c9577d9870799d2f8b57db73416f663bb1b796cc`. [فحص #43041990878](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43041990878) **الاختبارات السريعة ناجحة على Python3.10 و3.13**. محاكاة القرية الفعلية لـ48 ساعة ما زالت جارية عند كتابة المستند؛ لا تدّعِ وصول أي رغيف قبل قراءة `PLAY48AA_GENUINE_13NPC_BAKERY_TO_FARM_GRAIN_FOR_BREAD`.
+- **حماية الحفظ الجديدة:** فرع التكامل `integration/play48ac-rules61-verified-20261111` يحافظ على Schema45 ويصعد إلى **Rules61**، حتى لا تحمل ملفات Rules60 المعنى الجديد بصمت. [CI #43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) فحوص الحمولة السريعة واختبار حفظ 45/60 الحقيقي والرفض دون تغيير بايتات ناجحة على الإصدارين. الاختبار التاريخي الكامل وتجربة 48 ساعة على *Rules61 ذاته* كانا قيد التنفيذ؛ لا تعلن نجاحهما قبل ظهور سجلاتهما.
+- [الانحدار السابق 45/60 #43037819648](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43037819648) **1696/1696 ناجحة لكل إصدار** Python3.10 و3.13 بعد إعادة اختبار انتظار جزئي إلى 59 ثانية الصحيح؛ لا تغطي هذه النتيجة Rule61 الجديد.
+- [PLAY48Y2 محاكاة الأجور 96 ساعة #43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) ناجحة تقنيًا على الإصدارين لكنها تثبت الانهيار: هدى سلمت12 مقابل3، الأعمال24 مقابل20، الوجبات7 مقابل5؛ **13/13 الجوع100** بحلول اليوم الرابع، **صفر أعمال وتوصيلات ووجبات وصفقات بعد الساعة72**. المأزق دخل وتوزيع وغذاء وليس مجرد قمح.
+
+### القرار التالي بعد الاختبار
+
+1. افتح [CI Rules61 #43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485) و[AC #43041990878](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43041990878)، وافحص القيم الفعلية `actual_bread_returned_to_farm` و`grain_entitlements_after_real_grain_deliveries` ومقارنة مخزون المخبز والسوق والنقود. الاختبارات الخضراء وحدها لا تثبت وصول الخبز.
+2. إذا وصل خبز فعليًا إلى المزرعة، يجب تمويل أجر هدى من هذا المخزون **بعد توثيق ملكية المزرعة وموافقة رب العمل وخدمة ماء جديدة مثبتة**. لا استهلاك لحمولة الأمانة ولا دفع مكرر أو رجعي، ولا توليد خبز/نحاس.
+3. تبقى مبادلة 1 قمح = 1 خبز تجريبية وغير مؤكدة اقتصاديا؛ قارن كلفة الخباز والوقود وأثرها على مبيعات السوق قبل اعتمادها. اختبر العجز المالي والجفاف و96/168 ساعة و13 شخصية مستقلة ونسخ الحفظ.
+4. **لا تدّعِ إغلاق PLAY48، ولا تدمج في main، ولا تبدأ PLAY49.**
+
+المستند المفصل: [PLAY48AC_RULES61_AUTHORITATIVE_CARGO_AND_RECOVERY.md](PLAY48AC_RULES61_AUTHORITATIVE_CARGO_AND_RECOVERY.md). قائمة الحالة: [WORK_QUEUE.md](WORK_QUEUE.md).
+
+---
+
 # Carlos RPG — latest PLAY-48AA integration handoff (2026-11-11)
 
 **Status:** `PLAY48_OPEN / RELEASE_NO_GO`. `main` untouched, no old-world production save migration or 168h recovery acceptance. **Verify GitHub CI status/live SHA before continuing**; this file is a dated record.
