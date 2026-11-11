@@ -1,0 +1,103 @@
+name: PLAY-48X exact-head versioned world regression and legacy rejection
+on:
+  push:
+    branches: ["integration/play48x-schema44-regression-contract-20261111"]
+    paths:
+      - ".github/workflows/play48x-version-contract-regression.yml"
+      - ".github/workflows/simulation-tests.yml"
+      - "simulation/tests/**"
+      - "simulation/src/**"
+permissions:
+  contents: read
+concurrency:
+  group: play48x-version-contract-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-legacy-save-rejected:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: aa836e46b764a4e4d4d287caf5c43acb51d6c97e
+          path: verified-old-43-58
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Authentic prior-release source creates real old save
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git -C ../verified-old-43-58 rev-parse HEAD)" = "aa836e46b764a4e4d4d287caf5c43acb51d6c97e"
+          PYTHONPATH=../verified-old-43-58/simulation/src python - <<'PY'
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+          assert (SCHEMA_VERSION, RULES_VERSION) == (43, 58)
+          with SQLiteEventStore("real-old-schema43-rules58.sqlite") as db:
+              s = db.create_world("legacy-actual")
+              assert (s.schema_version, s.rules_version) == (43, 58)
+              db.snapshot("legacy-actual")
+              assert db.verify("legacy-actual").to_dict() == s.to_dict()
+          PY
+      - name: Strict new-code rejection without touching historic user bytes
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          import hashlib, sqlite3
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+          from carlos_sim.store import UnsupportedVersion
+          assert (SCHEMA_VERSION, RULES_VERSION) == (44, 59)
+          path = Path("real-old-schema43-rules58.sqlite")
+          sha_before = hashlib.sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              try:
+                  db.verify("legacy-actual")
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError("Unsafe: old saved world accepted without migration")
+          assert hashlib.sha256(path.read_bytes()).hexdigest() == sha_before
+          with sqlite3.connect(path) as db:
+              assert db.execute("SELECT schema_version, rules_version FROM worlds").fetchone() == (43,58)
+              assert db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+          print("PLAY48X_AUTHENTIC_43_58_SAVE_REJECTED_WITHOUT_WRITES", sha_before, flush=True)
+          PY
+      - name: New world version and synthetic adversarial header checks
+        run: python -m pytest -qs tests/test_play48x_version_transition_gate.py
+  full-current-schema-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Full historical and new-world suite against same exact SHA
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src tests scenarios
+          python -m pytest -q --tb=line
