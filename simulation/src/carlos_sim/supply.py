@@ -180,6 +180,25 @@ def _bakery_return_unpromised_food(state: dict | WorldState) -> int:
     return existing - listed - reserved_trade_units(circuits, "bakery", "food")
 
 
+def _bakery_has_pending_physical_farm_claim(state: dict | WorldState) -> bool:
+    """A bakery-local prepaid farm barter must reserve ONE actual baked loaf.
+
+    The contract is signed at genesis and earned only by real grain delivery.
+    This is a baker's local dispatch obligation, not a courier knowing a
+    distant farmer's inventory. No obligation means old-world behavior.
+    In-flight bread already left bakery stock and needs no second reserve.
+    """
+    circuits = (state.supply_circuits if isinstance(state, WorldState)
+                else state["supply_circuits"])
+    return any(
+        rec.get("bread_share_earned", 0) > rec.get("bread_share_delivered", 0)
+        and not (rec["carry"] is not None
+                 and rec["carry"]["resource"] == "food"
+                 and rec["carry"]["destination"] == rec["stops"][5])
+        for rec in circuits.values()
+    )
+
+
 def _signed_physical_lane(state: dict | WorldState, record: dict, who: str
                           ) -> tuple[str, str, str] | None:
     """Pick exactly ONE real return parcel: owed bread or normal copper.
@@ -194,13 +213,21 @@ def _signed_physical_lane(state: dict | WorldState, record: dict, who: str
     inventory = state.resources if isinstance(state, WorldState) else state["resources"]
     cash_enabled = CASH in inventory.get(who, {})
     old = _lane(record, cash_enabled=cash_enabled)
+    # The authenticated farm grain claim is owed by the BAKERY. All the
+    # bakery's outgoing MARKET couriers must leave ONE real, unquoted
+    # finished loaf on site until a real return trip picks up that wage
+    # procurement. Without this local priority, fast market delivery
+    # consumes every bread batch before its physical farm return.
+    if (record["index"] == 2 and _bakery_has_pending_physical_farm_claim(state)
+            and _bakery_return_unpromised_food(state) <= 1):
+        return None  # No market pickup may steal the real owed loaf.
     if (record["index"] != 4 or "bread_share_earned" not in record
             or record["bread_share_earned"] <= record["bread_share_delivered"]):
         return old
     if not _quantity(inventory.get(record["stops"][5], {}).get("food")):
         return old  # Farm's durable receiving warehouse must be initialized.
-    if _bakery_return_unpromised_food(state) < 2:
-        return old  # Keeper retains one unpromised real loaf for local use.
+    if _bakery_return_unpromised_food(state) < 1:
+        return old  # No bakery-produced unquoted loaf: keep money route.
     # Copper and bread compete for the same physical trip. Alternate whenever
     # both are possible, with the first eligible return paying farm's barter.
     bakery_coins = inventory.get("bakery", {}).get(CASH)
