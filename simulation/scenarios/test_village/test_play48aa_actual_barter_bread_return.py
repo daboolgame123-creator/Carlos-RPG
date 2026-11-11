@@ -176,7 +176,7 @@ def test_true_48h_grain_for_bread_with_two_original_farm_wages(tmp_path):
             "bakery_copper": b.resources["bakery"]["coin_copper"],
             "farm_copper": b.resources["farm"]["coin_copper"],
         })
-    assert treatment.schema_version == 45 and treatment.rules_version == 61
+    assert treatment.schema_version == 45 and treatment.rules_version == 62
     print("PLAY48AA_GENUINE_13NPC_BAKERY_TO_FARM_GRAIN_FOR_BREAD",
         json.dumps({
             "same_thirteen_people": True,
