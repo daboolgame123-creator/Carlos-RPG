@@ -40,8 +40,13 @@ def _quantity(v: Any) -> bool:
 def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> None:
     p = event.data
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
-            or set(p) != {"courier_id", "stops", "route_ids", "period_seconds"}):
+            or set(p) not in ({"courier_id", "stops", "route_ids", "period_seconds"},
+                            {"courier_id", "stops", "route_ids", "period_seconds",
+                             "farm_bread_share"})):
         raise ValueError("courier circuit is trusted time-zero setup")
+    share = p.get("farm_bread_share", False)
+    if type(share) is not bool or ("farm_bread_share" in p and share is not True):
+        raise ValueError("only explicitly signed real farm grain-for-bread share")
     who, stops, routes, period = (p["courier_id"], p["stops"],
                                 p["route_ids"], p["period_seconds"])
     if (type(who) is not str or who not in state["npcs"]
@@ -85,11 +90,19 @@ def configure_circuit(state: dict, event: DomainEvent, *, bootstrap: bool) -> No
             or any(not _quantity(stock.get(site, {}).get(CASH))
                    for site in (stops[1], "bakery", "market"))):
         raise ValueError("cash return contract needs zero courier cash and known depot balances")
+    if share and (
+            not _quantity(stock.get(stops[1], {}).get("food"))
+            or not _quantity(stock.get("bakery", {}).get("food"))
+            or not _quantity(stock.get(stops[1], {}).get("grain"))
+            or CASH not in stock.get(who, {})
+            or not _quantity(stock.get(who, {}).get("food"))):
+        raise ValueError("real signed grain-share requires owned farm/bakery stock and coin-return route")
     state["supply_circuits"][who] = {
         "stops": list(stops), "route_ids": list(routes),
         "period_seconds": period, "index": 0, "rounds": 0,
         "next_departure": 0, "carry": None,
         "loads": 0, "deliveries": 0,
+        **({"bread_share_earned": 0, "bread_share_delivered": 0} if share else {}),
     }
 
 
@@ -144,6 +157,62 @@ def _bakery_cash_remittance_minimum(state: dict | WorldState,
     return max(2, 1 + _local_unpaid_bakery_wage_reserve(state))
 
 
+def _bakery_return_unpromised_food(state: dict | WorldState) -> int:
+    """Only locally owned, unquoted, unconsigned bakery loaves are available.
+
+    A farm's signed grain delivery earns a bread claim, NOT an immediate loaf.
+    Already advertised customer goods are never repurposed as barter or wages.
+    """
+    if isinstance(state, WorldState):
+        inventory, offers, circuits = (
+            state.resources, state.market_offers, state.supply_circuits)
+    else:
+        inventory, offers, circuits = (
+            state["resources"], state["market_offers"], state["supply_circuits"])
+    existing = inventory.get("bakery", {}).get("food")
+    if not _quantity(existing):
+        return -1
+    listed = sum(
+        row["remaining"] for row in offers.values()
+        if row["status"] == "open"
+        and row["stock_owner_id"] == "bakery"
+        and row["resource"] == "food"
+    )
+    from .market import reserved_trade_units
+    return existing - listed - reserved_trade_units(circuits, "bakery", "food")
+
+
+def _signed_physical_lane(state: dict | WorldState, record: dict, who: str
+                          ) -> tuple[str, str, str] | None:
+    """Pick exactly ONE real return parcel: owed bread or normal copper.
+
+    Old circuits always return the exact legacy lane. For a specifically
+    signed grain-for-one-bread barter, every genuinely delivered farm grain
+    earns one owed loaf. The courier can carry one Bakery→Farm food parcel
+    on the *existing road* only if bakery has two unpromised finished loaves.
+    Cash remittance remains available on the other rounds; no double cargo.
+    This is a signed counterfactual, not a globally granted transport right.
+    """
+    inventory = state.resources if isinstance(state, WorldState) else state["resources"]
+    cash_enabled = CASH in inventory.get(who, {})
+    old = _lane(record, cash_enabled=cash_enabled)
+    if (record["index"] != 4 or "bread_share_earned" not in record
+            or record["bread_share_earned"] <= record["bread_share_delivered"]):
+        return old
+    if _bakery_return_unpromised_food(state) < 2:
+        return old  # Keeper retains one unpromised real loaf for local use.
+    # Copper and bread compete for the same physical trip. Alternate whenever
+    # both are possible, with the first eligible return paying farm's barter.
+    bakery_coins = inventory.get("bakery", {}).get(CASH)
+    copper_ready = (
+        cash_enabled and _quantity(bakery_coins) and
+        bakery_coins >= _bakery_cash_remittance_minimum(state, record)
+    )
+    if not copper_ready or record["rounds"] % 2 == 0:
+        return (record["stops"][4], record["stops"][5], "food")
+    return old
+
+
 def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -> None:
     p = event.data
     if (not supply_authorized or set(p) != {"courier_id", "resource"}
@@ -164,7 +233,7 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
                 or npc["needs"]["safety"] >= 75
                 or _injury_rest_decision(state["injuries"], who) is not None):
             raise ValueError("exhausted or unsafe courier cannot reserve new cargo")
-        lane = _lane(record, cash_enabled=CASH in state["resources"][who])
+        lane = _signed_physical_lane(state, record, who)
         if (lane is None or record["carry"] is not None or current != lane[0]
                 or p["resource"] != lane[2]):
             raise ValueError("pickup must use the local planned shipping lane")
@@ -197,6 +266,17 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
             raise ValueError("delivery requires one reserved carried unit")
         state["resources"][who][resource] -= 1
         state["resources"][current][resource] += 1
+        # The grain was PHYSICALLY picked at the farm and delivered at the
+        # bakery under an explicit time-zero barter. One grain becomes one
+        # future bread claim, never an inventory item or immediately a meal.
+        if (resource == "grain" and record["index"] == 2
+                and "bread_share_earned" in record):
+            record["bread_share_earned"] += 1
+        if (resource == "food" and record["index"] == 5
+                and "bread_share_earned" in record):
+            if record["bread_share_delivered"] >= record["bread_share_earned"]:
+                raise ValueError("bakery-to-farm bread cannot exceed actual grain barter")
+            record["bread_share_delivered"] += 1
         record["carry"] = None
         record["deliveries"] += 1
     else:
@@ -256,7 +336,7 @@ def choose_cargo(state: WorldState, who: str) -> str | None:
             or npc["needs"]["safety"] >= 75
             or _injury_rest_decision(state.injuries, who) is not None):
         return None
-    lane = _lane(record, cash_enabled=CASH in state.resources.get(who, {}))
+    lane = _signed_physical_lane(state, record, who)
     if (lane is not None and here == lane[0]
             and _quantity(state.resources.get(here, {}).get(lane[2]))
             and state.resources[here][lane[2]] >= (
@@ -312,10 +392,12 @@ def validate_supply_circuits(state: dict) -> None:
     if type(circuits) is not dict:
         raise ValueError("invalid courier contracts")
     for who, rec in circuits.items():
+        base_shape = {"stops", "route_ids", "period_seconds", "index",
+                      "rounds", "next_departure", "carry", "loads", "deliveries"}
+        share_shape = {"bread_share_earned", "bread_share_delivered"}
         if (who not in state["npcs"] or state["npcs"][who]["role"] != "courier"
                 or type(rec) is not dict
-                or set(rec) != {"stops", "route_ids", "period_seconds", "index",
-                               "rounds", "next_departure", "carry", "loads", "deliveries"}
+                or set(rec) not in (base_shape, base_shape | share_shape)
                 or not _validated_stops(rec["stops"])
                 or type(rec["route_ids"]) is not list or len(rec["route_ids"]) != 6
                 or type(rec["period_seconds"]) is not int
@@ -326,6 +408,15 @@ def validate_supply_circuits(state: dict) -> None:
                 or rec["loads"] < rec["deliveries"]
                 or rec["loads"] - rec["deliveries"] != int(rec["carry"] is not None)):
             raise ValueError("invalid durable courier logistics state")
+        if "bread_share_earned" in rec:
+            if (type(rec["bread_share_earned"]) is not int
+                    or type(rec["bread_share_delivered"]) is not int
+                    or not 0 <= rec["bread_share_delivered"] <= rec["bread_share_earned"]
+                    or rec["bread_share_earned"] > rec["deliveries"]
+                    or CASH not in state["resources"].get(who, {})
+                    or not _quantity(state["resources"].get(rec["stops"][1], {}).get("food"))
+                    or not _quantity(state["resources"].get("bakery", {}).get("food"))):
+                raise ValueError("invalid persisted real farm-bread barter account")
         for idx, rid in enumerate(rec["route_ids"]):
             route = state["routes"].get(rid)
             if route is None or {route["a"], route["b"]} != {rec["stops"][idx], rec["stops"][idx+1]}:
@@ -346,6 +437,8 @@ def validate_supply_circuits(state: dict) -> None:
                     (rec["stops"][idx], rec["stops"][idx + 1], CASH)
                     for idx in (3, 4)
                 )
+            if "bread_share_earned" in rec:
+                eligible.append((rec["stops"][4], rec["stops"][5], "food"))
             if (type(cargo) is not dict
                     or set(cargo) != {"source", "destination", "resource"}
                     or tuple(cargo[k] for k in ("source", "destination", "resource"))
