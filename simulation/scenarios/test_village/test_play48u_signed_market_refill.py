@@ -161,3 +161,71 @@ def test_true_48h_13npc_pre_authorized_market_refill_vs_one_shot(tmp_path):
     }
     print("PLAY48U_GENUINE_MARKET_BACKED_COURIER_REFUND_48H",
           json.dumps(report, sort_keys=True), flush=True)
+
+
+def test_open_customer_quotes_and_duplicate_service_are_protected(tmp_path):
+    """Synthetic reducer attack, NOT an authored in-game delivery.
+
+    A real separate 48-hour A/B tests delivery and stock provenance.
+    This isolated attack tests whether the reducer can spend already
+    advertised customer inventory, fake owner consent or double-pay.
+    """
+    from carlos_sim.courier_provisions import (
+        _market_uncommitted_bread_after_sales,
+        replenish_provision_from_delivered_market_food,
+        pay_courier_provision,
+    )
+
+    state = _seed_employed_paid_couriers(tmp_path / "signed-source.sqlite").to_dict()
+    c = state["courier_provisions"]["market-service-hana"]
+    assert c["authorized_total_units"] == 3
+    c["remaining"] = 0
+    c["payments"] = [{
+        "service_deliveries": 2, "paid_at": 0,
+        "worker_food_before": 0, "worker_food_after": 1,
+    }]
+    circuit = state["supply_circuits"]["hana"]
+    circuit["index"] = 3
+    circuit["loads"] = 3
+    circuit["deliveries"] = 3
+    circuit["carry"] = None
+    state["entities"]["hana"]["location_id"] = "market"
+    state["resources"]["market"]["food"] = 10
+    state["market_offers"]["unit-test-active-quote"] = {
+        "site_id": "market", "stock_owner_id": "market", "resource": "food",
+        "remaining": 10, "status": "open",
+    }
+    event = DomainEvent("CourierProvisionReplenished", None,
+        "isolated synthetic check, never appended to the world", 0,
+        {"id": "market-service-hana",
+         "courier_id": "hana", "service_deliveries": 3})
+
+    assert _market_uncommitted_bread_after_sales(state) == 0
+    before = json.dumps(state, sort_keys=True)
+    with pytest.raises(ValueError, match="listed"):
+        replenish_provision_from_delivered_market_food(
+            state, event, supply_authorized=True)
+    assert json.dumps(state, sort_keys=True) == before
+
+    # The SAME ten real test units: eight are already advertised.
+    # A capped payroll can spend ONE of the remaining TWO; at least
+    # one unlisted loaf stays with the merchant for subsequent sales.
+    state["market_offers"]["unit-test-active-quote"]["remaining"] = 8
+    assert _market_uncommitted_bread_after_sales(state) == 2
+    replenish_provision_from_delivered_market_food(
+        state, event, supply_authorized=True)
+    assert state["resources"]["market"]["food"] == 9
+    assert (c["total_units"], c["remaining"], c["authorized_total_units"]) == (2, 1, 3)
+    pay_courier_provision(state, DomainEvent("CourierProvisionPaid", None,
+        "single synthetic salary settlement", 0,
+        {"id": "market-service-hana", "courier_id": "hana",
+         "service_deliveries": 3}), supply_authorized=True)
+    assert state["resources"]["hana"]["food"] == 1
+    assert c["remaining"] == 0
+    assert len(c["payments"]) == 2
+
+    after = json.dumps(state, sort_keys=True)
+    with pytest.raises(ValueError):
+        replenish_provision_from_delivered_market_food(
+            state, event, supply_authorized=True)
+    assert json.dumps(state, sort_keys=True) == after
