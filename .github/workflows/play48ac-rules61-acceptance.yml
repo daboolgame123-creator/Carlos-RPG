@@ -1,0 +1,146 @@
+name: PLAY-48AC final provisional Rules61 forensic, old save protection and true 48h
+on:
+  push:
+    branches: ["integration/play48ac-rules61-verified-20261111"]
+    paths:
+      - ".github/workflows/play48ac-rules61-acceptance.yml"
+permissions:
+  contents: read
+concurrency:
+  group: play48ac-rules61-exact-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-old-45-60-world-is-byte-preserved:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          ref: c9577d9870799d2f8b57db73416f663bb1b796cc
+          path: verified-old-45-60
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Actually create and verify old 45/60 durable SQLite on frozen original engine
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          test "$(git -C ../verified-old-45-60 rev-parse HEAD)" = "c9577d9870799d2f8b57db73416f663bb1b796cc"
+          PYTHONPATH=../verified-old-45-60/simulation/src python - <<'PY'
+          from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+          from carlos_sim import SQLiteEventStore
+          assert (SCHEMA_VERSION, RULES_VERSION) == (45,60)
+          with SQLiteEventStore("authentic-previous-45-60.sqlite") as db:
+              s=db.create_world("legacy-current")
+              db.snapshot("legacy-current")
+              assert db.verify("legacy-current").to_dict()==s.to_dict()
+          PY
+      - name: New Rules61 rejects old saved world without changing any byte
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          import sqlite3
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+          from carlos_sim.store import UnsupportedVersion
+          assert (SCHEMA_VERSION, RULES_VERSION)==(45,61)
+          path=Path("authentic-previous-45-60.sqlite")
+          prior=sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              try:
+                  db.verify("legacy-current")
+              except UnsupportedVersion:
+                  pass
+              else:
+                  raise AssertionError("unsafe automatic Rules60-to-61 reinterpretation")
+          assert sha256(path.read_bytes()).hexdigest()==prior
+          with sqlite3.connect(path) as raw:
+              assert raw.execute("SELECT schema_version,rules_version FROM worlds").fetchone()==(45,60)
+              assert raw.execute("PRAGMA integrity_check").fetchone()==("ok",)
+          print("PLAY48AC_OLD_45_60_SAVE_REJECTED_BYTE_IDENTICAL", prior, flush=True)
+          PY
+  exact-source-short-manifest-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Signed single source of truth plus bakery stock and wage security
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48ac_authoritative_cargo_manifest.py scenarios/test_village/test_play48ab_bakery_farm_bread_priority.py scenarios/test_village/test_play48aa_barter_security.py scenarios/test_village/test_play48aa_actual_barter_bread_return.py -k "not true_48h"
+  full-historical-exact-source:
+    needs: exact-source-short-manifest-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Entire historical and current test suite on Rules61 exact commit
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src tests scenarios
+          python -m pytest -q --tb=line
+  independent-two-day-real-13-npc-freight:
+    needs: exact-source-short-manifest-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Actual 48h signed bread and physical return with no falsified meal
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src python -m pytest -qs scenarios/test_village/test_play48aa_actual_barter_bread_return.py -k "true_48h"
