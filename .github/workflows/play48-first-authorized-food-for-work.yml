@@ -1,0 +1,50 @@
+name: PLAY48 Option A first physical food-for-verified-work security gate (DRAFT NO MERGE)
+
+on:
+  push:
+    branches:
+      - feature/play48-authorized-physical-food-for-work-20261113
+    paths:
+      - ".github/workflows/play48-first-authorized-food-for-work.yml"
+      - "simulation/src/carlos_sim/food_for_work.py"
+      - "simulation/src/carlos_sim/production.py"
+      - "simulation/src/carlos_sim/domain.py"
+      - "simulation/src/carlos_sim/store.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/scenarios/test_village/test_play47_joined_professions.py"
+      - "simulation/scenarios/test_village/test_play48_authorized_food_for_work.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play48-food-for-work-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  exact-head-genuine-site-funded-food-wages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Verify exact tested branch head and compile
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_authorized_food_for_work.py
+      - name: Real 13NPC signed local food settlement and security negatives
+        run: PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_authorized_food_for_work.py
