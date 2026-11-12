@@ -12,7 +12,9 @@ from dataclasses import replace
 import pytest
 
 from carlos_sim import LivingWorldEngine, SQLiteEventStore, TimeEngine
-from carlos_sim.market_navigation import choose_known_market_walk
+from carlos_sim.market_navigation import (
+    UNBOUGHT_STALL_REVISIT_SECONDS, choose_known_market_walk,
+)
 from test_play42_market_shopping import _advance, _engine
 from test_play38_multi_farm_couriers import (
     WORLD, FARMER, EAST, seed_two_field_world,
@@ -114,3 +116,65 @@ def test_market_memory_opt_in_requires_full_life_and_shopping(tmp_path):
         with pytest.raises(ValueError, match="remember_unbought_stalls_enabled"):
             LivingWorldEngine(db, clock,
                               remember_unbought_stalls_enabled="true")
+
+
+def _same_actual_wage_after_real_first_hand_visit(real, *, seconds_since_visit):
+    """Detached selector-only time/hunger counterfactual. No minted wage."""
+    arrivals = [
+        t["arrived_at"] for t in real.travels.values()
+        if t["npc_id"] == FARMER and t["status"] == "arrived"
+        and t["destination"] == "market"
+    ]
+    wages = [
+        j["work_wage"]["paid_at"] for j in real.production_jobs.values()
+        if j["npc_id"] == FARMER and "work_wage" in j
+    ]
+    assert arrivals and wages and max(wages) <= max(arrivals)
+    raw = real.to_dict()
+    raw["time"] = max(arrivals) + seconds_since_visit
+    raw["npcs"][FARMER]["needs"]["hunger"] = 75
+    return replace(real, time=raw["time"], npcs=raw["npcs"])
+
+
+def test_same_genuine_wage_can_support_later_stall_revisit_after_six_hours(tmp_path):
+    real = _real_first_hand_failed_market_visit(tmp_path)
+    assert real.resources[FARMER]["coin_copper"] == 1
+    later = _same_actual_wage_after_real_first_hand_visit(
+        real, seconds_since_visit=UNBOUGHT_STALL_REVISIT_SECONDS)
+    old = choose_known_market_walk(later, FARMER, repeat_errands=True)
+    improved = choose_known_market_walk(
+        later, FARMER, repeat_errands=True,
+        remember_unbought_stalls=True)
+    assert old is None or old.destination != "market"
+    assert improved is not None and improved.destination == "market"
+    assert improved.route_id in real.navigation[FARMER]["known_routes"]
+    # This pure choice does not grant goods or take a physical step.
+    assert real.resources[FARMER]["coin_copper"] == 1
+    assert not real.market_trades
+
+
+def test_bounded_memory_does_not_repeat_before_physical_six_hour_cooldown(tmp_path):
+    real = _real_first_hand_failed_market_visit(tmp_path)
+    too_soon = _same_actual_wage_after_real_first_hand_visit(
+        real, seconds_since_visit=UNBOUGHT_STALL_REVISIT_SECONDS - 1)
+    denied = choose_known_market_walk(
+        too_soon, FARMER, repeat_errands=True,
+        remember_unbought_stalls=True)
+    assert denied is None or denied.destination != "market"
+
+
+def test_old_unquoted_visit_never_grants_market_knowledge(tmp_path):
+    real = _real_first_hand_failed_market_visit(tmp_path)
+    unquoted = _same_actual_wage_after_real_first_hand_visit(
+        real, seconds_since_visit=UNBOUGHT_STALL_REVISIT_SECONDS)
+    raw = unquoted.to_dict()
+    # Detached threat fixture. A quote posted only after the witnessed visit
+    # cannot retroactively tell the shopper about a remote food seller.
+    for offer in raw["market_offers"].values():
+        if offer["site_id"] == "market" and offer["resource"] == "food":
+            offer["posted_at"] = real.time + 1
+    with_unwitnessed_quote = replace(unquoted, market_offers=raw["market_offers"])
+    denied = choose_known_market_walk(
+        with_unwitnessed_quote, FARMER, repeat_errands=True,
+        remember_unbought_stalls=True)
+    assert denied is None or denied.destination != "market"
