@@ -35,6 +35,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install audited fixture dependency
+        run: python -m pip install pytest
       - name: Check exact commit and forensic report syntax
         run: |
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
