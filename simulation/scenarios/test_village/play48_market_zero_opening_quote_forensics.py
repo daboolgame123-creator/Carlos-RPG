@@ -17,7 +17,7 @@ from carlos_sim.economic_autonomy import (
 )
 from carlos_sim.market import _present
 from carlos_sim.food_access_diagnostics import audit_food_access_barriers
-from test_play48_hana_market_real_wage_ab import _seed
+from play48_hana_market_real_wage_ab import _seed
 from test_play48h3_early_market_wage import _run, _conserve
 from test_play48_13npc_post72_relay import _stats
 from test_play47_closure_endurance import WORLD
