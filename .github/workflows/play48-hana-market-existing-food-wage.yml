@@ -1,0 +1,45 @@
+name: PLAY48 Hana market-funded existing loaf 72h authentic A/B (NO MERGE)
+
+on:
+  push:
+    branches:
+      - experiment/play48-hana-signed-opening-food-wage-20261112
+    paths:
+      - "simulation/scenarios/test_village/play48_hana_market_real_wage_ab.py"
+      - ".github/workflows/play48-hana-market-existing-food-wage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: play48-hana-one-loaf-wage-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  original-vs-funded-existing-market-loaf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 145
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install authentic genesis fixture dependency
+        run: python -m pip install pytest
+      - name: Verify the exact source and syntax
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m py_compile scenarios/test_village/play48_hana_market_real_wage_ab.py
+      - name: Real 13-NPC same goods, signed market payroll A/B (24/48/72h)
+        run: |
+          PYTHONPATH=src:scenarios/test_village python -u scenarios/test_village/play48_hana_market_real_wage_ab.py
