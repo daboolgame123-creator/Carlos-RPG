@@ -1,0 +1,46 @@
+name: PLAY48 preserved first-market sale, finite Huda/Hana food-wage 72h A/B (NO MERGE)
+
+on:
+  push:
+    branches:
+      - experiment/play48-preserve-first-market-sale-split-food-wages-20261112
+    paths:
+      - "simulation/scenarios/test_village/play48_preserved_market_opening_split_wages_ab.py"
+      - ".github/workflows/play48-preserve-opening-market-sale-split-wages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play48-preserve-opening-market-sale-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  genuine-13npc-opening-sales-and-physical-wages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install authentic historical fixture dependency
+        run: python -m pip install pytest
+      - name: Check exact HEAD, parse forensic scenario
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m py_compile scenarios/test_village/play48_preserved_market_opening_split_wages_ab.py
+      - name: Real two-arm 13NPC physical 24/48/72h A/B
+        run: |
+          PYTHONPATH=src:scenarios/test_village python -u scenarios/test_village/play48_preserved_market_opening_split_wages_ab.py
