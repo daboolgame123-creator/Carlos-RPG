@@ -1,0 +1,44 @@
+name: PLAY48 authentic 13-NPC job-wage ledger forensics (NO MERGE)
+
+on:
+  push:
+    branches:
+      - experiment/play48-wage-ledger-by-job-20261112
+    paths:
+      - "simulation/scenarios/test_village/play48_wage_receipt_forensics.py"
+      - ".github/workflows/play48-authentic-per-job-wage-forensics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play48-wage-ledger-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  genuine-13npc-unpaid-job-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Check exact commit and forensic report syntax
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m py_compile scenarios/test_village/play48_wage_receipt_forensics.py
+      - name: Audit verified source job receipts and employer money (24/48/72/96h)
+        run: |
+          PYTHONPATH=src:scenarios/test_village python -u scenarios/test_village/play48_wage_receipt_forensics.py
