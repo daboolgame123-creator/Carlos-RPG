@@ -41,7 +41,14 @@ def _available_site_food(state: WorldState | dict[str, Any], site: str) -> int:
     )
     from .market import reserved_trade_units
     custody = reserved_trade_units(circuits, site, "food")
-    return balance - quoted - custody
+    # An already EARNED farm grain-for-bread barter is a first-priority
+    # physical bakery obligation. This loaf has not left the bakery yet:
+    # never spend it as a baker's site-funded salary.
+    promised_farm_loaf = 0
+    if site == "bakery":
+        from .supply import _bakery_has_pending_physical_farm_claim
+        promised_farm_loaf = int(_bakery_has_pending_physical_farm_claim(state))
+    return balance - quoted - custody - promised_farm_loaf
 
 
 def _worker_present_and_free(state: WorldState | dict[str, Any],
