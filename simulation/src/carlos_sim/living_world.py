@@ -89,7 +89,8 @@ class LivingWorldEngine:
                  farm_sourced_wage_refill_enabled: bool = False,
                  hungry_woodcutter_work_enabled: bool = False,
                  retry_known_supplier_enabled: bool = False,
-                 remember_unbought_stalls_enabled: bool = False):
+                 remember_unbought_stalls_enabled: bool = False,
+                 food_for_work_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -163,6 +164,11 @@ class LivingWorldEngine:
         if type(economic_enabled) is not bool:
             raise ValueError('economic_enabled must be boolean')
         self.economic_enabled = economic_enabled
+        if (type(food_for_work_enabled) is not bool
+                or (food_for_work_enabled and not (
+                    economic_enabled and consumption_enabled and survival_enabled))):
+            raise ValueError("food-for-work requires economic, consumption and survival")
+        self.food_for_work_enabled = food_for_work_enabled
         if type(adaptive_market_enabled) is not bool or (adaptive_market_enabled and not economic_enabled):
             raise ValueError("adaptive_market_enabled requires economic_enabled=True")
         self.adaptive_market_enabled = adaptive_market_enabled
@@ -602,6 +608,17 @@ class LivingWorldEngine:
                         "locally funded, one-time completed labor receipt",
                         current.time, {"job_id": job_id, "amount": wage}),
                         production_capability=True)
+                if self.food_for_work_enabled:
+                    # Only a completed job at its original, local worksite.
+                    # Existing customer quotes and cargo remain protected.
+                    from .food_for_work import choose_site_food_wage
+                    for job_id in sorted(current.production_jobs):
+                        if choose_site_food_wage(current, job_id) is None:
+                            continue
+                        append(DomainEvent("ProductionFoodWagePaid", None,
+                            "real local employer food for completed labor",
+                            current.time, {"job_id": job_id, "amount": 1}),
+                            production_capability=True)
                 if (self.professional_procurement_enabled or
                         self.multi_professional_markets_enabled):
                     from .professional_trade import choose_workshop_input_deposit
