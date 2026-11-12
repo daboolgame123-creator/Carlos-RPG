@@ -1,0 +1,66 @@
+name: PLAY48 genuine postwage 6h stall revisit 96h A/B (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-same-wage-food-market-revisit-20261112
+    paths:
+      - "simulation/src/carlos_sim/market_navigation.py"
+      - "simulation/scenarios/test_village/test_play48_market_memory_selector.py"
+      - "simulation/scenarios/test_village/play48_market_memory_ab.py"
+      - ".github/workflows/play48-same-wage-stall-revisit.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-postwage-market-retry-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  first-hand-revisit-logic-and-adversarial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Confirm exact revision syntax
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src scenarios/test_village/test_play48_market_memory_selector.py scenarios/test_village/play48_market_memory_ab.py
+      - name: Test prior genuine wage, witnessed route and bounded cooldown
+        run: PYTHONPATH=src:scenarios/test_village python -m pytest -qs scenarios/test_village/test_play48_market_memory_selector.py
+  real-13npc-24-48-72-96h-control-vs-optin:
+    needs: first-hand-revisit-logic-and-adversarial
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Authenticated 13-NPC same-genesis economic 4-day counterfactual
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src:scenarios/test_village python -u scenarios/test_village/play48_market_memory_ab.py
