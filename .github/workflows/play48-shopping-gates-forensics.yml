@@ -1,0 +1,42 @@
+name: PLAY48 pinpoint exact shopping gates at 24–72h (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-shopping-gates-forensics-20261112
+    paths:
+      - "simulation/scenarios/test_village/play48_shopping_gates_forensics.py"
+      - ".github/workflows/play48-shopping-gates-forensics.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-shopping-forensics-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  true-24-72h-single-world:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install fixture-only pytest dependency
+        run: python -m pip install pytest
+      - name: Validate exact source and syntax
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m py_compile scenarios/test_village/play48_shopping_gates_forensics.py
+      - name: Run real unchanged signed-wage world, all checkpoints
+        run: |
+          PYTHONPATH=src:scenarios/test_village python -u scenarios/test_village/play48_shopping_gates_forensics.py
