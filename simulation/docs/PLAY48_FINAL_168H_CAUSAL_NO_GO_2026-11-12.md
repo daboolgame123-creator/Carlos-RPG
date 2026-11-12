@@ -77,7 +77,7 @@ Repeated post-72 bread/grain production, real deliveries, wages, sales and meals
 | 3.13 log | `final168_p313_wal.log` + `final168_row.log` (operator artifacts, not committed) |
 | 3.10 log | `final168_p310_wal.log` (operator artifact, not committed) |
 | 168 h row | `final168_row.log`: `INTEG ('ok',) FK 0`, revision 15 675, 13/13 hunger 100 |
-| Branch/commit | `experiment/play48-final-168h-no-go-20261112` @ `8e62d15` (pushed) |
+| Branch/commit | `experiment/play48-final-168h-no-go-20261112` @ `469f5d9` (pushed) |
 | PR | Not opened: this runner has no authenticated GitHub session. Create/compare: `https://github.com/daboolgame123-creator/Carlos-RPG/compare/main...experiment/play48-final-168h-no-go-20261112?expand=1` |
 
 No merge, no release, no save migration. `PLAY48_ECONOMIC_NO_GO` remains in force until the design decision in §4 is made and a new candidate is measured through 168 h.
