@@ -88,7 +88,8 @@ class LivingWorldEngine:
                  market_sourced_wage_refill_enabled: bool = False,
                  farm_sourced_wage_refill_enabled: bool = False,
                  hungry_woodcutter_work_enabled: bool = False,
-                 retry_known_supplier_enabled: bool = False):
+                 retry_known_supplier_enabled: bool = False,
+                 remember_unbought_stalls_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -179,6 +180,13 @@ class LivingWorldEngine:
                 'professions, with navigation, consumption and survival'
             )
         self.shopping_routes_enabled = shopping_routes_enabled
+        if (type(remember_unbought_stalls_enabled) is not bool
+                or (remember_unbought_stalls_enabled and not (
+                    shopping_routes_enabled and professional_full_life_enabled))):
+            raise ValueError(
+                "remember_unbought_stalls_enabled requires full-life shopping"
+            )
+        self.remember_unbought_stalls_enabled = remember_unbought_stalls_enabled
         if (type(professional_procurement_enabled) is not bool or
                 (professional_procurement_enabled and not (
                     economic_enabled and agriculture_enabled and economy_only_enabled
@@ -937,6 +945,7 @@ class LivingWorldEngine:
                                 movement_capability=True)
                         walk = choose_known_market_walk(
                             current, shopper_id, repeat_errands=repeat_errands,
+                            remember_unbought_stalls=self.remember_unbought_stalls_enabled,
                         )
                     if walk is None:
                         continue
