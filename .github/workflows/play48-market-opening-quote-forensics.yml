@@ -1,0 +1,41 @@
+name: PLAY48 authentic zero-opening-market quote forensic (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-empty-market-quote-forensics-20261112
+    paths:
+      - "simulation/scenarios/test_village/play48_market_zero_opening_quote_forensics.py"
+      - ".github/workflows/play48-market-opening-quote-forensics.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-empty-market-quote-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  genuine-13npc-market-stall-observer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Exact SHA and diagnostic syntax check
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m py_compile scenarios/test_village/play48_market_zero_opening_quote_forensics.py
+      - name: Genuine physical 13-NPC market 0-24-36-48h seller quote/read-only gates
+        run: |
+          PYTHONPATH=src:scenarios/test_village python -u scenarios/test_village/play48_market_zero_opening_quote_forensics.py
