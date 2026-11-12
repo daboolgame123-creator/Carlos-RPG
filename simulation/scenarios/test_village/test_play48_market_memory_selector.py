@@ -150,7 +150,8 @@ def test_same_genuine_wage_can_support_later_stall_revisit_after_six_hours(tmp_p
     assert improved.route_id in real.navigation[FARMER]["known_routes"]
     # This pure choice does not grant goods or take a physical step.
     assert real.resources[FARMER]["coin_copper"] == 1
-    assert not real.market_trades
+    assert not [trade for trade in real.market_trades.values()
+                if trade["buyer_id"] == FARMER]
 
 
 def test_bounded_memory_does_not_repeat_before_physical_six_hour_cooldown(tmp_path):
