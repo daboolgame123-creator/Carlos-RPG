@@ -36,7 +36,7 @@ The 24 h zero is a timing artifact, not a capacity verdict: the first crop matur
 
 ### 3.1 Physical food is not the binding constraint at 48 h
 
-At 48 h the village owns **8 loaves at market + 1 escrow + 2 grain**, has just baked 12 loaves, and still has **5 residents at hunger 100**. At 72–96 h it owns **6 loaves + 1 escrow + 2 grain + 2 ripe crops**, 4 water at the well, and **11–12 residents at hunger 100**. Starvation coexists with physical surplus.
+At 48 h the village owns **8 loaves at market + 1 escrow + 2 grain**, has just baked 12 loaves, and still has **5 residents at hunger 100**. At 96–168 h it owns **6 loaves + 1 escrow + 2 grain + 2 ripe crops**, 4 water at the well, and **12–13 residents at hunger 100**. Starvation coexists with physical surplus.
 
 ### 3.2 Zero-income residents cannot clear the market
 
