@@ -25,6 +25,7 @@ def _joined_bootstrap(
     site_payroll_enabled=False, site_payroll_wage_coin=1,
     bakery_opening_food_wage=False, farm_opening_food_wage=False,
     farm_initial_food_loaves=1, farm_bread_share_enabled=False, wood_charcoal_jobs_enabled=False,
+    food_for_work_bakery_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -33,6 +34,9 @@ def _joined_bootstrap(
     are allocated at genesis as farm/bakery working capital, without adding
     any copper. The normal field/baker jobs get one-copper wage contracts.
     """
+    if (type(food_for_work_bakery_enabled) is not bool
+            or (food_for_work_bakery_enabled and not bakery_opening_food_wage)):
+        raise ValueError("bakery food-for-work requires an existing bakery-owned opening loaf")
     if type(site_payroll_enabled) is not bool:
         raise ValueError("site_payroll_enabled must be boolean")
     if type(farm_bread_share_enabled) is not bool:
@@ -151,6 +155,19 @@ def _joined_bootstrap(
                     signed.add(terms["id"])
             assert signed == {"finite-harvest", "grain-to-bread"}
 
+        if food_for_work_bakery_enabled:
+            # Only a real time-zero employer can sign this durable wage term.
+            bakery_jobs = [
+                (idx, ev) for idx, ev in enumerate(events)
+                if ev.event_type == "ProductionRecipeConfigured"
+                and ev.data.get("id") == "grain-to-bread"
+            ]
+            assert len(bakery_jobs) == 1
+            idx, old = bakery_jobs[0]
+            assert "wage_coin" not in old.data
+            terms = dict(old.data)
+            terms["wage_food"] = 1
+            events[idx] = _e("ProductionRecipeConfigured", terms)
         if wood_charcoal_jobs_enabled:
             # ONE of the thirteen existing people, Layla, takes an actual
             # finite-timber job. The forest location is created before her
