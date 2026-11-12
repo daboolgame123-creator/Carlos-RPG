@@ -17,6 +17,9 @@ from .navigation import shortest_known_route
 
 MAX_SHOPPING_FATIGUE = 84
 MAX_SHOPPING_DANGER = 74
+# A genuinely visited but unbought market may be retried after this much
+# simulation time, without any oracle about its *current* stock or price.
+UNBOUGHT_STALL_REVISIT_SECONDS = 6 * 3600
 
 
 @dataclass(frozen=True)
@@ -124,6 +127,52 @@ def choose_known_market_walk(
                      if remember_unbought_stalls else
                      "funded shopper returning to a personally used food stall"),
                 )
+
+        if remember_unbought_stalls and wage_at >= 0:
+            # Crucial case missed by the first market-memory pilot: a worker
+            # receives a real wage FIRST, THEN visits a food stall while it is
+            # empty/unaffordable, and later still owns enough personal copper
+            # to retry. No subsequent wage is required to remember a place
+            # their OWN feet have already reached.
+            #
+            # Apply a strict clock cooldown from the LATEST physical arrival,
+            # not from a remote price/stock update. This is bounded curiosity,
+            # not a daily oracle that reveals whether bread has been restocked.
+            first_hand_last_arrival = {}
+            for trip in state.travels.values():
+                if (trip["npc_id"] != npc_id or trip["status"] != "arrived"
+                        or trip["destination"] not in state.market_stalls):
+                    continue
+                destination = trip["destination"]
+                arrived = trip["arrived_at"]
+                if not any(
+                    offer["site_id"] == destination
+                    and offer["resource"] == "food"
+                    and offer["posted_at"] <= arrived
+                    for offer in state.market_offers.values()
+                ):
+                    continue
+                first_hand_last_arrival[destination] = max(
+                    arrived, first_hand_last_arrival.get(destination, -1)
+                )
+            for destination, arrived in sorted(first_hand_last_arrival.items()):
+                if (destination == here
+                        or state.time - arrived < UNBOUGHT_STALL_REVISIT_SECONDS
+                        or any(
+                            trade["buyer_id"] == npc_id
+                            and trade["resource"] == "food"
+                            and trade["site_id"] == destination
+                            and trade["executed_at"] >= arrived
+                            for trade in state.market_trades.values()
+                        )):
+                    continue
+                path = shortest_known_route(state, npc_id, destination)
+                if path:
+                    return ShoppingWalkIntent(
+                        npc_id, path[0], destination,
+                        "hungry solvent shopper revisiting a food stall "
+                        "personally encountered at least six hours earlier",
+                    )
 
     candidates: list[tuple[int, str, tuple[str, ...]]] = []
     reachable = set()
