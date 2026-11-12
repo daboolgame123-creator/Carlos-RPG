@@ -24,7 +24,8 @@ def _original_engine(db, clock, *, early: bool,
                      hungry_woodcutter_work_enabled=False,
                      retry_known_supplier_enabled=False,
                      market_sourced_wage_refill_enabled=False,
-                     farm_sourced_wage_refill_enabled=False):
+                     farm_sourced_wage_refill_enabled=False,
+                     remember_unbought_stalls_enabled=False):
     return LivingWorldEngine(
         db, clock, max_events_per_advance=5000,
         decision_cooldown=3600,
@@ -40,6 +41,7 @@ def _original_engine(db, clock, *, early: bool,
         early_courier_food_wage_enabled=early,
         market_sourced_wage_refill_enabled=market_sourced_wage_refill_enabled,
         farm_sourced_wage_refill_enabled=farm_sourced_wage_refill_enabled,
+        remember_unbought_stalls_enabled=remember_unbought_stalls_enabled,
         hungry_woodcutter_work_enabled=hungry_woodcutter_work_enabled,
         retry_known_supplier_enabled=retry_known_supplier_enabled,
     )
@@ -99,7 +101,8 @@ def _run(path, end, *, early: bool,
          hungry_woodcutter_work_enabled=False,
          retry_known_supplier_enabled=False,
          market_sourced_wage_refill_enabled=False,
-         farm_sourced_wage_refill_enabled=False):
+         farm_sourced_wage_refill_enabled=False,
+         remember_unbought_stalls_enabled=False):
     day_summaries = []
     with SQLiteEventStore(path) as db:
         clock = TimeEngine(db)
@@ -111,6 +114,7 @@ def _run(path, end, *, early: bool,
             retry_known_supplier_enabled=retry_known_supplier_enabled,
             market_sourced_wage_refill_enabled=market_sourced_wage_refill_enabled,
             farm_sourced_wage_refill_enabled=farm_sourced_wage_refill_enabled,
+            remember_unbought_stalls_enabled=remember_unbought_stalls_enabled,
         )
         try:
             for t in range(DAY // 4, end + 1, DAY // 4):
