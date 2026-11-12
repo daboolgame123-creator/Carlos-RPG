@@ -65,6 +65,7 @@ def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False) 
 
 def choose_known_market_walk(
     state: WorldState, npc_id: str, *, repeat_errands=False,
+    remember_unbought_stalls=False,
 ) -> ShoppingWalkIntent | None:
     """One real road toward a personally unexplored reachable location.
 
@@ -72,6 +73,10 @@ def choose_known_market_walk(
     and public travel durations of those learned roads enter pathfinding.
     Unknown shops and distant inventory are never inspected. No teleport.
     """
+    # New policy is opt-in and cannot affect historical shopping modes.
+    if (type(remember_unbought_stalls) is not bool
+            or (remember_unbought_stalls and not repeat_errands)):
+        raise ValueError("visited stall memory requires repeat errands")
     if not wants_local_market(state, npc_id, repeat_errands=repeat_errands):
         return None
     nav = state.navigation.get(npc_id)
@@ -87,6 +92,23 @@ def choose_known_market_walk(
             if trade["buyer_id"] == npc_id and trade["resource"] == "food"
             and trade["executed_at"] < wage_at
         }
+        if remember_unbought_stalls and wage_at >= 0:
+            # Completed personal road arrival BEFORE a later genuine wage
+            # and a food offer already posted at the time of that arrival
+            # are the only admissible evidence of a remembered stall.
+            # No remote price, stock, cashier balance or unknown road is read.
+            previous_sites.update(
+                trip["destination"] for trip in state.travels.values()
+                if trip["npc_id"] == npc_id and trip["status"] == "arrived"
+                and trip["arrived_at"] < wage_at
+                and trip["destination"] in state.market_stalls
+                and any(
+                    offer["site_id"] == trip["destination"]
+                    and offer["resource"] == "food"
+                    and offer["posted_at"] <= trip["arrived_at"]
+                    for offer in state.market_offers.values()
+                )
+            )
         attempted_sites = {
             trip["destination"] for trip in state.travels.values()
             if trip["npc_id"] == npc_id and trip["status"] == "arrived"
@@ -97,7 +119,10 @@ def choose_known_market_walk(
             if path:
                 return ShoppingWalkIntent(
                     npc_id, path[0], destination,
-                    "funded shopper returning to a personally used food stall",
+                    ("funded shopper returning to a personally visited "
+                     "food stall after a new authentic wage"
+                     if remember_unbought_stalls else
+                     "funded shopper returning to a personally used food stall"),
                 )
 
     candidates: list[tuple[int, str, tuple[str, ...]]] = []

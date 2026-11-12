@@ -1,0 +1,70 @@
+name: PLAY48 market memory — bounded first-hand 13-NPC A/B (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-market-memory-ab-20261112
+    paths:
+      - ".github/workflows/play48-market-memory-ab.yml"
+      - "simulation/src/carlos_sim/market_navigation.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/scenarios/test_village/test_play48h3_early_market_wage.py"
+      - "simulation/scenarios/test_village/test_play48_market_memory_selector.py"
+      - "simulation/scenarios/test_village/play48_market_memory_ab.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-memory-bounded-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  no-remote-knowledge-and-flag-security:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Verify exact source and syntax
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src scenarios/test_village/test_play48_market_memory_selector.py scenarios/test_village/play48_market_memory_ab.py
+      - name: Genuine prior visit with isolated pure-selector security tests
+        run: |
+          PYTHONPATH=src:scenarios/test_village python -m pytest -qs scenarios/test_village/test_play48_market_memory_selector.py
+
+  real-24-48-72h-economic-ab:
+    needs: no-remote-knowledge-and-flag-security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Genuine historical Rules62 control vs opt-in remembered-stall policy
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src:scenarios/test_village python scenarios/test_village/play48_market_memory_ab.py
