@@ -94,7 +94,8 @@ def gate_snapshot(state, npc_id):
         "navigation_target": nav["target"] if nav else None,
         "known_market_road": list(known_route) if known_route else None,
         "visited_market": bool(nav and "market" in nav["visited"]),
-        "last_decision": profile["last_decision"],
+        "last_decision": (dict(profile["last_decision"])
+                          if profile["last_decision"] is not None else None),
         "next_decision_at": profile["next_decision_at"],
         "paid_job_receipts": paid,
         "wants_local_market": wants,
