@@ -613,11 +613,12 @@ class LivingWorldEngine:
                     # Existing customer quotes and cargo remain protected.
                     from .food_for_work import choose_site_food_wage
                     for job_id in sorted(current.production_jobs):
-                        if choose_site_food_wage(current, job_id) is None:
+                        portions = choose_site_food_wage(current, job_id)
+                        if portions is None:
                             continue
                         append(DomainEvent("ProductionFoodWagePaid", None,
                             "real local employer food for completed labor",
-                            current.time, {"job_id": job_id, "amount": 1}),
+                            current.time, {"job_id": job_id, "amount": portions}),
                             production_capability=True)
                 if (self.professional_procurement_enabled or
                         self.multi_professional_markets_enabled):
