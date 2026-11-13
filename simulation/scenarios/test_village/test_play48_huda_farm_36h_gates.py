@@ -65,7 +65,7 @@ def _audit(s):
             "held_water":s.resources[who]["water"],
             "circuit_index":p["index"],
             "rounds":p["rounds"],"delivery_count":p["deliveries"],
-            "carry":p["carry"], "next_departure":p["next_departure"],
+            "carry":dict(p["carry"]) if p["carry"] is not None else None, "next_departure":p["next_departure"],
             "cargo_action":load, "next_leg":trip,
             "wage_receipts": sum(len(c["payments"]) for c in s.courier_provisions.values()
                                 if c["courier_id"]==who),
