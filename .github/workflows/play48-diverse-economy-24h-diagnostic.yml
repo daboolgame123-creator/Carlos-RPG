@@ -1,0 +1,43 @@
+name: PLAY48 24h actual 13NPC economic bottleneck diagnostics (DRAFT NO MERGE)
+
+on:
+  push:
+    branches:
+      - feature/play48-authorized-physical-food-for-work-20261113
+    paths:
+      - ".github/workflows/play48-diverse-economy-24h-diagnostic.yml"
+      - "simulation/scenarios/test_village/test_play48_peddler_24h_diagnostic.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play48-24h-diagnostic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actual-24-hour-village-invariants:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Verify exact SHA and test with no free items or forced NPCs
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_peddler_24h_diagnostic.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_peddler_24h_diagnostic.py
