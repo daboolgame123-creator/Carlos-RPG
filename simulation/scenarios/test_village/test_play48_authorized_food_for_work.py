@@ -166,3 +166,31 @@ def test_real_bakery_jobs_receive_only_existing_local_loaves(tmp_path):
             clock.close_session(WORLD)
     print("PLAY48_ACTUAL_SITE_FUNDED_FOOD_FOR_WORK " +
           json.dumps(timeline, sort_keys=True))
+
+
+def test_rules62_saved_world_is_rejected_without_rewriting_evidence(tmp_path):
+    """RULES63 introduced a new persisted wage receipt, never reinterpret v62."""
+    from carlos_sim import UnsupportedVersion
+
+    path = tmp_path / "rules62-legacy-no-migration.sqlite"
+    seed(path)
+    with SQLiteEventStore(path) as db:
+        before = db.db.execute(
+            "SELECT revision, sim_time, rules_version FROM worlds WHERE id=?",
+            (WORLD,),
+        ).fetchone()
+        count = db.db.execute(
+            "SELECT COUNT(*) FROM events WHERE world_id=?", (WORLD,),
+        ).fetchone()[0]
+        assert before[2] == 63
+        db.db.execute("UPDATE worlds SET rules_version=62 WHERE id=?", (WORLD,))
+        with pytest.raises(UnsupportedVersion):
+            db.load(WORLD)
+        after = db.db.execute(
+            "SELECT revision, sim_time, rules_version FROM worlds WHERE id=?",
+            (WORLD,),
+        ).fetchone()
+        assert after == (before[0], before[1], 62)
+        assert db.db.execute(
+            "SELECT COUNT(*) FROM events WHERE world_id=?", (WORLD,),
+        ).fetchone()[0] == count
