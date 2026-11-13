@@ -1,0 +1,32 @@
+name: PLAY48 13NPC actual owned-cash and local-food access to 72h diagnostic (NO MERGE)
+on:
+  push:
+    branches:
+      - diagnostic/play48-food-access-all-13-20261114
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-readonly-food-access-13-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Exact original residents, authentic market/consumer/worker cash h72
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_actual_13_food_access_h72.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_actual_13_food_access_h72.py
