@@ -132,7 +132,7 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
         return False
     if "wage_food" in recipe and (
             type(recipe["wage_food"]) is not int
-            or recipe["wage_food"] != 1
+            or recipe["wage_food"] not in (1, 2)
             or not _known(stocks.get("food"))):
         return False
     return True
