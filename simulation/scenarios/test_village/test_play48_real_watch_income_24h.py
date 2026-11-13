@@ -91,9 +91,8 @@ def test_signed_real_watch_service_pays_only_after_actual_work_and_can_buy_food(
     control = seed_original(tmp_path / "original.sqlite")
     start = seed(tmp_path / "signed-watch.sqlite")
     assert len(control.npcs) == len(start.npcs) == 13
-    assert sum(r.get("food", 0) for r in control.resources.values()) == (
-        sum(r.get("food", 0) for r in start.resources.values()) == 3
-    )
+    assert sum(r.get("food", 0) for r in control.resources.values()) == 3
+    assert sum(r.get("food", 0) for r in start.resources.values()) == 3
     assert audit_npc_economy(control)["copper_known_total"] == 12
     assert audit_npc_economy(start)["copper_known_total"] == 12
     assert control.resources["carlos"]["coin_copper"] == 2
