@@ -142,6 +142,24 @@ def choose_local_production(state: WorldState, npc_id: str, *,
             and recipe.get("wage_food") == 2
             and recipe["tool_resource"] in ("bow", "net")
         )
+        if finite_wilderness_batch and output_amount > 2:
+            # A real hunter/fisher is also the physical owner-stall keeper.
+            # Once genuine surplus exists, yield ONE decision opportunity
+            # to publicly quote it before beginning another timed job.
+            # Otherwise the worker stays perpetually busy and no buyer can
+            # legally exchange their scarce copper for the real food.
+            awaiting_surplus_quote = (
+                here in state.market_stalls
+                and state.market_stalls[here]["keeper_id"] == npc_id
+                and not any(
+                    q["status"] == "open"
+                    and q["stock_owner_id"] == here
+                    and q["resource"] == "food"
+                    for q in state.market_offers.values()
+                )
+            )
+            if awaiting_surplus_quote:
+                continue
         if (any(stocked[item] < amount for item, amount in needs)
                 or tool_amount < 1
                 or (output_amount != 0 and not finite_wilderness_batch)
