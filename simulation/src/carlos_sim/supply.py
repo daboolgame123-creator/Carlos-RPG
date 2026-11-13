@@ -310,6 +310,28 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         raise ValueError("unrecognized supply cargo event")
 
 
+
+def _real_loaded_source_water(state: dict | WorldState, who: str,
+                              record: dict) -> bool:
+    """Genuine well-water cargo already picked locally may dispatch now.
+
+    No free source stock, no pickup on a remote route, and no exemption from
+    hunger/fatigue/injury thresholds. Prevent a prepaid package awaiting an
+    unrelated empty-round scheduling boundary from becoming stranded.
+    """
+    stock = state.resources if isinstance(state, WorldState) else state["resources"]
+    entities = state.entities if isinstance(state, WorldState) else state["entities"]
+    if (record["index"] != 0
+            or entities[who]["location_id"] != record["stops"][0]):
+        return False
+    cargo = record["carry"]
+    return (cargo is not None
+            and cargo.get("source") == record["stops"][0]
+            and cargo.get("destination") == record["stops"][1]
+            and cargo.get("resource") == "water"
+            and stock.get(who, {}).get("water") == 1)
+
+
 def check_leg(state: dict, who: str, route_id: str,
               origin: str, destination: str) -> None:
     record = state["supply_circuits"].get(who)
@@ -324,7 +346,8 @@ def check_leg(state: dict, who: str, route_id: str,
     if (idx >= len(record["route_ids"]) or origin != record["stops"][idx]
             or destination != record["stops"][idx+1]
             or route_id != record["route_ids"][idx]
-            or (idx == 0 and state["time"] < record["next_departure"])):
+            or (idx == 0 and state["time"] < record["next_departure"]
+                and not _real_loaded_source_water(state, who, record))):
         raise ValueError("courier cannot skip a professional physical stop")
 
 
@@ -421,7 +444,8 @@ def choose_courier_leg(state: WorldState, who: str) -> tuple[str, str, str, int]
             or _injury_rest_decision(state.injuries, who) is not None):
         return None
     idx = rec["index"]
-    if idx == 0 and state.time < rec["next_departure"]:
+    if (idx == 0 and state.time < rec["next_departure"]
+            and not _real_loaded_source_water(state, who, rec)):
         return None
     here = state.entities[who]["location_id"]
     if here != rec["stops"][idx]:

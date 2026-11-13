@@ -1,0 +1,36 @@
+name: PLAY48 pay-from-delivered-surplus contingent contract 48h A/B (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-deferred-market-courier-wage-20261113
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-signed-deferred-income-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-post-delivery-funded-wages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Source-authenticated funded wages only after earned local delivery
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_deferred_courier_market_income.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_deferred_courier_market_income.py
