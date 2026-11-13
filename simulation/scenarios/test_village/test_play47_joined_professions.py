@@ -26,6 +26,7 @@ def _joined_bootstrap(
     bakery_opening_food_wage=False, farm_opening_food_wage=False,
     farm_initial_food_loaves=1, farm_bread_share_enabled=False, wood_charcoal_jobs_enabled=False,
     food_for_work_bakery_enabled=False, wilderness_food_jobs_enabled=False,
+    wilderness_food_peddler_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -34,8 +35,10 @@ def _joined_bootstrap(
     are allocated at genesis as farm/bakery working capital, without adding
     any copper. The normal field/baker jobs get one-copper wage contracts.
     """
-    if type(wilderness_food_jobs_enabled) is not bool:
-        raise ValueError("wilderness food jobs opt-in must be a boolean")
+    if (type(wilderness_food_jobs_enabled) is not bool
+            or type(wilderness_food_peddler_enabled) is not bool
+            or (wilderness_food_peddler_enabled and not wilderness_food_jobs_enabled)):
+        raise ValueError("bounded peddler requires actual finite wilderness food sites")
     if (type(food_for_work_bakery_enabled) is not bool
             or (food_for_work_bakery_enabled and not bakery_opening_food_wage)):
         raise ValueError("bakery food-for-work requires an existing bakery-owned opening loaf")
@@ -293,7 +296,8 @@ def _joined_bootstrap(
             ("smith", "blacksmith", "smithy"),
             ("miner", "miner", "iron_mine"),
             ("burner", "charcoal_burner", "charcoal_kiln"),
-            ("repairman", "repairer", "repair_shop"),
+            ("repairman", "food_peddler" if wilderness_food_peddler_enabled else "repairer",
+             "market" if wilderness_food_peddler_enabled else "repair_shop"),
         )
         events.extend(_e("LocationCreated", {"id": site, "name": site})
                       for site in sites)
@@ -393,13 +397,16 @@ def _joined_bootstrap(
             ("smith", "iron_mine", "smithy", 0),
             ("miner", "bakery", "iron_mine", 0),
             ("burner", "bakery", "charcoal_kiln", 0),
-            ("repairman", "charcoal_kiln", "repair_shop", 250),
+            ("repairman", "market" if wilderness_food_peddler_enabled else "charcoal_kiln",
+             "hunting_woods" if wilderness_food_peddler_enabled else "repair_shop",
+             0 if wilderness_food_peddler_enabled else 250),
         ):
             events.append(_e("NPCRoutineConfigured", {
                 "npc_id": owner, "home_id": home,
                 "workplace_id": workplace,
                 "work_start": start,
-                "work_end": repair_shift_end if owner == "repairman" else 20_000,
+                "work_end": (repair_shift_end if owner == "repairman"
+                             and not wilderness_food_peddler_enabled else 20_000),
             }))
         for site, keeper in (
             ("iron_mine", "miner"),

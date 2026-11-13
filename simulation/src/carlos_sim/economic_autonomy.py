@@ -203,7 +203,12 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
     unpromised = food - local_labor_reserve
     if unpromised < 1:
         return None
-    unit_price = (3 if unpromised == 1 else 2 if unpromised <= 3 else 1) if adaptive else TEST_FOOD_PRICE_COPPER
+    # Actual forest/river output is a distinct source commodity: the one
+    # copper surplus quote can fund real roadside traders, who physically
+    # carry and resell it. Normal bakery/market prices are unchanged.
+    unit_price = (1 if local_labor_reserve == 2 else
+                  (3 if unpromised == 1 else 2 if unpromised <= 3 else 1)
+                  if adaptive else TEST_FOOD_PRICE_COPPER)
     amount = min(unpromised, MARKET_MAX, (MAX_AMOUNT - coin) // unit_price)
     if amount < 1:
         return None
@@ -211,9 +216,7 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
     if ident in state.market_offers:
         return None
     reason = (f"registered_steward; physically_stocked={food}; "
-              f"local_quote={unit_price}; adaptive=True") if adaptive else (
-              f"registered_steward; physically_stocked={food}; "
-              f"test_price={TEST_FOOD_PRICE_COPPER}")
+              f"local_quote={unit_price}; protected_worker_portions={local_labor_reserve}")
     return OfferIntent(keeper_id, here, ident, amount, reason, unit_price)
 
 
