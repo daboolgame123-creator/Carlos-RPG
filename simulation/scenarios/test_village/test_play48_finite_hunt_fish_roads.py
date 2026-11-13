@@ -1,0 +1,183 @@
+"""PLAY-48 owner-approved food diversity: real finite hunting and fishing.
+
+An opt-in thirteen-NPC world at exact original copper/food budget adds
+physically located forest & river sites with local tools, finite ecological
+resource lots, scheduled finite reserve-to-wild-food conversion, road segments,
+and two genuine worker roles (existing Omar and Layla, no extra NPC). A hunted
+animal or caught fish yields two edible portions after ONE actual hour of
+on-site work. Paying the worker two portions is a real site→person debit.
+
+This is a bounded initial ecology trial, NOT renewable seven-day fish/wildlife,
+not a finished market transport system and not GO on the economy.
+"""
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from carlos_sim import (
+    DomainEvent, InvalidEvent, LivingWorldEngine, SQLiteEventStore, TimeEngine,
+)
+from test_play38_multi_farm_couriers import seed_two_field_world, WORLD
+from test_play47_joined_professions import _joined_bootstrap
+from test_play47_closure_endurance import DAY
+from test_play48h3_early_market_wage import _conserve
+
+SITES = {"hunting_woods": ("omar", "hunter", "bow"),
+         "riverbank": ("layla", "fisher", "net")}
+HOUR = 3600
+
+
+def _ecology_bootstrap(db, *, initial_market_food, **options):
+    assert initial_market_food == 3
+    assert options == {
+        "water": 2, "seed": 1, "harvest_yield": 3,
+        "personal_food": 0, "market_wallets": True,
+        "hungry_market_buyers": True,
+        "one_hungry_market_buyer": False,
+    }
+    return _joined_bootstrap(
+        db, initial_market_food=3,
+        wilderness_food_jobs_enabled=True,
+        food_for_work_bakery_enabled=True,
+        bakery_opening_food_wage=True,
+    )
+
+
+def seed(path):
+    with SQLiteEventStore(path) as db:
+        seed_two_field_world(
+            db, east_growth_seconds=DAY, east_grain_yield=12,
+            initial_water=2, initial_market_food=3,
+            market_wallets=True, hungry_market_buyers=True,
+            cash_return=True, waged_harvest=True,
+            harvest_wage_copper=2, bootstrap=_ecology_bootstrap,
+        )
+        s = db.load(WORLD)
+        s = db.append(WORLD, "play48-ecology-signed-genesis", s.revision, [
+            DomainEvent("WaterSourceConfigured", None,
+                        "bounded water authority", 0,
+                        {"site_id": "well", "capacity": 8}),
+            DomainEvent("MetabolismPolicyConfigured", None,
+                        "existing real hunger progress", 0,
+                        {"hunger_seconds_per_point": 3600,
+                         "activity_hunger_percent": 20}),
+        ], bootstrap=True)
+        assert len(s.npcs) == 13
+        assert (s.schema_version, s.rules_version) == (45, 63)
+        assert sum(bag.get("coin_copper", 0)
+                   for bag in s.resources.values()) == 12
+        assert s.resources["market"]["food"] == 2
+        assert s.resources["bakery"]["food"] == 1
+        for site, (who, role, tool) in SITES.items():
+            assert s.entities[who]["location_id"] == site
+            assert s.npcs[who]["role"] == role
+            assert s.resources[site]["wild_food"] == 2
+            assert s.resources[site]["regrowth_reserve"] == 6
+            assert s.resources[site]["food"] == 0
+            assert s.resources[site][tool] == 1
+            recipe = s.production_recipes["two-portions-" + role]
+            assert recipe["input_resource"] == "wild_food"
+            assert recipe["input_amount"] == 1
+            assert recipe["output_resource"] == "food"
+            assert recipe["output_amount"] == 2
+            assert recipe["wage_food"] == 2
+            assert s.environment_cycles[site + "-finite-ecology"]["capacity"] == 3
+        assert s.routes["market-woods"]["seconds"] == 240
+        assert s.routes["well-river"]["seconds"] == 180
+        assert not any(route in s.navigation.get("omar", {}).get("known_routes", [])
+                       for route in ("market-woods", "well-river"))
+        assert db.verify(WORLD).to_dict() == s.to_dict()
+        _conserve(s)
+    return s
+
+
+def test_genesis_contains_real_finite_forest_river_and_no_new_people_or_money(tmp_path):
+    s = seed(tmp_path / "time-zero-real-forest-river.sqlite")
+    assert len(s.environment_cycles) == 2
+    # Each site initially has exactly two real lots and six reserved lots,
+    # not an immortal source. These are additional disclosed physical genesis
+    # resources, so this is not an identical-resources control world.
+    for site in SITES:
+        assert s.resources[site]["wild_food"] + s.resources[site]["regrowth_reserve"] == 8
+
+
+def test_real_work_produces_two_owned_portions_with_conserved_prey_and_roads(tmp_path):
+    path = tmp_path / "three-hour-finite-ecology.sqlite"
+    seed(path)
+    with SQLiteEventStore(path) as db:
+        clock = TimeEngine(db)
+        clock.open_session(WORLD)
+        try:
+            engine = LivingWorldEngine(
+                db, clock, max_events_per_advance=5000,
+                decision_cooldown=3600, economic_enabled=True,
+                agriculture_enabled=True, navigation_enabled=True,
+                routines_enabled=True, consumption_enabled=True,
+                survival_enabled=True, supply_enabled=True,
+                shopping_routes_enabled=True,
+                multi_professional_markets_enabled=True,
+                compound_procurement_enabled=True,
+                professional_full_life_enabled=True,
+                food_for_work_enabled=True,
+            )
+            current = db.load(WORLD)
+            actual = engine.advance(
+                WORLD, seconds=3*HOUR,
+                command_id="real-hunt-fish:3h",
+                expected_revision=current.revision,
+            ).state
+            assert actual.time == 3 * HOUR
+            _conserve(actual)
+            assert db.verify(WORLD).to_dict() == actual.to_dict()
+            assert db.db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+            assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
+            assert sum(v.get("coin_copper", 0)
+                       for v in actual.resources.values()) == 12
+
+            output = {}
+            for site, (who, role, _tool) in SITES.items():
+                completed = [
+                    (name, job) for name, job in actual.production_jobs.items()
+                    if job["site_id"] == site and job["status"] == "completed"
+                ]
+                assert completed, "no real work completed: " + site
+                earned = [(key, j["food_wage"]) for key,j in completed
+                          if "food_wage" in j]
+                assert earned, "no physical food wage: " + site
+                assert all(r["amount"] == 2
+                           and r["site_before"]-r["site_after"] == 2
+                           and r["worker_after"]-r["worker_before"] == 2
+                           and r["worker_id"] == who for _,r in earned)
+                wild_now = actual.resources[site]["wild_food"]
+                reserve_now = actual.resources[site]["regrowth_reserve"]
+                # No one outside these jobs forages in this focused world.
+                assert (wild_now + reserve_now + len(completed) == 8), site
+                output[site] = {
+                    "jobs": len(completed),
+                    "two_portion_wages": len(earned),
+                    "wild_food_remaining": wild_now,
+                    "regrowth_reserve": reserve_now,
+                    "personally_owned": actual.resources[who]["food"],
+                    "worker_hunger": actual.npcs[who]["needs"]["hunger"],
+                }
+
+                paid_id, _ = earned[0]
+                stable = db.verify(WORLD).to_dict()
+                for amount in (1, 2, 3):
+                    with pytest.raises(InvalidEvent):
+                        db.append(WORLD, "illegal-food-" + role + str(amount),
+                                  actual.revision, [
+                                      DomainEvent("ProductionFoodWagePaid",
+                                                  None, "counterfeit job pay",
+                                                  actual.time,
+                                                  {"job_id": paid_id,
+                                                   "amount": amount}),
+                                  ], production_authorized=True)
+                    assert db.verify(WORLD).to_dict() == stable
+
+            print("PLAY48_FINITE_HUNT_FISH_ACTUAL_WORK " +
+                  json.dumps(output, sort_keys=True))
+        finally:
+            clock.close_session(WORLD)
