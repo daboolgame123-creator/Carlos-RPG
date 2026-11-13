@@ -1,7 +1,7 @@
 """PLAY48 Option A: bounded, fully owned food wages for genuine on-site jobs.
 
 These pure eligibility checks and strict reducer do not create or move remote
-resources. A worksite offers ONE owned loaf as an explicitly agreed wage on
+resources. A worksite offers ONE or TWO owned loaves as an explicitly agreed wage on
 a production recipe at trusted genesis; only an actually completed local job
 may redeem it, once. The existing authoritative SQLite event record persists
 every physical debit and worker receipt. No cargo theft, quote diversion,
@@ -82,22 +82,23 @@ def _recent_worker_receipt(jobs: Any, worker: str, now: int) -> bool:
 
 
 def choose_site_food_wage(state: WorldState, job_id: str) -> int | None:
-    """Propose a one-loaf settlement; honest nonpayment is always possible."""
+    """Propose the exact signed 1- or 2-portion wage; no hidden credit."""
     job = state.production_jobs.get(job_id)
     if (job is None or job["status"] != "completed"
             or "food_wage" in job or "work_wage" in job):
         return None
     recipe = state.production_recipes.get(job["recipe_id"])
-    if recipe is None or recipe.get("wage_food") != 1:
+    amount = recipe.get("wage_food") if recipe is not None else None
+    if type(amount) is not int or amount not in (1, 2):
         return None
     worker, site = job["npc_id"], job["site_id"]
     personal = state.resources.get(worker, {}).get("food")
-    if (type(personal) is not int or personal >= MAX_AMOUNT
+    if (type(personal) is not int or not 0 <= personal <= MAX_AMOUNT - amount
             or not _worker_present_and_free(state, worker, site)
             or _recent_worker_receipt(state.production_jobs, worker, state.time)
-            or _available_site_food(state, site) < 1):
+            or _available_site_food(state, site) < amount):
         return None
-    return 1
+    return amount
 
 
 def pay_site_food_wage(state: dict[str, Any], event: DomainEvent, *,
@@ -108,39 +109,39 @@ def pay_site_food_wage(state: dict[str, Any], event: DomainEvent, *,
             or set(p) != {"job_id", "amount"}
             or type(p.get("job_id")) is not str
             or not 0 < len(p["job_id"]) <= 64
-            or type(p.get("amount")) is not int or p["amount"] != 1):
-        raise ValueError("food payroll requires an authorized exact one-loaf job receipt")
+            or type(p.get("amount")) is not int or p["amount"] not in (1, 2)):
+        raise ValueError("food payroll requires an authorized exact 1/2-portion job receipt")
     job = state["production_jobs"].get(p["job_id"])
     if (job is None or job["status"] != "completed"
             or "food_wage" in job or "work_wage" in job):
         raise ValueError("food may only pay an unremunerated completed job once")
     recipe = state["production_recipes"].get(job["recipe_id"])
-    if (recipe is None or recipe.get("wage_food") != 1
+    if (recipe is None or recipe.get("wage_food") != p["amount"]
             or "wage_coin" in recipe
             or state["time"] < job["finished_at"]):
         raise ValueError("job lacks the original explicit food-only contract")
     worker, site = job["npc_id"], job["site_id"]
     if (not _worker_present_and_free(state, worker, site)
             or _recent_worker_receipt(state["production_jobs"], worker, state["time"])
-            or _available_site_food(state, site) < 1):
+            or _available_site_food(state, site) < p["amount"]):
         raise ValueError("food wage requires real unpromised local stock and an available worker")
     employer_stock = state["resources"].get(site, {})
     worker_stock = state["resources"].get(worker, {})
     employer_before = employer_stock.get("food")
     worker_before = worker_stock.get("food")
-    if (type(employer_before) is not int or employer_before < 1
+    if (type(employer_before) is not int or employer_before < p["amount"]
             or type(worker_before) is not int
-            or not 0 <= worker_before < MAX_AMOUNT):
+            or not 0 <= worker_before <= MAX_AMOUNT - p["amount"]):
         raise ValueError("unknown or overdrawn food wage balance")
-    employer_stock["food"] = employer_before - 1
-    worker_stock["food"] = worker_before + 1
+    employer_stock["food"] = employer_before - p["amount"]
+    worker_stock["food"] = worker_before + p["amount"]
     job["food_wage"] = {
-        "worker_id": worker, "site_id": site, "amount": 1,
+        "worker_id": worker, "site_id": site, "amount": p["amount"],
         "paid_at": state["time"],
         "site_before": employer_before,
-        "site_after": employer_before - 1,
+        "site_after": employer_before - p["amount"],
         "worker_before": worker_before,
-        "worker_after": worker_before + 1,
+        "worker_after": worker_before + p["amount"],
     }
 
 
@@ -152,7 +153,7 @@ def valid_site_food_wage_receipt(job: dict[str, Any], recipe: dict[str, Any],
     q = job["food_wage"]
     return (
         job["status"] == "completed"
-        and recipe.get("wage_food") == 1
+        and recipe.get("wage_food") in (1, 2)
         and "wage_coin" not in recipe
         and type(q) is dict
         and set(q) == {
@@ -161,12 +162,12 @@ def valid_site_food_wage_receipt(job: dict[str, Any], recipe: dict[str, Any],
         }
         and q["worker_id"] == job["npc_id"]
         and q["site_id"] == job["site_id"]
-        and type(q["amount"]) is int and q["amount"] == 1
+        and type(q["amount"]) is int and q["amount"] == recipe["wage_food"]
         and type(q["paid_at"]) is int
         and job["due"] <= q["paid_at"] <= now
         and all(type(q[k]) is int and 0 <= q[k] <= MAX_AMOUNT for k in (
             "site_before", "site_after", "worker_before", "worker_after"
         ))
-        and q["site_before"] - q["site_after"] == 1
-        and q["worker_after"] - q["worker_before"] == 1
+        and q["site_before"] - q["site_after"] == q["amount"]
+        and q["worker_after"] - q["worker_before"] == q["amount"]
     )
