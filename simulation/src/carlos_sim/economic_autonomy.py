@@ -266,7 +266,8 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
     if ident in state.market_offers:
         return None
     reason = (f"registered_steward; physically_stocked={food}; "
-              f"local_quote={unit_price}; protected_worker_portions={local_labor_reserve}")
+              f"local_quote={unit_price}; protected_worker_portions={local_labor_reserve}"
+              + ("; adaptive=True" if adaptive else ""))
     return OfferIntent(keeper_id, here, ident, amount, reason, unit_price)
 
 
