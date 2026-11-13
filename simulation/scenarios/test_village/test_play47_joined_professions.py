@@ -25,7 +25,7 @@ def _joined_bootstrap(
     site_payroll_enabled=False, site_payroll_wage_coin=1,
     bakery_opening_food_wage=False, farm_opening_food_wage=False,
     farm_initial_food_loaves=1, farm_bread_share_enabled=False, wood_charcoal_jobs_enabled=False,
-    food_for_work_bakery_enabled=False,
+    food_for_work_bakery_enabled=False, wilderness_food_jobs_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -34,6 +34,8 @@ def _joined_bootstrap(
     are allocated at genesis as farm/bakery working capital, without adding
     any copper. The normal field/baker jobs get one-copper wage contracts.
     """
+    if type(wilderness_food_jobs_enabled) is not bool:
+        raise ValueError("wilderness food jobs opt-in must be a boolean")
     if (type(food_for_work_bakery_enabled) is not bool
             or (food_for_work_bakery_enabled and not bakery_opening_food_wage)):
         raise ValueError("bakery food-for-work requires an existing bakery-owned opening loaf")
@@ -62,6 +64,48 @@ def _joined_bootstrap(
             or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
         raise ValueError("site_payroll_wage_coin must be one or two existing copper")
     def extend(events):
+        if wilderness_food_jobs_enabled:
+            # Same 13 people: a market explorer and resident take two
+            # real food-producing professions, and therefore are no longer
+            # available in their former occupations. No 14th NPC appears.
+            # The sites and roads must exist BEFORE their local entities.
+            first_entity = next(
+                i for i, e in enumerate(events) if e.event_type == "EntityCreated"
+            )
+            events[first_entity:first_entity] = [
+                _e("LocationCreated", {"id": "hunting_woods",
+                                       "name": "Hunting Woods"}),
+                _e("LocationCreated", {"id": "riverbank",
+                                       "name": "Fishing Riverbank"}),
+                _e("RouteCreated", {"id": "market-woods",
+                                    "a": "market", "b": "hunting_woods",
+                                    "seconds": 240}),
+                _e("RouteCreated", {"id": "well-river",
+                                    "a": "well", "b": "riverbank",
+                                    "seconds": 180}),
+            ]
+            updated = set()
+            for i, e in enumerate(events):
+                who = e.data.get("id") if e.event_type == "EntityCreated" else (
+                    e.data.get("npc_id") if e.event_type == "NPCConfigured" else None
+                )
+                site_role = {"omar": ("hunting_woods", "hunter"),
+                             "layla": ("riverbank", "fisher")}.get(who)
+                if site_role is None:
+                    continue
+                d = dict(e.data)
+                if e.event_type == "EntityCreated":
+                    d["location_id"] = site_role[0]
+                elif e.event_type == "NPCConfigured":
+                    d["role"] = site_role[1]
+                else:
+                    continue
+                events[i] = _e(e.event_type, d)
+                updated.add((who, e.event_type))
+            assert updated == {
+                ("omar", "EntityCreated"), ("omar", "NPCConfigured"),
+                ("layla", "EntityCreated"), ("layla", "NPCConfigured"),
+            }
         if farm_opening_food_wage:
             # The original three opening loaves remain exactly THREE:
             # 2 in the market, 1 already physically stored at the field
@@ -155,6 +199,46 @@ def _joined_bootstrap(
                     signed.add(terms["id"])
             assert signed == {"finite-harvest", "grain-to-bread"}
 
+        if wilderness_food_jobs_enabled:
+            # FINITE ecology: each site starts with TWO real food lots and
+            # SIX units of pre-existing reserve converted by scheduled time
+            # (one per two hours if below physical capacity). No invisible
+            # animal/fish spawn or unlimited breeding is claimed.
+            for site, tool, role in (
+                ("hunting_woods", "bow", "hunter"),
+                ("riverbank", "net", "fisher"),
+            ):
+                for resource, amount in (
+                    ("wild_food", 2), ("regrowth_reserve", 6),
+                    ("food", 0), (tool, 1),
+                ):
+                    events.append(_e("ResourceChanged", {
+                        "owner_id": site, "resource": resource,
+                        "previous": None, "current": amount,
+                        "source": "initialization",
+                    }))
+                events.append(_e("EnvironmentalCycleConfigured", {
+                    "id": site + "-finite-ecology",
+                    "site_id": site, "period_seconds": 7200,
+                    "capacity": 3,
+                }))
+                events.append(_e("ProductionRecipeConfigured", {
+                    "id": "two-portions-" + role,
+                    "site_id": site, "role": role,
+                    "input_resource": "wild_food", "input_amount": 1,
+                    "output_resource": "food", "output_amount": 2,
+                    "tool_resource": tool, "duration_seconds": 3600,
+                    "wage_food": 2,
+                }))
+            for who, site in (
+                ("omar", "hunting_woods"),
+                ("layla", "riverbank"),
+            ):
+                events.append(_e("NPCRoutineConfigured", {
+                    "npc_id": who, "home_id": "market",
+                    "workplace_id": site, "work_start": 0,
+                    "work_end": 20_000,
+                }))
         if food_for_work_bakery_enabled:
             # Only a real time-zero employer can sign this durable wage term.
             bakery_jobs = [
