@@ -210,7 +210,7 @@ def _joined_bootstrap(
             ):
                 for resource, amount in (
                     ("wild_food", 2), ("regrowth_reserve", 6),
-                    ("food", 0), (tool, 1),
+                    ("food", 0), ("coin_copper", 0), (tool, 1),
                 ):
                     events.append(_e("ResourceChanged", {
                         "owner_id": site, "resource": resource,
