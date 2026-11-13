@@ -127,8 +127,24 @@ def choose_local_production(state: WorldState, npc_id: str, *,
         tool_amount = stock.get(recipe["tool_resource"])
         if not all(_known(n) for n in (*stocked.values(), output_amount, tool_amount)):
             continue
+        # A signed, finite hunter/fisher operation may accumulate actual
+        # processed portions at its own site. Its prey input is removed by
+        # start_production and its output remains MAX_QUANTITY-bounded.
+        # Historical farms, workshops and bakeries retain their exact
+        # legacy requirement to clear their output stock first.
+        finite_wilderness_batch = (
+            npc["role"] in ("hunter", "fisher")
+            and recipe["role"] == npc["role"]
+            and recipe["input_resource"] == "wild_food"
+            and recipe["input_amount"] == 1
+            and recipe["output_resource"] == "food"
+            and recipe["output_amount"] == 2
+            and recipe.get("wage_food") == 2
+            and recipe["tool_resource"] in ("bow", "net")
+        )
         if (any(stocked[item] < amount for item, amount in needs)
-                or tool_amount < 1 or output_amount != 0
+                or tool_amount < 1
+                or (output_amount != 0 and not finite_wilderness_batch)
                 or output_amount + recipe["output_amount"] > PRODUCTION_MAX):
             continue
         reservations = sum(
