@@ -11,6 +11,8 @@ on:
       - "simulation/src/carlos_sim/domain.py"
       - "simulation/src/carlos_sim/store.py"
       - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/src/carlos_sim/economic_autonomy.py"
+      - "simulation/src/carlos_sim/market_navigation.py"
       - "simulation/scenarios/test_village/test_play47_joined_professions.py"
       - "simulation/scenarios/test_village/test_play48_authorized_food_for_work.py"
       - "simulation/scenarios/test_village/test_play48_finite_hunt_fish_roads.py"

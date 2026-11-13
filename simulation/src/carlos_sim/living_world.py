@@ -90,7 +90,8 @@ class LivingWorldEngine:
                  hungry_woodcutter_work_enabled: bool = False,
                  retry_known_supplier_enabled: bool = False,
                  remember_unbought_stalls_enabled: bool = False,
-                 food_for_work_enabled: bool = False):
+                 food_for_work_enabled: bool = False,
+                 seek_alternative_food_market_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -186,6 +187,12 @@ class LivingWorldEngine:
                 'professions, with navigation, consumption and survival'
             )
         self.shopping_routes_enabled = shopping_routes_enabled
+        if (type(seek_alternative_food_market_enabled) is not bool
+                or (seek_alternative_food_market_enabled and not (
+                    shopping_routes_enabled and economic_enabled
+                    and navigation_enabled))):
+            raise ValueError("alternate food markets require genuine economic shopping roads")
+        self.seek_alternative_food_market_enabled = seek_alternative_food_market_enabled
         if (type(remember_unbought_stalls_enabled) is not bool
                 or (remember_unbought_stalls_enabled and not (
                     shopping_routes_enabled and professional_full_life_enabled))):
@@ -955,7 +962,9 @@ class LivingWorldEngine:
                         current, shopper_id, repeat_errands=repeat_errands,
                     )
                     if walk is None and wants_local_market(
-                            current, shopper_id, repeat_errands=repeat_errands):
+                            current, shopper_id, repeat_errands=repeat_errands,
+                            seek_alternative_if_unaffordable=
+                            self.seek_alternative_food_market_enabled):
                         if needs_survey(current, shopper_id):
                             append(DomainEvent('NPCNavigationSurveyed', shopper_id,
                                 'shopper sees roads adjoining their physical location',
@@ -964,6 +973,8 @@ class LivingWorldEngine:
                         walk = choose_known_market_walk(
                             current, shopper_id, repeat_errands=repeat_errands,
                             remember_unbought_stalls=self.remember_unbought_stalls_enabled,
+                            seek_alternative_if_unaffordable=
+                            self.seek_alternative_food_market_enabled,
                         )
                     if walk is None:
                         continue

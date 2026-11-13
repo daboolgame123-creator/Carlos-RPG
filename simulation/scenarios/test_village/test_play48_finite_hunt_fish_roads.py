@@ -190,6 +190,7 @@ def test_real_work_produces_two_owned_portions_with_conserved_prey_and_roads(tmp
                 compound_procurement_enabled=True,
                 professional_full_life_enabled=True,
                 food_for_work_enabled=True,
+                seek_alternative_food_market_enabled=True,
             )
             current = db.load(WORLD)
             actual = engine.advance(
@@ -281,3 +282,70 @@ def test_local_food_offer_protects_contracted_worker_share(tmp_path):
             assert (intent.quantity if intent else None) == quoted, (
                 site, total, intent
             )
+
+
+def test_real_market_buyer_only_leaves_when_local_sale_is_unaffordable(tmp_path):
+    """New food-market exploration respects known roads and physical funds.
+
+    A market shopper knows only their current adjacent surveyed roads, not
+    which distant stall is stocked. Original no-opt-in behavior is unchanged.
+    """
+    from carlos_sim.market_navigation import (
+        wants_local_market, choose_known_market_walk,
+    )
+    from carlos_sim.domain import WorldState
+    s = seed(tmp_path / "alternate-known-markets.sqlite")
+    who = "adel"
+    assert s.entities[who]["location_id"] == "market"
+    assert s.resources[who]["coin_copper"] == 2
+    assert s.resources[who]["food"] == 0
+    assert s.npcs[who]["needs"]["hunger"] >= 70
+    assert not wants_local_market(s, who, repeat_errands=False)
+    assert wants_local_market(
+        s, who, repeat_errands=False,
+        seek_alternative_if_unaffordable=True,
+    )
+    # Allowed local survey: never construct secret global market knowledge.
+    scenario = s.to_dict()
+    scenario["navigation"][who] = {
+        "known_routes": sorted(
+            rid for rid, road in s.routes.items()
+            if "market" in (road["a"], road["b"])
+        ),
+        "visited": ["market"], "target": None,
+    }
+    survey = WorldState.from_dict(scenario)
+    walk = choose_known_market_walk(
+        survey, who, repeat_errands=False,
+        seek_alternative_if_unaffordable=True,
+    )
+    assert walk is not None
+    assert walk.route_id in survey.navigation[who]["known_routes"]
+    assert walk.destination != "market"
+
+    # A real locally affordable public offer means stay and purchase here.
+    offered = survey.to_dict()
+    offered["market_offers"]["locally-known-bread"] = {
+        "seller_id": "salma", "stock_owner_id": "market",
+        "site_id": "market", "resource": "food",
+        "quantity": 2, "remaining": 2, "payment_resource": "coin_copper",
+        "unit_price": 2, "posted_at": 0,
+        "status": "open", "closed_at": None,
+    }
+    here = WorldState.from_dict(offered)
+    assert not wants_local_market(
+        here, who, repeat_errands=False,
+        seek_alternative_if_unaffordable=True,
+    )
+    offered["market_offers"]["locally-known-bread"]["unit_price"] = 3
+    overpriced = WorldState.from_dict(offered)
+    assert wants_local_market(
+        overpriced, who, repeat_errands=False,
+        seek_alternative_if_unaffordable=True,
+    )
+    poor = overpriced.to_dict()
+    poor["resources"][who]["coin_copper"] = 0
+    assert not wants_local_market(
+        WorldState.from_dict(poor), who,
+        seek_alternative_if_unaffordable=True,
+    )
