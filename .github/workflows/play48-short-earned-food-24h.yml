@@ -1,0 +1,40 @@
+name: PLAY48 genuine 6h food for actual work 24h pilot (DRAFT NO MERGE)
+
+on:
+  push:
+    branches:
+      - experiment/play48-earned-food-wage-cadence-20261113
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play48-genuine-6h-earned-food-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  genuine-24h-wage-cadence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Verify exact source, compile and enforce genuine 24h 13NPC physics
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_short_earned_food_24h.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_short_earned_food_24h.py

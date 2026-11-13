@@ -18,7 +18,10 @@ from typing import Any
 from .domain import DomainEvent, WorldState
 
 MAX_AMOUNT = 2**31 - 1
-FOOD_WAGE_COOLDOWN_SECONDS = 36 * 3600
+# EXPERIMENTAL PLAY48 6-hour *completed-service* cadence; NOT approved or released.
+# No wage without signed completed work and actual owner-held local food.
+# The candidate is intentionally isolated from the audited 36-hour baseline.
+FOOD_WAGE_COOLDOWN_SECONDS = 6 * 3600
 
 
 def _available_site_food(state: WorldState | dict[str, Any], site: str) -> int:
