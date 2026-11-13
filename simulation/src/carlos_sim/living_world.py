@@ -93,6 +93,7 @@ class LivingWorldEngine:
                  food_for_work_enabled: bool = False,
                  seek_alternative_food_market_enabled: bool = False,
                  food_peddler_enabled: bool = False,
+                 food_peddler_self_meal_reserve_enabled: bool = False,
                  finite_aquifer_pumping_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
@@ -183,6 +184,11 @@ class LivingWorldEngine:
                     shopping_routes_enabled and routines_enabled))):
             raise ValueError("physical food peddler requires economy, routes and routines")
         self.food_peddler_enabled = food_peddler_enabled
+        if (type(food_peddler_self_meal_reserve_enabled) is not bool or
+                (food_peddler_self_meal_reserve_enabled and
+                 not food_peddler_enabled)):
+            raise ValueError("trader self-meal cargo reserve requires real food peddler")
+        self.food_peddler_self_meal_reserve_enabled = food_peddler_self_meal_reserve_enabled
         if type(adaptive_market_enabled) is not bool or (adaptive_market_enabled and not economic_enabled):
             raise ValueError("adaptive_market_enabled requires economic_enabled=True")
         self.adaptive_market_enabled = adaptive_market_enabled
@@ -757,7 +763,8 @@ class LivingWorldEngine:
                                 "trader withdraws owned food before eating",
                                 current.time, {"id": withdraw.offer_id}),
                                 market_capability=True)
-                        sale = choose_offer(current)
+                        sale = choose_offer(
+                            current, reserve_self_meal=self.food_peddler_self_meal_reserve_enabled)
                         if sale is not None:
                             append(DomainEvent("MarketOfferPosted", TRADER,
                                 "personal goods walked physically from wild site",
@@ -787,13 +794,14 @@ class LivingWorldEngine:
                 if self.food_peddler_enabled:
                     from .food_peddler import TRADER, choose_purchase
                     if TRADER in current.npcs:
-                        bought = choose_purchase(current)
+                        bought = choose_purchase(
+                            current, reserve_self_meal=self.food_peddler_self_meal_reserve_enabled)
                         if bought is not None:
                             append(DomainEvent("MarketTradeExecuted", TRADER,
                                 "trader buys actual on-site wild food with owned copper",
                                 current.time, {
                                 "id": bought.trade_id, "offer_id": bought.offer_id,
-                                "buyer_id": TRADER, "quantity": 1,
+                                "buyer_id": TRADER, "quantity": bought.quantity,
                                 "expected_unit_price": bought.unit_price,
                             }), market_capability=True)
                             economic_trades.append(bought.trade_id)

@@ -1,0 +1,36 @@
+name: PLAY48 trader two physical portions one private meal (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-peddler-owned-meal-reserve-20261113
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-trader-2food-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  actual-two-portion-trader:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Real merchant purchased 2 owned portions; site & buyer still eat
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_peddler_two_portion_provision.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_peddler_two_portion_provision.py
