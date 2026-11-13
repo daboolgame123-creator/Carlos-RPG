@@ -395,7 +395,8 @@ class SQLiteEventStore:
         if any(e.event_type == "CropGrowthStarted" for e in events):
             if not agriculture_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("crop growth needs protected active agriculture capability")
-        if any(e.event_type in ("ProductionStarted", "ProductionWagePaid") for e in events):
+        if any(e.event_type in ("ProductionStarted", "ProductionWagePaid",
+                                "ProductionFoodWagePaid") for e in events):
             if not production_authorized or bootstrap:
                 raise InvalidEvent("production and wages need trusted runtime capability")
             if world_id not in self._active_worlds:

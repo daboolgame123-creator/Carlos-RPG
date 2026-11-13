@@ -35,8 +35,15 @@ def _latest_wage_at(state: WorldState, npc_id: str) -> int:
                 if job["npc_id"] == npc_id and "work_wage" in job), default=-1)
 
 
-def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False) -> bool:
-    """Personal hunger, free time and owned wallet; no remote market oracle."""
+def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False,
+                       seek_alternative_if_unaffordable=False) -> bool:
+    """Hungry solvent buyer may inspect local prices, never remote stock.
+
+    Optional genuine-survival search allows leaving an empty/too-expensive
+    local market to survey adjacent known roads, not a teleported purchase.
+    """
+    if type(seek_alternative_if_unaffordable) is not bool:
+        raise ValueError("alternate market search is opt-in boolean")
     npc = state.npcs.get(npc_id)
     entity = state.entities.get(npc_id)
     if (npc is None or entity is None or entity["controller"] != "npc"
@@ -57,18 +64,45 @@ def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False) 
     if nav is not None and nav["target"] is not None:
         return False  # Explicit travel choices take precedence.
     here = entity["location_id"]
-    if here in state.market_stalls and (
-            not repeat_errands or any(
-                offer["site_id"] == here and offer["resource"] == "food"
+    if here in state.market_stalls:
+        if seek_alternative_if_unaffordable:
+            # On-site quotations only: the buyer never observes a distant
+            # price, seller, inventory or even a remote stall from here.
+            from .market import _present, reserved_trade_units, trade_receipt_allowed
+            physically_affordable = any(
+                offer["status"] == "open"
+                and offer["site_id"] == here
+                and offer["resource"] == "food"
+                and offer["payment_resource"] == MONEY
+                and offer["seller_id"] != npc_id
+                and offer["stock_owner_id"] != npc_id
+                and offer["remaining"] >= 1
+                and offer["unit_price"] <= coins
+                and _present(state.to_dict(), offer["seller_id"], here)
+                and trade_receipt_allowed(
+                    state.supply_circuits, offer["stock_owner_id"], MONEY
+                )
+                and type(state.resources.get(
+                    offer["stock_owner_id"], {}).get("food")) is int
+                and state.resources[offer["stock_owner_id"]]["food"]
+                    > reserved_trade_units(
+                        state.supply_circuits, offer["stock_owner_id"], "food"
+                    )
                 for offer in state.market_offers.values()
-            )):
-        return False  # Local food stalls use the normal price and stock checks.
+            )
+            if physically_affordable:
+                return False
+        elif (not repeat_errands or any(
+                offer["site_id"] == here and offer["resource"] == "food"
+                for offer in state.market_offers.values())):
+            return False  # Historic mode does not abandon the home market.
     return True
 
 
 def choose_known_market_walk(
     state: WorldState, npc_id: str, *, repeat_errands=False,
     remember_unbought_stalls=False,
+    seek_alternative_if_unaffordable=False,
 ) -> ShoppingWalkIntent | None:
     """One real road toward a personally unexplored reachable location.
 
@@ -80,7 +114,9 @@ def choose_known_market_walk(
     if (type(remember_unbought_stalls) is not bool
             or (remember_unbought_stalls and not repeat_errands)):
         raise ValueError("visited stall memory requires repeat errands")
-    if not wants_local_market(state, npc_id, repeat_errands=repeat_errands):
+    if not wants_local_market(
+            state, npc_id, repeat_errands=repeat_errands,
+            seek_alternative_if_unaffordable=seek_alternative_if_unaffordable):
         return None
     nav = state.navigation.get(npc_id)
     if nav is None:

@@ -89,7 +89,11 @@ class LivingWorldEngine:
                  farm_sourced_wage_refill_enabled: bool = False,
                  hungry_woodcutter_work_enabled: bool = False,
                  retry_known_supplier_enabled: bool = False,
-                 remember_unbought_stalls_enabled: bool = False):
+                 remember_unbought_stalls_enabled: bool = False,
+                 food_for_work_enabled: bool = False,
+                 seek_alternative_food_market_enabled: bool = False,
+                 food_peddler_enabled: bool = False,
+                 finite_aquifer_pumping_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -163,6 +167,22 @@ class LivingWorldEngine:
         if type(economic_enabled) is not bool:
             raise ValueError('economic_enabled must be boolean')
         self.economic_enabled = economic_enabled
+        if (type(food_for_work_enabled) is not bool
+                or (food_for_work_enabled and not (
+                    economic_enabled and consumption_enabled and survival_enabled))):
+            raise ValueError("food-for-work requires economic, consumption and survival")
+        self.food_for_work_enabled = food_for_work_enabled
+        if (type(finite_aquifer_pumping_enabled) is not bool
+                or (finite_aquifer_pumping_enabled
+                    and not (economic_enabled and routines_enabled))):
+            raise ValueError("finite aquifer needs true timed economic work")
+        self.finite_aquifer_pumping_enabled = finite_aquifer_pumping_enabled
+        if (type(food_peddler_enabled) is not bool
+                or (food_peddler_enabled and not (
+                    economic_enabled and navigation_enabled and
+                    shopping_routes_enabled and routines_enabled))):
+            raise ValueError("physical food peddler requires economy, routes and routines")
+        self.food_peddler_enabled = food_peddler_enabled
         if type(adaptive_market_enabled) is not bool or (adaptive_market_enabled and not economic_enabled):
             raise ValueError("adaptive_market_enabled requires economic_enabled=True")
         self.adaptive_market_enabled = adaptive_market_enabled
@@ -180,6 +200,12 @@ class LivingWorldEngine:
                 'professions, with navigation, consumption and survival'
             )
         self.shopping_routes_enabled = shopping_routes_enabled
+        if (type(seek_alternative_food_market_enabled) is not bool
+                or (seek_alternative_food_market_enabled and not (
+                    shopping_routes_enabled and economic_enabled
+                    and navigation_enabled))):
+            raise ValueError("alternate food markets require genuine economic shopping roads")
+        self.seek_alternative_food_market_enabled = seek_alternative_food_market_enabled
         if (type(remember_unbought_stalls_enabled) is not bool
                 or (remember_unbought_stalls_enabled and not (
                     shopping_routes_enabled and professional_full_life_enabled))):
@@ -602,6 +628,18 @@ class LivingWorldEngine:
                         "locally funded, one-time completed labor receipt",
                         current.time, {"job_id": job_id, "amount": wage}),
                         production_capability=True)
+                if self.food_for_work_enabled:
+                    # Only a completed job at its original, local worksite.
+                    # Existing customer quotes and cargo remain protected.
+                    from .food_for_work import choose_site_food_wage
+                    for job_id in sorted(current.production_jobs):
+                        portions = choose_site_food_wage(current, job_id)
+                        if portions is None:
+                            continue
+                        append(DomainEvent("ProductionFoodWagePaid", None,
+                            "real local employer food for completed labor",
+                            current.time, {"job_id": job_id, "amount": portions}),
+                            production_capability=True)
                 if (self.professional_procurement_enabled or
                         self.multi_professional_markets_enabled):
                     from .professional_trade import choose_workshop_input_deposit
@@ -637,8 +675,10 @@ class LivingWorldEngine:
                 for worker_id in sorted(current.npcs):
                     if self._professional_life_emergency(current, worker_id):
                         continue
-                    intent = choose_local_production(current, worker_id,
-                                                     agriculture_enabled=self.agriculture_enabled)
+                    intent = choose_local_production(
+                        current, worker_id,
+                        agriculture_enabled=self.agriculture_enabled,
+                        finite_aquifer_enabled=self.finite_aquifer_pumping_enabled)
                     if intent is None:
                         continue
                     append(DomainEvent('ProductionStarted', worker_id,
@@ -708,6 +748,28 @@ class LivingWorldEngine:
                                         'unit_price': quote.unit_price}),
                            market_capability=True)
                     economic_offers.append(quote.offer_id)
+                if self.food_peddler_enabled:
+                    from .food_peddler import TRADER, choose_withdrawal, choose_offer
+                    if TRADER in current.npcs:
+                        withdraw = choose_withdrawal(current)
+                        if withdraw is not None:
+                            append(DomainEvent("MarketOfferClosed", TRADER,
+                                "trader withdraws owned food before eating",
+                                current.time, {"id": withdraw.offer_id}),
+                                market_capability=True)
+                        sale = choose_offer(current)
+                        if sale is not None:
+                            append(DomainEvent("MarketOfferPosted", TRADER,
+                                "personal goods walked physically from wild site",
+                                current.time, {
+                                "id": sale.offer_id, "seller_id": TRADER,
+                                "stock_owner_id": TRADER,
+                                "site_id": "market", "resource": "food",
+                                "quantity": sale.quantity,
+                                "payment_resource": "coin_copper",
+                                "unit_price": 2,
+                            }), market_capability=True)
+                            economic_offers.append(sale.offer_id)
                 for buyer_id in sorted(current.npcs):
                     purchase = choose_local_food_purchase(
                         current, buyer_id, adaptive=self.adaptive_market_enabled)
@@ -722,6 +784,19 @@ class LivingWorldEngine:
                                         'expected_unit_price': purchase.price}),
                            market_capability=True)
                     economic_trades.append(purchase.trade_id)
+                if self.food_peddler_enabled:
+                    from .food_peddler import TRADER, choose_purchase
+                    if TRADER in current.npcs:
+                        bought = choose_purchase(current)
+                        if bought is not None:
+                            append(DomainEvent("MarketTradeExecuted", TRADER,
+                                "trader buys actual on-site wild food with owned copper",
+                                current.time, {
+                                "id": bought.trade_id, "offer_id": bought.offer_id,
+                                "buyer_id": TRADER, "quantity": 1,
+                                "expected_unit_price": bought.unit_price,
+                            }), market_capability=True)
+                            economic_trades.append(bought.trade_id)
                 if (self.professional_procurement_enabled or
                         self.multi_professional_markets_enabled):
                     from .professional_trade import choose_local_grain_purchase
@@ -901,6 +976,37 @@ class LivingWorldEngine:
                                        {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
                            consumption_capability=True)
                     meals_consumed.append(meal_id)
+            if self.food_peddler_enabled:
+                from .food_peddler import TRADER, choose_walk
+                if TRADER in current.npcs and TRADER not in busy:
+                    if needs_survey(current, TRADER):
+                        append(DomainEvent("NPCNavigationSurveyed", TRADER,
+                            "self-funded trader sees only adjacent physical roads",
+                            current.time, {"npc_id": TRADER}),
+                            movement_capability=True)
+                    walk = choose_walk(current)
+                    if walk is not None:
+                        here = current.entities[TRADER]["location_id"]
+                        edge = current.routes[walk.route_id]
+                        there = edge["b"] if edge["a"] == here else edge["a"]
+                        tid = f"auto-nav:{TRADER}:{current.time}"
+                        sid = "npc-travel:" + tid
+                        if tid in current.travels or sid in current.scheduled:
+                            raise InvalidEvent("duplicate real food-trader travel ID")
+                        due_at = current.time + edge["seconds"]
+                        append(DomainEvent("ScheduledEventCreated", None,
+                            "scheduled real one-leg food-carrier arrival",
+                            current.time, {"id": sid, "due": due_at,
+                            "order": current.next_schedule_order, "kind": "signal",
+                            "payload": {"__npc_travel_id": tid}, "interrupt": False}),
+                            movement_capability=True)
+                        append(DomainEvent("NPCTravelStarted", TRADER,
+                            "self-funded food merchant physically walks known road",
+                            current.time, {"id": tid, "npc_id": TRADER,
+                            "route_id": walk.route_id, "origin": here,
+                            "destination": there, "due": due_at,
+                            "schedule_id": sid}), movement_capability=True)
+                        busy.add(TRADER)
             if self.shopping_routes_enabled:
                 from .npc import _injury_rest_decision
 
@@ -937,7 +1043,9 @@ class LivingWorldEngine:
                         current, shopper_id, repeat_errands=repeat_errands,
                     )
                     if walk is None and wants_local_market(
-                            current, shopper_id, repeat_errands=repeat_errands):
+                            current, shopper_id, repeat_errands=repeat_errands,
+                            seek_alternative_if_unaffordable=
+                            self.seek_alternative_food_market_enabled):
                         if needs_survey(current, shopper_id):
                             append(DomainEvent('NPCNavigationSurveyed', shopper_id,
                                 'shopper sees roads adjoining their physical location',
@@ -946,6 +1054,8 @@ class LivingWorldEngine:
                         walk = choose_known_market_walk(
                             current, shopper_id, repeat_errands=repeat_errands,
                             remember_unbought_stalls=self.remember_unbought_stalls_enabled,
+                            seek_alternative_if_unaffordable=
+                            self.seek_alternative_food_market_enabled,
                         )
                     if walk is None:
                         continue

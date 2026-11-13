@@ -81,7 +81,9 @@ def _known(value: object) -> bool:
 
 
 def choose_local_production(state: WorldState, npc_id: str, *,
-                            agriculture_enabled: bool = False) -> ProductionIntent | None:
+                            agriculture_enabled: bool = False,
+                            finite_aquifer_enabled: bool = False
+                            ) -> ProductionIntent | None:
     """Worker starts one real batch as soon as local inputs and shift allow.
 
     The unrelated general NPC deliberation cooldown does not suppress a
@@ -110,6 +112,36 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     for recipe_id, recipe in sorted(state.production_recipes.items()):
         if recipe["site_id"] != here or recipe["role"] != npc["role"]:
             continue
+        if recipe.get("input_resource") == "groundwater_reserve":
+            if not finite_aquifer_enabled:
+                # No secret rain generator: original worlds remain unchanged.
+                continue
+            if not (
+                recipe["site_id"] == "well"
+                and recipe["role"] == "well_pumper"
+                and recipe["input_amount"] == 1
+                and recipe["output_resource"] == "water"
+                and recipe["output_amount"] == 1
+                and recipe["tool_resource"] == "hand_pump"
+                and recipe.get("wage_coin") == 1
+            ):
+                continue
+            # Physically finite aquifer: a real bore recovers between draws.
+            # Do not extract a second unit within four simulation hours,
+            # even if all reservoir water could be withdrawn rapidly.
+            previous_pump = max(
+                (job["started_at"] for job in state.production_jobs.values()
+                 if job["recipe_id"] == recipe_id),
+                default=None,
+            )
+            if (previous_pump is not None
+                    and state.time - previous_pump < 4 * 3600):
+                continue
+            # No unpaid pumping: employer must possess actual copper at the
+            # same well BEFORE accepting another signed labor contract.
+            # This does not transfer a coin until the scheduled job finishes.
+            if state.resources.get("well", {}).get("coin_copper", 0) < 1:
+                continue
         remaining_shift = (profile["work_end"] - state.time % DAY_SECONDS) % DAY_SECONDS
         if recipe["duration_seconds"] > remaining_shift:
             continue
@@ -127,8 +159,42 @@ def choose_local_production(state: WorldState, npc_id: str, *,
         tool_amount = stock.get(recipe["tool_resource"])
         if not all(_known(n) for n in (*stocked.values(), output_amount, tool_amount)):
             continue
+        # A signed, finite hunter/fisher operation may accumulate actual
+        # processed portions at its own site. Its prey input is removed by
+        # start_production and its output remains MAX_QUANTITY-bounded.
+        # Historical farms, workshops and bakeries retain their exact
+        # legacy requirement to clear their output stock first.
+        finite_wilderness_batch = (
+            npc["role"] in ("hunter", "fisher")
+            and recipe["role"] == npc["role"]
+            and recipe.get("input_resource") == "wild_food"
+            and recipe.get("input_amount") == 1
+            and recipe["output_resource"] == "food"
+            and recipe["output_amount"] == 2
+            and recipe.get("wage_food") == 2
+            and recipe["tool_resource"] in ("bow", "net")
+        )
+        if finite_wilderness_batch and output_amount > 2:
+            # A real hunter/fisher is also the physical owner-stall keeper.
+            # Once genuine surplus exists, yield ONE decision opportunity
+            # to publicly quote it before beginning another timed job.
+            # Otherwise the worker stays perpetually busy and no buyer can
+            # legally exchange their scarce copper for the real food.
+            awaiting_surplus_quote = (
+                here in state.market_stalls
+                and state.market_stalls[here]["keeper_id"] == npc_id
+                and not any(
+                    q["status"] == "open"
+                    and q["stock_owner_id"] == here
+                    and q["resource"] == "food"
+                    for q in state.market_offers.values()
+                )
+            )
+            if awaiting_surplus_quote:
+                continue
         if (any(stocked[item] < amount for item, amount in needs)
-                or tool_amount < 1 or output_amount != 0
+                or tool_amount < 1
+                or (output_amount != 0 and not finite_wilderness_batch)
                 or output_amount + recipe["output_amount"] > PRODUCTION_MAX):
             continue
         reservations = sum(
@@ -171,17 +237,37 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
     if any(o["status"] == "open" and o["stock_owner_id"] == here
            and o["resource"] == "food" for o in state.market_offers.values()):
         return None
-    unit_price = (3 if food == 1 else 2 if food <= 3 else 1) if adaptive else TEST_FOOD_PRICE_COPPER
-    amount = min(food, MARKET_MAX, (MAX_AMOUNT - coin) // unit_price)
+    # Genuine hunters and fishers must retain the agreed TWO physical
+    # worker portions before their on-site steward quotes any surplus.
+    # This does not reserve a fake entitlement: an unquoted loaf remains
+    # with its current legal owner until an actual completed wage is paid.
+    local_labor_reserve = max((
+        recipe["wage_food"]
+        for recipe in state.production_recipes.values()
+        if recipe["site_id"] == here
+        and recipe["role"] in ("hunter", "fisher")
+        and recipe.get("input_resource") == "wild_food"
+        and recipe["output_resource"] == "food"
+        and recipe.get("wage_food") == 2
+    ), default=0)
+    unpromised = food - local_labor_reserve
+    if unpromised < 1:
+        return None
+    # Actual forest/river output is a distinct source commodity: the one
+    # copper surplus quote can fund real roadside traders, who physically
+    # carry and resell it. Normal bakery/market prices are unchanged.
+    unit_price = (1 if local_labor_reserve == 2 else
+                  (3 if unpromised == 1 else 2 if unpromised <= 3 else 1)
+                  if adaptive else TEST_FOOD_PRICE_COPPER)
+    amount = min(unpromised, MARKET_MAX, (MAX_AMOUNT - coin) // unit_price)
     if amount < 1:
         return None
     ident = _event_id("offer", here, state.time)
     if ident in state.market_offers:
         return None
     reason = (f"registered_steward; physically_stocked={food}; "
-              f"local_quote={unit_price}; adaptive=True") if adaptive else (
-              f"registered_steward; physically_stocked={food}; "
-              f"test_price={TEST_FOOD_PRICE_COPPER}")
+              f"local_quote={unit_price}; protected_worker_portions={local_labor_reserve}"
+              + ("; adaptive=True" if adaptive else ""))
     return OfferIntent(keeper_id, here, ident, amount, reason, unit_price)
 
 

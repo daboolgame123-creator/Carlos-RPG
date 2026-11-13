@@ -80,7 +80,8 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
         return False
     compound = "inputs" in recipe
     expected = _RECIPE_COMPOUND if compound else _RECIPE_LEGACY
-    if set(recipe) not in (expected, expected | {"wage_coin"}):
+    if set(recipe) not in (expected, expected | {"wage_coin"},
+                           expected | {"wage_food"}):
         return False
     if (not _valid_name(recipe["id"], MAX_ID)
             or not isinstance(recipe["site_id"], str)
@@ -128,6 +129,11 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
             type(recipe["wage_coin"]) is not int
             or not 1 <= recipe["wage_coin"] <= 5
             or not _known(stocks.get("coin_copper"))):
+        return False
+    if "wage_food" in recipe and (
+            type(recipe["wage_food"]) is not int
+            or recipe["wage_food"] not in (1, 2)
+            or not _known(stocks.get("food"))):
         return False
     return True
 
@@ -321,7 +327,8 @@ def validate_production_state(state: dict[str, Any]) -> None:
             raise ValueError("job must reference existing recipe")
         compound = "inputs" in recipe
         valid_shape = _JOB_COMPOUND if compound else _JOB_LEGACY
-        if set(job) not in (valid_shape, valid_shape | {"work_wage"}):
+        if set(job) not in (valid_shape, valid_shape | {"work_wage"},
+                            valid_shape | {"food_wage"}):
             raise ValueError("invalid persisted job receipt shape")
         who = job["npc_id"]
         if compound:
@@ -376,6 +383,9 @@ def validate_production_state(state: dict[str, Any]) -> None:
                     or receipt["worker_after"] - receipt["worker_before"]
                        != receipt["amount"]):
                 raise ValueError("job wage receipt must conserve an actual completed wage")
+        from .food_for_work import valid_site_food_wage_receipt
+        if not valid_site_food_wage_receipt(job, recipe, state["time"]):
+            raise ValueError("invalid locally owned food wage receipt")
         if job["status"] == "running":
             if (who in busy or state["time"] > job["due"]
                     or job["started_at"] > state["time"]

@@ -18,11 +18,11 @@ from carlos_sim.store import UnsupportedVersion
 
 
 def test_new_schema45_world_roundtrip_with_unchanged_resources(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 62)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 63)
     path = tmp_path / "current-world.sqlite"
     with SQLiteEventStore(path) as db:
         initial = db.create_world("current")
-        assert (initial.schema_version, initial.rules_version) == (45, 62)
+        assert (initial.schema_version, initial.rules_version) == (45, 63)
         assert initial.courier_provisions == {}
         assert db.verify("current").to_dict() == initial.to_dict()
         assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
@@ -33,7 +33,7 @@ def test_synthetic_legacy_version_fails_closed_without_rewriting_sqlite(tmp_path
     with SQLiteEventStore(path) as db:
         db.create_world("legacy")
         original = db.verify("legacy").to_dict()
-        assert (original["schema_version"], original["rules_version"]) == (45, 62)
+        assert (original["schema_version"], original["rules_version"]) == (45, 63)
     # An otherwise hash-consistent fixture marking an old 43/58 save. This
     # ensures the error is due to the version boundary and does not imply
     # old events have been silently transformed to 44/59.

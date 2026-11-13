@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 45
-RULES_VERSION = 62
+RULES_VERSION = 63
 
 
 def _thaw(value: Any) -> Any:
@@ -514,6 +514,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "ProductionWagePaid":
         from .production import pay_completed_production_wage
         pay_completed_production_wage(d, e, production_authorized=production_authorized)
+    elif kind == "ProductionFoodWagePaid":
+        from .food_for_work import pay_site_food_wage
+        pay_site_food_wage(d, e, production_authorized=production_authorized)
     elif kind == "WorkshopMaterialDeposited":
         from .workshop_transfers import deposit_workshop_material
         deposit_workshop_material(
