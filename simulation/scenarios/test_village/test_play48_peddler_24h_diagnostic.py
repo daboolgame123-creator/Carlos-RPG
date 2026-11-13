@@ -122,11 +122,69 @@ def market_resale_gates(state):
     }
 
 
+def site_and_personal_cashflow(state):
+    """Read-only owner ledgers and authentic signed-work wage blockers."""
+    audit = audit_npc_economy(state)
+    assert audit["copper_scope_complete"] and audit["copper_known_total"] == 12
+    completed = []
+    for job_id, job in sorted(state.production_jobs.items()):
+        if job["status"] != "completed":
+            continue
+        recipe = state.production_recipes[job["recipe_id"]]
+        wage_coin, wage_food = recipe.get("wage_coin"), recipe.get("wage_food")
+        if wage_coin is None and wage_food is None:
+            continue
+        receipt = job.get("work_wage") or job.get("food_wage")
+        completed.append({
+            "job": job_id, "person": job["npc_id"],
+            "site": job["site_id"], "recipe": job["recipe_id"],
+            "signed_copper": wage_coin, "signed_food": wage_food,
+            "paid": receipt is not None,
+            "site_cash_now": state.resources[job["site_id"]].get("coin_copper", 0),
+            "site_food_now": state.resources[job["site_id"]].get("food", 0),
+            "worker_at_site_now": (
+                state.entities[job["npc_id"]]["location_id"] == job["site_id"]
+            ),
+        })
+    receipts = {
+        who: {
+            "wages_in_copper": sum(
+                job["work_wage"]["amount"]
+                for job in state.production_jobs.values()
+                if job["npc_id"] == who and "work_wage" in job
+            ),
+            "wages_in_food": sum(
+                job["food_wage"]["amount"]
+                for job in state.production_jobs.values()
+                if job["npc_id"] == who and "food_wage" in job
+            ),
+        }
+        for who in sorted(state.npcs)
+    }
+    return {
+        "hour": state.time // HOUR,
+        "cash_by_all_owner": audit["copper_known_by_owner"],
+        "cash_wage_receipts_by_resident": receipts,
+        "signed_completed_jobs": completed,
+        "site_cash_accounts": {
+            site: audit["copper_known_by_owner"][site]
+            for site in sorted(state.locations)
+            if audit["copper_known_by_owner"].get(site, 0)
+        },
+        "real_food_trades": [
+            {"buyer": tr["buyer_id"], "seller": tr["seller_id"],
+             "site": tr["site_id"], "coins": tr["total_paid"]}
+            for tr in state.market_trades.values() if tr["resource"] == "food"
+        ],
+    }
+
+
 def test_real_thirteen_npc_diversified_economy_first_twentyfour_hours(tmp_path):
     path = tmp_path / "play48-diversified-24h-diagnostic.sqlite"
     seed(path)
     snapshots = []
     gate_snapshots = []
+    cash_snapshots = []
     with SQLiteEventStore(path) as db:
         clock = TimeEngine(db)
         clock.open_session(WORLD)
@@ -162,9 +220,12 @@ def test_real_thirteen_npc_diversified_economy_first_twentyfour_hours(tmp_path):
                 assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
                 snapshots.append(measures(current))
                 gate_snapshots.append(market_resale_gates(current))
+                cash_snapshots.append(site_and_personal_cashflow(current))
             print("PLAY48_DIVERSE_ECONOMY_24H_MEASURED_NO_GO_CHECK " +
                   json.dumps(snapshots, sort_keys=True), flush=True)
             print("PLAY48_REAL_PEDDLER_24H_MARKET_GATES " +
                   json.dumps(gate_snapshots, sort_keys=True), flush=True)
+            print("PLAY48_AUTHENTIC_COPPER_AND_WORK_CONTRACTS_24H " +
+                  json.dumps(cash_snapshots, sort_keys=True), flush=True)
         finally:
             clock.close_session(WORLD)
