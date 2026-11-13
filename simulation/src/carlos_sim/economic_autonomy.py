@@ -135,8 +135,8 @@ def choose_local_production(state: WorldState, npc_id: str, *,
         finite_wilderness_batch = (
             npc["role"] in ("hunter", "fisher")
             and recipe["role"] == npc["role"]
-            and recipe["input_resource"] == "wild_food"
-            and recipe["input_amount"] == 1
+            and recipe.get("input_resource") == "wild_food"
+            and recipe.get("input_amount") == 1
             and recipe["output_resource"] == "food"
             and recipe["output_amount"] == 2
             and recipe.get("wage_food") == 2
@@ -187,8 +187,24 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
     if any(o["status"] == "open" and o["stock_owner_id"] == here
            and o["resource"] == "food" for o in state.market_offers.values()):
         return None
-    unit_price = (3 if food == 1 else 2 if food <= 3 else 1) if adaptive else TEST_FOOD_PRICE_COPPER
-    amount = min(food, MARKET_MAX, (MAX_AMOUNT - coin) // unit_price)
+    # Genuine hunters and fishers must retain the agreed TWO physical
+    # worker portions before their on-site steward quotes any surplus.
+    # This does not reserve a fake entitlement: an unquoted loaf remains
+    # with its current legal owner until an actual completed wage is paid.
+    local_labor_reserve = max((
+        recipe["wage_food"]
+        for recipe in state.production_recipes.values()
+        if recipe["site_id"] == here
+        and recipe["role"] in ("hunter", "fisher")
+        and recipe.get("input_resource") == "wild_food"
+        and recipe["output_resource"] == "food"
+        and recipe.get("wage_food") == 2
+    ), default=0)
+    unpromised = food - local_labor_reserve
+    if unpromised < 1:
+        return None
+    unit_price = (3 if unpromised == 1 else 2 if unpromised <= 3 else 1) if adaptive else TEST_FOOD_PRICE_COPPER
+    amount = min(unpromised, MARKET_MAX, (MAX_AMOUNT - coin) // unit_price)
     if amount < 1:
         return None
     ident = _event_id("offer", here, state.time)

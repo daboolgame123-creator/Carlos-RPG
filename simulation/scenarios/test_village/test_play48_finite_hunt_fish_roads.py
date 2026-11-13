@@ -144,6 +144,7 @@ def seed(path):
             assert s.resources[site]["wild_food"] == 2
             assert s.resources[site]["regrowth_reserve"] == 6
             assert s.resources[site]["food"] == 0
+            assert s.market_stalls[site]["keeper_id"] == who
             assert s.resources[site][tool] == 1
             recipe = s.production_recipes["two-portions-" + role]
             assert recipe["input_resource"] == "wild_food"
@@ -249,3 +250,26 @@ def test_real_work_produces_two_owned_portions_with_conserved_prey_and_roads(tmp
                   json.dumps(output, sort_keys=True))
         finally:
             clock.close_session(WORLD)
+
+
+def test_local_food_offer_protects_contracted_worker_share(tmp_path):
+    """Food buyers can only quote produced *surplus*, never the worker's wage.
+
+    Pure decision selector: no inventory is created or world-state mutated.
+    The actual 13NPC physical-work test separately verifies signed receipts.
+    """
+    from carlos_sim.economic_autonomy import choose_local_food_offer
+    from carlos_sim.domain import WorldState
+    s = seed(tmp_path / "finite-site-stalls.sqlite")
+    for site, (who, _role, _tool) in SITES.items():
+        raw = s.to_dict()
+        # Alter a *read-only selector copy* solely to test reservation arithmetic.
+        # No such direct mutation is submitted as a physical game event.
+        for total, quoted in ((0, None), (2, None), (3, 1), (6, 4)):
+            scenario = s.to_dict()
+            scenario["resources"][site]["food"] = total
+            mock = WorldState.from_dict(scenario)
+            intent = choose_local_food_offer(mock, who)
+            assert (intent.quantity if intent else None) == quoted, (
+                site, total, intent
+            )

@@ -222,6 +222,10 @@ def _joined_bootstrap(
                     "site_id": site, "period_seconds": 7200,
                     "capacity": 3,
                 }))
+                events.append(_e("MarketStallConfigured", {
+                    "site_id": site,
+                    "keeper_id": "omar" if role == "hunter" else "layla",
+                }))
                 events.append(_e("ProductionRecipeConfigured", {
                     "id": "two-portions-" + role,
                     "site_id": site, "role": role,
