@@ -81,7 +81,9 @@ def _known(value: object) -> bool:
 
 
 def choose_local_production(state: WorldState, npc_id: str, *,
-                            agriculture_enabled: bool = False) -> ProductionIntent | None:
+                            agriculture_enabled: bool = False,
+                            finite_aquifer_enabled: bool = False
+                            ) -> ProductionIntent | None:
     """Worker starts one real batch as soon as local inputs and shift allow.
 
     The unrelated general NPC deliberation cooldown does not suppress a
@@ -109,6 +111,10 @@ def choose_local_production(state: WorldState, npc_id: str, *,
         return None
     for recipe_id, recipe in sorted(state.production_recipes.items()):
         if recipe["site_id"] != here or recipe["role"] != npc["role"]:
+            continue
+        if (recipe.get("input_resource") == "groundwater_reserve"
+                and not finite_aquifer_enabled):
+            # No ancient or hidden rain generator; optional finite reserve.
             continue
         remaining_shift = (profile["work_end"] - state.time % DAY_SECONDS) % DAY_SECONDS
         if recipe["duration_seconds"] > remaining_shift:

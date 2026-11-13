@@ -26,7 +26,7 @@ def _joined_bootstrap(
     bakery_opening_food_wage=False, farm_opening_food_wage=False,
     farm_initial_food_loaves=1, farm_bread_share_enabled=False, wood_charcoal_jobs_enabled=False,
     food_for_work_bakery_enabled=False, wilderness_food_jobs_enabled=False,
-    wilderness_food_peddler_enabled=False,
+    wilderness_food_peddler_enabled=False, finite_aquifer_work_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -35,6 +35,8 @@ def _joined_bootstrap(
     are allocated at genesis as farm/bakery working capital, without adding
     any copper. The normal field/baker jobs get one-copper wage contracts.
     """
+    if type(finite_aquifer_work_enabled) is not bool:
+        raise ValueError("finite aquifer work must be a boolean opt-in")
     if (type(wilderness_food_jobs_enabled) is not bool
             or type(wilderness_food_peddler_enabled) is not bool
             or (wilderness_food_peddler_enabled and not wilderness_food_jobs_enabled)):
@@ -294,7 +296,8 @@ def _joined_bootstrap(
         sites = ("smithy", "iron_mine", "charcoal_kiln", "repair_shop")
         staff = (
             ("smith", "blacksmith", "smithy"),
-            ("miner", "miner", "iron_mine"),
+            ("miner", "well_pumper" if finite_aquifer_work_enabled else "miner",
+             "well" if finite_aquifer_work_enabled else "iron_mine"),
             ("burner", "charcoal_burner", "charcoal_kiln"),
             ("repairman", "food_peddler" if wilderness_food_peddler_enabled else "repairer",
              "market" if wilderness_food_peddler_enabled else "repair_shop"),
@@ -344,6 +347,12 @@ def _joined_bootstrap(
             "burner": {"food": 0, "labor_units": 0,
                        "investigation_attempts": 0},
         }
+        if finite_aquifer_work_enabled:
+            # Two *already existing* smith-owned copper coins are held as
+            # well employer working capital from time zero: never minted.
+            # Paid pumping cannot exceed the employer's real local wallet.
+            assert resources["smith"]["coin_copper"] == 2
+            resources["smith"]["coin_copper"] = 0
         if wood_charcoal_jobs_enabled:
             # The two original coins of Layla are deposited as real employer
             # working capital at the forest. One of the repairer's coins is
@@ -387,6 +396,39 @@ def _joined_bootstrap(
                 "previous": None, "current": 0, "source": "initialization",
             }))
 
+        if finite_aquifer_work_enabled:
+            original_well_wallets = [
+                (i, e) for i, e in enumerate(events)
+                if e.event_type == "ResourceChanged"
+                and e.data.get("owner_id") == "well"
+                and e.data.get("resource") == "coin_copper"
+            ]
+            assert len(original_well_wallets) == 1
+            idx, prior = original_well_wallets[0]
+            assert prior.data["previous"] is None
+            assert prior.data["current"] == 0
+            events[idx] = _e("ResourceChanged", {
+                **dict(prior.data), "current": 2,
+            })
+            # The literal physical reserve is *declared at genesis*, not
+            # weather conjured later. Six finite groundwater units and one
+            # hand pump must be present before the signed recipe can exist.
+            for resource, number in (
+                ("groundwater_reserve", 6), ("hand_pump", 1),
+            ):
+                events.append(_e("ResourceChanged", {
+                    "owner_id": "well", "resource": resource,
+                    "previous": None, "current": number,
+                    "source": "initialization",
+                }))
+            events.append(_e("ProductionRecipeConfigured", {
+                "id": "finite-aquifer-to-well",
+                "site_id": "well", "role": "well_pumper",
+                "input_resource": "groundwater_reserve", "input_amount": 1,
+                "output_resource": "water", "output_amount": 1,
+                "tool_resource": "hand_pump", "duration_seconds": 1800,
+                "wage_coin": 1,
+            }))
         if wood_charcoal_jobs_enabled:
             events.append(_e("NPCRoutineConfigured", {
                 "npc_id": "layla", "home_id": "market",
@@ -395,7 +437,8 @@ def _joined_bootstrap(
             }))
         for owner, home, workplace, start in (
             ("smith", "iron_mine", "smithy", 0),
-            ("miner", "bakery", "iron_mine", 0),
+            ("miner", "bakery",
+             "well" if finite_aquifer_work_enabled else "iron_mine", 0),
             ("burner", "bakery", "charcoal_kiln", 0),
             ("repairman", "market" if wilderness_food_peddler_enabled else "charcoal_kiln",
              "hunting_woods" if wilderness_food_peddler_enabled else "repair_shop",
@@ -405,7 +448,9 @@ def _joined_bootstrap(
                 "npc_id": owner, "home_id": home,
                 "workplace_id": workplace,
                 "work_start": start,
-                "work_end": (repair_shift_end if owner == "repairman"
+                "work_end": (72_000 if owner == "miner"
+                             and finite_aquifer_work_enabled else
+                             repair_shift_end if owner == "repairman"
                              and not wilderness_food_peddler_enabled else 20_000),
             }))
         for site, keeper in (

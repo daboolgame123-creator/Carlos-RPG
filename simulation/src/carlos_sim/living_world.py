@@ -92,7 +92,8 @@ class LivingWorldEngine:
                  remember_unbought_stalls_enabled: bool = False,
                  food_for_work_enabled: bool = False,
                  seek_alternative_food_market_enabled: bool = False,
-                 food_peddler_enabled: bool = False):
+                 food_peddler_enabled: bool = False,
+                 finite_aquifer_pumping_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -171,6 +172,11 @@ class LivingWorldEngine:
                     economic_enabled and consumption_enabled and survival_enabled))):
             raise ValueError("food-for-work requires economic, consumption and survival")
         self.food_for_work_enabled = food_for_work_enabled
+        if (type(finite_aquifer_pumping_enabled) is not bool
+                or (finite_aquifer_pumping_enabled
+                    and not (economic_enabled and routines_enabled))):
+            raise ValueError("finite aquifer needs true timed economic work")
+        self.finite_aquifer_pumping_enabled = finite_aquifer_pumping_enabled
         if (type(food_peddler_enabled) is not bool
                 or (food_peddler_enabled and not (
                     economic_enabled and navigation_enabled and
@@ -669,8 +675,10 @@ class LivingWorldEngine:
                 for worker_id in sorted(current.npcs):
                     if self._professional_life_emergency(current, worker_id):
                         continue
-                    intent = choose_local_production(current, worker_id,
-                                                     agriculture_enabled=self.agriculture_enabled)
+                    intent = choose_local_production(
+                        current, worker_id,
+                        agriculture_enabled=self.agriculture_enabled,
+                        finite_aquifer_enabled=self.finite_aquifer_pumping_enabled)
                     if intent is None:
                         continue
                     append(DomainEvent('ProductionStarted', worker_id,
