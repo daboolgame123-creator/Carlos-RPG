@@ -37,6 +37,7 @@ class Purchase:
     offer_id: str
     trade_id: str
     unit_price: int
+    quantity: int = 1
 
 
 @dataclass(frozen=True)
@@ -85,18 +86,19 @@ def _balances(state: WorldState) -> tuple[int | None, int | None]:
     return food, copper
 
 
-def choose_purchase(state: WorldState) -> Purchase | None:
+def choose_purchase(state: WorldState, *, reserve_self_meal: bool = False) -> Purchase | None:
     """Inspect ONLY a personally reached local hunting stall and real quote."""
     if not _present_free(state, TRADER):
         return None
     if state.entities[TRADER]["location_id"] != SOURCE:
         return None
     food, coins = _balances(state)
-    if food != 0 or coins is None or coins < SOURCE_PRICE:
+    desired = 2 if reserve_self_meal else 1
+    if food != 0 or coins is None or coins < SOURCE_PRICE * desired:
         return None
     source = state.resources.get(SOURCE, {})
     available = source.get("food")
-    if type(available) is not int or available < 1:
+    if type(available) is not int or available < desired:
         return None
     raw = state.to_dict()
     for offer_id, o in sorted(state.market_offers.items()):
@@ -105,26 +107,26 @@ def choose_purchase(state: WorldState) -> Purchase | None:
                 or o["payment_resource"] != MONEY
                 or o["stock_owner_id"] != SOURCE
                 or o["seller_id"] != "omar"
-                or o["remaining"] < 1
+                or o["remaining"] < desired
                 or o["unit_price"] != SOURCE_PRICE
                 or coins - reserved_trade_units(
-                    state.supply_circuits, TRADER, MONEY) < SOURCE_PRICE
+                    state.supply_circuits, TRADER, MONEY) < SOURCE_PRICE * desired
                 or not _present(raw, o["seller_id"], SOURCE)
                 or available - reserved_trade_units(
-                    state.supply_circuits, SOURCE, "food") < 1):
+                    state.supply_circuits, SOURCE, "food") < desired):
             continue
-        return Purchase(offer_id, _id("buy", TRADER, state.time), SOURCE_PRICE)
+        return Purchase(offer_id, _id("buy", TRADER, state.time), SOURCE_PRICE, desired)
     return None
 
 
-def choose_offer(state: WorldState) -> Sale | None:
+def choose_offer(state: WorldState, *, reserve_self_meal: bool = False) -> Sale | None:
     """Only personally owned carried goods offered after actual arrival."""
     if not _present_free(state, TRADER):
         return None
     if state.entities[TRADER]["location_id"] != DESTINATION:
         return None
     food, _ = _balances(state)
-    if (food is None or food < 1
+    if (food is None or food < (2 if reserve_self_meal else 1)
             or state.npcs[TRADER]["needs"]["hunger"] >= 70
             or any(o["status"] == "open"
                    and o["stock_owner_id"] == TRADER
@@ -132,7 +134,7 @@ def choose_offer(state: WorldState) -> Sale | None:
                    for o in state.market_offers.values())):
         return None
     committed = reserved_trade_units(state.supply_circuits, TRADER, "food")
-    if food - committed < 1:
+    if food - committed < (2 if reserve_self_meal else 1):
         return None
     return Sale(_id("offer", TRADER, state.time), 1)
 
