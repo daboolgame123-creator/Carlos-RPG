@@ -86,13 +86,18 @@ def configure_market_stall(state: dict[str, Any], event: DomainEvent, *,
                            bootstrap: bool) -> None:
     p = event.data
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
-            or set(p) != {"site_id", "keeper_id"}):
+            or set(p) not in ({"site_id", "keeper_id"},
+                               {"site_id", "keeper_id", "commission_coin"})
+            or ("commission_coin" in p and p["commission_coin"] != 1)):
         raise ValueError("market steward requires trusted time-zero bootstrap")
     site, keeper = p["site_id"], p["keeper_id"]
     if (not _id(site) or site not in state["locations"] or site in state["market_stalls"]
             or not _id(keeper) or not _present(state, keeper, site)):
         raise ValueError("market stall must have a real local NPC steward")
     state["market_stalls"][site] = {"keeper_id": keeper}
+    if "commission_coin" in p:
+        # Owner signed exactly one copper for each eligible REAL site sale.
+        state["market_stalls"][site]["commission_coin"] = 1
 
 
 def post_offer(state: dict[str, Any], event: DomainEvent, *,
@@ -210,6 +215,29 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
         "pay_source_before": pb, "pay_source_after": pb - total,
         "pay_target_before": pt, "pay_target_after": pt + total,
     }
+    # PLAY48 experimental real retail SERVICE income, never a free salary.
+    # The steward's own physical attendance was already required above;
+    # this pays only on the single, durable, authenticated sale event.
+    contract = state["market_stalls"].get(offer["site_id"])
+    signed_retail_work = (
+        owner == offer["site_id"] and item == "food" and pay == MONEY
+        and contract is not None and contract.get("keeper_id") == offer["seller_id"]
+        and contract.get("commission_coin") == 1 and total >= 2
+    )
+    if signed_retail_work:
+        seller_before = _ledger(state, offer["seller_id"], MONEY)
+        employer_before = state["resources"][owner][MONEY]
+        if employer_before < 1 or seller_before >= MAX_AMOUNT:
+            raise ValueError("retail wage requires actual unspent sale proceeds")
+        state["resources"][owner][MONEY] -= 1
+        state["resources"][offer["seller_id"]][MONEY] += 1
+        state["market_trades"][p["id"]]["retail_wage"] = {
+            "trade_id": p["id"], "worker_id": offer["seller_id"],
+            "employer_site": owner, "amount": 1,
+            "paid_at": state["time"],
+            "site_before": employer_before, "site_after": employer_before - 1,
+            "worker_before": seller_before, "worker_after": seller_before + 1,
+        }
 
 
 def close_offer(state: dict[str, Any], event: DomainEvent, *,
@@ -233,7 +261,9 @@ def validate_market(state: dict[str, Any]) -> None:
         raise ValueError("market ledgers must be mappings")
     for site, stall in stalls.items():
         if (not _id(site) or site not in state["locations"]
-                or not isinstance(stall, dict) or set(stall) != {"keeper_id"}
+                or not isinstance(stall, dict)
+                or set(stall) not in ({"keeper_id"}, {"keeper_id", "commission_coin"})
+                or ("commission_coin" in stall and stall["commission_coin"] != 1)
                 or not _id(stall["keeper_id"]) or stall["keeper_id"] not in state["npcs"]):
             raise ValueError("invalid registered market stall")
     for ident, o in offers.items():
@@ -263,7 +293,8 @@ def validate_market(state: dict[str, Any]) -> None:
             raise ValueError("market closure has no valid timestamp")
     sold: dict[str, int] = {}
     for ident, t in trades.items():
-        if (not _id(ident) or not isinstance(t, dict) or set(t) != TRADE_KEYS
+        if (not _id(ident) or not isinstance(t, dict)
+                or set(t) not in (TRADE_KEYS, TRADE_KEYS | {"retail_wage"})
                 or t["offer_id"] not in offers):
             raise ValueError("invalid market trade record")
         o = offers[t["offer_id"]]
@@ -287,6 +318,34 @@ def validate_market(state: dict[str, Any]) -> None:
                 or t["pay_source_before"] - t["pay_source_after"] != t["total_paid"]
                 or t["pay_target_after"] - t["pay_target_before"] != t["total_paid"]):
             raise ValueError("trade must conserve goods and currency without invention")
+        if "retail_wage" in t:
+            receipt = t["retail_wage"]
+            contract = stalls.get(t["site_id"])
+            if (type(receipt) is not dict
+                    or set(receipt) != {
+                        "trade_id", "worker_id", "employer_site", "amount",
+                        "paid_at", "site_before", "site_after",
+                        "worker_before", "worker_after",
+                    }
+                    or t["stock_owner_id"] != t["site_id"]
+                    or t["resource"] != "food" or t["payment_resource"] != MONEY
+                    or t["total_paid"] < 2
+                    or contract is None or contract.get("commission_coin") != 1
+                    or contract["keeper_id"] != t["seller_id"]
+                    or receipt["trade_id"] != ident
+                    or receipt["worker_id"] != t["seller_id"]
+                    or receipt["employer_site"] != t["site_id"]
+                    or type(receipt["amount"]) is not int
+                    or receipt["amount"] != 1
+                    or type(receipt["paid_at"]) is not int
+                    or receipt["paid_at"] != t["executed_at"]
+                    or any(not _balance(receipt[field]) for field in
+                           ("site_before", "site_after",
+                            "worker_before", "worker_after"))
+                    or receipt["site_before"] != t["pay_target_after"]
+                    or receipt["site_before"] - receipt["site_after"] != 1
+                    or receipt["worker_after"] - receipt["worker_before"] != 1):
+                raise ValueError("forged or unfunded site retail wage receipt")
         sold[t["offer_id"]] = sold.get(t["offer_id"], 0) + t["quantity"]
     for ident, o in offers.items():
         if o["quantity"] - o["remaining"] != sold.get(ident, 0):

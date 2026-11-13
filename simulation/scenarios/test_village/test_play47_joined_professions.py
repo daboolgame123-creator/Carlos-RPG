@@ -27,6 +27,7 @@ def _joined_bootstrap(
     farm_initial_food_loaves=1, farm_bread_share_enabled=False, wood_charcoal_jobs_enabled=False,
     food_for_work_bakery_enabled=False, wilderness_food_jobs_enabled=False,
     wilderness_food_peddler_enabled=False, finite_aquifer_work_enabled=False,
+    retail_service_wage_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -35,6 +36,8 @@ def _joined_bootstrap(
     are allocated at genesis as farm/bakery working capital, without adding
     any copper. The normal field/baker jobs get one-copper wage contracts.
     """
+    if type(retail_service_wage_enabled) is not bool:
+        raise ValueError("retail service wage opt-in must be boolean")
     if type(finite_aquifer_work_enabled) is not bool:
         raise ValueError("finite aquifer work must be a boolean opt-in")
     if (type(wilderness_food_jobs_enabled) is not bool
@@ -69,6 +72,20 @@ def _joined_bootstrap(
             or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
         raise ValueError("site_payroll_wage_coin must be one or two existing copper")
     def extend(events):
+        if retail_service_wage_enabled:
+            # Only the original local market steward can earn a commission
+            # from an actual sale. Explicit new time-zero contract, no cash.
+            matches = []
+            for index, evt in enumerate(events):
+                if (evt.event_type == "MarketStallConfigured"
+                        and evt.data.get("site_id") == "market"):
+                    assert evt.data == {"site_id": "market", "keeper_id": "salma"}
+                    events[index] = _e("MarketStallConfigured", {
+                        "site_id": "market", "keeper_id": "salma",
+                        "commission_coin": 1,
+                    })
+                    matches.append(index)
+            assert len(matches) == 1
         if wilderness_food_jobs_enabled:
             # Same 13 people: a market explorer and resident take two
             # real food-producing professions, and therefore are no longer
