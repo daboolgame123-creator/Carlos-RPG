@@ -454,7 +454,7 @@ def _joined_bootstrap(
                              and not wilderness_food_peddler_enabled else 20_000),
             }))
         for site, keeper in (
-            ("iron_mine", "miner"),
+            *((("iron_mine", "miner"),) if not finite_aquifer_work_enabled else ()),
             ("charcoal_kiln", "burner"),
             ("smithy", "smith"),
             *((("lumberyard", "layla"),) if wood_charcoal_jobs_enabled else ()),
