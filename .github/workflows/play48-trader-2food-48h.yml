@@ -1,0 +1,36 @@
+name: PLAY48 two-unit real trader 48h physical follow-through (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-peddler-owned-meal-reserve-20261113
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-trader-selfmeal-48h-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-trader-through-48h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: True source-stock market buyer and peddler self meal into 48h
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_trader_provision_48h_followthrough.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_trader_provision_48h_followthrough.py

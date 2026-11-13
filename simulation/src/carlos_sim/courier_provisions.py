@@ -44,13 +44,17 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
                 ("market", "bakery", state["supply_circuits"].get(
                     p["courier_id"], {}).get("stops", ["", ""])[1])
             or type(p["units"]) is not int
-            or not 1 <= p["units"] <= MAX_UNIT):
+            or not 0 <= p["units"] <= MAX_UNIT
+            or (p["units"] == 0 and (
+                p["payer_site"] != "market"
+                or "authorized_total_units" not in p))):
         raise ValueError("provision requires unique funded time-zero contract")
     # Explicit, owner-authorized future wage ceiling at trusted signing.
     # The default remains exactly the pre-paid opening number, so all
     # historic one-shot contracts CANNOT be secretly renewed at runtime.
     maximum = p.get("authorized_total_units", p["units"])
     if (type(maximum) is not int or not p["units"] <= maximum <= MAX_UNIT
+            or (p["units"] == 0 and maximum < 1)
             or (maximum > p["units"] and p["payer_site"] == "bakery")):
         raise ValueError("future payroll needs a signed market or physical farm employer")
     who = p["courier_id"]
@@ -70,6 +74,11 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
             or type(worker_food) is not int
             or worker_food < 0 or worker_food > MAX_BALANCE):
         raise ValueError("employer cannot reserve absent or unknown real food")
+    # An explicitly 0-funded *market-only* time-zero contract is a bounded
+    # contingent offer of FUTURE work, not an escrow or owned food. It may
+    # be funded ONLY after an independently authenticated real FOOD delivery,
+    # sufficient actually held market surplus, and a physically present
+    # stall keeper. No initial stock gets removed in that opt-in case.
     # All uncommitted market sales, gathering and cargo routes now see a
     # physically REDUCED market balance. Escrow is in this durable record,
     # still owned by the employer and unavailable for ordinary market sale.
@@ -374,7 +383,11 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
                 or c["courier_id"] in worker_ids
                 or state["npcs"][c["courier_id"]]["role"] != "courier"
                 or type(c["total_units"]) is not int
-                or not 1 <= c["total_units"] <= MAX_UNIT
+                or not 0 <= c["total_units"] <= MAX_UNIT
+                or (c["total_units"] == 0
+                    and (c["payer_site"] != "market"
+                         or c["authorized_total_units"] < 1
+                         or c["remaining"] != 0 or c["payments"]))
                 or type(c["authorized_total_units"]) is not int
                 or not c["total_units"] <= c["authorized_total_units"] <= MAX_UNIT
                 or (c["authorized_total_units"] > c["total_units"]
