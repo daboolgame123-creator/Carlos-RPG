@@ -12,6 +12,7 @@ import json
 from carlos_sim import SQLiteEventStore, TimeEngine
 from carlos_sim.economic_diagnostics import audit_npc_economy
 from carlos_sim.routines import routine_allows_work
+from carlos_sim.production import recipe_inputs
 from test_play38_multi_farm_couriers import WORLD
 from test_play48_real_watch_income_24h import seed, engine, HOUR
 from test_play48_finite_hunt_fish_roads import conserve_diverse
@@ -31,15 +32,21 @@ def audit_local_stall_gates(state):
                 continue
             local = state.resources.get(here, {})
             output = local.get(recipe["output_resource"])
-            input_amount = local.get(recipe["input_resource"])
+            inputs = [
+                {"resource": material, "available": local.get(material),
+                 "needed": quantity}
+                for material, quantity in recipe_inputs(recipe)
+            ]
             eligible.append({
-                "recipe": recipe_id, "in_stock": input_amount,
-                "needed": recipe["input_amount"], "output_stock": output,
+                "recipe": recipe_id, "inputs": inputs,
+                "output_stock": output,
                 "work_shift_ok": working,
                 "hunger_block": needs["hunger"] > 89,
                 "fatigue_block": needs["fatigue"] > 69,
-                "material_block": (input_amount is None or
-                                   input_amount < recipe["input_amount"]),
+                "material_block": any(
+                    type(item["available"]) is not int or
+                    item["available"] < item["needed"] for item in inputs
+                ),
             })
         actors[who] = {
             "hunger": needs["hunger"], "fatigue": needs["fatigue"],
