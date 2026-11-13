@@ -105,6 +105,18 @@ def conserve_water(state):
                   for j in state.production_jobs.values())
     assert reserve + started == INITIAL_AQUIFER
     assert pumped + pending == started
+    assert started <= 2, "cannot hire workers with fewer than two real coins"
+    starts = sorted(
+        job["started_at"] for job in state.production_jobs.values()
+        if job["recipe_id"] == "finite-aquifer-to-well"
+    )
+    assert all(b - a >= 4*HOUR
+               for a, b in zip(starts, starts[1:]))
+    assert sum(
+        "work_wage" in job
+        for job in state.production_jobs.values()
+        if job["recipe_id"] == "finite-aquifer-to-well"
+    ) == pumped, "completed pump work must actually be paid"
     for j in state.production_jobs.values():
         if j["recipe_id"] != "finite-aquifer-to-well":
             continue
@@ -198,6 +210,10 @@ def test_identical_aquifer_worlds_with_or_without_actual_pumping_12h(tmp_path):
                     assert snapshots[-1]["real_pump_jobs_completed"] > 0, (
                         "aquifer signed work never started; inspect work guards"
                     )
+                    assert snapshots[-1]["real_pump_jobs_completed"] <= 2
+                    assert snapshots[-1]["groundwater_reserve"] >= 4
+                    assert (snapshots[-1]["funded_well_wages"]
+                            == snapshots[-1]["real_pump_jobs_completed"])
             finally:
                 clock.close_session(WORLD)
         records.append({"finite_pumping_policy": enabled,

@@ -112,10 +112,36 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     for recipe_id, recipe in sorted(state.production_recipes.items()):
         if recipe["site_id"] != here or recipe["role"] != npc["role"]:
             continue
-        if (recipe.get("input_resource") == "groundwater_reserve"
-                and not finite_aquifer_enabled):
-            # No ancient or hidden rain generator; optional finite reserve.
-            continue
+        if recipe.get("input_resource") == "groundwater_reserve":
+            if not finite_aquifer_enabled:
+                # No secret rain generator: original worlds remain unchanged.
+                continue
+            if not (
+                recipe["site_id"] == "well"
+                and recipe["role"] == "well_pumper"
+                and recipe["input_amount"] == 1
+                and recipe["output_resource"] == "water"
+                and recipe["output_amount"] == 1
+                and recipe["tool_resource"] == "hand_pump"
+                and recipe.get("wage_coin") == 1
+            ):
+                continue
+            # Physically finite aquifer: a real bore recovers between draws.
+            # Do not extract a second unit within four simulation hours,
+            # even if all reservoir water could be withdrawn rapidly.
+            previous_pump = max(
+                (job["started_at"] for job in state.production_jobs.values()
+                 if job["recipe_id"] == recipe_id),
+                default=None,
+            )
+            if (previous_pump is not None
+                    and state.time - previous_pump < 4 * 3600):
+                continue
+            # No unpaid pumping: employer must possess actual copper at the
+            # same well BEFORE accepting another signed labor contract.
+            # This does not transfer a coin until the scheduled job finishes.
+            if state.resources.get("well", {}).get("coin_copper", 0) < 1:
+                continue
         remaining_shift = (profile["work_end"] - state.time % DAY_SECONDS) % DAY_SECONDS
         if recipe["duration_seconds"] > remaining_shift:
             continue
