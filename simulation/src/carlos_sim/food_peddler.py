@@ -23,7 +23,7 @@ from .economic_autonomy import _free
 from .market import MONEY, MAX_AMOUNT, reserved_trade_units, _present
 from .navigation import shortest_known_route
 from .npc import _injury_rest_decision
-from .routines import routine_allows_work
+from .routines import is_work_shift
 
 TRADER = "repairman"
 SOURCE = "hunting_woods"
@@ -156,7 +156,9 @@ def choose_withdrawal(state: WorldState) -> Withdrawal | None:
 
 def choose_walk(state: WorldState) -> Walk | None:
     """At work, explore the real known woods; return carrying actual food."""
-    if not _present_free(state, TRADER) or not routine_allows_work(state, TRADER):
+    profile = state.npc_routines.get(TRADER)
+    if (not _present_free(state, TRADER) or profile is None
+            or not is_work_shift(profile, state.time)):
         return None
     food, coins = _balances(state)
     if food is None or coins is None:
