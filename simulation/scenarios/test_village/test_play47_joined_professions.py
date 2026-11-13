@@ -27,6 +27,7 @@ def _joined_bootstrap(
     farm_initial_food_loaves=1, farm_bread_share_enabled=False, wood_charcoal_jobs_enabled=False,
     food_for_work_bakery_enabled=False, wilderness_food_jobs_enabled=False,
     wilderness_food_peddler_enabled=False, finite_aquifer_work_enabled=False,
+    signed_market_watch_service_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -35,6 +36,9 @@ def _joined_bootstrap(
     are allocated at genesis as farm/bakery working capital, without adding
     any copper. The normal field/baker jobs get one-copper wage contracts.
     """
+    if (type(signed_market_watch_service_enabled) is not bool
+            or (signed_market_watch_service_enabled and site_payroll_enabled)):
+        raise ValueError("one signed watch funding mode, with no competing Carlos cash")
     if type(finite_aquifer_work_enabled) is not bool:
         raise ValueError("finite aquifer work must be a boolean opt-in")
     if (type(wilderness_food_jobs_enabled) is not bool
@@ -69,6 +73,35 @@ def _joined_bootstrap(
             or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
         raise ValueError("site_payroll_wage_coin must be one or two existing copper")
     def extend(events):
+        if signed_market_watch_service_enabled:
+            # One finite and actually funded security contract, not generic
+            # free money: reallocate 2 ORIGINAL Carlos-owned copper to the
+            # independent watch employer at trusted t=0. Honest disclosed
+            # counterfactual; no added food, cash, people or future gifts.
+            first_actor = next(
+                i for i, ev in enumerate(events) if ev.event_type == "EntityCreated"
+            )
+            events[first_actor:first_actor] = [
+                _e("LocationCreated", {
+                    "id": "watch_post", "name": "Market Watch Post",
+                }),
+                _e("RouteCreated", {
+                    "id": "market-watch-post", "a": "market",
+                    "b": "watch_post", "seconds": 90,
+                }),
+            ]
+            original_carlos = [
+                (i, ev) for i, ev in enumerate(events)
+                if ev.event_type == "ResourceChanged"
+                and ev.data.get("owner_id") == "carlos"
+                and ev.data.get("resource") == "coin_copper"
+            ]
+            assert len(original_carlos) == 1
+            i, ev = original_carlos[0]
+            assert ev.data["previous"] is None and ev.data["current"] == 2
+            events[i] = _e("ResourceChanged", {
+                **dict(ev.data), "current": 0,
+            })
         if wilderness_food_jobs_enabled:
             # Same 13 people: a market explorer and resident take two
             # real food-producing professions, and therefore are no longer
@@ -380,6 +413,34 @@ def _joined_bootstrap(
                     "source": "initialization",
                 }))
 
+        if signed_market_watch_service_enabled:
+            for resource, units in (
+                ("coin_copper", 2),
+                ("watch_order", 1),
+                ("watch_report", 0),
+                ("watch_badge", 1),
+            ):
+                events.append(_e("ResourceChanged", {
+                    "owner_id": "watch_post", "resource": resource,
+                    "previous": None, "current": units,
+                    "source": "initialization",
+                }))
+            # Guard has to walk a genuinely learned road, spend real time,
+            # and use the finite assigned work order before any payment.
+            events.append(_e("ProductionRecipeConfigured", {
+                "id": "finite-watch-duty",
+                "site_id": "watch_post", "role": "guard",
+                "input_resource": "watch_order", "input_amount": 1,
+                "output_resource": "watch_report", "output_amount": 1,
+                "tool_resource": "watch_badge",
+                "duration_seconds": 900, "wage_coin": 2,
+            }))
+            events.append(_e("NPCRoutineConfigured", {
+                "npc_id": "adel", "home_id": "market",
+                "workplace_id": "watch_post",
+                "work_start": 0, "work_end": 7200,
+            }))
+
         existing_wallets = {
             event.data["owner_id"] for event in events
             if event.event_type == "ResourceChanged"
@@ -534,6 +595,11 @@ def _joined_bootstrap(
         assert state.resources["burner"]["coin_copper"] == 1
         assert state.resources["repairman"]["coin_copper"] == 1
         assert state.resources["charcoal_kiln"]["charcoal"] == 0
+    if signed_market_watch_service_enabled:
+        assert state.resources["carlos"]["coin_copper"] == 0
+        assert state.resources["watch_post"]["coin_copper"] == 2
+        assert state.resources["watch_post"]["watch_order"] == 1
+        assert state.production_recipes["finite-watch-duty"]["wage_coin"] == 2
     if site_payroll_enabled:
         assert state.resources["carlos"]["coin_copper"] == 0
         assert state.resources["farm"]["coin_copper"] == 1
