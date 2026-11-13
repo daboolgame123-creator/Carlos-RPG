@@ -38,8 +38,16 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
             )
             or not _id(p["id"]) or not _id(p["courier_id"])
             or p["id"] in state["courier_provisions"]
-            or any(c["courier_id"] == p["courier_id"]
-                   for c in state["courier_provisions"].values())
+            or any(
+                c["courier_id"] == p["courier_id"]
+                and not (
+                    p["payer_site"] == "market" and p["units"] == 0
+                    and c["payer_site"] == "bakery"
+                    and c["total_units"] == c["authorized_total_units"] == 1
+                    and sum(x["courier_id"] == p["courier_id"]
+                            for x in state["courier_provisions"].values()) == 1
+                ) for c in state["courier_provisions"].values()
+            )
             or p["payer_site"] not in
                 ("market", "bakery", state["supply_circuits"].get(
                     p["courier_id"], {}).get("stops", ["", ""])[1])
@@ -366,7 +374,8 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
     contracts = state["courier_provisions"]
     if type(contracts) is not dict:
         raise ValueError("invalid courier wage contracts")
-    worker_ids: set[str] = set()
+    pairs: set[tuple[str, str]] = set()
+    employers: dict[str, dict[str, dict[str, Any]]] = {}
     for ident, c in contracts.items():
         if (not _id(ident) or type(c) is not dict
                 or set(c) != {"courier_id", "payer_site", "total_units",
@@ -380,7 +389,7 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
                 or (c["payer_site"] == "bakery" and
                     state["supply_circuits"][c["courier_id"]]["stops"][2] != "bakery")
                 or c["courier_id"] not in state["supply_circuits"]
-                or c["courier_id"] in worker_ids
+                or (c["courier_id"], c["payer_site"]) in pairs
                 or state["npcs"][c["courier_id"]]["role"] != "courier"
                 or type(c["total_units"]) is not int
                 or not 0 <= c["total_units"] <= MAX_UNIT
@@ -398,7 +407,8 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
                 or type(c["payments"]) is not list
                 or len(c["payments"]) != c["total_units"] - c["remaining"]):
             raise ValueError("invalid funded service contract ledger")
-        worker_ids.add(c["courier_id"])
+        pairs.add((c["courier_id"], c["payer_site"]))
+        employers.setdefault(c["courier_id"], {})[c["payer_site"]] = c
         seen: set[int] = set()
         for row in c["payments"]:
             if (type(row) is not dict
@@ -415,3 +425,15 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
                     or row["worker_food_after"] != row["worker_food_before"] + 1):
                 raise ValueError("invalid unique courier wage receipt")
             seen.add(row["service_deliveries"])
+    # EXPERIMENT ONLY: signed independent bakery GRAIN and market FOOD
+    # services. Same employer cannot pay twice for two duplicate contracts.
+    # Legacy single-employer histories still validate without changes.
+    # Release requires RulesVersion migration and independent replay review.
+    for who, sites in employers.items():
+        if len(sites) > 1 and (
+                len(sites) != 2 or set(sites) != {"bakery", "market"}
+                or sites["bakery"]["total_units"] != 1
+                or sites["bakery"]["authorized_total_units"] != 1
+                or sites["market"]["authorized_total_units"] < 1):
+            raise ValueError("secondary wage needs distinct signed real services")
+
