@@ -13,6 +13,7 @@ on:
       - "simulation/src/carlos_sim/living_world.py"
       - "simulation/scenarios/test_village/test_play47_joined_professions.py"
       - "simulation/scenarios/test_village/test_play48_authorized_food_for_work.py"
+      - "simulation/scenarios/test_village/test_play48_finite_hunt_fish_roads.py"
   workflow_dispatch:
 
 permissions:
@@ -45,6 +46,6 @@ jobs:
       - name: Verify exact tested branch head and compile
         run: |
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
-          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_authorized_food_for_work.py
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_authorized_food_for_work.py scenarios/test_village/test_play48_finite_hunt_fish_roads.py
       - name: Real 13NPC signed local food settlement and security negatives
-        run: PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_authorized_food_for_work.py
+        run: PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_authorized_food_for_work.py scenarios/test_village/test_play48_finite_hunt_fish_roads.py
