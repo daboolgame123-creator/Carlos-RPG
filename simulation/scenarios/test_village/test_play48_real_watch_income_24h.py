@@ -69,7 +69,8 @@ def seed(path):
     return current
 
 
-def engine(db, clock, *, reserve_trader_meal=False):
+def engine(db, clock, *, reserve_trader_meal=False,
+           deferred_market_courier_wage=False):
     return LivingWorldEngine(
         db, clock, max_events_per_advance=9000,
         decision_cooldown=3600, economic_enabled=True,
@@ -82,6 +83,8 @@ def engine(db, clock, *, reserve_trader_meal=False):
         professional_full_life_enabled=True,
         food_for_work_enabled=True, food_peddler_enabled=True,
         food_peddler_self_meal_reserve_enabled=reserve_trader_meal,
+        early_courier_food_wage_enabled=deferred_market_courier_wage,
+        market_sourced_wage_refill_enabled=deferred_market_courier_wage,
         seek_alternative_food_market_enabled=True,
     )
 
