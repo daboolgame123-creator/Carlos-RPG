@@ -221,8 +221,16 @@ def test_real_work_produces_two_owned_portions_with_conserved_prey_and_roads(tmp
                            and r["worker_id"] == who for _,r in earned)
                 wild_now = actual.resources[site]["wild_food"]
                 reserve_now = actual.resources[site]["regrowth_reserve"]
-                # No one outside these jobs forages in this focused world.
-                assert (wild_now + reserve_now + len(completed) == 8), site
+                # Starting a physical job consumes a prey lot immediately,
+                # not on completion. Count completed AND still-running jobs.
+                started = sum(
+                    1 for job in actual.production_jobs.values()
+                    if job["site_id"] == site
+                    and job["recipe_id"] ==
+                    ("two-portions-hunter" if role == "hunter"
+                     else "two-portions-fisher")
+                )
+                assert wild_now + reserve_now + started == 8, site
                 output[site] = {
                     "jobs": len(completed),
                     "two_portion_wages": len(earned),
