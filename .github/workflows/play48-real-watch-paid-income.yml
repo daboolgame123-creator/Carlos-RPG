@@ -34,3 +34,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_real_watch_income_24h.py
           PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_real_watch_income_24h.py
+      - name: CONTROLLED physical baseline vs funded guard 6-12-18-24h A B
+        run: |
+          python -m compileall -q scenarios/test_village/test_play48_watch_income_ab_24h.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_watch_income_ab_24h.py
