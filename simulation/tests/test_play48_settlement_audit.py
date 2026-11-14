@@ -37,8 +37,12 @@ def test_earned_unpaid_job_cannot_spend_same_cargo_twice():
     state=fixture()
     a=audit_completed_work_cash_settlement(state)
     assert a.total_known_copper==12 and a.copper_scope_complete
-    assert a.npc_personal_copper==5 and a.site_owned_copper==4
+    assert a.npc_personal_copper==4 and a.site_owned_copper==4
+    assert a.other_owner_copper==3
+    assert (a.npc_personal_copper+a.site_owned_copper
+            +a.courier_cash_custody+a.other_owner_copper)==12
     assert a.courier_cash_custody==1
+    assert state.resources["hana"]["coin_copper"]==1  # cargo, NOT salary
     east=next(x for x in a.sites if x.site=="farm_east")
     market=next(x for x in a.sites if x.site=="market")
     assert east.known_copper==0 and east.completed_unpaid_signed_wages==2
