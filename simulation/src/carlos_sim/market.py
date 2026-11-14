@@ -86,13 +86,25 @@ def configure_market_stall(state: dict[str, Any], event: DomainEvent, *,
                            bootstrap: bool) -> None:
     p = event.data
     if (not bootstrap or state["time"] != 0 or event.actor_id is not None
-            or set(p) != {"site_id", "keeper_id"}):
+            or set(p) not in (
+                {"site_id", "keeper_id"},
+                {"site_id", "keeper_id", "keeper_food_wage_every"},
+            )):
+        raise ValueError("market steward requires trusted time-zero bootstrap")
+    if ("keeper_food_wage_every" in p and (
+            p["site_id"] != "market"
+            or type(p["keeper_food_wage_every"]) is not int
+            or p["keeper_food_wage_every"] != 2)):
         raise ValueError("market steward requires trusted time-zero bootstrap")
     site, keeper = p["site_id"], p["keeper_id"]
     if (not _id(site) or site not in state["locations"] or site in state["market_stalls"]
             or not _id(keeper) or not _present(state, keeper, site)):
         raise ValueError("market stall must have a real local NPC steward")
-    state["market_stalls"][site] = {"keeper_id": keeper}
+    state["market_stalls"][site] = {
+        "keeper_id": keeper,
+        **({"keeper_food_wage_every": 2}
+           if "keeper_food_wage_every" in p else {}),
+    }
 
 
 def post_offer(state: dict[str, Any], event: DomainEvent, *,
@@ -198,6 +210,40 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
     if offer["remaining"] == 0:
         offer["status"] = "filled"
         offer["closed_at"] = state["time"]
+
+    # PLAY48 strictly opted-in salary: on every SECOND physical food sale
+    # made by the real market's named seller, pay one OWNED surplus loaf
+    # from that SAME local site to that SAME person. No extra food or copper.
+    # Do not touch outstanding customer quotes, freight, employee cargo,
+    # another person's property or opening stock with no real sale.
+    paid_keeper_food = 0
+    stall = state["market_stalls"].get(offer["site_id"], {})
+    if (stall.get("keeper_food_wage_every") == 2
+            and item == "food" and pay == MONEY
+            and owner == offer["site_id"]
+            and offer["seller_id"] == stall["keeper_id"]):
+        previous_sales = sum(
+            x["quantity"] for x in state["market_trades"].values()
+            if x["site_id"] == offer["site_id"]
+            and x["seller_id"] == stall["keeper_id"]
+            and x["stock_owner_id"] == owner and x["resource"] == "food"
+        )
+        keeper_food = state["resources"].get(stall["keeper_id"], {}).get("food")
+        future_quotes = sum(
+            q["remaining"] for q in state["market_offers"].values()
+            if q["status"] == "open" and q["stock_owner_id"] == owner
+            and q["site_id"] == offer["site_id"] and q["resource"] == "food"
+        )
+        unpromised = (state["resources"][owner]["food"] - future_quotes
+                      - reserved_trade_units(circuits, owner, "food"))
+        if (previous_sales + quantity >= 2
+                and (previous_sales // 2) < ((previous_sales + quantity) // 2)
+                and type(keeper_food) is int and keeper_food == 0
+                and unpromised >= 1):
+            state["resources"][owner]["food"] -= 1
+            state["resources"][stall["keeper_id"]]["food"] += 1
+            paid_keeper_food = 1
+
     state["market_trades"][p["id"]] = {
         "offer_id": p["offer_id"], "buyer_id": buyer,
         "seller_id": offer["seller_id"], "stock_owner_id": owner,
@@ -205,10 +251,12 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
         "payment_resource": pay, "unit_price": offer["unit_price"],
         "quantity": quantity, "total_paid": total,
         "executed_at": state["time"],
-        "goods_source_before": gb, "goods_source_after": gb - quantity,
+        "goods_source_before": gb,
+        "goods_source_after": gb - quantity - paid_keeper_food,
         "goods_target_before": gt, "goods_target_after": gt + quantity,
         "pay_source_before": pb, "pay_source_after": pb - total,
         "pay_target_before": pt, "pay_target_after": pt + total,
+        **({"keeper_food_wage": paid_keeper_food} if paid_keeper_food else {}),
     }
 
 
@@ -233,7 +281,13 @@ def validate_market(state: dict[str, Any]) -> None:
         raise ValueError("market ledgers must be mappings")
     for site, stall in stalls.items():
         if (not _id(site) or site not in state["locations"]
-                or not isinstance(stall, dict) or set(stall) != {"keeper_id"}
+                or not isinstance(stall, dict)
+                or set(stall) not in ({"keeper_id"},
+                    {"keeper_id", "keeper_food_wage_every"})
+                or ("keeper_food_wage_every" in stall
+                    and (site != "market"
+                         or type(stall["keeper_food_wage_every"]) is not int
+                         or stall["keeper_food_wage_every"] != 2))
                 or not _id(stall["keeper_id"]) or stall["keeper_id"] not in state["npcs"]):
             raise ValueError("invalid registered market stall")
     for ident, o in offers.items():
@@ -263,7 +317,9 @@ def validate_market(state: dict[str, Any]) -> None:
             raise ValueError("market closure has no valid timestamp")
     sold: dict[str, int] = {}
     for ident, t in trades.items():
-        if (not _id(ident) or not isinstance(t, dict) or set(t) != TRADE_KEYS
+        if (not _id(ident) or not isinstance(t, dict)
+                or set(t) not in (TRADE_KEYS,
+                                  TRADE_KEYS | {"keeper_food_wage"})
                 or t["offer_id"] not in offers):
             raise ValueError("invalid market trade record")
         o = offers[t["offer_id"]]
@@ -282,7 +338,17 @@ def validate_market(state: dict[str, Any]) -> None:
         numbers = [t[k] for k in TRADE_KEYS if k.endswith("_before") or k.endswith("_after")]
         if not all(_balance(n) for n in numbers):
             raise ValueError("market trade balances must be known and bounded")
-        if (t["goods_source_before"] - t["goods_source_after"] != t["quantity"]
+        salary = t.get("keeper_food_wage", 0)
+        stall = stalls.get(t["site_id"], {})
+        if ("keeper_food_wage" in t and (
+                type(salary) is not int or salary != 1
+                or stall.get("keeper_food_wage_every") != 2
+                or t["resource"] != "food"
+                or t["payment_resource"] != MONEY
+                or t["seller_id"] != stall["keeper_id"]
+                or t["stock_owner_id"] != t["site_id"])):
+            raise ValueError("keeper wage requires signed sale and actual local food")
+        if (t["goods_source_before"] - t["goods_source_after"] != t["quantity"] + salary
                 or t["goods_target_after"] - t["goods_target_before"] != t["quantity"]
                 or t["pay_source_before"] - t["pay_source_after"] != t["total_paid"]
                 or t["pay_target_after"] - t["pay_target_before"] != t["total_paid"]):
