@@ -13,6 +13,8 @@ from tempfile import TemporaryDirectory
 
 from carlos_sim import LivingWorldEngine, SQLiteEventStore, TimeEngine
 from carlos_sim.economic_diagnostics import audit_npc_economy
+from carlos_sim.economic_autonomy import choose_local_production
+from carlos_sim.routines import routine_allows_work
 from carlos_sim.food_access_diagnostics import audit_food_access_barriers
 from carlos_sim.hydrology import FiniteWaterService
 from test_play48_authorized_food_for_work import seed
@@ -78,6 +80,42 @@ def run_arm(path: Path, *, enabled: bool, hours: int):
                 food_for_work_enabled=True,
                 hungry_paid_work_enabled=enabled,
             )
+            # Operator-only, per worker/tick observer. Never changes an event
+            # or an NPC decision; both A/B variants use the identical probe.
+            original_emergency = engine._professional_life_emergency
+            windows_seen = set()
+            windows = {
+                "hungry_on_site_recipe_windows": 0,
+                "real_immediate_job_windows": 0,
+                "recipe_exists_but_job_blocked": 0,
+            }
+
+            def audit_emergency(world, npc_id):
+                needs = world.npcs[npc_id]["needs"]
+                if 75 <= needs["hunger"] < 90:
+                    here = world.entities[npc_id]["location_id"]
+                    match = (
+                        routine_allows_work(world, npc_id)
+                        and any(
+                            recipe["site_id"] == here
+                            and recipe["role"] == world.npcs[npc_id]["role"]
+                            for recipe in world.production_recipes.values()
+                        )
+                    )
+                    key = (world.time, npc_id)
+                    if match and key not in windows_seen:
+                        windows_seen.add(key)
+                        windows["hungry_on_site_recipe_windows"] += 1
+                        possible = choose_local_production(
+                            world, npc_id, agriculture_enabled=True
+                        ) is not None
+                        if possible:
+                            windows["real_immediate_job_windows"] += 1
+                        else:
+                            windows["recipe_exists_but_job_blocked"] += 1
+                return original_emergency(world, npc_id)
+
+            engine._professional_life_emergency = audit_emergency
             state = db.verify(WORLD)
             for hour in range(6, hours + 1, 6):
                 state = engine.advance(
@@ -96,7 +134,9 @@ def run_arm(path: Path, *, enabled: bool, hours: int):
                     assert db.verify(WORLD).to_dict() == state.to_dict()
                     assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
                     assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
-                    readings[hour] = reading(state)
+                    report = reading(state)
+                    report["observed_hungry_work_windows"] = dict(windows)
+                    readings[hour] = report
             assert db.snapshot(WORLD).to_dict() == state.to_dict()
         finally:
             clock.close_session(WORLD)
