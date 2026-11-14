@@ -88,6 +88,7 @@ class LivingWorldEngine:
                  market_sourced_wage_refill_enabled: bool = False,
                  farm_sourced_wage_refill_enabled: bool = False,
                  hungry_woodcutter_work_enabled: bool = False,
+                  hungry_paid_work_enabled: bool = False,
                  retry_known_supplier_enabled: bool = False,
                  remember_unbought_stalls_enabled: bool = False,
                  food_for_work_enabled: bool = False,
@@ -268,6 +269,10 @@ class LivingWorldEngine:
                     and not professional_full_life_enabled)):
             raise ValueError("hungry_woodcutter_work_enabled requires real full-life jobs")
         self.hungry_woodcutter_work_enabled = hungry_woodcutter_work_enabled
+        if (type(hungry_paid_work_enabled) is not bool
+                or (hungry_paid_work_enabled and not professional_full_life_enabled)):
+            raise ValueError('hungry_paid_work_enabled requires real full-life jobs')
+        self.hungry_paid_work_enabled = hungry_paid_work_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
@@ -300,17 +305,20 @@ class LivingWorldEngine:
             return False
         from .npc import _injury_rest_decision
         needs = state.npcs[npc_id]["needs"]
-        # PLAY48-M opt-in: a hungry *but still capable* woodcutter may
-        # CHOOSE genuine paid work before severe hunger (90). Merely having
-        # a real job does not transfer food/copper or override injuries,
-        # danger, fatigue, or the engine's existing work limit of 89.
-        # Default unchanged: hunger>=75 causes safety-first precedence.
-        if (self.hungry_woodcutter_work_enabled
-                and state.npcs[npc_id]["role"] == "woodcutter"
+        # PLAY-48 opt-in: a capable worker can choose a genuine local shift
+        # before starvation. No new wage, food, money, or work is invented;
+        # the existing production selector enforces inputs, shift and custody.
+        legacy_woodcutter = (self.hungry_woodcutter_work_enabled
+                             and state.npcs[npc_id]["role"] == "woodcutter")
+        if ((self.hungry_paid_work_enabled or legacy_woodcutter)
                 and 75 <= needs["hunger"] < 90
-                and needs["fatigue"] < 70 and needs["safety"] < 75):
-            from .npc import _injury_rest_decision
-            if _injury_rest_decision(state.injuries, npc_id) is None:
+                and needs["fatigue"] < 70 and needs["safety"] < 75
+                and _injury_rest_decision(state.injuries, npc_id) is None):
+            here = state.entities[npc_id]["location_id"]
+            if (routine_allows_work(state, npc_id)
+                    and any(recipe["site_id"] == here
+                            and recipe["role"] == state.npcs[npc_id]["role"]
+                            for recipe in state.production_recipes.values())):
                 return False
         return (needs["hunger"] >= 75 or needs["fatigue"] >= 70
                 or needs["safety"] >= 75
