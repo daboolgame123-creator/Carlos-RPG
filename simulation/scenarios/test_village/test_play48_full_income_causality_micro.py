@@ -176,10 +176,11 @@ def test_real_market_sale_physically_funds_wage_then_farmer_buys_and_eats(tmp_pa
                       state.routes[t["route_id"]]["b"]})
                 for t in travel
             )
-            assert any(t["origin"] == "market"
-                       and t["destination"] == EAST
-                       and t["status"] == "arrived" for t in travel), (
-                "shopper must physically return toward workplace"
+            assert any(t["origin"] == "market" and t["status"] == "arrived"
+                       for t in travel), "shopper must exit market on a real road"
+            assert travel[-1]["destination"] == EAST
+            assert travel[-1]["status"] == "arrived", (
+                "shopper must complete all known road legs back to east field"
             )
 
             # No direct net income creation: market buyer's actual two copper
