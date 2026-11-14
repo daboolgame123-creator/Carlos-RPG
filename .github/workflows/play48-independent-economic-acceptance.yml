@@ -1,0 +1,33 @@
+name: PLAY48 independent sustained economy acceptance invariants (NO MERGE)
+on:
+  push:
+    branches:
+      - qa/play48-economy-sustained-release-gates-20261114
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pure-economic-release-checker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Fail-closed test synthetic checker only - never publish economic GO
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim/phase48_acceptance.py tests/test_play48_economic_acceptance.py
+          PYTHONPATH=src python -m pytest -q tests/test_play48_economic_acceptance.py
