@@ -185,9 +185,13 @@ def evaluate_play48(
     # than merely change nominal prices or hold unsold producer stock.
     if 36 in candidate and 48 in candidate:
         prev, x = candidate[36], candidate[48]
-        if (x.npc_copper + x.npc_food == 0
-                and x.earned_receipts <= prev.earned_receipts):
-            failures.append("48h_no_personal_food_cash_or_new_wage_receipt")
+        if x.npc_copper + x.npc_food == 0:
+            # A historical wage receipt is NOT a current wallet or meal.
+            # One payday followed by total personal depletion is the actual
+            # h48 lock-up, even if a receipt count increased after h36.
+            failures.append("48h_zero_personally_usable_cash_and_food")
+        if x.earned_receipts <= prev.earned_receipts:
+            failures.append("48h_no_new_authentic_earned_wage_receipt")
 
     for hour in (72, *LATE_HOURS):
         if hour in candidate and candidate[hour].hunger100:
