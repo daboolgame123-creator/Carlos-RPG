@@ -101,12 +101,11 @@ def configure_market_stall(state: dict[str, Any], event: DomainEvent, *,
     if (not _id(site) or site not in state["locations"] or site in state["market_stalls"]
             or not _id(keeper) or not _present(state, keeper, site)):
         raise ValueError("market stall must have a real local NPC steward")
-    if "keeper_commission_coin" in p:
-        # A worker must have a real personal receiving account at signing,
-        # and the employer must have a known treasury; unknown is not zero.
-        if (not _balance(state["resources"].get(keeper, {}).get(MONEY))
-                or not _balance(state["resources"].get(site, {}).get(MONEY))):
-            raise ValueError("signed sale commission requires known employer/worker copper")
+    # This is a contingent contract, not prepaid payroll: owner and worker
+    # coin wallets may be initialized LATER in the same trusted t=0 genesis.
+    # At the actual market sale, _ledger() MUST find known physical balances
+    # for the site, buyer and paid worker; otherwise that sale is rejected.
+    # Never infer an absent opening employer wallet to be zero.
     state["market_stalls"][site] = dict(p)
     state["market_stalls"][site].pop("site_id")
 
