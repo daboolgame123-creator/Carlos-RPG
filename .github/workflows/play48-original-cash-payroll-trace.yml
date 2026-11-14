@@ -1,0 +1,37 @@
+name: PLAY48 original 13 NPC cash/payroll source trace (diagnostic)
+
+on:
+  push:
+    branches:
+      - diagnostic/play48-original-real-cash-payroll-flow-20261114
+    paths:
+      - ".github/workflows/play48-original-cash-payroll-trace.yml"
+      - "simulation/scenarios/test_village/play48_original_cash_payroll_trace.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cash-and-food-payroll-source-trace:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify original source exact HEAD
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install minimal harness
+        run: python -m pip install pytest
+      - name: Compile and inspect unchanged physical economy at 24/30/36h
+        run: |
+          python -m compileall -q src/carlos_sim scenarios/test_village/play48_original_cash_payroll_trace.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -q -s scenarios/test_village/play48_original_cash_payroll_trace.py
