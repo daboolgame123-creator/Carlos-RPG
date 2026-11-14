@@ -1,0 +1,9 @@
+# PLAY-48 authentic miniature closed-money chain (QA only / NO MERGE)
+
+This branch does not create any game features. It combines existing, already implemented physical reducer pathways from PLAY-40 (copper physically remitted by the original Hana return route), PLAY-41 (original farmer paid by signed, completed local work), PLAY-42 (waged worker learns roads, shops at real on-site quote, buys with his own money, actually eats and returns home).
+
+The fixture intentionally has **9 NPCs**, **12 initialized copper**, and an original **3 finished bread** opening reserve, and runs **12,000 seconds (3h20m)**. It is **NOT** the original 13NPC village's h48/h72 or 168h endurance trial. The 2-copper farm wage contract is already supported by the existing PLAY-38 test-world bootstrap, not a new runtime gift. No changes to rules, prices, residents, money, simulator or save shape. Exact SHA and evidence run must be independently verified.
+
+Read-only checks: authentic **sale revenue received at the site** before a worker wage, physically picked and delivered copper by Hana (route), a single paid completed harvest receipt for Farid that debits the site and credits his *personal* wallet, real known-road arrival at an actual market, one personally paid two-copper food trade, then a personally eaten loaf and legitimate physical return, all under original twelve-copper equality and SQLite replay/DB integrity. Does not infer shopkeeper wages from store ownership or permit reserved courier cargo as personal cash.
+
+The new test gives a narrow independent reference for OpenCode's real 13-person economic fix, **not proof of a recurring wage cycle** or economic recovery. Release remains PLAY48_ECONOMIC_NO_GO until the actual 13-person source-matched gate in Issue #109, including daily 72→168 real output/meal/trade/cargo/wage receipts, passes both Python3.10 and3.13 and historical save migration/replay is verified.
