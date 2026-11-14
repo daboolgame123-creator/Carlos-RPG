@@ -26,7 +26,7 @@ def fixture(known_bakery=True):
                 "status":"completed","npc_id":"farid"},
             "paid-salma":{"site_id":"market","recipe_id":"job",
                 "status":"completed","npc_id":"salma",
-                "work_wage":{"amount":2}}
+                "work_wage":{"amount":2,"site_id":"market","worker_id":"salma"}}
         },
         supply_circuits={"hana":{"carry":{"resource":"coin_copper",
             "source":"market","destination":"farm_east"}}},
@@ -63,7 +63,8 @@ def test_unknown_cash_stays_unknown_not_assumed_zero():
 def test_only_one_actual_coin_in_physical_cargo(amount):
     state=fixture()
     state.resources["hana"]["coin_copper"]=amount
-    with pytest.raises(ValueError,match="one real carried unit"):
+    pattern=("invalid amount" if amount in (-1,"one") else "one real carried unit")
+    with pytest.raises(ValueError,match=pattern):
         audit_completed_work_cash_settlement(state)
 
 def test_merchant_sales_not_equivalent_to_personal_wage():
