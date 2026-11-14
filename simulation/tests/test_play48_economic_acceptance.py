@@ -129,7 +129,6 @@ def test_diagnostics_take_exact_owners_and_completed_real_receipts_not_site_cash
 
 def test_48h_nominal_all_money_in_sites_without_paid_jobs_or_food_rejected():
     base, trial = profile()
-    trial[36] = replace(trial[36], earned_receipts=trial[36].earned_receipts) if False else trial[36]
     prior = trial[36]
     trial[48] = replace(
         trial[48], npc_copper=0, site_copper=12, npc_food=0,
