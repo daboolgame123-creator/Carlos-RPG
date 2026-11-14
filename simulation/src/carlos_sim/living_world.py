@@ -314,6 +314,9 @@ class LivingWorldEngine:
                 and 75 <= needs["hunger"] < 90
                 and needs["fatigue"] < 70 and needs["safety"] < 75
                 and _injury_rest_decision(state.injuries, npc_id) is None):
+            if legacy_woodcutter:
+                # Preserve the existing opt-in woodcutter policy.
+                return False
             here = state.entities[npc_id]["location_id"]
             if (routine_allows_work(state, npc_id)
                     and any(recipe["site_id"] == here
