@@ -206,6 +206,24 @@ def evaluate_play48(
             if x.deliveries(who) < prior.deliveries(who):
                 failures.append(f"nonmonotone_{who}_deliveries:{prev_hour}-{hour}")
 
+    # The late economy cannot earn once at hour 73 then remain inert for
+    # several days. Every complete 24-hour period must have its own
+    # newly completed REAL work, food transaction, paid wage, eaten meal,
+    # and BOTH couriers' actually delivered cargo (not an empty trip).
+    # Aggregated counters are only a necessary condition: each receipt's
+    # authenticity and provenance require independent event-log review.
+    for start, finish in zip((72, *LATE_HOURS), LATE_HOURS):
+        if start not in candidate or finish not in candidate:
+            continue
+        before, after = candidate[start], candidate[finish]
+        for metric in ("completed_production", "food_trades", "consumed_meals",
+                       "earned_receipts"):
+            if getattr(after, metric) <= getattr(before, metric):
+                failures.append(f"no_real_daily_{metric}:{start}-{finish}")
+        for who in REQUIRED_COURIERS:
+            if after.deliveries(who) <= before.deliveries(who):
+                failures.append(f"no_real_daily_{who}_cargo:{start}-{finish}")
+
     if 72 in candidate and 168 in candidate:
         old, end = candidate[72], candidate[168]
         for metric in ("completed_production", "food_trades", "consumed_meals",

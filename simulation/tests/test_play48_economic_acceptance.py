@@ -83,6 +83,36 @@ def test_salmas_meal_improvement_does_not_hide_hana_loaded_freight_regression():
     assert result.status == "PLAY48_ECONOMIC_NO_GO"
 
 
+def test_activity_right_after_h72_cannot_mask_full_later_multi_day_freeze():
+    """A week-long cumulative delta is NOT proof of a live daily economy."""
+    baseline, trial = profile()
+    at96 = trial[96]
+    # Realistic false positive for the OLD gate: jobs, wages, meals, sales
+    # and both couriers do each move once after 72h, then NEVER again.
+    # All 13 are synthetically well-fed to isolate the cadence defect.
+    for hour in (120, 144, 168):
+        trial[hour] = replace(
+            trial[hour],
+            completed_production=at96.completed_production,
+            food_trades=at96.food_trades,
+            consumed_meals=at96.consumed_meals,
+            paid_work_receipts=at96.paid_work_receipts,
+            paid_food_work_receipts=at96.paid_food_work_receipts,
+            paid_courier_receipts=at96.paid_courier_receipts,
+            courier_deliveries=at96.courier_deliveries,
+        )
+    result = evaluate_play48(trial, baseline, evidence=CONFIRMED)
+    assert result.status == "PLAY48_ECONOMIC_NO_GO"
+    for hour in (120, 144, 168):
+        before = hour - 24
+        assert f"no_real_daily_completed_production:{before}-{hour}" in result.failures
+        assert f"no_real_daily_food_trades:{before}-{hour}" in result.failures
+        assert f"no_real_daily_consumed_meals:{before}-{hour}" in result.failures
+        assert f"no_real_daily_earned_receipts:{before}-{hour}" in result.failures
+        assert f"no_real_daily_hana_cargo:{before}-{hour}" in result.failures
+        assert f"no_real_daily_huda_cargo:{before}-{hour}" in result.failures
+
+
 def test_absent_checkpoints_unaccounted_money_and_missing_physical_courier_fail():
     control, trial = profile()
     del trial[120]
