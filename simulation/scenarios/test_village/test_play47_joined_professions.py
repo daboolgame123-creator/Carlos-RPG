@@ -28,6 +28,7 @@ def _joined_bootstrap(
     food_for_work_bakery_enabled=False, wilderness_food_jobs_enabled=False,
     wilderness_food_peddler_enabled=False, finite_aquifer_work_enabled=False,
     signed_market_watch_service_enabled=False,
+    paid_market_keeper_from_real_sales_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -39,6 +40,8 @@ def _joined_bootstrap(
     if (type(signed_market_watch_service_enabled) is not bool
             or (signed_market_watch_service_enabled and site_payroll_enabled)):
         raise ValueError("one signed watch funding mode, with no competing Carlos cash")
+    if type(paid_market_keeper_from_real_sales_enabled) is not bool:
+        raise ValueError("market keeper wages require explicit trusted boolean")
     if type(finite_aquifer_work_enabled) is not bool:
         raise ValueError("finite aquifer work must be a boolean opt-in")
     if (type(wilderness_food_jobs_enabled) is not bool
@@ -73,6 +76,17 @@ def _joined_bootstrap(
             or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
         raise ValueError("site_payroll_wage_coin must be one or two existing copper")
     def extend(events):
+        if paid_market_keeper_from_real_sales_enabled:
+            local = [
+                (i, ev) for i, ev in enumerate(events)
+                if ev.event_type == "MarketStallConfigured"
+                and ev.data["site_id"] == "market"
+            ]
+            assert len(local) == 1 and "keeper_food_wage_every" not in local[0][1].data
+            index, terms = local[0]
+            events[index] = _e("MarketStallConfigured", {
+                **dict(terms.data), "keeper_food_wage_every": 2,
+            })
         if signed_market_watch_service_enabled:
             # One finite and actually funded security contract, not generic
             # free money: reallocate 2 ORIGINAL Carlos-owned copper to the
