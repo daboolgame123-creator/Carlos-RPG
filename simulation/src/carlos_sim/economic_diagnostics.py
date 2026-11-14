@@ -59,6 +59,21 @@ def audit_npc_economy(state: WorldState) -> dict:
         if job["status"] == "completed"
     ]
     wage_receipts = sum("work_wage" in job for job in completed)
+    # A market keeper is not the legal owner of the till. Count transfers
+    # from authenticated receipts, never infer a salary from a sale or a
+    # courier's consigned copper. This operator view is not NPC knowledge.
+    cash_flows: dict[tuple[str, str, str], int] = {}
+    for trade in state.market_trades.values():
+        if trade["payment_resource"] != "coin_copper":
+            continue
+        key = (trade["buyer_id"], trade["stock_owner_id"], "sale")
+        cash_flows[key] = cash_flows.get(key, 0) + trade["total_paid"]
+    for job in completed:
+        if "work_wage" not in job:
+            continue
+        receipt = job["work_wage"]
+        key = (receipt["site_id"], receipt["worker_id"], "completed_job")
+        cash_flows[key] = cash_flows.get(key, 0) + receipt["amount"]
     journeys_arrived = sum(
         journey["status"] == "arrived" for journey in state.travels.values()
     )
@@ -82,6 +97,10 @@ def audit_npc_economy(state: WorldState) -> dict:
         "completed_jobs": len(completed),
         "completed_without_wage_receipt": len(completed) - wage_receipts,
         "wage_receipts": wage_receipts,
+        "cash_flows_from_receipts": [
+            {"from": source, "to": target, "cause": cause, "copper": amount}
+            for (source, target, cause), amount in sorted(cash_flows.items())
+        ],
         "trips_arrived": journeys_arrived,
         "npc_hunger": hunger,
     }
