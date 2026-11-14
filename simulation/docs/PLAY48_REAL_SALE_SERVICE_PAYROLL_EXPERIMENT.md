@@ -1,0 +1,9 @@
+# PLAY48 signed, sale-funded retail labor experiment (NO MERGE)
+
+Only trusted time-zero institution market keeper terms can specify keeper_commission_coin=1. Each real co-present and paid sale of at least two copper from a SITE-OWNED quote can pay the acting seller precisely one coin, taken from the site's actual sale receipt. The worker must have an initialized personal account. Unquoted goods, distant goods, cargo, uncompleted shifts and forged sales cannot pay wages. A sale involving personal seller stock or barter never pays a retail commission.
+
+The MarketTradeExecuted authoritative receipt records original buyer payment, goods conservation, seller wage before/after and site balance after wage. This is one real retail service per customer sale, not a periodic subsidy. Original default market event shapes and all unopted worlds remain unchanged. The salary is recorded in the trade receipt, not inferred from site treasury or from the shopper's personal cargo.
+
+THIS IS A RULE/RECEIPT FORMAT EXPERIMENT. Exact historical saves, RulesVersion and migration acceptance remain PENDING; no merge before full security, version and old-save replay review. The 13-NPC 12-copper 3-opening-food 6/12h comparison tests the single opt-in signed difference, physical conservation, SQLite replay, source-authentic wage proof, no regression of meals, food sales or Hana/Huda delivered cargo.
+
+Do not treat success here as economic recovery. PLAY48 requires independently verified 48/72 and daily 72→168 hours with all 13 residents sustained and original resource limits; status PLAY48_ECONOMIC_NO_GO / RELEASE_NO_GO.

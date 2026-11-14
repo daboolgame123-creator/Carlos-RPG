@@ -1,0 +1,31 @@
+name: PLAY48 authentic signed sale-funded shopkeeper income 13NPC 12h NO MERGE
+on:
+  push:
+    branches:
+      - experiment/play48-sale-backed-recurring-keeper-payroll-20261114
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-retail-service:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Verify authentic old-source real market wages at hours 6 and 12
+        run: |
+          python -m compileall -q src/carlos_sim/market.py scenarios/test_village/test_play48_original_13npc_sale_commission_12h.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -q -s scenarios/test_village/test_play48_original_13npc_sale_commission_12h.py
