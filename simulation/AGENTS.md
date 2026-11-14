@@ -2,6 +2,13 @@
 
 Scope: `simulation/` only. These rules supplement the root `AGENTS.md`; they do not change the original interactive story.
 
+## Causal alternatives and efficient debugging — owner decision 2026-11-14
+
+When a proposed fix repeatedly fails, **change the hypothesis, not the evidence**. Inspect event logs and the original NPCs, compare alternative **world-consistent** mechanisms, and implement the smallest coherent remedy **within the current open phase**. Alternative designs are explicitly allowed; repeated narrow patches without root-cause evidence are not the preferred path.
+
+Every alternative must preserve finite physical stock, conserved seeded funds, actual work and funded wages, time and known-road travel, NPC autonomy, authentic ownership, deterministic SQLite/event replay, and existing release gates. No fictional food/copper, fabricated jobs, silent rescue, teleportation or artificially scripted success. Prefer fast deterministic failure probes first, then the relevant authentic 13-NPC long run (96/168 h for PLAY-48), then full regression CI on the final candidate. Do not lower acceptance criteria or start a new phase as a shortcut. Record the confirmed fault, rejected approach, causal alternative and measured outcome concisely.
+
+
 ## Mandatory sequence for EVERY development task
 
 1. **Analyze before implementing.** Inspect the actual branch HEAD, relevant code, tests, roadmap, historical constraints and CI evidence. State the task's goal, assumptions, affected files, invariants, failure modes, security/trust boundaries and acceptance criteria. Distinguish verified facts from hypotheses.
