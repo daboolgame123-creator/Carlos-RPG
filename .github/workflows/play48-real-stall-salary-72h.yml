@@ -1,0 +1,36 @@
+name: PLAY48 site keeper salary from genuine sales no minted goods (NO MERGE)
+on:
+  push:
+    branches:
+      - experiment/play48-earned-local-stall-food-salary-20261114
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play48-market-keeper-real-sales-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  physical-seller-earned-food:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10","3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: 13 NPC true market sales fund local steward meal to h72
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_sale_backed_stall_keeper_72h.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_sale_backed_stall_keeper_72h.py
