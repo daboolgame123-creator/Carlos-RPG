@@ -102,8 +102,8 @@ def run_arm(path: Path, *, enabled: bool, hours: int):
             clock.close_session(WORLD)
     with SQLiteEventStore(path) as reopened:
         assert reopened.verify(WORLD).to_dict() == state.to_dict()
-        assert reopened.db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
-        assert reopened.db.db.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert reopened.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        assert reopened.db.execute("PRAGMA foreign_key_check").fetchall() == []
     return readings
 
 
