@@ -65,6 +65,16 @@ def test_no_precarious_work_when_inputs_missing_or_too_hungry(tmp_path):
         out_of_inputs = WorldState.from_dict(raw)
         assert choose_local_production(out_of_inputs, "omar") is None
         assert priority._professional_life_emergency(out_of_inputs, "omar") is True
+        # A genuine job with a ZERO-copper employer cannot be offered as
+        # paid emergency work by merely changing the salary label.
+        cash_only = hungry.to_dict()
+        recipe = cash_only["production_recipes"]["two-portions-hunter"]
+        assert recipe.pop("wage_food") == 2
+        recipe["wage_coin"] = 1
+        missing_cash = WorldState.from_dict(cash_only)
+        assert choose_local_production(missing_cash, "omar") is not None
+        assert missing_cash.resources["hunting_woods"]["coin_copper"] == 0
+        assert priority._professional_life_emergency(missing_cash, "omar") is True
         # A courier without a local paid job does not gain fictitious work.
         assert priority._professional_life_emergency(
             hungry_copy(initial, "huda"), "huda") is True
