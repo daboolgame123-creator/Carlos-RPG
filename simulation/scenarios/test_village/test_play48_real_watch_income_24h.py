@@ -24,7 +24,8 @@ from test_play48_peddler_24h_diagnostic import measures, market_resale_gates
 HOUR = 3600
 
 
-def _watch_genesis(db, *, initial_market_food, **options):
+def _watch_genesis(db, *, initial_market_food,
+                   sale_backed_keeper_commission_enabled=False, **options):
     assert initial_market_food == 3
     assert options == {
         "water": 2, "seed": 1, "harvest_yield": 3,
@@ -37,17 +38,21 @@ def _watch_genesis(db, *, initial_market_food, **options):
         wilderness_food_peddler_enabled=True,
         food_for_work_bakery_enabled=True, bakery_opening_food_wage=True,
         signed_market_watch_service_enabled=True,
+        sale_backed_keeper_commission_enabled=sale_backed_keeper_commission_enabled,
     )
 
 
-def seed(path):
+def seed(path, *, sale_backed_keeper_commission_enabled=False):
     with SQLiteEventStore(path) as db:
         seed_two_field_world(
             db, east_growth_seconds=DAY, east_grain_yield=12,
             initial_water=2, initial_market_food=3,
             market_wallets=True, hungry_market_buyers=True,
             cash_return=True, waged_harvest=True,
-            harvest_wage_copper=2, bootstrap=_watch_genesis,
+            harvest_wage_copper=2,
+            bootstrap=(lambda db, **kwargs: _watch_genesis(
+                db, sale_backed_keeper_commission_enabled=
+                sale_backed_keeper_commission_enabled, **kwargs)),
         )
         old = db.load(WORLD)
         current = db.append(

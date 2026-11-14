@@ -28,6 +28,7 @@ def _joined_bootstrap(
     food_for_work_bakery_enabled=False, wilderness_food_jobs_enabled=False,
     wilderness_food_peddler_enabled=False, finite_aquifer_work_enabled=False,
     signed_market_watch_service_enabled=False,
+    sale_backed_keeper_commission_enabled=False,
 ):
     """Build the *entire* eleven-NPC world in one trusted genesis event batch.
 
@@ -36,6 +37,8 @@ def _joined_bootstrap(
     are allocated at genesis as farm/bakery working capital, without adding
     any copper. The normal field/baker jobs get one-copper wage contracts.
     """
+    if type(sale_backed_keeper_commission_enabled) is not bool:
+        raise ValueError("sale commission must be a signed boolean opt-in")
     if (type(signed_market_watch_service_enabled) is not bool
             or (signed_market_watch_service_enabled and site_payroll_enabled)):
         raise ValueError("one signed watch funding mode, with no competing Carlos cash")
@@ -73,6 +76,19 @@ def _joined_bootstrap(
             or (not site_payroll_enabled and site_payroll_wage_coin != 1)):
         raise ValueError("site_payroll_wage_coin must be one or two existing copper")
     def extend(events):
+        if sale_backed_keeper_commission_enabled:
+            signed = []
+            for idx, ev in enumerate(events):
+                if ev.event_type == "MarketStallConfigured":
+                    # An institution-owned stall earns *only* from its own
+                    # authentic buyers; no new money, bread or work orders.
+                    site = ev.data["site_id"]
+                    if site == "market":
+                        events[idx] = _e("MarketStallConfigured", {
+                            **dict(ev.data), "keeper_commission_coin": 1,
+                        })
+                        signed.append(site)
+            assert signed == ["market"]
         if signed_market_watch_service_enabled:
             # One finite and actually funded security contract, not generic
             # free money: reallocate 2 ORIGINAL Carlos-owned copper to the
