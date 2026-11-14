@@ -233,8 +233,11 @@ def validate_market(state: dict[str, Any]) -> None:
         raise ValueError("market ledgers must be mappings")
     for site, stall in stalls.items():
         if (not _id(site) or site not in state["locations"]
-                or not isinstance(stall, dict) or set(stall) != {"keeper_id"}
-                or not _id(stall["keeper_id"]) or stall["keeper_id"] not in state["npcs"]):
+                or not isinstance(stall, dict) or set(stall) not in ({"keeper_id"}, {"keeper_id", "wage_coin"})
+                or not _id(stall["keeper_id"]) or stall["keeper_id"] not in state["npcs"]
+                or ("wage_coin" in stall and (type(stall["wage_coin"]) is not int
+                    or stall["wage_coin"] != 1
+                    or state["npcs"][stall["keeper_id"]]["role"] != "merchant"))):
             raise ValueError("invalid registered market stall")
     for ident, o in offers.items():
         if (not _id(ident) or not isinstance(o, dict) or set(o) != OFFER_KEYS
@@ -263,7 +266,7 @@ def validate_market(state: dict[str, Any]) -> None:
             raise ValueError("market closure has no valid timestamp")
     sold: dict[str, int] = {}
     for ident, t in trades.items():
-        if (not _id(ident) or not isinstance(t, dict) or set(t) != TRADE_KEYS
+        if (not _id(ident) or not isinstance(t, dict) or set(t) not in (TRADE_KEYS, TRADE_KEYS | {"sale_wage"})
                 or t["offer_id"] not in offers):
             raise ValueError("invalid market trade record")
         o = offers[t["offer_id"]]
@@ -279,6 +282,9 @@ def validate_market(state: dict[str, Any]) -> None:
                 or type(t["executed_at"]) is not int
                 or not o["posted_at"] <= t["executed_at"] <= state["time"]):
             raise ValueError("invalid market trade identity, price or provenance")
+        if "sale_wage" in t:
+            from .steward_wages import validate_steward_wage_receipt
+            validate_steward_wage_receipt(state, t)
         numbers = [t[k] for k in TRADE_KEYS if k.endswith("_before") or k.endswith("_after")]
         if not all(_balance(n) for n in numbers):
             raise ValueError("market trade balances must be known and bounded")

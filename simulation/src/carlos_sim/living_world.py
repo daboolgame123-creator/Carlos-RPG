@@ -94,7 +94,8 @@ class LivingWorldEngine:
                  seek_alternative_food_market_enabled: bool = False,
                  food_peddler_enabled: bool = False,
                  food_peddler_self_meal_reserve_enabled: bool = False,
-                 finite_aquifer_pumping_enabled: bool = False):
+                 finite_aquifer_pumping_enabled: bool = False,
+                 merchant_sale_wage_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -168,6 +169,10 @@ class LivingWorldEngine:
         if type(economic_enabled) is not bool:
             raise ValueError('economic_enabled must be boolean')
         self.economic_enabled = economic_enabled
+        if (type(merchant_sale_wage_enabled) is not bool or
+                (merchant_sale_wage_enabled and not economic_enabled)):
+            raise ValueError("merchant wage opt-in requires an active economy")
+        self.merchant_sale_wage_enabled = merchant_sale_wage_enabled
         if (type(food_for_work_enabled) is not bool
                 or (food_for_work_enabled and not (
                     economic_enabled and consumption_enabled and survival_enabled))):
@@ -791,6 +796,15 @@ class LivingWorldEngine:
                                         'expected_unit_price': purchase.price}),
                            market_capability=True)
                     economic_trades.append(purchase.trade_id)
+                    if self.merchant_sale_wage_enabled:
+                        from .steward_wages import choose_steward_wage
+                        earning = choose_steward_wage(current, purchase.trade_id)
+                        if earning is not None:
+                            append(DomainEvent("MarketStewardWagePaid", None,
+                                "signed shop worker earns physical sale commission",
+                                current.time, {"trade_id": purchase.trade_id,
+                                               "amount": earning}),
+                                market_capability=True)
                 if self.food_peddler_enabled:
                     from .food_peddler import TRADER, choose_purchase
                     if TRADER in current.npcs:
@@ -805,6 +819,15 @@ class LivingWorldEngine:
                                 "expected_unit_price": bought.unit_price,
                             }), market_capability=True)
                             economic_trades.append(bought.trade_id)
+                            if self.merchant_sale_wage_enabled:
+                                from .steward_wages import choose_steward_wage
+                                earning = choose_steward_wage(current, bought.trade_id)
+                                if earning is not None:
+                                    append(DomainEvent("MarketStewardWagePaid", None,
+                                        "signed shop worker earns physical sale commission",
+                                        current.time, {"trade_id": bought.trade_id,
+                                                       "amount": earning}),
+                                        market_capability=True)
                 if (self.professional_procurement_enabled or
                         self.multi_professional_markets_enabled):
                     from .professional_trade import choose_local_grain_purchase
