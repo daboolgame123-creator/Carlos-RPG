@@ -167,4 +167,16 @@ def test_48h_nominal_all_money_in_sites_without_paid_jobs_or_food_rejected():
         paid_courier_receipts=prior.paid_courier_receipts,
     )
     result = evaluate_play48(trial, base, evidence=CONFIRMED)
-    assert "48h_no_personal_food_cash_or_new_wage_receipt" in result.failures
+    assert "48h_zero_personally_usable_cash_and_food" in result.failures
+    assert "48h_no_new_authentic_earned_wage_receipt" in result.failures
+
+
+def test_new_48h_salary_receipts_do_not_mask_empty_personal_cash_and_food():
+    """A worker paid-and-broke is not proof of a sustainable village."""
+    base, trial = profile()
+    trial[48] = replace(trial[48], npc_copper=0, site_copper=12, npc_food=0)
+    assert trial[48].earned_receipts > trial[36].earned_receipts
+    result = evaluate_play48(trial, base, evidence=CONFIRMED)
+    assert result.status == "PLAY48_ECONOMIC_NO_GO"
+    assert "48h_zero_personally_usable_cash_and_food" in result.failures
+    assert "48h_no_new_authentic_earned_wage_receipt" not in result.failures
