@@ -44,7 +44,12 @@ def test_real_market_sale_physically_funds_wage_then_farmer_buys_and_eats(tmp_pa
         assert start.resources["market"]["coin_copper"] == 0
         assert start.resources[EAST]["coin_copper"] == 0
         assert start.production_recipes["east-finite-harvest"]["wage_coin"] == 2
-        assert audit_npc_economy(start)["copper_known_total"] == 12
+        opening_scope = audit_npc_economy(start)
+        assert opening_scope["copper_known_total"] == 12
+        # This legacy 9NPC test-world intentionally leaves SOME irrelevant
+        # NPC copper slots absent (UNKNOWN, never assumed zero). Hold the
+        # initial owner scope fixed: never fill a missing wallet by guess.
+        originally_unknown = opening_scope["copper_unknown_owners"]
 
         clock = TimeEngine(db)
         clock.open_session(WORLD)
@@ -55,8 +60,10 @@ def test_real_market_sale_physically_funds_wage_then_farmer_buys_and_eats(tmp_pa
             for target in POINTS:
                 state = _advance(db, engine, target)
                 audit = audit_npc_economy(state)
-                assert audit["copper_scope_complete"]
+                assert audit["copper_unknown_owners"] == originally_unknown
                 assert audit["copper_known_total"] == 12
+                assert sum(bal.get("coin_copper", 0)
+                           for bal in state.resources.values()) == 12
                 assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
                 assert not db.db.execute("PRAGMA foreign_key_check").fetchall()
                 measurements.append({
