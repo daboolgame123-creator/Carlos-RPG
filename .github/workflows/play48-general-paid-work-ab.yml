@@ -1,0 +1,50 @@
+name: PLAY48 real 13-NPC paid-work A/B (diagnostic only)
+
+on:
+  push:
+    branches:
+      - experiment/play48-general-paid-work-before-starvation-20261114
+    paths:
+      - ".github/workflows/play48-general-paid-work-ab.yml"
+      - "simulation/scenarios/test_village/play48_general_paid_work_ab.py"
+      - "simulation/src/carlos_sim/living_world.py"
+      - "simulation/tests/test_play48_hungry_paid_work_policy.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: play48-general-paid-work-ab-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  real-13npc-24-48h-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify tested commit and setup Python
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install minimal fixture dependency
+        run: python -m pip install pytest
+      - name: Compile targeted engine, guard test and A/B harness
+        run: |
+          python -m compileall -q src/carlos_sim/living_world.py tests/test_play48_hungry_paid_work_policy.py scenarios/test_village/play48_general_paid_work_ab.py
+      - name: Run hunger-work guards without full historical suite
+        run: PYTHONPATH=src python -m pytest -q tests/test_play48_hungry_paid_work_policy.py
+      - name: Compare identical physical 13-NPC villages at 24 and 48h
+        run: PYTHONPATH=src:scenarios/test_village python scenarios/test_village/play48_general_paid_work_ab.py --hours 48
