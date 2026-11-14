@@ -317,11 +317,15 @@ class LivingWorldEngine:
             if legacy_woodcutter:
                 # Preserve the existing opt-in woodcutter policy.
                 return False
-            here = state.entities[npc_id]["location_id"]
-            if (routine_allows_work(state, npc_id)
-                    and any(recipe["site_id"] == here
-                            and recipe["role"] == state.npcs[npc_id]["role"]
-                            for recipe in state.production_recipes.values())):
+            # Matching a recipe is not the same as being able to work:
+            # require the existing pure selector to confirm physical inputs,
+            # tools, custody, work shift, concurrency and the local worksite.
+            from .economic_autonomy import choose_local_production
+            if choose_local_production(
+                    state, npc_id,
+                    agriculture_enabled=self.agriculture_enabled,
+                    finite_aquifer_enabled=self.finite_aquifer_pumping_enabled,
+            ) is not None:
                 return False
         return (needs["hunger"] >= 75 or needs["fatigue"] >= 70
                 or needs["safety"] >= 75

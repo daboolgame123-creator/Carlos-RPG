@@ -11,6 +11,8 @@ def engine(*, enabled, legacy=False):
     coordinator.professional_full_life_enabled = True
     coordinator.hungry_paid_work_enabled = enabled
     coordinator.hungry_woodcutter_work_enabled = legacy
+    coordinator.agriculture_enabled = True
+    coordinator.finite_aquifer_pumping_enabled = False
     return coordinator
 
 
@@ -23,6 +25,56 @@ def state(*, hunger=80, fatigue=20, safety=0, role="farmer",
         production_recipes={"real-batch": {"site_id": recipe_site, "role": role}},
         injuries={},
     )
+
+
+@pytest.fixture(autouse=True)
+def actual_work_intent_stub(monkeypatch):
+    """Emulate only the external selector's job eligibility, not its internals."""
+    def eligible(world, who, **kwargs):
+        here = world.entities[who]["location_id"]
+        if (world.npcs[who]["needs"]["hunger"] >= 90
+                or world.npcs[who]["needs"]["fatigue"] >= 70
+                or world.npcs[who]["needs"]["safety"] >= 75):
+            return None
+        from carlos_sim.living_world import routine_allows_work
+        if not routine_allows_work(world, who):
+            return None
+        return next((
+            SimpleNamespace(job_id="physical-eligible-job")
+            for recipe in world.production_recipes.values()
+            if recipe["site_id"] == here
+            and recipe["role"] == world.npcs[who]["role"]
+        ), None)
+    monkeypatch.setattr(
+        "carlos_sim.economic_autonomy.choose_local_production", eligible)
+
+
+def test_recipe_without_actual_startable_job_cannot_override_emergency(monkeypatch):
+    # No actual inputs/available tool or depleted payroll => pure selector None.
+    monkeypatch.setattr("carlos_sim.living_world.routine_allows_work",
+                        lambda world, who: True)
+    monkeypatch.setattr(
+        "carlos_sim.economic_autonomy.choose_local_production",
+        lambda world, who, **kwargs: None,
+    )
+    assert engine(enabled=True)._professional_life_emergency(
+        state(hunger=82), "worker") is True
+
+
+def test_real_selector_receives_physical_policy_flags(monkeypatch):
+    monkeypatch.setattr("carlos_sim.living_world.routine_allows_work",
+                        lambda world, who: True)
+    seen = []
+    def accepted(world, who, **kwargs):
+        seen.append((who, kwargs))
+        return SimpleNamespace(job_id="real-work")
+    monkeypatch.setattr(
+        "carlos_sim.economic_autonomy.choose_local_production", accepted)
+    assert engine(enabled=True)._professional_life_emergency(
+        state(hunger=83), "worker") is False
+    assert seen == [("worker", {
+        "agriculture_enabled": True, "finite_aquifer_enabled": False,
+    })]
 
 
 @pytest.mark.parametrize("enabled,expected", [(False, True), (True, False)])
