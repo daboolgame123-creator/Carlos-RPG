@@ -33,6 +33,7 @@ class CashSettlementReport:
     npc_personal_copper: int
     site_owned_copper: int
     courier_cash_custody: int
+    other_owner_copper: int
     sites: tuple[SiteSettlement, ...]
 
 def audit_completed_work_cash_settlement(state) -> CashSettlementReport:
@@ -46,6 +47,7 @@ def audit_completed_work_cash_settlement(state) -> CashSettlementReport:
     inventory, jobs, recipes=state.resources, state.production_jobs, state.production_recipes
     in_custody={site:0 for site in state.locations}
     courier_cash=0
+    courier_custody_in_npc_balances=0
     for who,c in sorted(state.supply_circuits.items()):
         cargo=c.get("carry")
         if cargo is None or cargo["resource"] != CASH:
@@ -58,6 +60,8 @@ def audit_completed_work_cash_settlement(state) -> CashSettlementReport:
             raise ValueError("copper cargo needs a real site destination")
         in_custody[dest]+=1
         courier_cash+=1
+        if who in state.npcs:
+            courier_custody_in_npc_balances+=1
 
     sites=[]
     for site in sorted(state.locations):
@@ -93,12 +97,19 @@ def audit_completed_work_cash_settlement(state) -> CashSettlementReport:
             historical_work_wages_paid=paid,
             historical_sale_service_wages_paid=service_paid
         ))
+    personal=sum(inventory.get(who,{}).get(CASH,0) or 0 for who in state.npcs)
+    personal-=courier_custody_in_npc_balances
+    site_cash=sum(row.known_copper or 0 for row in sites)
+    other=money["copper_known_total"]-personal-site_cash-courier_cash
+    if min(personal,site_cash,other) < 0:
+        raise ValueError("owner partitions counted physical money twice")
     return CashSettlementReport(
         total_known_copper=money["copper_known_total"],
         copper_scope_complete=money["copper_scope_complete"],
         unknown_coin_owners=money["copper_unknown_owners"],
-        npc_personal_copper=sum(inventory.get(who,{}).get(CASH,0) or 0 for who in state.npcs),
-        site_owned_copper=sum(row.known_copper or 0 for row in sites),
+        npc_personal_copper=personal,
+        site_owned_copper=site_cash,
         courier_cash_custody=courier_cash,
+        other_owner_copper=other,
         sites=tuple(sites),
     )
