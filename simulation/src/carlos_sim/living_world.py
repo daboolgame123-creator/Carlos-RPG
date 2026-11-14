@@ -88,6 +88,7 @@ class LivingWorldEngine:
                  market_sourced_wage_refill_enabled: bool = False,
                  farm_sourced_wage_refill_enabled: bool = False,
                  hungry_woodcutter_work_enabled: bool = False,
+                  subsistence_work_priority_enabled: bool = False,
                  retry_known_supplier_enabled: bool = False,
                  remember_unbought_stalls_enabled: bool = False,
                  food_for_work_enabled: bool = False,
@@ -274,6 +275,12 @@ class LivingWorldEngine:
                     and not professional_full_life_enabled)):
             raise ValueError("hungry_woodcutter_work_enabled requires real full-life jobs")
         self.hungry_woodcutter_work_enabled = hungry_woodcutter_work_enabled
+        if (type(subsistence_work_priority_enabled) is not bool
+                or (subsistence_work_priority_enabled and not (
+                    professional_full_life_enabled and food_for_work_enabled))):
+            raise ValueError(
+                "subsistence work priority needs paid full-life production")
+        self.subsistence_work_priority_enabled = subsistence_work_priority_enabled
         if type(supply_enabled) is not bool or (supply_enabled and not agriculture_enabled):
             raise ValueError("supply_enabled requires opt-in agriculture_enabled")
         self.supply_enabled = supply_enabled
@@ -318,6 +325,36 @@ class LivingWorldEngine:
             from .npc import _injury_rest_decision
             if _injury_rest_decision(state.injuries, npc_id) is None:
                 return False
+        # PLAY48: a still-capable hungry worker may choose a genuinely
+        # available, locally paid shift BEFORE the existing 90 hunger cutoff.
+        # This is not a general hunger override: absent inputs, active injury,
+        # insufficient employer cash, off-duty work, or missing food pay leave
+        # emergency survival precedence intact. No wages are minted here.
+        if (self.subsistence_work_priority_enabled
+                and 75 <= needs["hunger"] <= 89
+                and needs["fatigue"] < 70 and needs["safety"] < 75
+                and _injury_rest_decision(state.injuries, npc_id) is None):
+            job = choose_local_production(
+                state, npc_id,
+                agriculture_enabled=self.agriculture_enabled,
+                finite_aquifer_enabled=self.finite_aquifer_pumping_enabled)
+            if job is not None:
+                recipe = state.production_recipes[job.recipe_id]
+                site = recipe["site_id"]
+                stock = state.resources.get(site, {})
+                coin_wage = recipe.get("wage_coin", 0)
+                food_wage = recipe.get("wage_food", 0)
+                # A food-paid worker must physically produce edible food or
+                # be working at an employer with existing onsite food stock.
+                paid_food = (type(food_wage) is int and food_wage > 0
+                             and (recipe["output_resource"] == "food"
+                                  or stock.get("food", 0) >= food_wage))
+                # Do not accept cash promises unsupported by employer funds.
+                paid_cash = (type(coin_wage) is int and coin_wage > 0
+                             and type(stock.get("coin_copper")) is int
+                             and stock["coin_copper"] >= coin_wage)
+                if paid_food or paid_cash:
+                    return False
         return (needs["hunger"] >= 75 or needs["fatigue"] >= 70
                 or needs["safety"] >= 75
                 or _injury_rest_decision(state.injuries, npc_id) is not None)
