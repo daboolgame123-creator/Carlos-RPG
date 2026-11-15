@@ -110,6 +110,30 @@ def investigate(path: Path):
                             choose_market_owned_food_refill(state, who) is not None,
                     }
                     assert circuit["deliveries"] == len(timeline[who]["real_delivery_rows"])
+                # No invented wage: identify the actual potential employer
+                # on Huda's completed routes and whether it owns unpromised
+                # food after all existing buyer, production and barter claims.
+                from carlos_sim.food_for_work import _available_site_food
+                from carlos_sim.supply import (
+                    _bakery_has_pending_physical_farm_claim,
+                )
+                local_employers = {}
+                for farm_or_bakery in ("farm", "farm_east", "bakery", "market"):
+                    local_employers[farm_or_bakery] = {
+                        "owned_food": state.resources.get(farm_or_bakery, {}).get("food"),
+                        "unpromised_food": _available_site_food(state, farm_or_bakery),
+                        "owned_copper": state.resources.get(farm_or_bakery, {}).get("coin_copper"),
+                        "open_food_quotes": sum(
+                            offer["remaining"] for offer in state.market_offers.values()
+                            if offer["status"] == "open"
+                            and offer["stock_owner_id"] == farm_or_bakery
+                            and offer["resource"] == "food"),
+                        "completed_production": sum(
+                            job["status"] == "completed"
+                            and job["site_id"] == farm_or_bakery
+                            for job in state.production_jobs.values()),
+                    }
+                bakery_barter_claim = _bakery_has_pending_physical_farm_claim(state)
                 overall = report(state)
                 print("PLAY48_HUDA_AUTHENTIC_DELIVERY_VS_PAID_SERVICE " +
                     json.dumps({
@@ -118,6 +142,8 @@ def investigate(path: Path):
                         "market_unquoted_food_after_customer_claims":
                             _market_uncommitted_bread_after_sales(state),
                         "market_merchant_food_paid": overall["salma_earned_site_food"],
+                        "actual_potential_employers": local_employers,
+                        "bakery_bread_reserved_for_farm_return": bakery_barter_claim,
                         "total_copper_physical": overall["cash_total"],
                         "sqlite_replay_verified": True,
                     }, sort_keys=True), flush=True)
