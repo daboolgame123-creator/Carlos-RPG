@@ -118,9 +118,9 @@ def test_huda_post_grain_service_exact_timing_without_engine_edits(tmp_path):
                 kind=e["event_type"]
                 who=e["actor_id"]
                 data=e["data"]
-                if (who in ("huda","hana") and kind in (
+                if ((who in ("huda","hana") and kind in (
                     "SupplyCargoPicked","SupplyCargoDelivered","NPCTravelStarted"))
-                    or kind in ("CourierBakeryDeferredFoodPaid",)):
+                    or kind == "CourierBakeryDeferredFoodPaid"):
                     entries.append({
                         "seq":seq,"hour":round(t/HOUR,5),
                         "kind":kind,"actor":who,"resource":data.get("resource"),
