@@ -617,6 +617,15 @@ class LivingWorldEngine:
                                                "service_deliveries": service,
                                                "amount": 1}),
                                 supply_capability=True, production_capability=True)
+                    # A documented grain worker may wait ON SITE for up to
+                    # one real simulated hour while a bakery completes later
+                    # bread; no opening-loaf escrow or route teleport.
+                    # Once paid, or if no bread becomes available, she resumes
+                    # her genuine known-road circuit. Default mode unchanged.
+                    if self.deferred_bakery_grain_wage_enabled:
+                        from .deferred_bakery_payroll import courier_waits_for_due_bakery_food
+                        if courier_waits_for_due_bakery_food(current, courier):
+                            continue
                     # Survey only the currently visible adjacent roads
                     # BEFORE selecting the next leg. Otherwise an existing
                     # navigation profile blocks discovery of the next road.

@@ -3,8 +3,10 @@
 Does not reserve opening food. Only real grain delivery establishes a signed
 nonspendable work claim in the canonical physical cargo reducer. A later
 completed real bakery bread job may pay it, but ONLY to its physically present
-courier from unquoted, unescrowed local surplus. Leave one uncommitted loaf
-to run the employer; all prior customer claims outrank payroll.
+courier from unquoted, unescrowed local surplus. Customer quotes, cargo and
+pre-existing barter obligations outrank payroll. A bounded *physical stay*
+(up to 1 simulated hour) allows the courier to collect her real earned loaf
+before she walks the next known road; no fictitious source stock exists.
 """
 from __future__ import annotations
 from typing import Any
@@ -12,6 +14,8 @@ from .domain import DomainEvent, WorldState
 from .food_for_work import _available_site_food, _worker_present_and_free
 
 MAX_BALANCE = 2**31 - 1
+MIN_UNPROMISED_BREAD = 1
+MAX_WAGE_COLLECTION_WAIT = 3600
 
 def register_local_grain_service(state: dict[str, Any], who: str) -> None:
     circuit = state["supply_circuits"][who]
@@ -42,12 +46,35 @@ def _genuine_later_bread(jobs: Any, recipes: Any, earned_at: int, now: int) -> b
     )
 
 
+def courier_waits_for_due_bakery_food(state: WorldState, who: str) -> bool:
+    """One-hour maximum local payment collection at the *real* worksite.
+
+    Requires the original grain-delivery receipt and signed contract.
+    No travel shortcut, hunger/stamina bypass, remote stock read, fake food,
+    or open-ended waiting. If bread never finishes, the courier continues
+    her existing physical route after the finite window.
+    """
+    circuit = state.supply_circuits.get(who)
+    if (circuit is None or circuit["index"] != 2 or circuit["carry"] is not None
+            or not _worker_present_and_free(state, who, "bakery")):
+        return False
+    for c in state.courier_provisions.values():
+        if (c["courier_id"] != who or c["payer_site"] != "bakery"
+                or "deferred_grain_services" not in c):
+            continue
+        for receipt in c["deferred_grain_services"]:
+            if (receipt["paid_at"] is None
+                    and 0 <= state.time-receipt["earned_at"] < MAX_WAGE_COLLECTION_WAIT):
+                return True
+    return False
+
+
 def choose_deferred_bakery_payment(state: WorldState,
                                    who: str) -> tuple[str, int] | None:
     circuit = state.supply_circuits.get(who)
     if (circuit is None or circuit["index"] != 2 or circuit["carry"] is not None
             or not _worker_present_and_free(state, who, "bakery")
-            or _available_site_food(state, "bakery") < 2
+            or _available_site_food(state, "bakery") < MIN_UNPROMISED_BREAD
             or type(state.resources.get(who, {}).get("food")) is not int
             or state.resources[who]["food"] >= MAX_BALANCE):
         return None
@@ -91,11 +118,11 @@ def pay_deferred_bakery_food(state: dict[str, Any], event: DomainEvent, *,
             or not _genuine_later_bread(state["production_jobs"],
                                         state["production_recipes"],
                                         proof["earned_at"], state["time"])
-            or _available_site_food(state, "bakery") < 2):
+            or _available_site_food(state, "bakery") < MIN_UNPROMISED_BREAD):
         raise ValueError("no real later unquoted bakery food for actual service")
     shop, person = state["resources"].get("bakery", {}), state["resources"].get(who, {})
     source, own = shop.get("food"), person.get("food")
-    if (type(source) is not int or source < 2
+    if (type(source) is not int or source < MIN_UNPROMISED_BREAD
             or type(own) is not int or not 0 <= own < MAX_BALANCE):
         raise ValueError("missing bounded physical source/worker food")
     shop["food"], person["food"] = source - 1, own + 1

@@ -1,0 +1,57 @@
+name: PLAY48 one-hour genuine bakery payroll collection without opening bread
+on:
+  push:
+    branches:
+      - experiment/play48-bakery-held-wage-real-batch-20261116
+    paths:
+      - ".github/workflows/play48-bakery-wage-collection-original-ab.yml"
+      - "simulation/src/carlos_sim/**"
+      - "simulation/scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py"
+      - "simulation/scenarios/test_village/test_play48_real_watch_income_24h.py"
+      - "simulation/scenarios/test_village/test_play48_in_kind_market_wages_ab.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reject-fake-labor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Verify no salary prior to real grain or fresh bakery output
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py -k no_payment
+
+  original-13npc-hard-economic-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Genuine 13 villagers 48h before/after worksite wait and wage, no sales or freight declines
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py -k original_13npc
