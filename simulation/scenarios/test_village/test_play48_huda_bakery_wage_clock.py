@@ -51,7 +51,8 @@ def view(s):
         "at_hours":round(s.time/HOUR,5),
         "huda_site":s.entities["huda"]["location_id"],
         "huda_route_index":s.supply_circuits["huda"]["index"],
-        "huda_cargo":s.supply_circuits["huda"]["carry"],
+        "huda_cargo":(dict(s.supply_circuits["huda"]["carry"])
+                      if s.supply_circuits["huda"]["carry"] is not None else None),
         "huda_traveling":any(t["npc_id"]=="huda" and t["status"]=="traveling"
                              for t in s.travels.values()),
         "huda_hunger":s.npcs["huda"]["needs"]["hunger"],
