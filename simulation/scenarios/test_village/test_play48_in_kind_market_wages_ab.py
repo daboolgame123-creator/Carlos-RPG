@@ -18,7 +18,7 @@ from test_play48_deferred_courier_market_income import signed_genesis
 from test_play48_real_watch_income_24h import engine as original_engine, HOUR
 from test_play48_finite_hunt_fish_roads import conserve_diverse
 
-CHECKPOINTS = (6, 24, 30, 36, 48)
+CHECKPOINTS = (6, 24, 30, 36, 48, 72, 96, 120, 144, 168)
 
 
 def seeded(path: Path, *, contract: bool):
@@ -51,6 +51,27 @@ def report(state):
         "npcs": len(state.npcs),
         "cash_total": cash["copper_known_total"],
         "market_cash": state.resources["market"].get("coin_copper"),
+        "owners_with_copper": {who: amount for who, amount in
+            cash["copper_known_by_owner"].items() if amount > 0},
+        "starving_ids": [
+            who for who in sorted(state.npcs)
+            if state.npcs[who]["needs"]["hunger"] == 100
+        ],
+        "professional_jobs": {
+            role: sum(job["status"] == "completed" and
+                      state.npcs[job["npc_id"]]["role"] == role
+                      for job in state.production_jobs.values())
+            for role in sorted({n["role"] for n in state.npcs.values()})
+        },
+        "market_trades_by_resource": {
+            resource: sum(t["resource"] == resource
+                          for t in state.market_trades.values())
+            for resource in sorted({t["resource"] for t in state.market_trades.values()})
+        },
+        "personal_food_owners": {
+            who: state.resources[who]["food"] for who in sorted(state.npcs)
+            if state.resources[who].get("food", 0) > 0
+        },
         "market_food": state.resources["market"].get("food"),
         "market_unpromised_food": _available_site_food(state, "market"),
         "market_open_food_quotes": sum(
@@ -102,10 +123,10 @@ def simulate(path: Path, *, contract: bool):
                 assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
                 assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
                 result[hour] = report(last)
-                if hour == 24:
+                if hour in (24, 48, 72, 96, 120, 144):
                     last = FiniteWaterService(db, clock).record(
-                        WORLD, "well", "fixed-external-rain-day1", 2,
-                        command_id="real-attributed-source-day1",
+                        WORLD, "well", f"fixed-external-rain-day{hour//24}", 2,
+                        command_id=f"real-attributed-source-day{hour//24}",
                         expected_revision=last.revision).state
                     conserve_diverse(last)
             assert db.snapshot(WORLD).to_dict() == last.to_dict()
@@ -155,6 +176,10 @@ def test_real_13npc_signed_food_sales_before_starvation_ab(tmp_path):
         }, sort_keys=True), flush=True)
         assert old["salma_earned_site_food"] == 0
         assert old["cash_total"] == new["cash_total"] == 12
+    # This extended A/B additionally records genuine labor and goods across
+    # actual existing farm, mine, kiln, smith, hunting, fishing and trade jobs.
+    # More jobs or merchants are NOT invented: measure which existing trades
+    # connect actual wages to personal food at days 3, 4 and 7.
     # Guard both livelihoods: a real seller meal must help the shopkeeper,
     # WITHOUT impairing the original freight or actual buyer access.
     assert candidate[36]["salma_earned_site_food"] >= 1, (
@@ -170,6 +195,8 @@ def test_real_13npc_signed_food_sales_before_starvation_ab(tmp_path):
             assert (candidate[hour]["deliveries"][courier]
                     >= baseline[hour]["deliveries"][courier]), (
                 "true freight must not be reduced to feed the merchant")
+    for hour in (72, 96, 120, 144, 168):
+        assert candidate[hour]["cash_total"] == baseline[hour]["cash_total"] == 12
     with SQLiteEventStore(candidate_path) as db:
         state = db.verify(WORLD)
         paid_ids = [key for key, trade in state.market_trades.items()

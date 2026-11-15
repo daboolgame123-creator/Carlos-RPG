@@ -1,0 +1,36 @@
+name: PLAY48 real in-kind seller + diversified occupations endurance 168h A/B
+
+on:
+  push:
+    branches:
+      - experiment/play48-in-kind-market-steward-revenue-20261115
+    paths:
+      - ".github/workflows/play48-original-168h-sector-endurance.yml"
+      - "simulation/scenarios/test_village/test_play48_in_kind_market_wages_ab.py"
+      - "simulation/src/carlos_sim/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  original-13npc-sector-endurance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Verify source, compile and compare 13 physical NPCs through 168h
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_in_kind_market_wages_ab.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_in_kind_market_wages_ab.py -k real_13npc
