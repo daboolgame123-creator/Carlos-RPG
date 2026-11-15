@@ -473,6 +473,24 @@ class LivingWorldEngine:
                 # A courier may transfer exactly one local unit at an authentic
                 # stop and then traverse a physically configured adjacent road.
                 for courier in sorted(current.supply_circuits):
+                    # At this REAL worksite settle a proved worker wage
+                    # BEFORE reserving the next market-bound food parcel.
+                    # This is not salary priority over any *posted* customer
+                    # quote: _available_site_food already excludes those
+                    # commitments, farm barter and courier custody.
+                    # No food is created and no route is changed.
+                    if self.deferred_bakery_grain_wage_enabled:
+                        from .deferred_bakery_payroll import choose_deferred_bakery_payment
+                        earned = choose_deferred_bakery_payment(current, courier)
+                        if earned is not None:
+                            cid, service = earned
+                            append(DomainEvent("CourierBakeryDeferredFoodPaid", None,
+                                "local owned surplus after a later genuine bakery batch "
+                                "for a prior authenticated grain delivery",
+                                current.time, {"id": cid, "courier_id": courier,
+                                               "service_deliveries": service,
+                                               "amount": 1}),
+                                supply_capability=True, production_capability=True)
                     for _ in range(2):
                         # One authoritative manifest for both policy and
                         # reducer. A signed grain/bread farm-return leg can
@@ -605,18 +623,6 @@ class LivingWorldEngine:
                                                "service_deliveries": service_number,
                                                "proof": "prior_market_service"}),
                                 supply_capability=True)
-                    if self.deferred_bakery_grain_wage_enabled:
-                        from .deferred_bakery_payroll import choose_deferred_bakery_payment
-                        earned = choose_deferred_bakery_payment(current, courier)
-                        if earned is not None:
-                            cid, service = earned
-                            append(DomainEvent("CourierBakeryDeferredFoodPaid", None,
-                                "local owned surplus after a later genuine bakery batch "
-                                "for a prior authenticated grain delivery",
-                                current.time, {"id": cid, "courier_id": courier,
-                                               "service_deliveries": service,
-                                               "amount": 1}),
-                                supply_capability=True, production_capability=True)
                     # A documented grain worker may wait ON SITE for up to
                     # one real simulated hour while a bakery completes later
                     # bread; no opening-loaf escrow or route teleport.

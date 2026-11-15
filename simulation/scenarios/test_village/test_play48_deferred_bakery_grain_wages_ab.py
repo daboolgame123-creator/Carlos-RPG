@@ -26,7 +26,7 @@ def seed(path, *, deferred):
                  **({"deferred_bakery_grain": True} if deferred else {})})],
             bootstrap=True)
         assert db.verify(WORLD).to_dict() == original.to_dict()
-    assert (original.schema_version,original.rules_version) == (45,66)
+    assert (original.schema_version,original.rules_version) == (45,67)
     assert len(original.npcs) == 13
     assert original.resources["bakery"]["food"] == 1
     assert audit_npc_economy(original)["copper_known_total"] == 12

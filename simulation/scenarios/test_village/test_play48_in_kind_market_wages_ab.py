@@ -31,7 +31,7 @@ def seeded(path: Path, *, contract: bool):
                     0, {"site_id": "market", "keeper_id": "salma",
                         "sales_per_wage": 2})], bootstrap=True)
             assert db.verify(WORLD).to_dict() == state.to_dict()
-    assert (state.schema_version, state.rules_version) == (45, 66)
+    assert (state.schema_version, state.rules_version) == (45, 67)
     assert len(state.npcs) == 13
     assert audit_npc_economy(state)["copper_known_total"] == 12
     conserve_diverse(state)
