@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 45
-RULES_VERSION = 63
+RULES_VERSION = 64
 
 
 def _thaw(value: Any) -> Any:
@@ -483,6 +483,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "MarketStallConfigured":
         from .market import configure_market_stall
         configure_market_stall(d, e, bootstrap=bootstrap)
+    elif kind == "MarketStewardFoodContractSigned":
+        from .steward_food_payroll import sign_steward_food_contract
+        sign_steward_food_contract(d, e, bootstrap=bootstrap)
+    elif kind == "MarketStewardFoodWagePaid":
+        from .steward_food_payroll import pay_steward_food_wage
+        pay_steward_food_wage(d, e, market_authorized=market_authorized)
     elif kind == "MarketOfferPosted":
         from .market import post_offer
         post_offer(d, e, market_authorized=market_authorized)
