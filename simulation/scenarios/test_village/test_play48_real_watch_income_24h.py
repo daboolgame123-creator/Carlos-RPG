@@ -59,7 +59,7 @@ def seed(path):
                              "activity_hunger_percent": 20}),
             ], bootstrap=True,
         )
-        assert (current.schema_version, current.rules_version) == (45, 64)
+        assert (current.schema_version, current.rules_version) == (45, 65)
         assert len(current.npcs) == 13
         assert audit_npc_economy(current)["copper_known_total"] == 12
         assert current.resources["watch_post"]["coin_copper"] == 2

@@ -389,6 +389,10 @@ class SQLiteEventStore:
                             or source.data.get("resource") != "food"
                             or source.time != wage.time):
                         raise InvalidEvent("food wage must immediately follow its physical market delivery")
+        if any(e.event_type == "CourierBakeryDeferredFoodPaid" for e in events):
+            if (bootstrap or not supply_authorized or not production_authorized
+                    or world_id not in self._active_worlds):
+                raise InvalidEvent("deferred bakery food payroll needs active supply and production authorities")
         if any(e.event_type in ("SupplyCargoPicked", "SupplyCargoDelivered") for e in events):
             if not supply_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("cargo needs active trusted physical supply capability")

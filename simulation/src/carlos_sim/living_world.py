@@ -95,7 +95,8 @@ class LivingWorldEngine:
                  food_peddler_enabled: bool = False,
                  food_peddler_self_meal_reserve_enabled: bool = False,
                  finite_aquifer_pumping_enabled: bool = False,
-                 merchant_food_wage_enabled: bool = False):
+                 merchant_food_wage_enabled: bool = False,
+                 deferred_bakery_grain_wage_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -174,6 +175,12 @@ class LivingWorldEngine:
                     economic_enabled and consumption_enabled))):
             raise ValueError("steward food wages require real economy and consumption")
         self.merchant_food_wage_enabled = merchant_food_wage_enabled
+        if (type(deferred_bakery_grain_wage_enabled) is not bool
+                or (deferred_bakery_grain_wage_enabled and not (
+                    supply_enabled and consumption_enabled
+                    and economic_enabled and agriculture_enabled))):
+            raise ValueError("deferred bakery payroll requires real physical production, consumption and supply")
+        self.deferred_bakery_grain_wage_enabled = deferred_bakery_grain_wage_enabled
         if (type(food_for_work_enabled) is not bool
                 or (food_for_work_enabled and not (
                     economic_enabled and consumption_enabled and survival_enabled))):
@@ -598,6 +605,18 @@ class LivingWorldEngine:
                                                "service_deliveries": service_number,
                                                "proof": "prior_market_service"}),
                                 supply_capability=True)
+                    if self.deferred_bakery_grain_wage_enabled:
+                        from .deferred_bakery_payroll import choose_deferred_bakery_payment
+                        earned = choose_deferred_bakery_payment(current, courier)
+                        if earned is not None:
+                            cid, service = earned
+                            append(DomainEvent("CourierBakeryDeferredFoodPaid", None,
+                                "local owned surplus after a later genuine bakery batch "
+                                "for a prior authenticated grain delivery",
+                                current.time, {"id": cid, "courier_id": courier,
+                                               "service_deliveries": service,
+                                               "amount": 1}),
+                                supply_capability=True, production_capability=True)
                     # Survey only the currently visible adjacent roads
                     # BEFORE selecting the next leg. Otherwise an existing
                     # navigation profile blocks discovery of the next road.

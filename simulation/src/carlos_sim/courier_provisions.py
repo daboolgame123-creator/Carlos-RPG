@@ -35,6 +35,8 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
                 {"id", "courier_id", "payer_site", "units"},
                 {"id", "courier_id", "payer_site", "units",
                  "authorized_total_units"},
+                {"id", "courier_id", "payer_site", "units",
+                 "authorized_total_units", "deferred_bakery_grain"},
             )
             or not _id(p["id"]) or not _id(p["courier_id"])
             or p["id"] in state["courier_provisions"]
@@ -45,8 +47,12 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
                     p["courier_id"], {}).get("stops", ["", ""])[1])
             or type(p["units"]) is not int
             or not 0 <= p["units"] <= MAX_UNIT
+            or ("deferred_bakery_grain" in p and (
+                p["deferred_bakery_grain"] is not True
+                or p["payer_site"] != "bakery" or p["units"] != 0))
             or (p["units"] == 0 and (
-                p["payer_site"] != "market"
+                (p["payer_site"] != "market"
+                 and not p.get("deferred_bakery_grain", False))
                 or "authorized_total_units" not in p))):
         raise ValueError("provision requires unique funded time-zero contract")
     # Explicit, owner-authorized future wage ceiling at trusted signing.
@@ -55,7 +61,8 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
     maximum = p.get("authorized_total_units", p["units"])
     if (type(maximum) is not int or not p["units"] <= maximum <= MAX_UNIT
             or (p["units"] == 0 and maximum < 1)
-            or (maximum > p["units"] and p["payer_site"] == "bakery")):
+            or (maximum > p["units"] and p["payer_site"] == "bakery"
+                and not p.get("deferred_bakery_grain", False))):
         raise ValueError("future payroll needs a signed market or physical farm employer")
     who = p["courier_id"]
     if (who not in state["supply_circuits"]
@@ -88,6 +95,8 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
         "total_units": p["units"], "remaining": p["units"],
         "authorized_total_units": maximum,
         "created_at": state["time"], "payments": [],
+        **({"deferred_grain_services": []}
+           if p.get("deferred_bakery_grain", False) else {}),
     }
 
 
@@ -369,9 +378,13 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
     worker_ids: set[str] = set()
     for ident, c in contracts.items():
         if (not _id(ident) or type(c) is not dict
-                or set(c) != {"courier_id", "payer_site", "total_units",
-                              "remaining", "authorized_total_units",
-                              "created_at", "payments"}
+                or set(c) not in (
+                    {"courier_id", "payer_site", "total_units",
+                     "remaining", "authorized_total_units",
+                     "created_at", "payments"},
+                    {"courier_id", "payer_site", "total_units",
+                     "remaining", "authorized_total_units",
+                     "created_at", "payments", "deferred_grain_services"})
                 or c["payer_site"] not in (
                     "market", "bakery",
                     state["supply_circuits"].get(c["courier_id"], {})
@@ -385,19 +398,24 @@ def validate_courier_provisions(state: dict[str, Any]) -> None:
                 or type(c["total_units"]) is not int
                 or not 0 <= c["total_units"] <= MAX_UNIT
                 or (c["total_units"] == 0
-                    and (c["payer_site"] != "market"
+                    and ((c["payer_site"] != "market"
+                          and "deferred_grain_services" not in c)
                          or c["authorized_total_units"] < 1
                          or c["remaining"] != 0 or c["payments"]))
                 or type(c["authorized_total_units"]) is not int
                 or not c["total_units"] <= c["authorized_total_units"] <= MAX_UNIT
                 or (c["authorized_total_units"] > c["total_units"]
-                    and c["payer_site"] == "bakery")
+                    and c["payer_site"] == "bakery"
+                    and "deferred_grain_services" not in c)
                 or type(c["remaining"]) is not int
                 or not 0 <= c["remaining"] <= c["total_units"]
                 or c["created_at"] != 0
                 or type(c["payments"]) is not list
                 or len(c["payments"]) != c["total_units"] - c["remaining"]):
             raise ValueError("invalid funded service contract ledger")
+        if "deferred_grain_services" in c:
+            from .deferred_bakery_payroll import validate_deferred_grain_ledger
+            validate_deferred_grain_ledger(state, c)
         worker_ids.add(c["courier_id"])
         seen: set[int] = set()
         for row in c["payments"]:

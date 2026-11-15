@@ -306,6 +306,11 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
             record["bread_share_delivered"] += 1
         record["carry"] = None
         record["deliveries"] += 1
+        # The delivered grain is authoritative physical employment proof.
+        # Do NOT pay or reserve food until a later authentic bakery batch.
+        if current == "bakery" and resource == "grain" and record["index"] == 2:
+            from .deferred_bakery_payroll import register_local_grain_service
+            register_local_grain_service(state, who)
     else:
         raise ValueError("unrecognized supply cargo event")
 
