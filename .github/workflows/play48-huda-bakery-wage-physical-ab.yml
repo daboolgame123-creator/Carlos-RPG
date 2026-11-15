@@ -1,0 +1,32 @@
+name: PLAY48 original Huda bakery-funded genuine grain-service wage AB
+on:
+  push:
+    branches:
+      - experiment/play48-huda-physical-bakery-paid-grain-20261115
+    paths:
+      - ".github/workflows/play48-huda-bakery-wage-physical-ab.yml"
+      - "simulation/scenarios/test_village/test_play48_huda_bakery_grain_wage_ab.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  huda-real-bakery-wage-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Test zero-minted 13-resident original bakery wage vs market contract at 6-48h
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_huda_bakery_grain_wage_ab.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_huda_bakery_grain_wage_ab.py
