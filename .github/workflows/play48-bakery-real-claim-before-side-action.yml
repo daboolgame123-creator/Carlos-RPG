@@ -1,0 +1,54 @@
+name: PLAY48 true earned bakery bread before new generic NPC action and outgoing cargo
+on:
+  push:
+    branches:
+      - experiment/play48-bakery-paid-before-npc-side-action-20261116
+    paths:
+      - ".github/workflows/play48-bakery-real-claim-before-side-action.yml"
+      - "simulation/src/carlos_sim/**"
+      - "simulation/scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py"
+      - "simulation/scenarios/test_village/test_play48_in_kind_market_wages_ab.py"
+      - "simulation/scenarios/test_village/test_play48_real_watch_income_24h.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  forged-claim-rejected:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Compile and verify signed physical wage security before world run
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py -k no_payment
+  hard-real-13npc-economic-ab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Genuine original 13NPC 48h actual wages meals bakery sales delivery hard acceptance
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py -k original_13npc

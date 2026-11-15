@@ -1243,6 +1243,29 @@ class LivingWorldEngine:
                     break  # Focused economic endurance, not full village life.
                 if npc_id in busy:
                     continue
+                if self.deferred_bakery_grain_wage_enabled:
+                    # The worker physically delivered grain, has a signed
+                    # bounded claim, and is at the actual paying bakery.
+                    # A short *unstarted* generic NPC action (180 seconds)
+                    # would block her real earned bread finished 90 seconds
+                    # later, letting the courier planner convert her wage
+                    # into outgoing market cargo. This is a narrow
+                    # wage-collection appointment, not hunger immunity:
+                    # never suppress an already-running task, severe
+                    # hunger>=90, fatigue>=70, danger>=75 or an injury
+                    # requiring rest. All source and stock checks remain
+                    # canonical in the payment reducer.
+                    from .npc import _injury_rest_decision
+                    needs = current.npcs[npc_id]["needs"]
+                    if (needs["hunger"] < 90
+                            and needs["fatigue"] < 70
+                            and needs["safety"] < 75
+                            and _injury_rest_decision(
+                                current.injuries, npc_id) is None):
+                        from .deferred_bakery_payroll import courier_waits_for_due_bakery_food
+                        if courier_waits_for_due_bakery_food(current, npc_id):
+                            busy.add(npc_id)
+                            continue
                 existing = current.npcs[npc_id]['last_decision']
                 pending_action = existing is not None and existing['at'] == current.time
                 if (self.professional_full_life_enabled and not pending_action
