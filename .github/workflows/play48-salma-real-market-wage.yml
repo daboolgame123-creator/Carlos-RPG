@@ -1,0 +1,32 @@
+name: PLAY48 market keeper existing signed genuine sale wages and original day3 famine
+on:
+  push:
+    branches:
+      - experiment/play48-market-salma-real-sale-funded-wage-20261116
+    paths:
+      - ".github/workflows/play48-salma-real-market-wage.yml"
+      - "simulation/scenarios/test_village/test_play48_steward_existing_wage_with_huda.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  physical-market-steward-earns-real-food:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Actual 13NPC market sales signed salary food provenance and h60 living village
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_steward_existing_wage_with_huda.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_steward_existing_wage_with_huda.py
