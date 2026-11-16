@@ -16,6 +16,10 @@ from test_play48_deferred_bakery_grain_wages_ab import seed, report
 from test_play48_real_watch_income_24h import engine as original_engine, HOUR
 from test_play48_finite_hunt_fish_roads import conserve_diverse
 from test_play38_multi_farm_couriers import WORLD
+from carlos_sim.economic_autonomy import choose_local_production
+from carlos_sim.supply import choose_cargo_manifest, choose_courier_leg
+from carlos_sim.food_for_work import _available_site_food
+from carlos_sim.routines import routine_allows_work
 
 HOURS=(24,36,48,60,72,84,96)
 
@@ -63,6 +67,75 @@ def test_authentic_13npc_still_produces_and_eats_on_days_three_and_four(tmp_path
                     j["status"]=="completed" and j["site_id"]=="bakery"
                     for j in world.production_jobs.values())
                 stats["water_ledger"]=audit["stock_known_by_resource"].get("water")
+                # Root-cause snapshots only; real autonomous policies and
+                # unmodified reducer still make every decision. The selector
+                # answers below do not change any stock or NPC state.
+                stats["physical_owner_inventory"]={
+                    site:{
+                        resource:amount for resource,amount
+                        in sorted(world.resources.get(site,{}).items())
+                        if resource in ("food","grain","water","seed",
+                                        "crop_ready","coin_copper")
+                    }
+                    for site in sorted(world.resources)
+                    if site not in world.npcs
+                    and any(k in world.resources[site] for k in
+                            ("food","grain","water","seed","crop_ready"))
+                }
+                stats["owned_food_and_cash_by_person"]={
+                    who:{
+                        "food":world.resources.get(who,{}).get("food"),
+                        "copper":world.resources.get(who,{}).get("coin_copper"),
+                        "site":world.entities[who]["location_id"],
+                        "role":n["role"],
+                        "hunger":n["needs"]["hunger"],
+                        "fatigue":n["needs"]["fatigue"],
+                        "safety":n["needs"]["safety"],
+                        "routine_on_shift":routine_allows_work(world,who),
+                        "production_possible_now":choose_local_production(
+                            world,who,agriculture_enabled=True) is not None,
+                        "active_action":sum(
+                            row["npc_id"]==who and row["status"]=="running"
+                            for row in world.actions.values()),
+                        "active_production":sum(
+                            row["npc_id"]==who and row["status"]=="running"
+                            for row in world.production_jobs.values()),
+                        "traveling":sum(
+                            row["npc_id"]==who and row["status"]=="traveling"
+                            for row in world.travels.values()),
+                    }
+                    for who,n in sorted(world.npcs.items())
+                }
+                stats["courier_actual_obstacles"]={
+                    who:{
+                        "hunger":world.npcs[who]["needs"]["hunger"],
+                        "fatigue":world.npcs[who]["needs"]["fatigue"],
+                        "index":world.supply_circuits[who]["index"],
+                        "site":world.entities[who]["location_id"],
+                        "carry":(dict(world.supply_circuits[who]["carry"])
+                                 if world.supply_circuits[who]["carry"] is not None else None),
+                        "next_departure":world.supply_circuits[who]["next_departure"],
+                        "physically_loadable_now":str(choose_cargo_manifest(world,who)),
+                        "road_travel_possible_now":str(choose_courier_leg(world,who)),
+                    } for who in ("hana","huda")
+                }
+                stats["bakery_open_food_quotes"]=sum(
+                    row["remaining"] for row in world.market_offers.values()
+                    if row["status"]=="open" and row["resource"]=="food"
+                    and row["stock_owner_id"]=="bakery")
+                stats["bakery_uncommitted_food"]=_available_site_food(world,"bakery")
+                stats["bakery_grain_to_bread_completed"]={
+                    recipe_id:sum(
+                        job["status"]=="completed"
+                        for job in world.production_jobs.values()
+                        if job["recipe_id"]==recipe_id)
+                    for recipe_id,recipe in sorted(world.production_recipes.items())
+                    if recipe["site_id"]=="bakery"
+                    and recipe["output_resource"]=="food"
+                }
+                stats["bakery_food_jobs_waiting"]=sum(
+                    job["status"]=="running" and job["site_id"]=="bakery"
+                    for job in world.production_jobs.values())
                 seen[hour]=stats
                 print("PLAY48_GENUINE_96H_ENDURANCE "+
                       json.dumps(stats,sort_keys=True),flush=True)
