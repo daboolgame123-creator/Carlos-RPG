@@ -1,0 +1,54 @@
+name: PLAY48 genuine prior meal finite 72h courier endurance and 96h economics
+on:
+  push:
+    branches:
+      - experiment/play48-real-meal-three-day-courier-endurance-20261116
+    paths:
+      - ".github/workflows/play48-real-meal-courier-endurance.yml"
+      - "simulation/src/carlos_sim/supply.py"
+      - "simulation/src/carlos_sim/domain.py"
+      - "simulation/scenarios/test_village/test_play48_genuine_meal_courier_endurance.py"
+      - "simulation/scenarios/test_village/test_play48_huda_96h_endurance.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-nutrition-and-anti-bypass:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Bounded real meal physiology and unauthorized work wage rejected
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_genuine_meal_courier_endurance.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_genuine_meal_courier_endurance.py scenarios/test_village/test_play48_deferred_bakery_grain_wages_ab.py -k 'genuine_meal or no_payment'
+  original-96h-economic-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: True original 13NPC 12-copper 96h survival production freight and SQLite replay
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_huda_96h_endurance.py
