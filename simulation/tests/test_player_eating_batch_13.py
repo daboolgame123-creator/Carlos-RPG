@@ -29,7 +29,8 @@ def harvest(db, gateway, cid="forage"):
 
 
 def test_rule_version_and_no_implicit_nutrition():
-    assert SCHEMA_VERSION == 45 and RULES_VERSION == 63
+    from release_contract import assert_current_version
+    assert_current_version(SCHEMA_VERSION, RULES_VERSION)
 
 
 def test_earned_food_eaten_once_and_replay_exact(tmp_path):

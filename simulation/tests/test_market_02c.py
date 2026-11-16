@@ -121,7 +121,8 @@ def _buy(db, market, *, who="salma", ident="buy-once", listing="bread-quote",
 
 
 def test_opt_in_empty_market_and_schema(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 63)
+    from release_contract import assert_current_version
+    assert_current_version(SCHEMA_VERSION, RULES_VERSION)
     with SQLiteEventStore(tmp_path / "off.sqlite") as db:
         prepare(db, market=False)
         clock = TimeEngine(db)

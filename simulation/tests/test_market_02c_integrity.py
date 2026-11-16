@@ -32,7 +32,8 @@ def test_snapshot_reopen_and_isolated_backup_preserves_real_bakery_market(tmp_pa
         assert db.verify("village").to_dict() == before
         bundle = tmp_path / "bundle"
         manifest = create_backup_bundle(db, "village", bundle, code_commit=BASE_SHA)
-        assert (manifest["schema"], manifest["rules"]) == (45, 63)
+        from release_contract import assert_current_version
+        assert_current_version(manifest["schema"], manifest["rules"])
         assert verify_backup_bundle(bundle) == manifest
     target = tmp_path / "restore.sqlite"
     restore_backup_bundle(bundle, target)

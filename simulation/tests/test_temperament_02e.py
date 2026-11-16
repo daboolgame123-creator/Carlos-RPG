@@ -71,7 +71,8 @@ def decide(db, clock, who, ident):
 
 
 def test_schema_and_default_off_is_exact_legacy_choice(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 63)  # current player-foraging schema/rules
+    from release_contract import assert_current_version
+    assert_current_version(SCHEMA_VERSION, RULES_VERSION)
     with SQLiteEventStore(tmp_path / "off.sqlite") as db:
         setup(db, configured=False, members=("basim", "nora"))
         clock = TimeEngine(db)

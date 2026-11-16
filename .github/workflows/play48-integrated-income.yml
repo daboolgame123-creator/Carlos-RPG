@@ -1,0 +1,52 @@
+name: PLAY48 integrated original-village income acceptance
+on:
+  push:
+    branches: [integration/play48-sustainable-income-20261116]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  integrity:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Ownership, wages, authentic frozen save compatibility
+        working-directory: simulation
+        run: python -m pytest -q tests/test_play48_integrated_income.py tests/test_play48_frozen_save_contract.py tests/test_play48x_version_transition_gate.py tests/test_knowledge_compatibility.py
+  original-village:
+    needs: integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Gated 24 48 60 72 96 168h same-resource A/B
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_integrated_acceptance.py --directory evidence --hours 168
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-income-${{ matrix.python }}-${{ github.sha }}
+          path: simulation/evidence/

@@ -36,7 +36,8 @@ def tell(db, svc, sender, receiver, original="original", parent=None, ident="r1"
 def test_genuine_player_utterance_becomes_uncertain_local_rumor(tmp_path):
     db, clock, service = world(tmp_path)
     try:
-        assert (SCHEMA_VERSION, RULES_VERSION) == (45, 63)
+        from release_contract import assert_current_version
+        assert_current_version(SCHEMA_VERSION, RULES_VERSION)
         speak(db, clock)
         step(db, clock)
         result = tell(db, service, "basim", "nora")

@@ -1,5 +1,11 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
+## إعادة فتح PLAY48 بأمر المالك — 2026-11-16
+
+`PLAY48-INCOME-INTEGRATION | إصلاح الدخل والأكل والنقل المترابط | PR133/134/135 | CHAT_EXECUTABLE | IN_PROGRESS | Windows + GitHub Actions | base 1e04e84 | انتظار A/B وCI النهائي | إصلاح أول بوابة فاشلة ثم 96/168h`.
+التفاصيل: [التقرير التكاملـي](PLAY48_INTEGRATED_INCOME_2026-11-16.md).
+هذا القرار أحدث من إنهاء الدورة أدناه؛ النتيجة الحالية `PLAY48_NO_GO` حتى الإثبات.
+
 ## PLAY-48 — final execution termination decision (2026-11-11)
 
 **Latest authoritative status: `PLAY48_EXECUTION_ENDED / PLAY48_ACCEPTANCE_FAILED / RELEASE_NO_GO`**. Bounded production and real bakery→farm transport features are **verified complete**; phase-wide 13-NPC multi-day economic recovery is **failed**. The old historical OPEN/PENDING lines below are archival and superseded by this terminal decision, **not** authorization to close the phase as technically passed. No more PLAY48 iterations unless a new owner decision explicitly reopens or changes this blocked scope.

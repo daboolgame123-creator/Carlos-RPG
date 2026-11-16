@@ -96,7 +96,8 @@ class LivingWorldEngine:
                  food_peddler_self_meal_reserve_enabled: bool = False,
                  finite_aquifer_pumping_enabled: bool = False,
                  merchant_food_wage_enabled: bool = False,
-                 deferred_bakery_grain_wage_enabled: bool = False):
+                 deferred_bakery_grain_wage_enabled: bool = False,
+                 integrated_livelihoods_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -104,6 +105,12 @@ class LivingWorldEngine:
         if type(decision_cooldown) is not int or decision_cooldown < MIN_DECISION_COOLDOWN:
             raise ValueError('decision_cooldown must be at least 60 simulation seconds')
         self.store = store
+        if (type(integrated_livelihoods_enabled) is not bool
+                or (integrated_livelihoods_enabled and not (
+                    economic_enabled and consumption_enabled and survival_enabled
+                    and supply_enabled and professional_full_life_enabled))):
+            raise ValueError("integrated livelihoods require full physical economy and needs")
+        self.integrated_livelihoods_enabled = integrated_livelihoods_enabled
         self.clock = clock
         self.max_events_per_advance = max_events_per_advance
         if type(navigation_enabled) is not bool:
@@ -469,10 +476,46 @@ class LivingWorldEngine:
                         if t['status'] == 'traveling')
             busy.update(j['npc_id'] for j in current.production_jobs.values()
                         if j['status'] == 'running')
+            def eat_owned_food(npc_id):
+                nonlocal recorded_player_sighting
+                quantity = choose_food_consumption(current, npc_id)
+                if quantity is None:
+                    return
+                if player_observer_id is not None:
+                    from .movement import _in_transit, _visible
+                    raw = current.to_dict()
+                    place = raw['entities'][player_observer_id]['location_id']
+                    if (not _in_transit(raw, player_observer_id)
+                            and not _in_transit(raw, npc_id)
+                            and place == raw['entities'][npc_id]['location_id']):
+                        append(DomainEvent('PlayerObserved', player_observer_id,
+                            'player witnessed a nearby NPC eating', current.time,
+                            {'location_id': place, 'occupants': _visible(raw, place)}),
+                            movement_capability=True)
+                        recorded_player_sighting = True
+                meal_id = _meal_id(npc_id, current.time)
+                append(DomainEvent('NPCFoodConsumed', npc_id,
+                    'NPC ate owned food before a new optional commitment', current.time,
+                    {'id': meal_id, 'npc_id': npc_id, 'quantity': quantity}),
+                    consumption_capability=True)
+                meals_consumed.append(meal_id)
+
+            if self.integrated_livelihoods_enabled:
+                for npc_id in sorted(current.npcs):
+                    eat_owned_food(npc_id)
             if self.supply_enabled:
                 # A courier may transfer exactly one local unit at an authentic
                 # stop and then traverse a physically configured adjacent road.
                 for courier in sorted(current.supply_circuits):
+                    if self.integrated_livelihoods_enabled:
+                        from .freight_payroll import choose_payment
+                        earned = choose_payment(current, courier)
+                        if earned is not None:
+                            append(DomainEvent('RecurringFreightWagePaid', None,
+                                'local food for independently recorded physical freight',
+                                current.time, {'courier_id': courier, 'delivery': earned}),
+                                supply_capability=True)
+                            eat_owned_food(courier)
                     # At this REAL worksite settle a proved worker wage
                     # BEFORE reserving the next market-bound food parcel.
                     # This is not salary priority over any *posted* customer
@@ -601,6 +644,15 @@ class LivingWorldEngine:
                     # when the trusted contract was signed. The reducer
                     # verifies active circuit, local physical presence,
                     # recorded service count and distinct paid receipt.
+                    if self.integrated_livelihoods_enabled:
+                        from .freight_payroll import choose_payment
+                        earned = choose_payment(current, courier)
+                        if earned is not None:
+                            append(DomainEvent('RecurringFreightWagePaid', None,
+                                'local earned freight wage after genuine delivery',
+                                current.time, {'courier_id': courier, 'delivery': earned}),
+                                supply_capability=True)
+                        eat_owned_food(courier)
                     if self.early_courier_food_wage_enabled:
                         from .courier_provisions import choose_courier_provision
                         eligible = choose_courier_provision(current, courier)
@@ -635,6 +687,11 @@ class LivingWorldEngine:
                     # Survey only the currently visible adjacent roads
                     # BEFORE selecting the next leg. Otherwise an existing
                     # navigation profile blocks discovery of the next road.
+                    if self.integrated_livelihoods_enabled:
+                        from .freight_payroll import waits_for_local_payment
+                        if waits_for_local_payment(current, courier):
+                            busy.add(courier)
+                            continue
                     if needs_survey(current, courier):
                         append(DomainEvent("NPCNavigationSurveyed", courier,
                             "courier learns locally adjacent professional road",
@@ -719,6 +776,8 @@ class LivingWorldEngine:
                 # capabilities as explicit local production and market commands.
                 # Each pass sees only state already changed by previous events.
                 for worker_id in sorted(current.npcs):
+                    if self.integrated_livelihoods_enabled:
+                        eat_owned_food(worker_id)
                     if self._professional_life_emergency(current, worker_id):
                         continue
                     intent = choose_local_production(
@@ -1079,6 +1138,9 @@ class LivingWorldEngine:
                 # pass neither reads a distant quote nor reserves food.
                 repeat_errands = self.professional_full_life_enabled
                 for shopper_id in sorted(current.npcs):
+                    if (self.integrated_livelihoods_enabled
+                            and current.npcs[shopper_id]['needs']['fatigue'] >= 70):
+                        continue  # Rest before optional shopping, as for freight/work.
                     if (self.professional_full_life_enabled and
                             _injury_rest_decision(current.injuries, shopper_id) is not None):
                         continue
@@ -1457,6 +1519,14 @@ class LivingWorldEngine:
                 resume = next_courier_departure(current)
                 if resume is not None:
                     next_ticks.append(resume)
+                if self.integrated_livelihoods_enabled:
+                    for circuit in current.supply_circuits.values():
+                        contract = circuit.get('food_payroll')
+                        if contract and contract['receipts']:
+                            receipt = contract['receipts'][-1]
+                            expiry = receipt['delivered_at'] + 3600
+                            if receipt['payment'] is None and expiry > current.time:
+                                next_ticks.append(expiry)
             if self.routines_enabled or self.agriculture_enabled:
                 next_boundary = next_routine_boundary(current)
                 if next_boundary is not None:

@@ -66,6 +66,7 @@ def configure_provision(state: dict[str, Any], event: DomainEvent, *,
         raise ValueError("future payroll needs a signed market or physical farm employer")
     who = p["courier_id"]
     if (who not in state["supply_circuits"]
+            or "food_payroll" in state["supply_circuits"].get(who, {})
             or who not in state["npcs"]
             or state["npcs"][who]["role"] != "courier"
             or "market" not in state["market_stalls"]

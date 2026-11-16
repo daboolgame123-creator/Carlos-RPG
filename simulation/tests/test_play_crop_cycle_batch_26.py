@@ -42,7 +42,8 @@ def test_seed_to_real_planting_job_then_exact_day_growth(tmp_path):
     db, clock, engine = begin(tmp_path / "first.sqlite")
     try:
         initial = db.load(WORLD)
-        assert initial.schema_version == 45 and initial.rules_version == 63
+        from release_contract import assert_current_version
+        assert_current_version(initial.schema_version, initial.rules_version)
         assert initial.resources["square"]["crop_ready"] == 0
         assert initial.resources["square"]["grain"] == 0
         assert choose_local_production(initial, "nora", agriculture_enabled=True).recipe_id == "seed-planting"

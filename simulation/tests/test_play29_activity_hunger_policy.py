@@ -40,7 +40,8 @@ def test_real_work_charge_preserves_time_tool_and_fatigue(tmp_path, rate, cost, 
         clock, initial = make_world(db, rate=rate, cost=cost)
         result = advance_real_action(db, clock)
         assert result.time == 180
-        assert result.schema_version == 45 and result.rules_version == 63
+        from release_contract import assert_current_version
+        assert_current_version(result.schema_version, result.rules_version)
         assert result.npcs["nora"]["needs"]["hunger"] == expected
         assert result.npcs["nora"]["needs"]["fatigue"] == 20
         assert result.resources["nora"]["labor_units"] == 1
