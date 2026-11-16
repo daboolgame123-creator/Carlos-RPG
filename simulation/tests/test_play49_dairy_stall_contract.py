@@ -62,7 +62,7 @@ def produce(db, clock):
         WORLD, "cheese_maker", "milk-to-cheese", "cheese-batch", expected_revision=_rev(db))
     harvest(db, clock)  # original orchard fruit + bakery at 90/120 seconds
     s = db.load(WORLD)
-    assert s.time == 120 and s.resources["dairy"]["milk"] == 0
+    assert s.time == 120 and s.resources["dairy"]["milk"] == s.production_jobs["cheese-batch"]["input_after"]
     clock.advance(WORLD, seconds=60, command_id="dairy:complete180", expected_revision=_rev(db))
     s = db.load(WORLD)
     assert s.time == 180 and s.production_jobs["cheese-batch"]["status"] == "completed"

@@ -74,7 +74,7 @@ def harvest(db, clock):
     s = db.load(WORLD)
     assert s.time == 120
     assert s.production_jobs["fruit-batch"]["status"] == "completed"
-    assert s.resources["orchard"]["fruit_ready"] == 0
+    assert s.resources["orchard"]["fruit_ready"] == s.production_jobs["fruit-batch"]["input_after"]
     assert s.resources["orchard"]["fruit"] == 1
     return s
 

@@ -227,9 +227,13 @@ def test_site_cannot_purchase_without_cash_even_with_true_local_seller(village):
     db, clock, market = village
     # The actual first production seller is on-site; tavern treasury is ZERO
     # until a real customer pays for cooked food.
-    source_and_buy_for_cook(db, clock, market)
+    from test_play49_tavern_trade_provenance import source_goods, post_tavern
+    source_goods(db, clock, market)
+    walk(db, clock, "huda", "dairy-tavern", "huda-puts-real-fruit-on-sale", 60)
+    post_tavern(db, market)
     before = db.load(WORLD)
     assert before.resources["tavern"]["coin_copper"] == 0
+    assert before.resources["huda"]["fruit"] == 1
     with pytest.raises(InvalidEvent):
         market.buy_for_site(WORLD, "tavern_host", "tavern",
                             "no-minted-funding", "tavern-fruit-quote",
