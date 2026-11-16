@@ -116,3 +116,89 @@ def test_existing_history_cannot_be_changed_to_fake_service(village):
     db.db.execute('UPDATE events SET payload=? WHERE seq=?', (json.dumps(event), seq))
     with pytest.raises(IntegrityError, match='hash mismatch'):
         db.verify(WORLD)
+
+
+def freight_fixture(path, *, bread=1, fatigue=0, hunger=65, period=1800):
+    """Small boundary fixture; deliberately separate from 13-person acceptance."""
+    db = SQLiteEventStore(path)
+    s = db.create_world('freight')
+    events = []
+    def add(kind, data):
+        events.append(DomainEvent(kind, None, 'isolated payroll boundary setup', 0, data))
+    for site in ('well', 'farm', 'bakery', 'market'):
+        add('LocationCreated', {'id': site, 'name': site})
+    for rid, a, b in (('wf', 'well', 'farm'), ('fb', 'farm', 'bakery'), ('bm', 'bakery', 'market')):
+        add('RouteCreated', {'id': rid, 'a': a, 'b': b, 'seconds': 30})
+    for who, site, role in (('huda', 'well', 'courier'), ('salma', 'market', 'merchant')):
+        add('EntityCreated', {'id': who, 'name': who, 'location_id': site, 'controller': 'npc'})
+        add('NPCConfigured', {'npc_id': who, 'role': role,
+                             'needs': {'hunger': hunger if who == 'huda' else 10,
+                                       'fatigue': fatigue if who == 'huda' else 0, 'safety': 0},
+                             'goals': {'earn': 10, 'survive': 30, 'explore': 10}})
+    add('EntityCreated', {'id': 'carlos', 'name': 'Carlos', 'location_id': 'bakery', 'controller': 'player'})
+    for owner in ('well', 'farm', 'bakery', 'market', 'huda', 'salma'):
+        for resource in ('water', 'grain', 'food', 'coin_copper', 'labor_units', 'investigation_attempts'):
+            quantity = bread if (owner, resource) == ('bakery', 'food') else 2 if (owner, resource) == ('farm', 'grain') else 0
+            add('ResourceChanged', {'owner_id': owner, 'resource': resource,
+                                   'previous': None, 'current': quantity, 'source': 'initialization'})
+    add('MarketStallConfigured', {'site_id': 'market', 'keeper_id': 'salma'})
+    add('SupplyCircuitConfigured', {'courier_id': 'huda',
+                                   'stops': ['well', 'farm', 'bakery', 'market', 'bakery', 'farm', 'well'],
+                                   'route_ids': ['wf', 'fb', 'bm', 'bm', 'fb', 'wf'], 'period_seconds': period})
+    add('RecurringFreightWageSigned', {'courier_id': 'huda', 'site_id': 'bakery',
+                                     'resource': 'grain', 'interval_seconds': 43200})
+    add('MetabolismPolicyConfigured', {'hunger_seconds_per_point': 3600, 'activity_hunger_percent': 20})
+    s = db.append('freight', 'setup', s.revision, events, bootstrap=True)
+    clock = TimeEngine(db)
+    clock.open_session('freight')
+    sim = engine(db, clock)
+    sim.integrated_livelihoods_enabled = True
+    return db, clock, sim, s
+
+
+def test_bakery_arrival_pays_before_loading_only_loaf_and_player_sees_owned_meal(tmp_path):
+    db, clock, sim, s = freight_fixture(tmp_path / 'one-loaf.sqlite')
+    with db:
+        s = sim.advance('freight', seconds=60, command_id='player-wait:arrival',
+                        expected_revision=s.revision, player_observer_id='carlos').state
+        q = s.supply_circuits['huda']['food_payroll']['receipts'][0]
+        assert q['payment'] is not None
+        assert s.resources['bakery']['food'] == 0
+        assert s.resources['huda']['food'] == 0
+        assert s.npcs['huda']['needs']['hunger'] == 40
+        events = [json.loads(row[0]) for row in db.db.execute('SELECT payload FROM events ORDER BY seq')]
+        meal = next(i for i, e in enumerate(events) if e['event_type'] == 'NPCFoodConsumed')
+        assert events[meal - 1]['event_type'] == 'PlayerObserved'
+        assert events[meal - 1]['actor_id'] == 'carlos'
+        assert db.verify('freight').to_dict() == s.to_dict()
+        clock.close_session('freight')
+
+
+def test_unpaid_wait_wakes_at_fatigue_boundary_independent_of_partition(tmp_path):
+    states = []
+    for arm, parts in (('whole', (1800,)), ('split', (600, 1200))):
+        db, clock, sim, s = freight_fixture(tmp_path / f'{arm}.sqlite', bread=0, fatigue=69, hunger=20)
+        with db:
+            for i, seconds in enumerate(parts):
+                s = sim.advance('freight', seconds=seconds, command_id=f'step:{i}', expected_revision=s.revision).state
+            assert db.verify('freight').to_dict() == s.to_dict()
+            raw = s.to_dict()
+            raw.pop('revision')
+            states.append(raw)
+            clock.close_session('freight')
+    assert states[0] == states[1]
+    assert any(a['npc_id'] == 'huda' and a['action'] == 'rest' and a['start'] == 600
+               for a in states[0]['actions'].values())
+
+
+def test_recurring_wage_requires_second_interval_and_new_actual_delivery(tmp_path):
+    db, clock, sim, s = freight_fixture(tmp_path / 'repeat.sqlite', bread=3, hunger=20, period=43200)
+    with db:
+        s = sim.advance('freight', seconds=43400, command_id='two-circuits', expected_revision=s.revision).state
+        receipts = s.supply_circuits['huda']['food_payroll']['receipts']
+        assert len(receipts) == 2
+        assert all(r['payment'] is not None for r in receipts)
+        assert receipts[1]['delivered_at'] - receipts[0]['delivered_at'] >= 43200
+        assert receipts[1]['delivery'] > receipts[0]['delivery']
+        assert db.verify('freight').to_dict() == s.to_dict()
+        clock.close_session('freight')

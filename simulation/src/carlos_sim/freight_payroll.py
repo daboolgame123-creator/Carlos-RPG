@@ -87,6 +87,28 @@ def waits_for_local_payment(state: WorldState, who: str) -> bool:
             and _injury_rest_decision(state.injuries, who) is None)
 
 
+def next_wait_boundary(state: WorldState, who: str) -> int | None:
+    """Wake on the same physiological/expiry boundary in any time partition."""
+    if not waits_for_local_payment(state, who):
+        return None
+    from .survival import FATIGUE_SECONDS_PER_POINT, HUNGER_SECONDS_PER_POINT
+    from .consumption import AUTONOMOUS_EATING_THRESHOLD, _reserved_food
+    needs = state.npcs[who]['needs']
+    progress = state.survival_progress.get(who, {})
+    contract = state.supply_circuits[who]['food_payroll']
+    expiry = contract['receipts'][-1]['delivered_at'] + 3600
+    hunger_boundary = 90
+    if (needs['hunger'] < AUTONOMOUS_EATING_THRESHOLD
+            and state.resources[who]['food'] > _reserved_food(state.supply_circuits, who)):
+        hunger_boundary = AUTONOMOUS_EATING_THRESHOLD
+    period = state.metabolism_policy.get('hunger_seconds_per_point', HUNGER_SECONDS_PER_POINT)
+    return min(expiry,
+               state.time + (70 - needs['fatigue']) * FATIGUE_SECONDS_PER_POINT
+               - progress.get('fatigue_seconds', 0),
+               state.time + (hunger_boundary - needs['hunger']) * period
+               - progress.get('hunger_seconds', 0))
+
+
 def pay_wage(state: dict, event: DomainEvent, *, supply_authorized: bool) -> None:
     p = event.data
     if (not supply_authorized or event.actor_id is not None

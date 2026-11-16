@@ -549,6 +549,18 @@ class LivingWorldEngine:
                                            {"courier_id": courier,
                                             "resource": resource}),
                                supply_capability=True)
+                        if (self.integrated_livelihoods_enabled
+                                and act == 'SupplyCargoDelivered'):
+                            # The newly recorded service must settle BEFORE
+                            # this loop can reserve a second outgoing parcel.
+                            from .freight_payroll import choose_payment
+                            earned = choose_payment(current, courier)
+                            if earned is not None:
+                                append(DomainEvent('RecurringFreightWagePaid', None,
+                                    'earned local wage before the next cargo reservation',
+                                    current.time, {'courier_id': courier, 'delivery': earned}),
+                                    supply_capability=True)
+                            eat_owned_food(courier)
                         if (self.early_courier_food_wage_enabled
                                 and act == "SupplyCargoDelivered"
                                 and resource == "water"):
@@ -1520,13 +1532,11 @@ class LivingWorldEngine:
                 if resume is not None:
                     next_ticks.append(resume)
                 if self.integrated_livelihoods_enabled:
-                    for circuit in current.supply_circuits.values():
-                        contract = circuit.get('food_payroll')
-                        if contract and contract['receipts']:
-                            receipt = contract['receipts'][-1]
-                            expiry = receipt['delivered_at'] + 3600
-                            if receipt['payment'] is None and expiry > current.time:
-                                next_ticks.append(expiry)
+                    from .freight_payroll import next_wait_boundary
+                    for courier in current.supply_circuits:
+                        boundary = next_wait_boundary(current, courier)
+                        if boundary is not None:
+                            next_ticks.append(boundary)
             if self.routines_enabled or self.agriculture_enabled:
                 next_boundary = next_routine_boundary(current)
                 if next_boundary is not None:

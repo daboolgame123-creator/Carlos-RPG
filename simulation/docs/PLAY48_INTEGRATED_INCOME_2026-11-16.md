@@ -65,6 +65,16 @@ No 96/168h success is inferred from a shorter run.
 
 ## Remaining work
 
+Focused reviewer session `ses_e1b73d1e4ffenpMwbP5Ehm2RnG` identified two
+coordinator defects: new bakery wages were checked after the next pickup,
+and the payroll wait did not wake at fatigue/hunger boundaries. Both were
+reproduced by failing tests, then fixed. The new tests prove a sole bakery
+loaf pays its real grain courier before shipment, visible owned-food eating,
+second-interval genuine delivery payment, and whole/split equality across
+fatigue69→70. **19 focused tests pass on local Python3.13**. This is a focused
+agent review, not external production approval. Superseded CI runs
+43876289116 / 43876347501 were cancelled, not passed.
+
 Run exact-head targeted/full CI Python3.10/3.13; inspect first failed economic
 checkpoint and repair demonstrated blockers before extending the horizon.
 Review new contracts and negative cases, including partitioning and forged
