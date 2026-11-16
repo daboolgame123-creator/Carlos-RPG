@@ -98,6 +98,7 @@ def test_same_original_cargo_reallocated_or_lost(tmp_path):
     candidate=simulate(b_path,deferred=True)
     a48=physical_receipts(a_path,48)
     b48=physical_receipts(b_path,48)
+    actual_failures=[]
     for hour in HOURS:
         old, new = physical_receipts(a_path,hour),physical_receipts(b_path,hour)
         result={
@@ -123,15 +124,18 @@ def test_same_original_cargo_reallocated_or_lost(tmp_path):
         }
         print("PLAY48_ACTUAL_COMMODITY_COURIER_REDISTRIBUTION_AB " +
               json.dumps(result,sort_keys=True),flush=True)
-        assert new["combined_total"]>=old["combined_total"], (
-            "real village has fewer actually RECEIVED parcels")
-        assert new["by_commodity"]["food"]>=old["by_commodity"]["food"], (
-            "saved Huda's life by losing real bakery-to-market food shipments")
-        assert new["by_commodity"]["grain"]>=old["by_commodity"]["grain"], (
-            "bakery lacks original genuine delivered grain")
-        assert candidate[hour]["food_sales"]>=baseline[hour]["food_sales"]
-        assert candidate[hour]["meals"]>=baseline[hour]["meals"]
-        assert candidate[hour]["bakery_finished"]>=baseline[hour]["bakery_finished"]
+        if new["combined_total"]<old["combined_total"]:
+            actual_failures.append((hour,"actually_delivered_total_lost",
+                                    old["combined_total"]-new["combined_total"]))
+        for resource in RESOURCES:
+            if new["by_commodity"][resource]<old["by_commodity"][resource]:
+                actual_failures.append((
+                    hour,f"genuine_{resource}_delivered_lost",
+                    old["by_commodity"][resource]-new["by_commodity"][resource]))
+        for measure in ("food_sales","meals","bakery_finished"):
+            if candidate[hour][measure]<baseline[hour][measure]:
+                actual_failures.append((hour,f"lost_{measure}",
+                         baseline[hour][measure]-candidate[hour][measure]))
     for who in COURIERS:
         print("PLAY48_COURIER_OWNER_SAFETY " +
             json.dumps({"courier":who,
@@ -151,11 +155,18 @@ def test_same_original_cargo_reallocated_or_lost(tmp_path):
     }
     print("PLAY48_ANY_WORSE_NPC_HUNGER_AT_H48 " +
         json.dumps(hunger_regression,sort_keys=True),flush=True)
-    assert not hunger_regression, (
-        "reallocation should not feed Huda by increasing any other NPC's hunger")
-    assert b48["meals_by_npc_at_h48"].get("hana",0)>=a48["meals_by_npc_at_h48"].get("hana",0), (
-        "Hana must not lose her own meals to Huda's earned wage")
-    assert b48["signed_market_payroll_at_h48"]["hana"]>=a48["signed_market_payroll_at_h48"]["hana"], (
-        "Hana's real originally signed wage must not be forfeited")
-    assert candidate[36]["huda_meals"] > baseline[36]["huda_meals"]
-    assert candidate[36]["huda_hunger"] < baseline[36]["huda_hunger"]
+    if hunger_regression:
+        actual_failures.append((48,"other_npc_hunger_increased",hunger_regression))
+    if b48["meals_by_npc_at_h48"].get("hana",0)<a48["meals_by_npc_at_h48"].get("hana",0):
+        actual_failures.append((48,"Hana_own_real_meals_declined",1))
+    if b48["signed_market_payroll_at_h48"]["hana"]<a48["signed_market_payroll_at_h48"]["hana"]:
+        actual_failures.append((48,"Hana_signed_wage_removed",1))
+    if candidate[36]["huda_meals"]<=baseline[36]["huda_meals"]:
+        actual_failures.append((36,"Huda_salary_not_eaten",1))
+    if candidate[36]["huda_hunger"]>=baseline[36]["huda_hunger"]:
+        actual_failures.append((36,"Huda_hunger_not_improved",1))
+    print("PLAY48_ORIGINAL_FREIGHT_ACCEPTANCE_ALL_REAL_FAILURES "+
+          json.dumps(actual_failures,sort_keys=True),flush=True)
+    assert not actual_failures, (
+        "original village commodity/recipient safeguards failed: "
+        + repr(actual_failures))
