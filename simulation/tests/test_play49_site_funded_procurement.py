@@ -108,7 +108,7 @@ def _second_authentic_goods(db, clock, market):
     walk(db, clock, "huda", "orchard-dairy", "huda-back-to-orchard", 70)
     market.buy(WORLD, "huda", "second-fruit-wholesale",
                "second-fruit-quote", 1, 1, expected_revision=_rev(db))
-    walk(db, clock, "huda", "orchard-dairy", "huda-back-to-dairy", 70)
+    walk(db, clock, "huda", "orchard-dairy", "huda-return-from-fruit-to-dairy", 70)
     walk(db, clock, "huda", "dairy-tavern", "huda-returns-with-goods", 60)
 
     goods = db.load(WORLD)
