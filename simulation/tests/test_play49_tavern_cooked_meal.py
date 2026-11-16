@@ -193,7 +193,7 @@ def test_actual_paid_kitchen_plate_customer_and_no_new_currency(kitchen):
     deposit_ingredients(db, clock)
     finished = finish_sale_wage_and_eat(db, clock, market, opening)
     assert len(finished.market_stalls) == 4
-    assert len(finished.market_trades) == 4
+    assert len(finished.market_trades) == 5  # 2 upstream + 2 kitchen procurements + final meal
     assert finished.market_trades["real-cooked-food-sale"]["stock_owner_id"] == "tavern"
     assert finished.resources["huda"]["coin_copper"] == 12
     assert finished.resources["cheese_maker"]["coin_copper"] == 1
