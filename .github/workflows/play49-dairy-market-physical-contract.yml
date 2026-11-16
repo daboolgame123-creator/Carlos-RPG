@@ -1,0 +1,27 @@
+name: PLAY49 isolated three physical markets
+on:
+  push:
+    branches: [experiment/play49-dairy-shop-physical-contract-20261116]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  true-finite-market-contracts:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Three staffed shops finite fruit milk-to-cheese wages travel sale replay
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests
+        run: |
+          python -m compileall -q src/carlos_sim tests/test_play49_fruit_stall_contract.py tests/test_play49_dairy_stall_contract.py
+          python -m pytest -q -v tests/test_play49_fruit_stall_contract.py tests/test_play49_dairy_stall_contract.py
