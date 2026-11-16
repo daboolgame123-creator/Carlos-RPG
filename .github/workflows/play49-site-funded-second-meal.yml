@@ -1,0 +1,27 @@
+name: PLAY49 second genuinely site-funded tavern meal
+on:
+  push:
+    branches: [experiment/play49-site-funded-second-meal-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-site-income-procurement-and-second-batch:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: True venue cash purchases real second ingredients plus all older market contracts
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests
+        run: |
+          python -m compileall -q src/carlos_sim tests/test_play49_site_funded_procurement.py
+          python -m pytest -q -v tests/test_play49_fruit_stall_contract.py tests/test_play49_dairy_stall_contract.py tests/test_play49_tavern_trade_provenance.py tests/test_play49_tavern_cooked_meal.py tests/test_play49_tavern_cost_liquidity_audit.py tests/test_play49_tavern_credit_ownership.py tests/test_play49_site_funded_procurement.py

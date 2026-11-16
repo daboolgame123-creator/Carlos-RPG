@@ -158,17 +158,46 @@ def trade_receipt_allowed(circuits: Any, owner: str, resource: str) -> bool:
 def execute_trade(state: dict[str, Any], event: DomainEvent, *,
                   market_authorized: bool) -> None:
     p = event.data
-    if (not market_authorized or set(p) != {"id", "offer_id", "buyer_id",
-                                           "quantity", "expected_unit_price"}
+    normal_keys = {"id", "offer_id", "buyer_id", "quantity", "expected_unit_price"}
+    site_purchase = set(p) == normal_keys | {"business_keeper_id"}
+    if (not market_authorized or set(p) not in (normal_keys, normal_keys | {"business_keeper_id"})
             or not _id(p["id"]) or p["id"] in state["market_trades"]
             or not _id(p["offer_id"])):
         raise ValueError("market exchange requires trusted capability and unique trade ID")
     offer = state["market_offers"].get(p["offer_id"])
     buyer = p["buyer_id"]
-    if (offer is None or offer["status"] != "open"
-            or not _id(buyer) or event.actor_id != buyer
+    if offer is None or offer["status"] != "open":
+        raise ValueError("market sale requires a genuine open local quote")
+    if site_purchase:
+        # Site money is NOT the steward's private purse. Only the actually
+        # registered on-site keeper can spend site funds on a *local recipe*
+        # input, with a personally present independent seller.
+        from .production import recipe_inputs
+        steward = p["business_keeper_id"]
+        stall = state["market_stalls"].get(buyer)
+        authorized_buyer = (
+            _id(buyer) and buyer == offer["site_id"]
+            and stall is not None and stall["keeper_id"] == steward
+            and event.actor_id == steward and steward in state["npcs"]
+            and state["npcs"][steward]["role"] == "merchant"
+            and _present(state, steward, buyer)
+            and offer["payment_resource"] == MONEY
+            and offer["stock_owner_id"] != buyer
+            and offer["seller_id"] != steward
+            and any(
+                recipe["site_id"] == buyer
+                and any(item == offer["resource"]
+                        for item, amount in recipe_inputs(recipe))
+                for recipe in state["production_recipes"].values()
+            )
+        )
+    else:
+        authorized_buyer = (
+            _id(buyer) and event.actor_id == buyer
+            and _buyer_present(state, buyer, offer["site_id"])
+        )
+    if (not authorized_buyer
             or buyer == offer["seller_id"] or buyer == offer["stock_owner_id"]
-            or not _buyer_present(state, buyer, offer["site_id"])
             or not _present(state, offer["seller_id"], offer["site_id"])
             or not _positive(p["quantity"], MAX_QUANTITY)
             or p["quantity"] > offer["remaining"]
@@ -186,10 +215,20 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
     if (not trade_receipt_allowed(circuits, buyer, item)
             or not trade_receipt_allowed(circuits, owner, pay)):
         raise ValueError("market receipt conflicts with courier custody")
+    # The venue must honor wages for completed local jobs before financing
+    # new ingredient purchases. No remote or prospective obligations.
+    signed_unpaid_wages = sum(
+        rec["wage_coin"]
+        for job in state["production_jobs"].values()
+        if job["site_id"] == buyer and job["status"] == "completed"
+        and "work_wage" not in job
+        for rec in (state["production_recipes"][job["recipe_id"]],)
+        if "wage_coin" in rec
+    ) if site_purchase else 0
     if (gb - reserved_trade_units(circuits, owner, item) < quantity
-            or pb - reserved_trade_units(circuits, buyer, pay) < total
+            or pb - reserved_trade_units(circuits, buyer, pay) < total + signed_unpaid_wages
             or gt + quantity > MAX_AMOUNT or pt + total > MAX_AMOUNT):
-        raise ValueError("insufficient market goods/coins or destination overflow")
+        raise ValueError("insufficient market goods/coins, earned wage reserve or destination overflow")
     state["resources"][owner][item] = gb - quantity
     state["resources"][buyer][item] = gt + quantity
     state["resources"][buyer][pay] = pb - total
@@ -209,6 +248,7 @@ def execute_trade(state: dict[str, Any], event: DomainEvent, *,
         "goods_target_before": gt, "goods_target_after": gt + quantity,
         "pay_source_before": pb, "pay_source_after": pb - total,
         "pay_target_before": pt, "pay_target_after": pt + total,
+        **({"business_keeper_id": p["business_keeper_id"]} if site_purchase else {}),
     }
 
 
@@ -267,13 +307,36 @@ def validate_market(state: dict[str, Any]) -> None:
             raise ValueError("market closure has no valid timestamp")
     sold: dict[str, int] = {}
     for ident, t in trades.items():
-        if (not _id(ident) or not isinstance(t, dict) or set(t) not in (TRADE_KEYS, TRADE_KEYS | {"steward_food_wage"})
+        if (not _id(ident) or not isinstance(t, dict) or set(t) not in
+                (TRADE_KEYS, TRADE_KEYS | {"steward_food_wage"},
+                 TRADE_KEYS | {"business_keeper_id"})
                 or t["offer_id"] not in offers):
             raise ValueError("invalid market trade record")
         o = offers[t["offer_id"]]
-        if (t["buyer_id"] not in state["npcs"]
-                and (t["buyer_id"] not in state["entities"]
-                     or state["entities"][t["buyer_id"]]["controller"] != "player")
+        purchaser = t["buyer_id"]
+        if "business_keeper_id" in t:
+            from .production import recipe_inputs
+            steward = t["business_keeper_id"]
+            stall = stalls.get(o["site_id"])
+            buyer_valid = (
+                purchaser == o["site_id"] and stall is not None
+                and stall["keeper_id"] == steward
+                and steward in state["npcs"]
+                and state["npcs"][steward]["role"] == "merchant"
+                and o["seller_id"] != steward and o["payment_resource"] == MONEY
+                and any(
+                    rec["site_id"] == purchaser
+                    and any(item == o["resource"] for item, qty in recipe_inputs(rec))
+                    for rec in state["production_recipes"].values()
+                )
+            )
+        else:
+            buyer_valid = (
+                purchaser in state["npcs"]
+                or (purchaser in state["entities"]
+                    and state["entities"][purchaser]["controller"] == "player")
+            )
+        if (not buyer_valid
                 or t["buyer_id"] == o["seller_id"] or t["buyer_id"] == o["stock_owner_id"]
                 or any(t[k] != o[k] for k in (
                     "seller_id", "stock_owner_id", "site_id", "resource",
@@ -351,6 +414,24 @@ class NPCMarketService:
         return self._append(world_id, "sale:" + trade_id, expected_revision,
                             "MarketTradeExecuted", buyer_id,
                             {"id": trade_id, "buyer_id": buyer_id,
+                             "offer_id": offer_id, "quantity": quantity,
+                             "expected_unit_price": expected_unit_price})
+
+    def buy_for_site(self, world_id: str, keeper_id: str, site_id: str,
+                     trade_id: str, offer_id: str, quantity: int,
+                     expected_unit_price: int, *,
+                     expected_revision: int) -> MarketResult:
+        """Trusted on-site employer procurement; NEVER a personal keeper loan."""
+        self.clock._require_session(world_id)
+        current = self.store.load(world_id)
+        stall = current.market_stalls.get(site_id)
+        if (stall is None or stall["keeper_id"] != keeper_id
+                or keeper_id not in current.npcs):
+            raise PermissionError("only registered site keeper may spend venue balance")
+        return self._append(world_id, "site-buy:" + trade_id, expected_revision,
+                            "MarketTradeExecuted", keeper_id,
+                            {"id": trade_id, "buyer_id": site_id,
+                             "business_keeper_id": keeper_id,
                              "offer_id": offer_id, "quantity": quantity,
                              "expected_unit_price": expected_unit_price})
 
