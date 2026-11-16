@@ -1,0 +1,32 @@
+name: PLAY48 bounded real 3-food-wage counterfactual to 96h
+on:
+  push:
+    branches:
+      - experiment/play48-three-authentic-courier-food-wages-20261116
+    paths:
+      - ".github/workflows/play48-three-real-wage-endurance.yml"
+      - "simulation/scenarios/test_village/test_play48_three_real_wage_ceiling_96h.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-13npc-three-wage-96h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Genuine local signed 3-food-wage cap, h24-96 physical original village and bread output
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_three_real_wage_ceiling_96h.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_three_real_wage_ceiling_96h.py
