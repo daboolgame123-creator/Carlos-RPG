@@ -10,7 +10,7 @@ import json
 from collections import Counter
 
 from carlos_sim import SQLiteEventStore, TimeEngine
-from carlos_sim.economic_diagnostics import audit_npc_economy
+from carlos_sim.economic_diagnostics import audit_npc_economy, audit_production_wages
 from carlos_sim.economic_autonomy import choose_local_food_purchase
 from carlos_sim.courier_provisions import _market_uncommitted_bread_after_sales
 from carlos_sim.food_for_work import _available_site_food
@@ -86,6 +86,8 @@ def market_access(state):
             who:state.supply_circuits[who]["deliveries"]
             for who in ("hana","huda")},
         "copper_total":agg["copper_known_total"],
+        "copper_by_owner":agg["copper_known_by_owner"],
+        "production_wages":audit_production_wages(state),
     }
 
 
