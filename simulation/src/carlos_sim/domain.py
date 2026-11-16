@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 45
-RULES_VERSION = 68
+RULES_VERSION = 69
 
 
 def _thaw(value: Any) -> Any:

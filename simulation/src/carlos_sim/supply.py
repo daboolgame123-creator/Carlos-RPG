@@ -15,6 +15,30 @@ from .npc import _injury_rest_decision
 MAX_STOCK = 2**31 - 1
 RESOURCES = ("water", "grain", "food")
 CASH = "coin_copper"
+MAX_REAL_MEAL_ENDURANCE_SECONDS = 72 * 3600
+
+def _courier_able_after_recent_genuine_meal(state: WorldState | dict, who: str) -> bool:
+    """A hunger gauge is not instant paralysis if the courier ate recently.
+
+    Strict physical cutoff after 72h without personally consumed food,
+    never a new food resource, never a global fatigue or injury exemption.
+    This is an isolated old-world courier physiology trial.
+    """
+    if isinstance(state, WorldState):
+        now, npc, meals = state.time, state.npcs.get(who), state.consumptions
+    else:
+        now, npc, meals = state["time"], state["npcs"].get(who), state["consumptions"]
+    if npc is None:
+        return False
+    if npc["needs"]["hunger"] < 90:
+        return True
+    return any(
+        m["npc_id"] == who and m["resource"] == "food"
+        and type(m["quantity"]) is int and m["quantity"] >= 1
+        and type(m["consumed_at"]) is int
+        and 0 <= now - m["consumed_at"] <= MAX_REAL_MEAL_ENDURANCE_SECONDS
+        for m in meals.values()
+    )
 STOPS = ("well", "farm", "bakery", "market", "bakery", "farm", "well")
 
 
@@ -256,7 +280,7 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
     current = state["entities"][who]["location_id"]
     if event.event_type == "SupplyCargoPicked":
         npc = state["npcs"][who]
-        if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 70
+        if (not _courier_able_after_recent_genuine_meal(state, who) or npc["needs"]["fatigue"] >= 70
                 or npc["needs"]["safety"] >= 75
                 or _injury_rest_decision(state["injuries"], who) is not None):
             raise ValueError("exhausted or unsafe courier cannot reserve new cargo")
@@ -343,7 +367,7 @@ def check_leg(state: dict, who: str, route_id: str,
     if record is None:
         return
     npc = state["npcs"][who]
-    if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 70
+    if (not _courier_able_after_recent_genuine_meal(state, who) or npc["needs"]["fatigue"] >= 70
             or npc["needs"]["safety"] >= 75
             or _injury_rest_decision(state["injuries"], who) is not None):
         raise ValueError("exhausted or unsafe courier cannot begin a contracted leg")
@@ -387,7 +411,7 @@ def choose_cargo(state: WorldState, who: str) -> str | None:
     # A courier too hungry or exhausted to walk must not reserve a new
     # parcel and block the well or bakery indefinitely.
     npc = state.npcs[who]
-    if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 70
+    if (not _courier_able_after_recent_genuine_meal(state, who) or npc["needs"]["fatigue"] >= 70
             or npc["needs"]["safety"] >= 75
             or _injury_rest_decision(state.injuries, who) is not None):
         return None
@@ -444,7 +468,7 @@ def choose_courier_leg(state: WorldState, who: str) -> tuple[str, str, str, int]
     if rec is None or _traveling(state, who):
         return None
     npc = state.npcs[who]
-    if (npc["needs"]["hunger"] >= 90 or npc["needs"]["fatigue"] >= 70
+    if (not _courier_able_after_recent_genuine_meal(state, who) or npc["needs"]["fatigue"] >= 70
             or npc["needs"]["safety"] >= 75
             or _injury_rest_decision(state.injuries, who) is not None):
         return None
