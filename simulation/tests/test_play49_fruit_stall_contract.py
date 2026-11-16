@@ -12,7 +12,7 @@ def copper(s):
     return sum(v.get("coin_copper", 0) for v in s.resources.values())
 
 
-def add_orchard(db):
+def add_orchard(db, *, ready_stock=1):
     old = db.load(WORLD)
     actions = [
         ev("LocationCreated", {"id": "orchard", "name": "Fruit Orchard"}),
@@ -26,7 +26,7 @@ def add_orchard(db):
                                  "goals": {"earn": 50, "explore": 10, "survive": 30}}),
         ]
     for owner, resource, amount in (
-        ("orchard", "fruit_ready", 1), ("orchard", "fruit", 0),
+        ("orchard", "fruit_ready", ready_stock), ("orchard", "fruit", 0),
         ("orchard", "fruit_basket", 1), ("orchard", "coin_copper", 1),
         ("fruit_farmer", "coin_copper", 0), ("fruit_seller", "coin_copper", 0),
         ("salma", "fruit", 0),

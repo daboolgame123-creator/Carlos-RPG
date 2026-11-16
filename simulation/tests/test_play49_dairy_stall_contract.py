@@ -5,7 +5,7 @@ from carlos_sim.store import InvalidEvent
 from test_market_02c import ev, prepare, _rev
 from test_play49_fruit_stall_contract import WORLD, add_orchard, harvest, pay, copper
 
-def add_dairy(db):
+def add_dairy(db, *, milk_stock=2):
     before = db.load(WORLD)
     events = [
         ev("LocationCreated", {"id": "dairy", "name": "Dairy"}),
@@ -19,7 +19,7 @@ def add_dairy(db):
                 "goals": {"earn": 50, "explore": 10, "survive": 30}}),
         ]
     for owner, resource, quantity in (
-        ("dairy", "milk", 2), ("dairy", "cheese", 0),
+        ("dairy", "milk", milk_stock), ("dairy", "cheese", 0),
         ("dairy", "cheese_press", 1), ("dairy", "coin_copper", 1),
         ("cheese_maker", "coin_copper", 0), ("cheese_seller", "coin_copper", 0),
         ("salma", "cheese", 0),
@@ -40,7 +40,7 @@ def add_dairy(db):
     assert after.resources["bakery"] == before.resources["bakery"]
     assert after.resources["orchard"] == before.resources["orchard"]
     assert after.resources["salma"]["coin_copper"] == before.resources["salma"]["coin_copper"]
-    assert after.resources["dairy"]["milk"] == 2 and after.resources["dairy"]["cheese"] == 0
+    assert after.resources["dairy"]["milk"] == milk_stock and after.resources["dairy"]["cheese"] == 0
     assert copper(after) == copper(before) + 1  # declared employer opening capital
     assert db.verify(WORLD).to_dict() == after.to_dict()
 
