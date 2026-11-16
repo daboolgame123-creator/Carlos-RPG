@@ -1,0 +1,32 @@
+name: PLAY48 original real commodity receipts versus courier shift A/B
+on:
+  push:
+    branches:
+      - diagnostic/play48-real-cargo-distribution-audit-20261116
+    paths:
+      - ".github/workflows/play48-original-commodity-receipts-audit.yml"
+      - "simulation/scenarios/test_village/test_play48_real_cargo_distribution_audit.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actually-received-grain-food-water-copper:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: Read true immutable receipts for every cargo resource and actual owner meals
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_real_cargo_distribution_audit.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -vs scenarios/test_village/test_play48_real_cargo_distribution_audit.py
