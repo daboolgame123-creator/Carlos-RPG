@@ -1,0 +1,32 @@
+name: PLAY48 original 13NPC physically funded income 96h day3/day4 diagnostic
+on:
+  push:
+    branches:
+      - diagnostic/play48-96h-real-bakery-payroll-endurance-20261116
+    paths:
+      - ".github/workflows/play48-huda-96h-real-endurance.yml"
+      - "simulation/scenarios/test_village/test_play48_huda_96h_endurance.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-original-13npc-96h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: True h24-96 physical income bakery food actual meals and strict replay
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python -m compileall -q src/carlos_sim scenarios/test_village/test_play48_huda_96h_endurance.py
+          PYTHONPATH=src:scenarios/test_village python -m pytest -sv scenarios/test_village/test_play48_huda_96h_endurance.py
