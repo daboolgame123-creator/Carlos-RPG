@@ -11,6 +11,43 @@ from collections import Counter
 from .domain import WorldState
 
 
+def audit_production_wages(state: WorldState) -> dict:
+    """Classify completed jobs by their actual signed wage and receipt.
+
+    This is an operator-only accounting view, not authorization to pay a
+    worker. A recipe without wage terms is not an unpaid wage, and a food
+    receipt must not be mistaken for an unpaid cash receipt.
+    """
+    counts = Counter()
+    due = []
+    for job_id, job in sorted(state.production_jobs.items()):
+        if job["status"] != "completed":
+            continue
+        recipe = state.production_recipes[job["recipe_id"]]
+        if "wage_coin" in recipe:
+            kind, receipt = "coin", "work_wage"
+        elif "wage_food" in recipe:
+            kind, receipt = "food", "food_wage"
+        else:
+            counts["without_contract"] += 1
+            continue
+        if receipt in job:
+            counts[kind + "_paid"] += 1
+        else:
+            counts[kind + "_unpaid"] += 1
+            due.append({"job_id": job_id, "worker_id": job["npc_id"],
+                        "site_id": job["site_id"], "resource": kind,
+                        "amount": recipe["wage_" + kind]})
+    return {
+        "coin_paid": counts["coin_paid"],
+        "coin_unpaid": counts["coin_unpaid"],
+        "food_paid": counts["food_paid"],
+        "food_unpaid": counts["food_unpaid"],
+        "without_contract": counts["without_contract"],
+        "unpaid_jobs": due,
+    }
+
+
 def audit_npc_economy(state: WorldState) -> dict:
     """Return a deterministic, read-only snapshot with explicit unknowns.
 
