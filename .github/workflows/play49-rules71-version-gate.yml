@@ -1,0 +1,54 @@
+name: PLAY49-I real Rules70-to-71 version boundary
+on:
+  push:
+    branches: [audit/play49-i-rules71-save-boundary-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  version-boundary:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - name: Pin genuine pre-G Rules70 reader and writer
+        uses: actions/checkout@v5
+        with:
+          ref: 5464f12efacc825fdd8bf1fb03b8d773b9f65935
+          path: reviewed-pre-g
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install test fixture dependencies and verify source history
+        run: |
+          python -m pip install pytest
+          test "$(git -C ../reviewed-pre-g rev-parse HEAD)" = 5464f12efacc825fdd8bf1fb03b8d773b9f65935
+          python -m compileall -q src/carlos_sim tools/play49_rules71_version_gate.py
+      - name: Current Rules71 writer creates and verifies real site-funded market receipts
+        env:
+          PYTHONPATH: src:tests
+        run: python tools/play49_rules71_version_gate.py current-write /tmp/play49-rule71.sqlite
+      - name: Frozen real Rules70 reader rejects new save by version without mutation
+        env:
+          PYTHONPATH: ../reviewed-pre-g/simulation/src
+        run: python tools/play49_rules71_version_gate.py old-read-new /tmp/play49-rule71.sqlite
+      - name: Genuine frozen Rules70 writer creates real historic snapshot
+        env:
+          PYTHONPATH: ../reviewed-pre-g/simulation/src
+        run: python tools/play49_rules71_version_gate.py old-write /tmp/play49-rule70.sqlite
+      - name: Rules71 reader refuses old save explicitly without mutation
+        env:
+          PYTHONPATH: src
+        run: python tools/play49_rules71_version_gate.py current-read-old /tmp/play49-rule70.sqlite
+      - name: Check independent release-version oracle and core PLAY49 tests
+        env:
+          PYTHONPATH: src:tests
+        run: |
+          python -m pytest -q tests/test_play48x_version_transition_gate.py tests/test_play49_autonomous_site_procurement.py
