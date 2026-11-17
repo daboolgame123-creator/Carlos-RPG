@@ -1,8 +1,8 @@
-"""Real Rules63 and Rules68 writer saves remain immutable and fail closed.
+"""Real Rules63, Rules68 and Rules70 saves remain immutable and fail closed.
 
 The source SHA is fetched via git archive into a disposable directory. No header
 editing, event upcasting or migrations; the original writer verifies the file
-again after the current reader rejects it. Both versions are explicit oracles.
+again after the current reader rejects it. Frozen versions are explicit oracles.
 """
 from __future__ import annotations
 import hashlib
@@ -20,12 +20,13 @@ from carlos_sim.store import UnsupportedVersion
 from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
 
 FROZEN = [(63, 'b397f40d01a314197f2e22f26f1d27bf64eeed3f'),
-          (68, '1e04e84e180b7ff6fa597aaed6e2605a3ca1dfd3')]
+          (68, '1e04e84e180b7ff6fa597aaed6e2605a3ca1dfd3'),
+          (70, 'f6b124d74e422824df829a458be81e7519454ef9')]
 
 
 @pytest.mark.parametrize('rules,sha', FROZEN)
 def test_authentic_frozen_writer_refusal_and_original_reader(tmp_path, rules, sha):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 70)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 71)
     repo = Path(__file__).resolve().parents[2]
     archive = subprocess.check_output(['git', 'archive', '--format=zip', sha, 'simulation'], cwd=repo)
     old = tmp_path / f'writer-{rules}'

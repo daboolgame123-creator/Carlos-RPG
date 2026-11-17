@@ -26,6 +26,8 @@ def seed(path, *, candidate):
     if candidate:
         events = [
             event('ProductionCashWageSigned', {'recipe_id': 'finite-harvest', 'amount': 2}),
+            *[event('GrainPurchaseSigned', {'courier_id': who, 'unit_price': 1})
+              for who in ('hana', 'huda')],
             event('MarketStewardFoodContractSigned',
                   {'site_id': 'market', 'keeper_id': 'salma', 'sales_per_wage': 2}),
             *[event('RecurringFreightWageSigned',
@@ -69,6 +71,14 @@ def metrics(s):
         'cash_wages': audit_production_wages(s)['coin_paid'],
         'freight_wages': sum(r['payment'] is not None for c in s.supply_circuits.values()
                              for r in c.get('food_payroll', {}).get('receipts', ())),
+        'grain_settlements': {who: {
+            'received_grain': len(c.get('grain_purchase', {}).get('receipts', ())),
+            'farm_received_copper': sum(r['received_at'] is not None
+                for r in c.get('grain_purchase', {}).get('receipts', ())),
+        } for who, c in s.supply_circuits.items()},
+        'courier_generic_work': {who: sum(a['npc_id'] == who and a['action'] == 'work'
+                                          for a in s.actions.values())
+                                  for who in s.supply_circuits},
         'npcs': {who: {'hunger': n['needs']['hunger'], 'fatigue': n['needs']['fatigue'],
                        'site': s.entities[who]['location_id'],
                        'cash': s.resources[who].get('coin_copper'),

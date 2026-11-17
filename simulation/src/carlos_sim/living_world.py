@@ -1361,7 +1361,10 @@ class LivingWorldEngine:
                                 and recipe["role"] == current.npcs[npc_id]["role"]
                                 for recipe in current.production_recipes.values())
                     )
-                    if keeper or professional:
+                    from .freight_payroll import waits_for_departure
+                    courier_idle = (self.integrated_livelihoods_enabled
+                                    and waits_for_departure(current, npc_id))
+                    if keeper or professional or courier_idle:
                         continue
                 # A social exchange is an instantaneous *speech act*, not an
                 # executed favor. Both events share this one authorized command.
@@ -1532,11 +1535,13 @@ class LivingWorldEngine:
                 if resume is not None:
                     next_ticks.append(resume)
                 if self.integrated_livelihoods_enabled:
-                    from .freight_payroll import next_wait_boundary
+                    from .freight_payroll import (next_wait_boundary,
+                                                 next_departure_wait_boundary)
                     for courier in current.supply_circuits:
-                        boundary = next_wait_boundary(current, courier)
-                        if boundary is not None:
-                            next_ticks.append(boundary)
+                        for boundary in (next_wait_boundary(current, courier),
+                                         next_departure_wait_boundary(current, courier)):
+                            if boundary is not None:
+                                next_ticks.append(boundary)
             if self.routines_enabled or self.agriculture_enabled:
                 next_boundary = next_routine_boundary(current)
                 if next_boundary is not None:

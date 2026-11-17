@@ -1,6 +1,7 @@
 # PLAY48 integrated income — reopened by owner, 2026-11-16
 
-Status: **IN_PROGRESS / PLAY48_NO_GO**, branch
+Status: **IN_PROGRESS / PLAY48_NO_GO**, current candidate **Schema45 / Rules71**,
+exact-head regression and original-village acceptance pending; branch
 `integration/play48-sustainable-income-20261116`, base
 `1e04e84e180b7ff6fa597aaed6e2605a3ca1dfd3` (PR135).
 The new owner instruction explicitly reopens the terminated economic scope.
@@ -35,6 +36,12 @@ separate missing income and consumption edges, not a shortage dashboard.
    control exactly. No new coins, food, characters, sites or rain advantage.
 
 ## Version contract
+
+**17 November update:** Rules71 supersedes the failed Rules70 candidate below.
+It adds explicit prospective grain purchase obligations and a bounded courier
+departure-wait policy. Authentic Rules70 saves from `f6b124d` join Rules63/68
+in the frozen-writer byte-identical refusal/original-reader verification matrix.
+No header rewriting, migration, or reinterpretation of the failed worlds.
 
 Schema45 / Rules70: Rules69 exists on a separate rejected experiment; it is
 not reused. New event meanings are not silently applied to old saves.
@@ -110,6 +117,44 @@ second-interval genuine delivery payment, and whole/split equality across
 fatigue69→70. **19 focused tests pass on local Python3.13**. This is a focused
 agent review, not external production approval. Superseded CI runs
 43876289116 / 43876347501 were cancelled, not passed.
+
+### Analyzed and implemented root repair — Rules71, 17 November
+
+Classification: `CHAT_EXECUTABLE / READY_FOR_VERIFICATION`; h60 acceptance
+remains **FAILED on the old candidate**, not waived for the new one.
+
+- **Courier idle:** the artifact confirms17/25 generic courier work actions.
+  A free courier at the real origin with a future contracted departure now
+  remains available instead of inventing generic labor. The opt-in policy
+  respects pending decisions, hunger75, fatigue70, danger and injuries; wake
+  boundaries include actual departure, emergency thresholds and owned meals.
+  Metabolism and genuine rest costs remain. Default-off behavior is tested.
+- **Prospective grain procurement:** the candidate explicitly signs **one
+  existing copper per genuinely delivered grain** for each source circuit.
+  This is a new isolated experimental price, not an inferred market price or
+  retroactive entitlement. FIFO uses bakery-local receipt time, courier ID
+  and delivery identity, never remote source wallets. Copper stays at bakery
+  until physically carried on the correct existing bakery→source leg.
+  Each one-copper parcel settles exactly one claim; no credit or new funds.
+  Bakery operating copper, quoted cash and completed unpaid local cash wages
+  remain senior. An unearned source cannot drain another source's reserve.
+  Existing grain-for-bread contracts cannot overlap this purchase agreement.
+- **Acceptance evidence:** 33 focused tests passed locally on **both3.10 and
+  3.13**, including real two-grain→two-copper→one completed Nora wage, one
+  copper cannot pay two, duplicate/unauthorized/fake-custody/insolvency
+  rejection, cross-source dispatch protection, quoted cash/earned labor
+  reserves, whole/split cash settlement, idle/rest partition equality, and
+  all three frozen save writers. Small synthetic rejection fixtures and the
+  scheduler's conserved player gift are **not village economic evidence**.
+- **Review:** focused agent source review in
+  `ses_e1b73d1e4ffenpMwbP5Ehm2RnG` found explicit-null and negative-time
+  snapshot validation defects. Both were fixed and regression-tested; source
+  follow-up found no remaining confirmed blocker in those fixes. This is not
+  independent external approval or independently executed tests.
+- A broader local3.10 command including production and physical-supply tests
+  timed out after120 seconds without a final result; **not a full PASS**.
+  Final-SHA full CI remains required. No relaxed h60 gate, no 72/96/168 claim,
+  no `main`, story, P0, merge or PLAY49 change.
 
 Run exact-head targeted/full CI Python3.10/3.13; inspect first failed economic
 checkpoint and repair demonstrated blockers before extending the horizon.

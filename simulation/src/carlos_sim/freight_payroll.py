@@ -91,13 +91,37 @@ def next_wait_boundary(state: WorldState, who: str) -> int | None:
     """Wake on the same physiological/expiry boundary in any time partition."""
     if not waits_for_local_payment(state, who):
         return None
+    contract = state.supply_circuits[who]['food_payroll']
+    return _next_need_boundary(state, who,
+                               contract['receipts'][-1]['delivered_at'] + 3600, 90)
+
+
+def waits_for_departure(state: WorldState, who: str) -> bool:
+    """Only a free, safe courier at the scheduled circuit origin can idle."""
+    circuit = state.supply_circuits.get(who)
+    if (circuit is None or circuit['index'] != 0 or circuit['carry'] is not None
+            or circuit['next_departure'] <= state.time
+            or not _worker_present_and_free(state, who, circuit['stops'][0])):
+        return False
+    from .npc import _injury_rest_decision
+    needs = state.npcs[who]['needs']
+    return (needs['hunger'] < 75 and needs['fatigue'] < 70 and needs['safety'] < 75
+            and _injury_rest_decision(state.injuries, who) is None)
+
+
+def next_departure_wait_boundary(state: WorldState, who: str) -> int | None:
+    if not waits_for_departure(state, who):
+        return None
+    return _next_need_boundary(state, who,
+                               state.supply_circuits[who]['next_departure'], 75)
+
+
+def _next_need_boundary(state: WorldState, who: str, expiry: int,
+                        hunger_boundary: int) -> int:
     from .survival import FATIGUE_SECONDS_PER_POINT, HUNGER_SECONDS_PER_POINT
     from .consumption import AUTONOMOUS_EATING_THRESHOLD, _reserved_food
     needs = state.npcs[who]['needs']
     progress = state.survival_progress.get(who, {})
-    contract = state.supply_circuits[who]['food_payroll']
-    expiry = contract['receipts'][-1]['delivered_at'] + 3600
-    hunger_boundary = 90
     if state.resources[who]['food'] > _reserved_food(state.supply_circuits, who):
         if needs['hunger'] >= AUTONOMOUS_EATING_THRESHOLD:
             # The consumption pass already ran. A same-tick meal/decision

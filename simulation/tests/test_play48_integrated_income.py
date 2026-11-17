@@ -119,7 +119,8 @@ def test_existing_history_cannot_be_changed_to_fake_service(village):
 
 
 def freight_fixture(path, *, bread=1, fatigue=0, hunger=65, period=1800,
-                    player_food=0):
+                    player_food=0, grain_purchase=False, bakery_copper=0,
+                    harvest_wage=False):
     """Small boundary fixture; deliberately separate from 13-person acceptance."""
     db = SQLiteEventStore(path)
     s = db.create_world('freight')
@@ -142,14 +143,37 @@ def freight_fixture(path, *, bread=1, fatigue=0, hunger=65, period=1800,
     for owner in ('well', 'farm', 'bakery', 'market', 'huda', 'salma'):
         for resource in ('water', 'grain', 'food', 'coin_copper', 'labor_units', 'investigation_attempts'):
             quantity = bread if (owner, resource) == ('bakery', 'food') else 2 if (owner, resource) == ('farm', 'grain') else 0
+            if (owner, resource) == ('bakery', 'coin_copper'):
+                quantity = bakery_copper
+            if harvest_wage and (owner, resource) == ('farm', 'grain'):
+                quantity = 0
             add('ResourceChanged', {'owner_id': owner, 'resource': resource,
                                    'previous': None, 'current': quantity, 'source': 'initialization'})
     add('MarketStallConfigured', {'site_id': 'market', 'keeper_id': 'salma'})
     add('SupplyCircuitConfigured', {'courier_id': 'huda',
                                    'stops': ['well', 'farm', 'bakery', 'market', 'bakery', 'farm', 'well'],
                                    'route_ids': ['wf', 'fb', 'bm', 'bm', 'fb', 'wf'], 'period_seconds': period})
-    add('RecurringFreightWageSigned', {'courier_id': 'huda', 'site_id': 'bakery',
-                                     'resource': 'grain', 'interval_seconds': 43200})
+    if not harvest_wage:
+        add('RecurringFreightWageSigned', {'courier_id': 'huda', 'site_id': 'bakery',
+                                         'resource': 'grain', 'interval_seconds': 43200})
+    if grain_purchase:
+        add('GrainPurchaseSigned', {'courier_id': 'huda', 'unit_price': 1})
+    if harvest_wage:
+        add('EntityCreated', {'id': 'nora', 'name': 'Nora', 'location_id': 'farm', 'controller': 'npc'})
+        add('NPCConfigured', {'npc_id': 'nora', 'role': 'farmer',
+                             'needs': {'hunger': 20, 'fatigue': 0, 'safety': 0},
+                             'goals': {'earn': 10, 'survive': 30, 'explore': 10}})
+        add('NPCRoutineConfigured', {'npc_id': 'nora', 'home_id': 'well', 'workplace_id': 'farm',
+                                     'work_start': 0, 'work_end': 30000})
+        for owner, resource, quantity in (('farm', 'crop_ready', 1), ('farm', 'sickle', 1),
+                                           ('nora', 'food', 0), ('nora', 'coin_copper', 0)):
+            add('ResourceChanged', {'owner_id': owner, 'resource': resource,
+                                   'previous': None, 'current': quantity, 'source': 'initialization'})
+        add('ProductionRecipeConfigured', {'id': 'harvest', 'site_id': 'farm', 'role': 'farmer',
+                                           'input_resource': 'crop_ready', 'input_amount': 1,
+                                           'output_resource': 'grain', 'output_amount': 3,
+                                           'tool_resource': 'sickle', 'duration_seconds': 60,
+                                           'wage_coin': 2})
     add('MetabolismPolicyConfigured', {'hunger_seconds_per_point': 3600, 'activity_hunger_percent': 20})
     s = db.append('freight', 'setup', s.revision, events, bootstrap=True)
     clock = TimeEngine(db)
@@ -235,3 +259,34 @@ def test_waiting_courier_second_meal_is_independent_of_partition(tmp_path):
                   if m['npc_id'] == 'huda') == [60, 61]
     assert states[0]['resources']['carlos']['food'] == 0
     assert states[0]['resources']['huda']['food'] == 0
+
+
+def test_courier_departure_wait_has_no_fictitious_work_and_wakes_for_rest(tmp_path):
+    states = []
+    for arm, parts in (('whole', (1800,)), ('split', (600, 1200))):
+        db, clock, sim, s = freight_fixture(tmp_path / f'idle-{arm}.sqlite',
+                                           bread=1, fatigue=69, hunger=20, period=43200)
+        with db:
+            for i, seconds in enumerate(parts):
+                s = sim.advance('freight', seconds=seconds, command_id=f'step:{i}',
+                                expected_revision=s.revision).state
+            assert db.verify('freight').to_dict() == s.to_dict()
+            raw = s.to_dict()
+            raw.pop('revision')
+            states.append(raw)
+            clock.close_session('freight')
+    assert states[0] == states[1]
+    actions = [a for a in states[0]['actions'].values() if a['npc_id'] == 'huda']
+    assert not any(a['action'] == 'work' for a in actions)
+    assert any(a['action'] == 'rest' and a['start'] == 600 for a in actions)
+    assert states[0]['npcs']['huda']['needs']['hunger'] > 20
+
+
+def test_courier_idle_policy_is_default_off(tmp_path):
+    db, clock, sim, s = freight_fixture(tmp_path / 'legacy-idle.sqlite', bread=0, hunger=20)
+    sim.integrated_livelihoods_enabled = False
+    with db:
+        s = sim.advance('freight', seconds=300, command_id='legacy-policy', expected_revision=s.revision).state
+        assert any(a['npc_id'] == 'huda' and a['action'] == 'work' for a in s.actions.values())
+        assert db.verify('freight').to_dict() == s.to_dict()
+        clock.close_session('freight')

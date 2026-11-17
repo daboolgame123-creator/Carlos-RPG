@@ -25,7 +25,7 @@ jobs:
       - run: python -m pip install pytest
       - name: Ownership, wages, authentic frozen save compatibility
         working-directory: simulation
-        run: python -m pytest -q tests/test_play48_integrated_income.py tests/test_play48_frozen_save_contract.py tests/test_play48x_version_transition_gate.py tests/test_knowledge_compatibility.py
+        run: python -m pytest -q tests/test_play48_integrated_income.py tests/test_play48_grain_purchase.py tests/test_play48_frozen_save_contract.py tests/test_play48x_version_transition_gate.py tests/test_knowledge_compatibility.py
   original-village:
     needs: integrity
     runs-on: ubuntu-24.04
