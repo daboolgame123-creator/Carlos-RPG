@@ -1,0 +1,29 @@
+name: PLAY49-J autonomous real cooked menu and actual buyer
+on:
+  push:
+    branches: [experiment/play49-j-costed-tavern-autonomy-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-tavern-menu:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Real venue-owned inputs, deterministic cooking and no compulsory sale
+        env:
+          PYTHONPATH: src:tests
+        run: |
+          python -m compileall -q src/carlos_sim tests/test_play49_autonomous_costed_tavern.py
+          python -m pytest -q -v tests/test_play49_autonomous_costed_tavern.py tests/test_play49_autonomous_site_procurement.py tests/test_play49_site_funded_procurement.py tests/test_play48x_version_transition_gate.py
