@@ -65,6 +65,42 @@ No 96/168h success is inferred from a shorter run.
 
 ## Remaining work
 
+### Verified follow-up — 17 November
+
+On `f6b124d74e422824df829a458be81e7519454ef9`, full regression run
+[43878111956](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43878111956)
+is **SUCCESS on both Python versions**; integrated acceptance
+[43878104653](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43878104653)
+is **FAILED**. The Python3.13 artifact gives this unchanged h60 gate result:
+
+| h60 metric | Control | Candidate |
+| --- | ---: | ---: |
+| Completed bakery batches | 17 | 27 |
+| Meals | 22 | 22 |
+| Food sales | 8 | 7 |
+| Hunger100 residents | 5 | 3 |
+| Cash wages (copper paid) | 3 | 3 |
+| Nora purchases / meals | 0 / 0 | 0 / 0 |
+| Hana / Huda deliveries | 44 / 8 | 73 / 7 |
+| Conserved copper | 12 | 12 |
+
+The gate correctly stops at h60: Nora gained no food; no 72/96/168 claim.
+Downloaded original candidate SQLite confirms Nora's completed harvest is
+unpaid, farm owns only1 against the agreed2 copper, east owns5. Huda's grain
+arrivals at approximately24.114/30.031/36.031h produce only one18h-qualified
+claim, paid at24.139h. Generic courier work occurs25 times for Hana and17
+for Huda; all completed generic actions (including rest) cost85/77 hunger.
+These are observed ledgers, not authority to confiscate east funds or change
+wage intervals retroactively.
+
+The remaining reviewer P2 was reproduced: second meal at660 seconds for a
+whole600 advance versus61 for1+599. The deterministic next-tick wake fixes
+it; **20 focused tests passed locally on Python3.10 and3.13**. The conserved
+two-loaf player gift exists ONLY in the tiny scheduler regression fixture,
+never in original-village acceptance. Reviewer session
+`ses_e1b73d1e4ffenpMwbP5Ehm2RnG` confirmed the narrow fix by source inspection,
+not independent test execution or production approval.
+
 Focused reviewer session `ses_e1b73d1e4ffenpMwbP5Ehm2RnG` identified two
 coordinator defects: new bakery wages were checked after the next pickup,
 and the payroll wait did not wake at fatigue/hunger boundaries. Both were

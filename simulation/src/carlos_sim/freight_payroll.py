@@ -98,8 +98,12 @@ def next_wait_boundary(state: WorldState, who: str) -> int | None:
     contract = state.supply_circuits[who]['food_payroll']
     expiry = contract['receipts'][-1]['delivered_at'] + 3600
     hunger_boundary = 90
-    if (needs['hunger'] < AUTONOMOUS_EATING_THRESHOLD
-            and state.resources[who]['food'] > _reserved_food(state.supply_circuits, who)):
+    if state.resources[who]['food'] > _reserved_food(state.supply_circuits, who):
+        if needs['hunger'] >= AUTONOMOUS_EATING_THRESHOLD:
+            # The consumption pass already ran. A same-tick meal/decision
+            # can defer another owned loaf, but not until the caller's next
+            # arbitrary advance boundary. The next logical tick is eligible.
+            return state.time + 1
         hunger_boundary = AUTONOMOUS_EATING_THRESHOLD
     period = state.metabolism_policy.get('hunger_seconds_per_point', HUNGER_SECONDS_PER_POINT)
     return min(expiry,

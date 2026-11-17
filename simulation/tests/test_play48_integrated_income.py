@@ -118,7 +118,8 @@ def test_existing_history_cannot_be_changed_to_fake_service(village):
         db.verify(WORLD)
 
 
-def freight_fixture(path, *, bread=1, fatigue=0, hunger=65, period=1800):
+def freight_fixture(path, *, bread=1, fatigue=0, hunger=65, period=1800,
+                    player_food=0):
     """Small boundary fixture; deliberately separate from 13-person acceptance."""
     db = SQLiteEventStore(path)
     s = db.create_world('freight')
@@ -136,6 +137,8 @@ def freight_fixture(path, *, bread=1, fatigue=0, hunger=65, period=1800):
                                        'fatigue': fatigue if who == 'huda' else 0, 'safety': 0},
                              'goals': {'earn': 10, 'survive': 30, 'explore': 10}})
     add('EntityCreated', {'id': 'carlos', 'name': 'Carlos', 'location_id': 'bakery', 'controller': 'player'})
+    add('ResourceChanged', {'owner_id': 'carlos', 'resource': 'food',
+                           'previous': None, 'current': player_food, 'source': 'initialization'})
     for owner in ('well', 'farm', 'bakery', 'market', 'huda', 'salma'):
         for resource in ('water', 'grain', 'food', 'coin_copper', 'labor_units', 'investigation_attempts'):
             quantity = bread if (owner, resource) == ('bakery', 'food') else 2 if (owner, resource) == ('farm', 'grain') else 0
@@ -202,3 +205,33 @@ def test_recurring_wage_requires_second_interval_and_new_actual_delivery(tmp_pat
         assert receipts[1]['delivery'] > receipts[0]['delivery']
         assert db.verify('freight').to_dict() == s.to_dict()
         clock.close_session('freight')
+
+
+def test_waiting_courier_second_meal_is_independent_of_partition(tmp_path):
+    states = []
+    for arm, parts in (('whole', (600,)), ('split', (1, 599))):
+        db, clock, sim, s = freight_fixture(tmp_path / f'{arm}.sqlite',
+                                           bread=0, hunger=89, player_food=2)
+        with db:
+            s = sim.advance('freight', seconds=60, command_id='arrive',
+                            expected_revision=s.revision).state
+            # Isolated scheduler probe, NOT original-village acceptance:
+            # transfer two existing loaves at the real bakery wait location.
+            s = db.append('freight', 'local-gift', s.revision,
+                          [DomainEvent('PlayerGiftDelivered', 'carlos',
+                                       'test fixture owned food transfer', s.time,
+                                       {'recipient_id': 'huda', 'resource': 'food', 'quantity': 2})],
+                          gift_authorized=True)
+            for i, seconds in enumerate(parts):
+                s = sim.advance('freight', seconds=seconds, command_id=f'step:{i}',
+                                expected_revision=s.revision).state
+            assert db.verify('freight').to_dict() == s.to_dict()
+            raw = s.to_dict()
+            raw.pop('revision')
+            states.append(raw)
+            clock.close_session('freight')
+    assert states[0] == states[1]
+    assert sorted(m['consumed_at'] for m in states[0]['consumptions'].values()
+                  if m['npc_id'] == 'huda') == [60, 61]
+    assert states[0]['resources']['carlos']['food'] == 0
+    assert states[0]['resources']['huda']['food'] == 0
