@@ -61,13 +61,18 @@ def test_site_keeper_autonomously_buys_complete_real_batch_with_site_money(ready
     a = economy.advance(WORLD, seconds=1, command_id="i-auto-buy-tick1",
                         expected_revision=_rev(db))
     after_one = db.load(WORLD)
-    assert len(a.economic_trades) >= 1
+    # LivingWorldEngine evaluates decisions at both endpoints of a 1s
+    # advance. Two DIFFERENT logical ticks can fund two independent inputs;
+    # the bound is one purchase per SITE per TICK, not per API command.
+    assert len(a.economic_trades) == 2
     one = [t for t in after_one.market_trades.values()
            if t.get("business_keeper_id") == "tavern_host"]
-    assert len(one) == 1
-    assert one[0]["buyer_id"] == "tavern"
+    assert len(one) == 2
+    assert {t["buyer_id"] for t in one} == {"tavern"}
+    assert sorted(t["executed_at"] for t in one) == [before.time, before.time + 1]
     assert copper(after_one) == copper(before) == 22
 
+    # A later command must not buy a third, non-existent ingredient.
     economy.advance(WORLD, seconds=1, command_id="i-auto-buy-tick2",
                     expected_revision=_rev(db))
     bought = db.load(WORLD)
