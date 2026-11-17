@@ -152,6 +152,11 @@ def _bakery_cash_remittance_minimum(state: dict | WorldState,
     """Keep normal 1 bakery operating coin plus any already-earned wages."""
     if record["index"] != 4:
         return 1
+    circuits = (state.supply_circuits if isinstance(state, WorldState)
+                else state['supply_circuits'])
+    if any('grain_purchase' in c for c in circuits.values()):
+        from .grain_purchase import cash_minimum
+        return cash_minimum(state, record)
     return max(2, 1 + _local_unpaid_bakery_wage_reserve(state))
 
 
@@ -277,6 +282,8 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         state["resources"][who][resource] += 1
         record["carry"] = {"source": src, "destination": dest, "resource": resource}
         record["loads"] += 1
+        from .grain_purchase import record_pickup
+        record_pickup(state, who, resource)
     elif event.event_type == "SupplyCargoDelivered":
         cargo = record["carry"]
         if (cargo is None or current != cargo["destination"]
@@ -306,6 +313,10 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
             record["bread_share_delivered"] += 1
         record["carry"] = None
         record["deliveries"] += 1
+        from .grain_purchase import record_delivery as record_grain_purchase
+        record_grain_purchase(state, who, resource)
+        from .freight_payroll import record_delivery
+        record_delivery(state, who, resource)
         # The delivered grain is authoritative physical employment proof.
         # Do NOT pay or reserve food until a later authentic bakery batch.
         if current == "bakery" and resource == "grain" and record["index"] == 2:
@@ -481,7 +492,9 @@ def validate_supply_circuits(state: dict) -> None:
         share_shape = {"bread_share_earned", "bread_share_delivered"}
         if (who not in state["npcs"] or state["npcs"][who]["role"] != "courier"
                 or type(rec) is not dict
-                or set(rec) not in (base_shape, base_shape | share_shape)
+                or not base_shape <= set(rec)
+                or not set(rec) - base_shape <= share_shape | {'food_payroll', 'grain_purchase'}
+                or (set(rec) & share_shape not in (set(), share_shape))
                 or not _validated_stops(rec["stops"])
                 or type(rec["route_ids"]) is not list or len(rec["route_ids"]) != 6
                 or type(rec["period_seconds"]) is not int
@@ -492,6 +505,10 @@ def validate_supply_circuits(state: dict) -> None:
                 or rec["loads"] < rec["deliveries"]
                 or rec["loads"] - rec["deliveries"] != int(rec["carry"] is not None)):
             raise ValueError("invalid durable courier logistics state")
+        from .freight_payroll import validate_contract
+        validate_contract(state, who, rec)
+        from .grain_purchase import validate_contract as validate_grain_purchase
+        validate_grain_purchase(state, who, rec)
         if "bread_share_earned" in rec:
             if (type(rec["bread_share_earned"]) is not int
                     or type(rec["bread_share_delivered"]) is not int

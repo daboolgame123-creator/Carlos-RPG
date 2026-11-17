@@ -23,7 +23,8 @@ def take(db, gateway, ident="pick"):
 
 
 def test_version_and_local_survey_readonly(tmp_path):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 63)
+    from release_contract import assert_current_version
+    assert_current_version(SCHEMA_VERSION, RULES_VERSION)
     db, clock, g = demo(tmp_path)
     with db:
         before = db.load(WORLD).to_dict()

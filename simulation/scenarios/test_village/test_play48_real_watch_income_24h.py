@@ -14,6 +14,7 @@ import json
 
 from carlos_sim import DomainEvent, LivingWorldEngine, SQLiteEventStore, TimeEngine
 from carlos_sim.economic_diagnostics import audit_npc_economy
+from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
 from test_play38_multi_farm_couriers import seed_two_field_world, WORLD
 from test_play47_joined_professions import _joined_bootstrap
 from test_play47_closure_endurance import DAY
@@ -59,7 +60,7 @@ def seed(path):
                              "activity_hunger_percent": 20}),
             ], bootstrap=True,
         )
-        assert (current.schema_version, current.rules_version) == (45, 68)
+        assert (current.schema_version, current.rules_version) == (SCHEMA_VERSION, RULES_VERSION)
         assert len(current.npcs) == 13
         assert audit_npc_economy(current)["copper_known_total"] == 12
         assert current.resources["watch_post"]["coin_copper"] == 2

@@ -47,7 +47,8 @@ def session(db):
 def test_source_config_is_time_zero_only_and_replayable(tmp_path):
     with SQLiteEventStore(tmp_path / "site.sqlite") as db:
         initial = setup_water(db)
-        assert (initial.schema_version, initial.rules_version) == (45, 63)
+        from release_contract import assert_current_version
+        assert_current_version(initial.schema_version, initial.rules_version)
         assert initial.hydrology_sources["well"]["capacity"] == 3
         assert initial.hydrology_sources["well"]["initial"] == 2
         assert db.verify(WORLD).to_dict() == initial.to_dict()

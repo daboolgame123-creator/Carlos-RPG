@@ -146,6 +146,24 @@ def configure_recipe(state: dict[str, Any], event: DomainEvent, *,
         raise ValueError("recipe requires finite, initialized time-zero materials")
     state["production_recipes"][p["id"]] = dict(p)
 
+
+def sign_production_cash_wage(state: dict[str, Any], event: DomainEvent, *,
+                              bootstrap: bool) -> None:
+    """Prospective employer terms, never a retroactive payment or funding."""
+    p = event.data
+    if (not bootstrap or state["time"] != 0 or event.actor_id is not None
+            or set(p) != {"recipe_id", "amount"}
+            or not _valid_name(p["recipe_id"], MAX_ID)
+            or type(p["amount"]) is not int or not 1 <= p["amount"] <= 5):
+        raise ValueError("cash wage agreement requires trusted time-zero terms")
+    recipe = state["production_recipes"].get(p["recipe_id"])
+    if (recipe is None or "wage_coin" in recipe or "wage_food" in recipe
+            or any(j["recipe_id"] == p["recipe_id"]
+                   for j in state["production_jobs"].values())
+            or not _known(state["resources"].get(recipe["site_id"], {}).get("coin_copper"))):
+        raise ValueError("cannot replace wages or pay previously unsigned work")
+    recipe["wage_coin"] = p["amount"]
+
 def start_production(state: dict[str, Any], event: DomainEvent, *,
                      production_authorized: bool) -> None:
     p = event.data

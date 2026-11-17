@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 45
-RULES_VERSION = 68
+RULES_VERSION = 71
 
 
 def _thaw(value: Any) -> Any:
@@ -514,6 +514,18 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "ProductionRecipeConfigured":
         from .production import configure_recipe
         configure_recipe(d, e, bootstrap=bootstrap)
+    elif kind == "ProductionCashWageSigned":
+        from .production import sign_production_cash_wage
+        sign_production_cash_wage(d, e, bootstrap=bootstrap)
+    elif kind == "RecurringFreightWageSigned":
+        from .freight_payroll import sign_contract
+        sign_contract(d, e, bootstrap=bootstrap)
+    elif kind == "GrainPurchaseSigned":
+        from .grain_purchase import sign_contract
+        sign_contract(d, e, bootstrap=bootstrap)
+    elif kind == "RecurringFreightWagePaid":
+        from .freight_payroll import pay_wage
+        pay_wage(d, e, supply_authorized=supply_authorized)
     elif kind == "ProductionStarted":
         from .production import start_production
         start_production(d, e, production_authorized=production_authorized)
