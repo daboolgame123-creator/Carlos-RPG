@@ -1,0 +1,54 @@
+name: PLAY48 independent read-only saved income preflight
+on:
+  push:
+    branches: [audit/play48-saved-economic-preflight-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  saved-evidence-parser:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Audit parsing, conservation assertions, refusal, byte immutability
+        working-directory: simulation
+        run: python -m pytest -q tests/test_play48_saved_income_preflight.py
+
+      - name: Retrieve immutable original Python 3.13 60h control/candidate SQLite
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43878104653
+          name: play48-income-3.13-f6b124d74e422824df829a458be81e7519454ef9
+          github-token: ${{ github.token }}
+          path: simulation/evidence
+      - name: Independently inspect real original-village SQLite, no new simulation
+        working-directory: simulation
+        run: |
+          python tools/play48_saved_income_preflight.py evidence/candidate.sqlite --control evidence/control.sqlite > evidence/preflight.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          evidence = json.loads(Path("evidence/preflight.json").read_text())
+          row = evidence["candidate"]
+          assert row["version"] == [45, 70] and row["hour"] == 60
+          assert row["original_npcs"] == 13 and row["copper"] == 12
+          assert row["farm_cash"] == 1 and row["farm_unpaid_copper_due"] == 2
+          assert row["farm_grain_sale_receipts"] == 0
+          assert row["nora"]["hunger"] == 100 and row["nora"]["purchases"] == 0
+          assert row["nora"]["meals"] == 0
+          assert row["huda"]["deliveries"] == 7
+          assert row["huda"]["last_delivery_at"] == 129710
+          assert evidence["delta"]["huda_deliveries"] == -1
+          assert row["market_food_stock"] == 16
+          assert row["economic_release_go"] is False
+          print("ORIGINAL_60H_REAL_SQLITE_EVIDENCE_CONFIRMED: 13 NPC, 12 copper, unpaid wage, unsold grain, Huda freight stall")
+          PY
