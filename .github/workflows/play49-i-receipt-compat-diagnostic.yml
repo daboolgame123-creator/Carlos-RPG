@@ -1,0 +1,117 @@
+name: PLAY49-I frozen-reader same-version receipt diagnostic
+on:
+  push:
+    branches: [experiment/play49-i-receipt-compat-diagnostic-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  historical-reader-boundary-not-a-release:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - name: Frozen real pre-G rules-70 reader
+        uses: actions/checkout@v5
+        with:
+          ref: 5464f12efacc825fdd8bf1fb03b8d773b9f65935
+          path: pre-g
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Genuine post-G writer creates two site-receipt transactions
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests
+        run: |
+          python - <<'PY'
+          from carlos_sim import SQLiteEventStore, TimeEngine, NPCMarketService
+          from carlos_sim.domain import RULES_VERSION, SCHEMA_VERSION
+          from test_play49_site_funded_procurement import (
+              WORLD, _setup, _first_real_plate, _second_authentic_goods, _make_second_meal
+          )
+          assert (SCHEMA_VERSION, RULES_VERSION) == (45, 70)
+          with SQLiteEventStore('/tmp/play49-i-new-venue.sqlite') as db:
+              _setup(db)
+              clock = TimeEngine(db)
+              clock.open_session(WORLD)
+              try:
+                  market = NPCMarketService(db, clock)
+                  _first_real_plate(db, clock, market)
+                  _second_authentic_goods(db, clock, market)
+                  s = _make_second_meal(db, clock, market)
+                  assert sum("business_keeper_id" in t for t in s.market_trades.values()) == 2
+                  db.snapshot(WORLD)
+                  assert db.verify(WORLD).to_dict() == s.to_dict()
+              finally:
+                  clock.close_session(WORLD)
+          print("NEW_WRITER_GREEN: same rules 70, two new stored site receipts")
+          PY
+      - name: Real old reader rejects changed same-version receipts without mutation
+        working-directory: simulation
+        env:
+          PYTHONPATH: ../pre-g/simulation/src
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.domain import RULES_VERSION, SCHEMA_VERSION
+          from carlos_sim.store import IntegrityError, UnsupportedVersion
+          assert (SCHEMA_VERSION, RULES_VERSION) == (45, 70)
+          path = Path('/tmp/play49-i-new-venue.sqlite')
+          prior = sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              try:
+                  db.verify('village')
+              except UnsupportedVersion as exc:
+                  raise AssertionError('Wrong diagnostic: previous reader sees same version') from exc
+              except IntegrityError as exc:
+                  print('CONFIRMED_INCOMPATIBILITY: same-version previous reader rejects new receipt:', exc)
+              else:
+                  raise AssertionError('Old reader unexpectedly accepted new persistent receipt')
+          assert sha256(path.read_bytes()).hexdigest() == prior
+          print('REFUSAL_DID_NOT_MUTATE_FILE: confirms RELEASE_NO_GO, not compatibility')
+          PY
+      - name: True old writer produces a historical save with original code
+        working-directory: simulation
+        env:
+          PYTHONPATH: ../pre-g/simulation/src
+        run: |
+          python - <<'PY'
+          from carlos_sim import SQLiteEventStore, DomainEvent
+          from carlos_sim.domain import RULES_VERSION, SCHEMA_VERSION
+          assert (SCHEMA_VERSION, RULES_VERSION) == (45, 70)
+          with SQLiteEventStore('/tmp/play49-i-old-venue.sqlite') as db:
+              db.create_world('old')
+              db.append('old', 'loc', 0, [
+                  DomainEvent('LocationCreated', None, 'frozen source', 0,
+                              {'id': 'square', 'name': 'Square'})
+              ])
+              db.snapshot('old')
+              assert db.verify('old').revision == 1
+          print('GENUINE_PRE_G_SAVED_WORLD_WRITTEN')
+          PY
+      - name: New reader verifies genuine old-version world, byte identical
+        working-directory: simulation
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from carlos_sim import SQLiteEventStore
+          from carlos_sim.domain import RULES_VERSION, SCHEMA_VERSION
+          assert (SCHEMA_VERSION, RULES_VERSION) == (45, 70)
+          path = Path('/tmp/play49-i-old-venue.sqlite')
+          before = sha256(path.read_bytes()).hexdigest()
+          with SQLiteEventStore(path) as db:
+              assert db.verify('old').revision == 1
+          assert sha256(path.read_bytes()).hexdigest() == before
+          print('NEW_READER_COMPATIBLE_WITH_OLD_SAVE; old-reader of new receipt remains broken')
+          PY
