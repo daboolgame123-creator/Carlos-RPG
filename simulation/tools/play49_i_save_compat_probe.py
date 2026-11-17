@@ -12,6 +12,7 @@ import sys
 
 from carlos_sim import DomainEvent, NPCMarketService, SQLiteEventStore, TimeEngine
 from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
+from carlos_sim.store import IntegrityError
 
 
 def _version(db: SQLiteEventStore, world: str):
@@ -62,7 +63,7 @@ def old_read(path: Path):
         assert _version(db, "village") == (45, 70) == (SCHEMA_VERSION, RULES_VERSION)
         try:
             db.verify("village")
-        except (ValueError, TypeError, KeyError) as exc:
+        except (ValueError, TypeError, KeyError, IntegrityError) as exc:
             print("PRE_G_OLD_READER_REJECTS_SAME_VERSION_RECEIPT:", type(exc).__name__, str(exc)[:180])
         else:
             raise AssertionError("Pre-G reader silently accepted new same-version trade receipt")
