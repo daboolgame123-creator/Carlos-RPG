@@ -40,9 +40,11 @@ def test_opening_owned_assets_and_huda_provision_match_control(arms):
         assert old["courier_id"] == "huda"
         assert old["payer_site"] == "bakery"
         assert old["authorized_total_units"] == 2
-        assert old["deferred_bakery_grain"] is True
-        assert old["payments"] == []
-        assert old["deferred_grain_services"] == []
+        # The persisted projection stores *the earned service ledger*, not
+        # the bootstrap-only option name; frozen sequences become tuples.
+        assert "deferred_bakery_grain" not in old
+        assert old["payments"] == ()
+        assert old["deferred_grain_services"] == ()
 
 
 def test_nora_and_hana_independent_without_double_claim(arms):
@@ -52,7 +54,7 @@ def test_nora_and_hana_independent_without_double_claim(arms):
     assert "food_payroll" not in a.supply_circuits["hana"]
     assert b.supply_circuits["hana"]["food_payroll"] == {
         "site_id": "market", "resource": "food",
-        "interval_seconds": 18 * 3600, "receipts": [],
+        "interval_seconds": 18 * 3600, "receipts": (),
     }
     assert sum(x.get("food", 0) for x in b.resources.values()) == 3
 
