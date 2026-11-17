@@ -1,0 +1,69 @@
+name: PLAY48 Huda actual two-service food wage 48h parity pilot
+on:
+  push:
+    branches: [experiment/play48-preserve-real-huda-livelihood-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  signed-terms:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Original Huda contract unchanged, no invented stock or double wages
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_huda_livelihood_parity.py
+  actual-48h-ab:
+    needs: signed-terms
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Original 13 NPC, both 24h/48h physically funded A/B
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_integrated_acceptance.py --directory evidence --hours 48
+      - name: Verify that Huda's real delivery and earned-meal metrics do not regress
+        working-directory: simulation
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          rows = json.loads(Path("evidence/results.json").read_text())
+          for hour in ("24", "48"):
+              a, b = rows[hour]["control"], rows[hour]["candidate"]
+              assert a["copper"] == b["copper"] == 12
+              assert len(a["npcs"]) == len(b["npcs"]) == 13
+              print(f"HUDAPARITY_{hour}h control_deliveries={a['deliveries']['huda']} candidate_deliveries={b['deliveries']['huda']} control_meals={a['npcs']['huda']['meals']} candidate_meals={b['npcs']['huda']['meals']}")
+          a, b = rows["48"]["control"], rows["48"]["candidate"]
+          assert b["npcs"]["huda"]["meals"] >= a["npcs"]["huda"]["meals"], "Huda lost legally earned meals"
+          assert b["deliveries"]["huda"] >= a["deliveries"]["huda"], "Huda lost genuine freight"
+          print("PLAY48_HUDA_48H_PARITY_PASSED_NOT_ECONOMIC_RELEASE")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-huda-48h-${{ matrix.python }}-${{ github.sha }}
+          path: simulation/evidence/

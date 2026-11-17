@@ -28,10 +28,19 @@ def seed(path, *, candidate):
             event('ProductionCashWageSigned', {'recipe_id': 'finite-harvest', 'amount': 2}),
             event('MarketStewardFoodContractSigned',
                   {'site_id': 'market', 'keeper_id': 'salma', 'sales_per_wage': 2}),
-            *[event('RecurringFreightWageSigned',
-                   {'courier_id': who, 'site_id': site, 'resource': resource,
-                    'interval_seconds': 18 * HOUR})
-              for who, site, resource in (('huda', 'bakery', 'grain'), ('hana', 'market', 'food'))],
+            # Huda already has the original two-service, actually delivered,
+            # bakery-funded deferred grain wage. Do not silently replace it
+            # with an 18h recurring contract: the historical saved 60h trial
+            # proved that replacement paid only one meal and stranded her.
+            # Retain those exact original terms and physical delivery guards.
+            event('CourierProvisionConfigured',
+                  {'id': 'huda-future-bakery', 'courier_id': 'huda',
+                   'payer_site': 'bakery', 'units': 0, 'authorized_total_units': 2,
+                   'deferred_bakery_grain': True}),
+            # Hana may separately pilot genuine recurring MARKET food wages.
+            event('RecurringFreightWageSigned',
+                  {'courier_id': 'hana', 'site_id': 'market', 'resource': 'food',
+                   'interval_seconds': 18 * HOUR}),
         ]
     else:
         events = [
@@ -86,7 +95,7 @@ def advance_to(path, hour, *, candidate):
         clock.open_session(WORLD)
         sim = engine(db, clock, reserve_trader_meal=True, deferred_market_courier_wage=True)
         sim.merchant_food_wage_enabled = True
-        sim.deferred_bakery_grain_wage_enabled = not candidate
+        sim.deferred_bakery_grain_wage_enabled = True  # same funded Huda service in both arms
         sim.integrated_livelihoods_enabled = candidate
         sim.remember_unbought_stalls_enabled = candidate
         s = db.load(WORLD)
