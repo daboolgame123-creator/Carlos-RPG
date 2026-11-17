@@ -1,5 +1,5 @@
 """Independent current-writer oracle; frozen readers are tested separately."""
-CURRENT_VERSION = (45, 70)
+CURRENT_VERSION = (45, 71)
 
 
 def assert_current_version(schema, rules):
