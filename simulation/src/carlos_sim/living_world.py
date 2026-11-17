@@ -98,7 +98,8 @@ class LivingWorldEngine:
                  merchant_food_wage_enabled: bool = False,
                  deferred_bakery_grain_wage_enabled: bool = False,
                  integrated_livelihoods_enabled: bool = False,
-                 site_procurement_enabled: bool = False):
+                 site_procurement_enabled: bool = False,
+                 costed_prepared_food_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -182,6 +183,10 @@ class LivingWorldEngine:
                 or (site_procurement_enabled and not economic_enabled)):
             raise ValueError('site procurement requires real economic_enabled=True')
         self.site_procurement_enabled = site_procurement_enabled
+        if (type(costed_prepared_food_enabled) is not bool
+                or (costed_prepared_food_enabled and not site_procurement_enabled)):
+            raise ValueError('costed prepared food requires real site procurement')
+        self.costed_prepared_food_enabled = costed_prepared_food_enabled
         if (type(merchant_food_wage_enabled) is not bool or
                 (merchant_food_wage_enabled and not (
                     economic_enabled and consumption_enabled))):
@@ -854,9 +859,20 @@ class LivingWorldEngine:
                              'unit_price': grain.unit_price}),
                              market_capability=True)
                         economic_offers.append(grain.offer_id)
+                if self.costed_prepared_food_enabled:
+                    from .prepared_food_autonomy import (
+                        has_prepared_food_recipe, choose_local_costed_plate_offer,
+                    )
                 for keeper_id in sorted(current.npcs):
-                    quote = choose_local_food_offer(
-                        current, keeper_id, adaptive=self.adaptive_market_enabled)
+                    if (self.costed_prepared_food_enabled
+                            and has_prepared_food_recipe(
+                                current, current.entities[keeper_id]['location_id'])):
+                        # Never underprice actual prepared food using the
+                        # generic 2-copper bread/foraged-food quotation.
+                        quote = choose_local_costed_plate_offer(current, keeper_id)
+                    else:
+                        quote = choose_local_food_offer(
+                            current, keeper_id, adaptive=self.adaptive_market_enabled)
                     if quote is None:
                         continue
                     append(DomainEvent('MarketOfferPosted', keeper_id,
