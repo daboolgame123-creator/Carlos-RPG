@@ -1,0 +1,23 @@
+name: PLAY48 independent read-only saved income preflight
+on:
+  push:
+    branches: [audit/play48-saved-economic-preflight-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  saved-evidence-parser:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Audit parsing, conservation assertions, refusal, byte immutability
+        working-directory: simulation
+        run: python -m pytest -q tests/test_play48_saved_income_preflight.py
