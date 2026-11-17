@@ -25,7 +25,7 @@ FROZEN = [(63, 'b397f40d01a314197f2e22f26f1d27bf64eeed3f'),
 
 @pytest.mark.parametrize('rules,sha', FROZEN)
 def test_authentic_frozen_writer_refusal_and_original_reader(tmp_path, rules, sha):
-    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 70)
+    assert (SCHEMA_VERSION, RULES_VERSION) == (45, 71)
     repo = Path(__file__).resolve().parents[2]
     archive = subprocess.check_output(['git', 'archive', '--format=zip', sha, 'simulation'], cwd=repo)
     old = tmp_path / f'writer-{rules}'
