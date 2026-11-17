@@ -202,7 +202,7 @@ def buy_cook_and_pay_third_plate(db, clock, market):
         if (job["status"] == "completed" and "work_wage" not in job
                 and "wage_coin" in recipe):
             due.append((ident, recipe["wage_coin"]))
-    assert len(due) >= 8  # farm, dairy and the third cooked meal
+    assert len(due) == 6  # earlier first-batch farm/dairy wages were already paid
     events = [
         DomainEvent("ProductionWagePaid", None, "signed completed real job",
                     sold.time, {"job_id": ident, "amount": amount})
