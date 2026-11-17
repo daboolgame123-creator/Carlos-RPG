@@ -1,0 +1,48 @@
+name: PLAY49-I real old-reader save compatibility probe
+on:
+  push:
+    branches: [audit/play49-i-legacy-save-acceptance-20261117]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  historical-pre-g-receipt:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    defaults:
+      run:
+        working-directory: simulation
+    steps:
+      - uses: actions/checkout@v5
+      - name: Checkout unchanged real pre-PLAY49-G Rules70 reader/writer
+        uses: actions/checkout@v5
+        with:
+          ref: 5464f12efacc825fdd8bf1fb03b8d773b9f65935
+          path: reviewed-pre-g
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile genuine old and current rules
+        run: |
+          python -m compileall -q src/carlos_sim tools/play49_i_save_compat_probe.py ../reviewed-pre-g/simulation/src/carlos_sim
+          test "$(git -C ../reviewed-pre-g rev-parse HEAD)" = 5464f12efacc825fdd8bf1fb03b8d773b9f65935
+      - name: Genuine new-rule market receipt, exact saved snapshot and replay
+        env:
+          PYTHONPATH: src:tests
+        run: python tools/play49_i_save_compat_probe.py new-write /tmp/play49i-current.sqlite
+      - name: Genuine old reader MUST reject modified same-version receipt, preserving file bytes
+        env:
+          PYTHONPATH: ../reviewed-pre-g/simulation/src
+        run: python tools/play49_i_save_compat_probe.py old-read /tmp/play49i-current.sqlite
+      - name: Create real pre-G file from frozen source
+        env:
+          PYTHONPATH: ../reviewed-pre-g/simulation/src
+        run: python tools/play49_i_save_compat_probe.py old-write /tmp/play49i-historic.sqlite
+      - name: New reader accepts genuinely old no-trade save without modifications
+        env:
+          PYTHONPATH: src
+        run: python tools/play49_i_save_compat_probe.py new-read /tmp/play49i-historic.sqlite
