@@ -97,7 +97,8 @@ class LivingWorldEngine:
                  finite_aquifer_pumping_enabled: bool = False,
                  merchant_food_wage_enabled: bool = False,
                  deferred_bakery_grain_wage_enabled: bool = False,
-                 integrated_livelihoods_enabled: bool = False):
+                 integrated_livelihoods_enabled: bool = False,
+                 site_procurement_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -177,6 +178,10 @@ class LivingWorldEngine:
         if type(economic_enabled) is not bool:
             raise ValueError('economic_enabled must be boolean')
         self.economic_enabled = economic_enabled
+        if (type(site_procurement_enabled) is not bool
+                or (site_procurement_enabled and not economic_enabled)):
+            raise ValueError('site procurement requires real economic_enabled=True')
+        self.site_procurement_enabled = site_procurement_enabled
         if (type(merchant_food_wage_enabled) is not bool or
                 (merchant_food_wage_enabled and not (
                     economic_enabled and consumption_enabled))):
@@ -888,6 +893,25 @@ class LivingWorldEngine:
                                 "unit_price": 2,
                             }), market_capability=True)
                             economic_offers.append(sale.offer_id)
+                if self.site_procurement_enabled:
+                    from .site_market_autonomy import choose_local_site_input_purchase
+                    # One fully funded, physically local site ingredient per
+                    # merchant/tick. The next input must be reconsidered from
+                    # the newly committed double-entry ownership state.
+                    for business in sorted(current.market_stalls):
+                        site_buy = choose_local_site_input_purchase(current, business)
+                        if site_buy is None:
+                            continue
+                        append(DomainEvent('MarketTradeExecuted', site_buy.keeper_id,
+                            'autonomous local venue procurement: ' + site_buy.reason,
+                            current.time, {'id': site_buy.trade_id,
+                                           'offer_id': site_buy.offer_id,
+                                           'buyer_id': site_buy.site_id,
+                                           'quantity': 1,
+                                           'expected_unit_price': site_buy.unit_price,
+                                           'business_keeper_id': site_buy.keeper_id}),
+                            market_capability=True)
+                        economic_trades.append(site_buy.trade_id)
                 for buyer_id in sorted(current.npcs):
                     purchase = choose_local_food_purchase(
                         current, buyer_id, adaptive=self.adaptive_market_enabled)
