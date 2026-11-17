@@ -26,6 +26,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+      - name: Install historical test fixture dependency
+        run: python -m pip install pytest
       - name: Compile genuine old and current rules
         run: |
           python -m compileall -q src/carlos_sim tools/play49_i_save_compat_probe.py ../reviewed-pre-g/simulation/src/carlos_sim
