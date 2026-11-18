@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+      - name: Install scenario import dependency
+        run: python -m pip install pytest
       - name: Download real 168h control/candidate event ledgers from PR157
         uses: actions/download-artifact@v4
         with:
