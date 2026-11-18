@@ -1,0 +1,67 @@
+name: PLAY48 real-world saved 72h to 96h and 168h observational continuation
+on:
+  push:
+    branches:
+      - experiment/play48-resume-from-72-real-world-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  real-96h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve original verified 72h physical SQLite worlds from exact unchanged-engine head
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-source-fair-168h-04f1f8c532058a1eb64c1a50d233c9e0619ffb4d
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44266847089
+          github-token: ${{ github.token }}
+          path: simulation/evidence
+      - name: Advance both original 13-NPC physical worlds only from their saved 72h state to 96h
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_resume_real_economy_observer.py --directory evidence --start 72 --end 96
+      - name: Preserve even failed partial 96h SQLite event ledgers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-observer-96-${{ github.sha }}
+          path: simulation/evidence
+  real-168h:
+    needs: real-96h
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve actual 96h result of this run, not a synthetic reset
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-observer-96-${{ github.sha }}
+          path: simulation/evidence
+      - name: Resume both genuine physical worlds from 96h to 168h
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_resume_real_economy_observer.py --directory evidence --start 96 --end 168
+      - name: Preserve final real 168h event ledgers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-observer-168-${{ github.sha }}
+          path: simulation/evidence
