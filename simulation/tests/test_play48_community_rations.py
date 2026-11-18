@@ -62,6 +62,23 @@ def test_owner_consent_is_required_and_only_signed_at_genesis():
         sign_market_relief(s, signed, bootstrap=True)
 
 
+def test_original_market_merchant_wage_and_owner_ration_contracts_can_coexist():
+    from carlos_sim.steward_food_payroll import sign_steward_food_contract
+    from carlos_sim.market import validate_market
+    s = market()
+    s["resources"]["salma"] = {"food": 0, "coin_copper": 0}
+    sign_steward_food_contract(s, DomainEvent(
+        "MarketStewardFoodContractSigned", None, "original merchant job", 0,
+        {"site_id": "market", "keeper_id": "salma", "sales_per_wage": 2},
+    ), bootstrap=True)
+    sign_market_relief(s, DomainEvent(
+        "MarketCommunityRationsSigned", None, "later consent", 0,
+        {"site_id": "market", "keeper_id": "salma", "daily_limit": 2},
+    ), bootstrap=True)
+    assert s["market_stalls"]["market"]["food_wage_sales_required"] == 2
+    validate_market(s)
+
+
 def test_actual_penniless_present_and_hungry_recipient_gets_conserved_food():
     s = configured()
     assert choose_market_ration(WorldState(**s)) == "nora"
