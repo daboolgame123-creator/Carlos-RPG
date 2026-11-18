@@ -1,0 +1,38 @@
+name: PLAY48 genuine 168h saved-ledger wage and income audit
+on:
+  push:
+    branches:
+      - experiment/play48-week-income-audit-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  saved-week-wage-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Download real 168h control/candidate event ledgers from PR157
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-baker-rescue-saved96-to-168-db385ab9a8e25105b976c1a22e5a998b66ff8c98
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44303712170
+          github-token: ${{ github.token }}
+          path: simulation/evidence
+      - name: Verify replay, classify production wages and inspect owned copper without advancing time
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_week_income_audit.py --directory evidence --output income-audit.json
+      - name: Preserve read-only audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-week-income-audit-${{ github.sha }}
+          path: simulation/income-audit.json
+          if-no-files-found: warn
