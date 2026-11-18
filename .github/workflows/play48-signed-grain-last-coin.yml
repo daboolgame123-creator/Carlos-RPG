@@ -1,0 +1,49 @@
+name: PLAY48 signed farm cash last-coin settlement
+on:
+  push:
+    branches:
+      - experiment/play48-pay-real-grain-before-operating-reserve-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  physical-payment:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Two authentic payable invoices, reserved cash, original 2c wage, Huda
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_last_coin_grain_payout.py tests/test_play48_source_fairness.py tests/test_play48_grain_purchase.py tests/test_play48_huda_grain_payment_pilot.py
+  original-village-60h:
+    needs: physical-payment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Unmodified original 13 NPC 24/48/60h A/B
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_integrated_acceptance.py --directory evidence --hours 60
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-grain-last-coin-${{ github.sha }}
+          path: simulation/evidence/
