@@ -48,10 +48,17 @@ def pending_claims(state):
 
 
 def cash_minimum(state, record) -> int:
-    """Reserve operating cash, quoted stock, earned wages, and earlier grain."""
+    """A funded signed grain invoice outranks the optional operating coin.
+
+    Operating with zero liquidity may be economically painful, but hoarding
+    the *last* existing coin indefinitely while genuine farm deliveries remain
+    unpaid leaves an otherwise active village worker without her earned wage.
+    Keep senior completed bakery wages, posted cash quotes and all earlier
+    authentic source invoices protected. No credit or minted funds.
+    """
     from .supply import _local_unpaid_bakery_wage_reserve
     circuits, _, offers, _ = _fields(state)
-    base = 1 + _local_unpaid_bakery_wage_reserve(state)
+    base = _local_unpaid_bakery_wage_reserve(state)
     base += sum(o['remaining'] for o in offers.values()
                 if o['status'] == 'open' and o['stock_owner_id'] == 'bakery'
                 and o['resource'] == 'coin_copper')
