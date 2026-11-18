@@ -1,0 +1,59 @@
+name: PLAY48 physical baker rescue 0-168h and saved96-168h evidence
+on:
+  push:
+    branches:
+      - experiment/play48-baker-full-week-proof-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  saved-96h-to-168h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 115
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download actual candidate and control 96h saved event ledgers
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-baker-rescue-real-96h-ffba00fffc3915c3db5e51f1cefd0f26f4d99630
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44284735091
+          github-token: ${{ github.token }}
+          path: simulation/evidence
+      - name: Resume genuine saved 96h worlds to 168h, no reset or injection
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_resume_real_economy_observer.py --directory evidence --start 96 --end 168
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-baker-rescue-saved96-to-168-${{ github.sha }}
+          path: simulation/evidence/
+  fresh-original-0h-to-168h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Original 13-person actual genesis with repair active from hour zero, full 24/48/60/72/96/168h A/B
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_fresh_baker_full_week.py --directory fresh-evidence --hours 168
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-baker-rescue-fresh-original-168-${{ github.sha }}
+          path: simulation/fresh-evidence/
