@@ -19,6 +19,14 @@ from .domain import DomainEvent, WorldState
 
 MAX_AMOUNT = 2**31 - 1
 FOOD_WAGE_COOLDOWN_SECONDS = 36 * 3600
+BAKERY_BAKER_FOOD_WAGE_COOLDOWN_SECONDS = 12 * 3600
+
+
+def _cooldown_for_job(job: dict, recipe: dict) -> int:
+    """Only bakery baker shifts use the shorter, still bounded wage interval."""
+    if job["site_id"] == "bakery" and recipe.get("role") == "baker":
+        return BAKERY_BAKER_FOOD_WAGE_COOLDOWN_SECONDS
+    return FOOD_WAGE_COOLDOWN_SECONDS
 
 
 def _available_site_food(state: WorldState | dict[str, Any], site: str) -> int:
@@ -72,11 +80,12 @@ def _worker_present_and_free(state: WorldState | dict[str, Any],
     )
 
 
-def _recent_worker_receipt(jobs: Any, worker: str, now: int) -> bool:
+def _recent_worker_receipt(jobs: Any, worker: str, now: int, *,
+                           cooldown_seconds: int = FOOD_WAGE_COOLDOWN_SECONDS) -> bool:
     return any(
         job["npc_id"] == worker
         and "food_wage" in job
-        and now - job["food_wage"]["paid_at"] < FOOD_WAGE_COOLDOWN_SECONDS
+        and now - job["food_wage"]["paid_at"] < cooldown_seconds
         for job in jobs.values()
     )
 
@@ -95,7 +104,8 @@ def choose_site_food_wage(state: WorldState, job_id: str) -> int | None:
     personal = state.resources.get(worker, {}).get("food")
     if (type(personal) is not int or not 0 <= personal <= MAX_AMOUNT - amount
             or not _worker_present_and_free(state, worker, site)
-            or _recent_worker_receipt(state.production_jobs, worker, state.time)
+            or _recent_worker_receipt(state.production_jobs, worker, state.time,
+                                      cooldown_seconds=_cooldown_for_job(job, recipe))
             or _available_site_food(state, site) < amount):
         return None
     return amount
@@ -122,7 +132,8 @@ def pay_site_food_wage(state: dict[str, Any], event: DomainEvent, *,
         raise ValueError("job lacks the original explicit food-only contract")
     worker, site = job["npc_id"], job["site_id"]
     if (not _worker_present_and_free(state, worker, site)
-            or _recent_worker_receipt(state["production_jobs"], worker, state["time"])
+            or _recent_worker_receipt(state["production_jobs"], worker, state["time"],
+                                      cooldown_seconds=_cooldown_for_job(job, recipe))
             or _available_site_food(state, site) < p["amount"]):
         raise ValueError("food wage requires real unpromised local stock and an available worker")
     employer_stock = state["resources"].get(site, {})
