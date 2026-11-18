@@ -40,3 +40,32 @@ jobs:
         with:
           name: play48-baker-rescue-saved72-source-${{ github.sha }}
           path: simulation/evidence
+  saved-real-96h:
+    needs: saved-real-baker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download the original identical 72h physical control and candidate worlds
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-source-fair-168h-04f1f8c532058a1eb64c1a50d233c9e0619ffb4d
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44266847089
+          github-token: ${{ github.token }}
+          path: simulation/evidence
+      - name: Continue from real 72h to real 96h and report completed bakery batches, food, payroll and safety
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_resume_real_economy_observer.py --directory evidence --start 72 --end 96
+      - name: Archive genuine 96h candidate/control event ledgers even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-baker-rescue-real-96h-${{ github.sha }}
+          path: simulation/evidence/
