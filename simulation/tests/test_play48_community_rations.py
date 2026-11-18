@@ -98,6 +98,11 @@ def test_customer_offers_are_protected_and_one_unit_is_left_unquoted():
     with pytest.raises(ValueError):
         post_offer(s, quote(4), market_authorized=True)
     post_offer(s, quote(3), market_authorized=True)
+    # A second direct listing must not double-count already quoted units.
+    second = DomainEvent("MarketOfferPosted", "salma", "new listing", 0,
+                         {**quote(1).data, "id": "other"})
+    with pytest.raises(ValueError):
+        post_offer(s, second, market_authorized=True)
     assert choose_market_ration(WorldState(**s)) == "nora"
     ration(s)
     assert s["resources"]["market"]["food"] == 3
