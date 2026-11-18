@@ -30,10 +30,17 @@ def seed(path, *, candidate):
               for who in ('hana', 'huda')],
             event('MarketStewardFoodContractSigned',
                   {'site_id': 'market', 'keeper_id': 'salma', 'sales_per_wage': 2}),
-            *[event('RecurringFreightWageSigned',
-                   {'courier_id': who, 'site_id': site, 'resource': resource,
-                    'interval_seconds': 18 * HOUR})
-              for who, site, resource in (('huda', 'bakery', 'grain'), ('hana', 'market', 'food'))],
+            # Preserve Huda's genuine original bounded two-grain-service food
+            # wage. Rules71's distinct one-coin/source grain purchase stays
+            # signed: the crop owner and the courier are different creditors.
+            event('CourierProvisionConfigured',
+                  {'id': 'huda-future-bakery', 'courier_id': 'huda',
+                   'payer_site': 'bakery', 'units': 0, 'authorized_total_units': 2,
+                   'deferred_bakery_grain': True}),
+            # Hana keeps the independently funded recurring market wage.
+            event('RecurringFreightWageSigned',
+                  {'courier_id': 'hana', 'site_id': 'market', 'resource': 'food',
+                   'interval_seconds': 18 * HOUR}),
         ]
     else:
         events = [
@@ -96,7 +103,7 @@ def advance_to(path, hour, *, candidate):
         clock.open_session(WORLD)
         sim = engine(db, clock, reserve_trader_meal=True, deferred_market_courier_wage=True)
         sim.merchant_food_wage_enabled = True
-        sim.deferred_bakery_grain_wage_enabled = not candidate
+        sim.deferred_bakery_grain_wage_enabled = True  # Huda's authentic two-service original wage in both arms
         sim.integrated_livelihoods_enabled = candidate
         sim.remember_unbought_stalls_enabled = candidate
         s = db.load(WORLD)
