@@ -74,11 +74,49 @@ def examine(path: Path, arm: str, recorded: dict) -> dict:
             "provision_food_payments": provision_payments,
         }
 
+    # Targeted evidence for the two outstanding wage bottlenecks. These are
+    # facts, not an assumption that employer-owned stock is spendable.
+    from carlos_sim.food_for_work import _available_site_food
+    wage_bottlenecks = {}
+    for worker in ("basim", "smith"):
+        worker_jobs = [(ident, j) for ident, j in sorted(state.production_jobs.items())
+                       if j["npc_id"] == worker and j["status"] == "completed"]
+        paid_food = [(ident, j["food_wage"]) for ident, j in worker_jobs
+                     if "food_wage" in j]
+        paid_coin = [(ident, j["work_wage"]) for ident, j in worker_jobs
+                     if "work_wage" in j]
+        unpaid_signed = [(ident, j) for ident, j in worker_jobs
+                         if "food_wage" not in j and "work_wage" not in j
+                         and ("wage_food" in state.production_recipes[j["recipe_id"]]
+                              or "wage_coin" in state.production_recipes[j["recipe_id"]])]
+        sites = sorted({j["site_id"] for _, j in worker_jobs})
+        wage_bottlenecks[worker] = {
+            "worker_site": state.entities[worker]["location_id"],
+            "employer_sites": sites,
+            "employer_cash": {site: state.resources[site].get("coin_copper")
+                              for site in sites},
+            "employer_food": {site: state.resources[site].get("food")
+                              for site in sites},
+            "bakery_unpromised_food_at_168h": _available_site_food(state, "bakery")
+                if worker == "basim" else None,
+            "completed_jobs": len(worker_jobs),
+            "food_receipt_hours": [q["paid_at"] // HOUR for _, q in paid_food],
+            "cash_receipt_hours": [q["paid_at"] // HOUR for _, q in paid_coin],
+            "unpaid_signed_jobs": len(unpaid_signed),
+            "unpaid_recipe_contracts": sorted({
+                j["recipe_id"] + ": food=" + str(state.production_recipes[j["recipe_id"]].get("wage_food"))
+                + ", coin=" + str(state.production_recipes[j["recipe_id"]].get("wage_coin"))
+                for _, j in unpaid_signed
+            }),
+            "last_unpaid_finish_hours": [j["finished_at"] // HOUR
+                                         for _, j in unpaid_signed[-4:]],
+        }
+
     report = {
         "arm": arm,
         "hour": 168,
         "ledger_sha256": original_digest,
-        "replay_verified": True,
+        "prior_pr157_full_replay_verified": True,
         "physical_copper_total": ownership["copper_known_total"],
         "copper_in_npc_wallets_now": personal_cash,
         "copper_in_non_npc_accounts_now": site_cash,
@@ -87,6 +125,7 @@ def examine(path: Path, arm: str, recorded: dict) -> dict:
         "bakery_grain": state.resources["bakery"].get("grain", 0),
         "market_food": state.resources["market"].get("food", 0),
         "production_wages": wages,
+        "wage_bottlenecks": wage_bottlenecks,
         "completed_jobs": len(completed),
         "workers": workers,
         "release_gate_passed": False,
@@ -114,6 +153,7 @@ def main() -> None:
             "cash_in_wallets": data["copper_in_npc_wallets_now"],
             "cash_at_sites": data["copper_in_non_npc_accounts_now"],
             "paid_coin_jobs": data["production_wages"]["coin_paid"],
+            "wage_bottlenecks": data["wage_bottlenecks"],
             "signed_unpaid_coin_jobs": data["production_wages"]["coin_unpaid"],
             "paid_food_jobs": data["production_wages"]["food_paid"],
             "signed_unpaid_food_jobs": data["production_wages"]["food_unpaid"],
