@@ -29,7 +29,7 @@ def summarize(path: Path) -> dict:
             "SELECT payload FROM events WHERE world_id=? ORDER BY seq", (WORLD,)
         ):
             event = json.loads(blob)
-            if 72 * HOUR <= event["occurred_at"] <= 96 * HOUR:
+            if 72 * HOUR <= event["time"] <= 96 * HOUR:
                 activity[event["event_type"]] += 1
     assert sha256(path.read_bytes()).hexdigest() == before
     assert world.time == 96 * HOUR and len(world.npcs) == 13
