@@ -483,6 +483,12 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "MarketStallConfigured":
         from .market import configure_market_stall
         configure_market_stall(d, e, bootstrap=bootstrap)
+    elif kind == "MarketCommunityRationsSigned":
+        from .community_food import sign_market_relief
+        sign_market_relief(d, e, bootstrap=bootstrap)
+    elif kind == "MarketCommunityRationIssued":
+        from .community_food import pay_market_ration
+        pay_market_ration(d, e, market_authorized=market_authorized)
     elif kind == "MarketStewardFoodContractSigned":
         from .steward_food_payroll import sign_steward_food_contract
         sign_steward_food_contract(d, e, bootstrap=bootstrap)
