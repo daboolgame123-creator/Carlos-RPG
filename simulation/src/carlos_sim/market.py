@@ -124,9 +124,14 @@ def post_offer(state: dict[str, Any], event: DomainEvent, *,
     if not _balance(stock) or stock < p["quantity"]:
         raise ValueError("seller has no known sufficient inventory")
     if (owner == site and item == "food"
-            and "community_food" in state["market_stalls"].get(site, {})
-            and stock - p["quantity"] < 1):
-        raise ValueError("market owner reserved one real unquoted community loaf")
+            and "community_food" in state["market_stalls"].get(site, {})):
+        existing_quotes = sum(
+            offer["remaining"] for offer in state["market_offers"].values()
+            if offer["status"] == "open" and offer["stock_owner_id"] == site
+            and offer["resource"] == "food"
+        )
+        if stock - existing_quotes - p["quantity"] < 1:
+            raise ValueError("market owner reserved one real unquoted community loaf")
     state["market_offers"][p["id"]] = {
         "seller_id": seller, "stock_owner_id": owner, "site_id": site,
         "resource": item, "quantity": p["quantity"],
