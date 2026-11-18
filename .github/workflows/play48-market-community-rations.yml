@@ -1,0 +1,47 @@
+name: PLAY48 local market community ration P0 genuine village A/B
+on:
+  push:
+    branches:
+      - experiment/play48-local-community-rations-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused-owner-funding:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Prove owner consent, genuine stock conservation, quoted stock protection and local hunger
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_community_rations.py
+  original-13-npc-0h-to-72h:
+    needs: focused-owner-funding
+    runs-on: ubuntu-24.04
+    timeout-minutes: 125
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Run authentic original 13-person worlds 0-to-72h A/B; only market-owner consent differs
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_community_rations_real_village.py --directory community-evidence --hours 72
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-community-original-0-to-72-${{ github.sha }}
+          path: simulation/community-evidence/
+          if-no-files-found: warn
