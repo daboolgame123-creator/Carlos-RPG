@@ -1,0 +1,29 @@
+name: PLAY48 real farm cash fairness bounded pilot
+on:
+  push:
+    branches:
+      - experiment/play48-source-payment-fairness-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-fairness:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Source fairness plus genuine grain cash and Huda salary contract
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_source_fairness.py tests/test_play48_grain_purchase.py tests/test_play48_huda_grain_payment_pilot.py
