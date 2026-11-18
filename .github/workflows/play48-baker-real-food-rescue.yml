@@ -32,6 +32,7 @@ jobs:
         working-directory: simulation
         env:
           PYTHONPATH: src:scenarios/test_village
+          PLAY48_REAL_72H_EVIDENCE_REQUIRED: '1'
         run: python -m pytest -q -s tests/test_play48_saved72_baker_earned_meal.py tests/test_play48_huda_grain_payment_pilot.py tests/test_play48_source_fairness.py
       - name: Archive replay evidence for inspection
         if: always()
