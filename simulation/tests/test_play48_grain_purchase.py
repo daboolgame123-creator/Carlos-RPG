@@ -36,14 +36,14 @@ def test_grain_receipt_settles_only_via_actual_return_cargo_once(tmp_path):
 
 def test_no_grain_means_no_cash_and_insolvent_bakery_cannot_mint_payment(tmp_path):
     db, clock, sim, original = freight_fixture(tmp_path / 'insolvent.sqlite', hunger=20,
-                                              grain_purchase=True, bakery_copper=1)
+                                              grain_purchase=True, bakery_copper=0)
     with db:
         s = sim.advance('freight', seconds=180, command_id='real-unfunded-grain',
                         expected_revision=original.revision).state
         assert len(s.supply_circuits['huda']['grain_purchase']['receipts']) == 1
         assert s.supply_circuits['huda']['grain_purchase']['receipts'][0]['loaded_at'] is None
         assert s.resources['farm']['coin_copper'] == 0
-        assert s.resources['bakery']['coin_copper'] == 1
+        assert s.resources['bakery']['coin_copper'] == 0
         raw = s.to_dict()
         raw['supply_circuits']['huda'].update(index=4)
         raw['entities']['huda']['location_id'] = 'bakery'
@@ -67,24 +67,24 @@ def test_earlier_source_claim_reserves_copper_against_fast_circuit():
         {'delivery': 1, 'delivered_at': 90, 'loaded_at': None}]}}
     state = {'supply_circuits': {'slow': earlier, 'fast': faster}, 'resources': {},
              'market_offers': {}, 'time': 100, 'production_jobs': {}, 'production_recipes': {}}
-    assert cash_minimum(state, earlier) == 2
-    assert cash_minimum(state, faster) == 3
+    assert cash_minimum(state, earlier) == 1
+    assert cash_minimum(state, faster) == 2
     # The second courier cannot take the earlier farm's only available coin.
-    assert 2 < cash_minimum(state, faster)
+    assert 1 < cash_minimum(state, faster)
     state['market_offers']['reserved-coin'] = {'status': 'open', 'stock_owner_id': 'bakery',
                                                'resource': 'coin_copper', 'remaining': 2}
-    assert cash_minimum(state, earlier) == 4
-    assert cash_minimum(state, faster) == 5
+    assert cash_minimum(state, earlier) == 3
+    assert cash_minimum(state, faster) == 4
     # This source claim has loaded and therefore no longer reserves bakery cash.
     earlier['grain_purchase']['receipts'][0]['loaded_at'] = 100
-    assert cash_minimum(state, faster) == 4
+    assert cash_minimum(state, faster) == 3
     # Already earned local bakery labor is senior to unshipped grain cash.
     state['production_recipes']['bread'] = {'wage_coin': 2}
     state['production_jobs']['completed-batch'] = {
         'site_id': 'bakery', 'status': 'completed', 'recipe_id': 'bread'}
-    assert cash_minimum(state, faster) == 6
+    assert cash_minimum(state, faster) == 5
     state['production_jobs']['completed-batch']['work_wage'] = {'amount': 2}
-    assert cash_minimum(state, faster) == 4
+    assert cash_minimum(state, faster) == 3
 
 
 def test_unsigned_late_and_repeated_purchase_contracts_reject(tmp_path):
@@ -151,8 +151,8 @@ def test_fast_courier_cannot_load_earlier_farms_reserved_coin(tmp_path):
         c['grain_purchase']['receipts'] = [{'delivery': 1, 'delivered_at': delivered_at,
                                            'loaded_at': None, 'received_at': None}]
     # Move already existing setup cash into the bakery for this negative probe.
-    raw['resources']['watch_post']['coin_copper'] -= 2
-    raw['resources']['bakery']['coin_copper'] += 2
+    raw['resources']['watch_post']['coin_copper'] -= 1
+    raw['resources']['bakery']['coin_copper'] += 1
     state = WorldState.from_dict(raw)
     assert choose_cargo_manifest(state, 'hana') is None
     attempted = DomainEvent('SupplyCargoPicked', 'hana', 'wrong source claim', 1,
@@ -164,7 +164,7 @@ def test_fast_courier_cannot_load_earlier_farms_reserved_coin(tmp_path):
                                            {'courier_id': 'huda', 'resource': 'coin_copper'}),
                          supply_authorized=True)
     assert loaded.resources['huda']['coin_copper'] == 1
-    assert loaded.resources['bakery']['coin_copper'] == 1
+    assert loaded.resources['bakery']['coin_copper'] == 0
     assert choose_cargo_manifest(loaded, 'hana') is None
 
 
