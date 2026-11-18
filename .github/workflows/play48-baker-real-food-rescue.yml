@@ -1,0 +1,41 @@
+name: PLAY48 actual saved-72h baker earned food rescue
+on:
+  push:
+    branches:
+      - experiment/play48-baker-earned-meal-rescue-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  saved-real-baker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Load unchanged 13-NPC REAL 72h SQLite evidence with signed 12 copper
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-source-fair-168h-04f1f8c532058a1eb64c1a50d233c9e0619ffb4d
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44266847089
+          github-token: ${{ github.token }}
+          path: simulation/evidence
+      - name: Check real baker hunger deadlock, earned local loaf, continued production and authentic replay
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -m pytest -q -s tests/test_play48_saved72_baker_earned_meal.py tests/test_play48_huda_grain_payment_pilot.py tests/test_play48_source_fairness.py
+      - name: Archive replay evidence for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-baker-rescue-saved72-source-${{ github.sha }}
+          path: simulation/evidence
