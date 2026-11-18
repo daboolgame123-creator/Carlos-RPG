@@ -48,7 +48,7 @@ def ration(state, *, recipient="nora", authorized=True):
 
 def test_owner_consent_is_required_and_only_signed_at_genesis():
     s = market()
-    assert choose_market_ration(WorldState.from_dict(s)) is None
+    assert choose_market_ration(WorldState(**s)) is None
     with pytest.raises(ValueError):
         ration(s)
     signed = DomainEvent("MarketCommunityRationsSigned", None, "attempt late", DAY,
@@ -64,7 +64,7 @@ def test_owner_consent_is_required_and_only_signed_at_genesis():
 
 def test_actual_penniless_present_and_hungry_recipient_gets_conserved_food():
     s = configured()
-    assert choose_market_ration(WorldState.from_dict(s)) == "nora"
+    assert choose_market_ration(WorldState(**s)) == "nora"
     with pytest.raises(ValueError):
         ration(s, authorized=False)
     ration(s)
@@ -82,7 +82,7 @@ def test_actual_penniless_present_and_hungry_recipient_gets_conserved_food():
 ])
 def test_no_gift_without_on_site_need_or_real_stock(options):
     s = configured(**options)
-    assert choose_market_ration(WorldState.from_dict(s)) is None
+    assert choose_market_ration(WorldState(**s)) is None
     with pytest.raises(ValueError):
         ration(s)
 
@@ -98,7 +98,7 @@ def test_customer_offers_are_protected_and_one_unit_is_left_unquoted():
     with pytest.raises(ValueError):
         post_offer(s, quote(4), market_authorized=True)
     post_offer(s, quote(3), market_authorized=True)
-    assert choose_market_ration(WorldState.from_dict(s)) == "nora"
+    assert choose_market_ration(WorldState(**s)) == "nora"
     ration(s)
     assert s["resources"]["market"]["food"] == 3
     assert s["market_offers"]["offer"]["remaining"] == 3
