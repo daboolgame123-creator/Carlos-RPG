@@ -272,7 +272,7 @@ class SQLiteEventStore:
         if any(e.event_type == "PlayerGiftDelivered" for e in events):
             if not gift_authorized or world_id not in self._active_worlds:
                 raise InvalidEvent("player gift requires dedicated capability and active session")
-        if any(e.event_type in {"MarketOfferPosted", "MarketTradeExecuted", "MarketOfferClosed"} for e in events):
+        if any(e.event_type in {"MarketOfferPosted", "MarketTradeExecuted", "MarketOfferClosed", "MarketCommunityRationIssued"} for e in events):
             if not market_authorized:
                 raise InvalidEvent("market transactions require trusted market capability")
             if world_id not in self._active_worlds:
