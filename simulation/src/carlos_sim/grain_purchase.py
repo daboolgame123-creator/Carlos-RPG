@@ -32,10 +32,19 @@ def sign_contract(state: dict, event: DomainEvent, *, bootstrap: bool) -> None:
 
 
 def pending_claims(state):
+    """Source-fair round robin for actual outstanding, chronologically signed sales.
+
+    A fast farm must not take every scarce payment while a slower farm has a
+    legitimate first receipt: settle the first unpaid *service round* for
+    each farm before funding another source's later round. Earlier claims
+    within a farm still have priority; same-round ties keep actual receipt
+    time and ID order. No claim is created, funded or remotely inspected.
+    """
     circuits, _, _, _ = _fields(state)
-    return sorted((r['delivered_at'], who, r['delivery'])
+    return sorted((round_number, r['delivered_at'], who, r['delivery'])
                   for who, c in circuits.items() if 'grain_purchase' in c
-                  for r in c['grain_purchase']['receipts'] if r['loaded_at'] is None)
+                  for round_number, r in enumerate(c['grain_purchase']['receipts'])
+                  if r['loaded_at'] is None)
 
 
 def cash_minimum(state, record) -> int:
@@ -50,7 +59,7 @@ def cash_minimum(state, record) -> int:
     who = next((who for who, c in circuits.items() if c is record), None)
     # Projected and frozen records both retain identity within their own state.
     if who is not None and 'grain_purchase' in record:
-        position = next((i for i, (_, worker, _) in enumerate(queue) if worker == who), None)
+        position = next((i for i, (_, _, worker, _) in enumerate(queue) if worker == who), None)
         return base + position + 1 if position is not None else 2**63
     return base + len(queue) + 1
 

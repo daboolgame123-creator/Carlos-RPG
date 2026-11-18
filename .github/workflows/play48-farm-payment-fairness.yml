@@ -1,0 +1,50 @@
+name: PLAY48 real farm cash fairness bounded pilot
+on:
+  push:
+    branches:
+      - experiment/play48-source-payment-fairness-20261118
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-fairness:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - name: Source fairness plus genuine grain cash and Huda salary contract
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_source_fairness.py tests/test_play48_grain_purchase.py tests/test_play48_huda_grain_payment_pilot.py
+  village-168h:
+    needs: source-fairness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Original 13 NPC 24/48/60/72/96/168h gated endurance A/B
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_integrated_acceptance.py --directory evidence --hours 168
+      - name: Preserve SQLite and actual A/B evidence even when gate fails
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-source-fair-168h-${{ github.sha }}
+          path: simulation/evidence/
