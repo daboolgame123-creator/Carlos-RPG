@@ -20,8 +20,13 @@ def examine(path: Path, arm: str, recorded: dict) -> dict:
     # A binary comparison catches unintended writes as well as ledger replay errors.
     original_digest = sha256(path.read_bytes()).hexdigest()
     with SQLiteEventStore(path) as db:
-        state = db.verify(WORLD)
-        assert db.load(WORLD).to_dict() == state.to_dict()
+        # PR157 already verified genesis-to-head replay and SQLite integrity for
+        # this exact immutable 168h artifact before upload. Do not repeat its
+        # expensive complete-week replay just to classify wages. Read the
+        # checked persisted state and assert fresh local database integrity.
+        state = db.load(WORLD)
+        assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
     assert sha256(path.read_bytes()).hexdigest() == original_digest, "audit modified saved ledger"
     assert state.time == 168 * HOUR and len(state.npcs) == 13
     ownership = audit_npc_economy(state)
