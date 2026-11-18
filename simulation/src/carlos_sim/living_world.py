@@ -338,6 +338,24 @@ class LivingWorldEngine:
             from .npc import _injury_rest_decision
             if _injury_rest_decision(state.injuries, npc_id) is None:
                 return False
+        # PLAY48 practical baker survival: at 75-89 hunger, a worker with
+        # real local grain, a real oven and a safe available short shift may
+        # complete a genuine baking job rather than being diverted into a
+        # generic "work" action that produces neither food nor wages. The
+        # existing production selector remains authoritative (including
+        # injuries, fatigue, tools, stock, shift and signed food terms).
+        # No exemption at hunger>=90 or unsafe/injured conditions.
+        if (self.integrated_livelihoods_enabled
+                and state.npcs[npc_id]["role"] == "baker"
+                and 75 <= needs["hunger"] < 90
+                and needs["fatigue"] < 70 and needs["safety"] < 75
+                and _injury_rest_decision(state.injuries, npc_id) is None
+                and choose_local_production(
+                    state, npc_id,
+                    agriculture_enabled=self.agriculture_enabled,
+                    finite_aquifer_enabled=self.finite_aquifer_pumping_enabled,
+                ) is not None):
+            return False
         return (needs["hunger"] >= 75 or needs["fatigue"] >= 70
                 or needs["safety"] >= 75
                 or _injury_rest_decision(state.injuries, npc_id) is not None)
@@ -503,6 +521,26 @@ class LivingWorldEngine:
             if self.integrated_livelihoods_enabled:
                 for npc_id in sorted(current.npcs):
                     eat_owned_food(npc_id)
+                if self.food_for_work_enabled:
+                    # Settle an ALREADY COMPLETED baker's signed food wage
+                    # before a freight courier loads the only remaining loaf
+                    # for market. Existing stock quotes, cargo reservations,
+                    # earned barter and 36h wage cooldown remain protected by
+                    # choose_site_food_wage and the strict payment reducer.
+                    # The normal later salary loop will never double pay.
+                    from .food_for_work import choose_site_food_wage
+                    for job_id in sorted(current.production_jobs):
+                        job = current.production_jobs[job_id]
+                        if job["site_id"] != "bakery":
+                            continue
+                        portions = choose_site_food_wage(current, job_id)
+                        if portions is None:
+                            continue
+                        append(DomainEvent("ProductionFoodWagePaid", None,
+                            "real baker's completed-job meal before outbound freight",
+                            current.time, {"job_id": job_id, "amount": portions}),
+                            production_capability=True)
+                        eat_owned_food(job["npc_id"])
             if self.supply_enabled:
                 # A courier may transfer exactly one local unit at an authentic
                 # stop and then traverse a physically configured adjacent road.
