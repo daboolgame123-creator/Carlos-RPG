@@ -25,14 +25,14 @@ def seed(path, *, candidate, community_food=False):
         return DomainEvent(kind, None, 'prospective original-site employment terms', 0, data)
     if candidate:
         events = [
-            *([event('MarketCommunityRationsSigned',
-                     {'site_id': 'market', 'keeper_id': 'salma', 'daily_limit': 2})]
-              if community_food else []),
             event('ProductionCashWageSigned', {'recipe_id': 'finite-harvest', 'amount': 2}),
             *[event('GrainPurchaseSigned', {'courier_id': who, 'unit_price': 1})
               for who in ('hana', 'huda')],
             event('MarketStewardFoodContractSigned',
                   {'site_id': 'market', 'keeper_id': 'salma', 'sales_per_wage': 2}),
+            *([event('MarketCommunityRationsSigned',
+                     {'site_id': 'market', 'keeper_id': 'salma', 'daily_limit': 2})]
+              if community_food else []),
             # Preserve Huda's genuine original bounded two-grain-service food
             # wage. Rules71's distinct one-coin/source grain purchase stays
             # signed: the crop owner and the courier are different creditors.
