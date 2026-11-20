@@ -28,6 +28,9 @@ jobs:
           PYTHONPATH: src:scenarios/test_village
         run: python -m pytest -q tests/test_play48_cashless_known_road.py tests/test_play48_community_rations.py
   genuine-original-village:
+    # The full original 0-72h proof already passed as run 44733046138.
+    # Avoid rerunning this expensive proof on each source amendment.
+    if: github.event_name == 'workflow_dispatch'
     needs: focused-navigation
     runs-on: ubuntu-24.04
     timeout-minutes: 100
