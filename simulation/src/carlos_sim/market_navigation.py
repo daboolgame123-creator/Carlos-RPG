@@ -36,14 +36,16 @@ def _latest_wage_at(state: WorldState, npc_id: str) -> int:
 
 
 def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False,
-                       seek_alternative_if_unaffordable=False) -> bool:
+                       seek_alternative_if_unaffordable=False,
+                       seek_relief=False) -> bool:
     """Hungry solvent buyer may inspect local prices, never remote stock.
 
     Optional genuine-survival search allows leaving an empty/too-expensive
     local market to survey adjacent known roads, not a teleported purchase.
     """
-    if type(seek_alternative_if_unaffordable) is not bool:
-        raise ValueError("alternate market search is opt-in boolean")
+    if (type(seek_alternative_if_unaffordable) is not bool
+            or type(seek_relief) is not bool):
+        raise ValueError("alternate and relief searches must be opt-in booleans")
     npc = state.npcs.get(npc_id)
     entity = state.entities.get(npc_id)
     if (npc is None or entity is None or entity["controller"] != "npc"
@@ -57,7 +59,10 @@ def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False,
         return False
     owned = state.resources.get(npc_id, {})
     coins, food = owned.get(MONEY), owned.get("food")
-    if (type(coins) is not int or not 1 <= coins <= MAX_AMOUNT
+    is_destitute = (seek_relief and type(coins) is int and coins == 0
+                    and needs["hunger"] >= 95)
+    if (type(coins) is not int
+            or not (1 <= coins <= MAX_AMOUNT or is_destitute)
             or type(food) is not int or food != 0):
         return False
     nav = state.navigation.get(npc_id)
@@ -103,6 +108,7 @@ def choose_known_market_walk(
     state: WorldState, npc_id: str, *, repeat_errands=False,
     remember_unbought_stalls=False,
     seek_alternative_if_unaffordable=False,
+    seek_relief=False,
 ) -> ShoppingWalkIntent | None:
     """One real road toward a personally unexplored reachable location.
 
@@ -116,12 +122,26 @@ def choose_known_market_walk(
         raise ValueError("visited stall memory requires repeat errands")
     if not wants_local_market(
             state, npc_id, repeat_errands=repeat_errands,
-            seek_alternative_if_unaffordable=seek_alternative_if_unaffordable):
+            seek_alternative_if_unaffordable=seek_alternative_if_unaffordable,
+            seek_relief=seek_relief):
         return None
     nav = state.navigation.get(npc_id)
     if nav is None:
         return None  # Caller must first survey adjacent roads while on-site.
     here = state.entities[npc_id]["location_id"]
+    own_coins = state.resources.get(npc_id, {}).get(MONEY)
+    if seek_relief and own_coins == 0:
+        # Severe hunger motivates an actual search for help. This route can
+        # only revisit a shop the resident personally reached; no remote
+        # knowledge of charity stock, prices or recipient eligibility.
+        for site in sorted((set(nav["visited"]) & set(state.market_stalls)) - {here}):
+            path = shortest_known_route(state, npc_id, site)
+            if path:
+                return ShoppingWalkIntent(
+                    npc_id, path[0], site,
+                    "cashless starving resident revisiting a personally "
+                    "witnessed market, seeking help",
+                )
     if repeat_errands:
         wage_at = _latest_wage_at(state, npc_id)
         # Only personal purchases reveal a remote food destination. A new
@@ -228,8 +248,10 @@ def choose_known_market_walk(
     _, destination, path = min(candidates)
     return ShoppingWalkIntent(
         npc_id, path[0], destination,
-        "hungry funded shopper exploring personally known roads; "
-        f"unvisited_destination={destination}",
+        ("cashless starving resident searching known roads for help; "
+         if seek_relief and own_coins == 0 else
+         "hungry funded shopper exploring personally known roads; ")
+        + f"unvisited_destination={destination}",
     )
 
 
