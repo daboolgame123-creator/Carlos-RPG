@@ -100,13 +100,15 @@ def metrics(s):
     }
 
 
-def advance_to(path, hour, *, candidate, community_food=False):
+def advance_to(path, hour, *, candidate, community_food=False,
+               cashless_relief_walk=False):
     with SQLiteEventStore(path) as db:
         clock = TimeEngine(db)
         clock.open_session(WORLD)
         sim = engine(db, clock, reserve_trader_meal=True, deferred_market_courier_wage=True)
         sim.merchant_food_wage_enabled = True
         sim.community_food_enabled = community_food
+        sim.cashless_relief_walk_enabled = cashless_relief_walk
         sim.deferred_bakery_grain_wage_enabled = True  # Huda's authentic two-service original wage in both arms
         sim.integrated_livelihoods_enabled = candidate
         sim.remember_unbought_stalls_enabled = candidate
