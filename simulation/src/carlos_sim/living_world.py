@@ -98,7 +98,8 @@ class LivingWorldEngine:
                  merchant_food_wage_enabled: bool = False,
                  deferred_bakery_grain_wage_enabled: bool = False,
                  integrated_livelihoods_enabled: bool = False,
-                 community_food_enabled: bool = False):
+                 community_food_enabled: bool = False,
+                 cashless_relief_walk_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -188,6 +189,10 @@ class LivingWorldEngine:
                     economic_enabled and consumption_enabled and survival_enabled))):
             raise ValueError("community market food requires real economy and hunger")
         self.community_food_enabled = community_food_enabled
+        if (type(cashless_relief_walk_enabled) is not bool
+                or (cashless_relief_walk_enabled and not community_food_enabled)):
+            raise ValueError("cashless relief walking requires signed community food policy")
+        self.cashless_relief_walk_enabled = cashless_relief_walk_enabled
         if (type(deferred_bakery_grain_wage_enabled) is not bool
                 or (deferred_bakery_grain_wage_enabled and not (
                     supply_enabled and consumption_enabled
@@ -1235,7 +1240,7 @@ class LivingWorldEngine:
                             current, shopper_id, repeat_errands=repeat_errands,
                             seek_alternative_if_unaffordable=
                             self.seek_alternative_food_market_enabled,
-                            seek_relief=self.community_food_enabled):
+                            seek_relief=self.cashless_relief_walk_enabled):
                         if needs_survey(current, shopper_id):
                             append(DomainEvent('NPCNavigationSurveyed', shopper_id,
                                 'shopper sees roads adjoining their physical location',
@@ -1246,7 +1251,7 @@ class LivingWorldEngine:
                             remember_unbought_stalls=self.remember_unbought_stalls_enabled,
                             seek_alternative_if_unaffordable=
                             self.seek_alternative_food_market_enabled,
-                            seek_relief=self.community_food_enabled,
+                            seek_relief=self.cashless_relief_walk_enabled,
                         )
                     if walk is None:
                         continue
