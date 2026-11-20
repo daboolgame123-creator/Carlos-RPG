@@ -233,13 +233,18 @@ def validate_market(state: dict[str, Any]) -> None:
         raise ValueError("market ledgers must be mappings")
     for site, stall in stalls.items():
         if (not _id(site) or site not in state["locations"]
-                or not isinstance(stall, dict) or set(stall) not in ({"keeper_id"}, {"keeper_id", "food_wage_sales_required"})
+                or not isinstance(stall, dict) or (set(stall) - {"community_food"}) not in ({"keeper_id"}, {"keeper_id", "food_wage_sales_required"})
                 or not _id(stall["keeper_id"]) or stall["keeper_id"] not in state["npcs"]
                 or ("food_wage_sales_required" in stall and (
                     type(stall["food_wage_sales_required"]) is not int
                     or stall["food_wage_sales_required"] != 2
                     or state["npcs"][stall["keeper_id"]]["role"] != "merchant"))):
             raise ValueError("invalid registered market stall")
+        if "community_food" in stall:
+            if site != "market" or state["npcs"][stall["keeper_id"]]["role"] != "merchant":
+                raise ValueError("community rations require market keeper")
+            from .community_food import validate_market_relief
+            validate_market_relief(state, stall)
     for ident, o in offers.items():
         if (not _id(ident) or not isinstance(o, dict) or set(o) != OFFER_KEYS
                 or not _id(o["site_id"]) or o["site_id"] not in state["locations"]

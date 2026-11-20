@@ -97,7 +97,8 @@ class LivingWorldEngine:
                  finite_aquifer_pumping_enabled: bool = False,
                  merchant_food_wage_enabled: bool = False,
                  deferred_bakery_grain_wage_enabled: bool = False,
-                 integrated_livelihoods_enabled: bool = False):
+                 integrated_livelihoods_enabled: bool = False,
+                 community_food_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -182,6 +183,11 @@ class LivingWorldEngine:
                     economic_enabled and consumption_enabled))):
             raise ValueError("steward food wages require real economy and consumption")
         self.merchant_food_wage_enabled = merchant_food_wage_enabled
+        if (type(community_food_enabled) is not bool or
+                (community_food_enabled and not (
+                    economic_enabled and consumption_enabled and survival_enabled))):
+            raise ValueError("community market food requires real economy and hunger")
+        self.community_food_enabled = community_food_enabled
         if (type(deferred_bakery_grain_wage_enabled) is not bool
                 or (deferred_bakery_grain_wage_enabled and not (
                     supply_enabled and consumption_enabled
@@ -793,6 +799,15 @@ class LivingWorldEngine:
                             "real local employer food for completed labor",
                             current.time, {"job_id": job_id, "amount": portions}),
                             production_capability=True)
+                if self.community_food_enabled:
+                    from .community_food import choose_market_ration
+                    recipient = choose_market_ration(current)
+                    if recipient is not None:
+                        append(DomainEvent("MarketCommunityRationIssued", None,
+                            "market-owned unquoted ration for present penniless hungry resident",
+                            current.time, {"site_id": "market", "recipient_id": recipient,
+                                           "amount": 1}), market_capability=True)
+                        eat_owned_food(recipient)
                 if (self.professional_procurement_enabled or
                         self.multi_professional_markets_enabled):
                     from .professional_trade import choose_workshop_input_deposit

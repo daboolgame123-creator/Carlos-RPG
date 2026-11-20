@@ -19,7 +19,7 @@ from test_play48_finite_hunt_fish_roads import conserve_diverse
 CHECKPOINTS = (24, 48, 60, 72, 96, 168)
 
 
-def seed(path, *, candidate):
+def seed(path, *, candidate, community_food=False):
     original = original_seed(path)
     def event(kind, data):
         return DomainEvent(kind, None, 'prospective original-site employment terms', 0, data)
@@ -30,6 +30,9 @@ def seed(path, *, candidate):
               for who in ('hana', 'huda')],
             event('MarketStewardFoodContractSigned',
                   {'site_id': 'market', 'keeper_id': 'salma', 'sales_per_wage': 2}),
+            *([event('MarketCommunityRationsSigned',
+                     {'site_id': 'market', 'keeper_id': 'salma', 'daily_limit': 2})]
+              if community_food else []),
             # Preserve Huda's genuine original bounded two-grain-service food
             # wage. Rules71's distinct one-coin/source grain purchase stays
             # signed: the crop owner and the courier are different creditors.
@@ -97,12 +100,13 @@ def metrics(s):
     }
 
 
-def advance_to(path, hour, *, candidate):
+def advance_to(path, hour, *, candidate, community_food=False):
     with SQLiteEventStore(path) as db:
         clock = TimeEngine(db)
         clock.open_session(WORLD)
         sim = engine(db, clock, reserve_trader_meal=True, deferred_market_courier_wage=True)
         sim.merchant_food_wage_enabled = True
+        sim.community_food_enabled = community_food
         sim.deferred_bakery_grain_wage_enabled = True  # Huda's authentic two-service original wage in both arms
         sim.integrated_livelihoods_enabled = candidate
         sim.remember_unbought_stalls_enabled = candidate
