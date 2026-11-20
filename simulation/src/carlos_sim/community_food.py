@@ -1,7 +1,9 @@
 """PLAY48 optional community rations, truly drawn from market-owned unquoted bread.
 
 A trusted time-zero market owner authorizes at most TWO physical loaves per
-simulated day for co-present, penniless, hungry residents. The participating
+simulated day for co-present, penniless, hungry residents from only leftover,
+UNQUOTED stock. This contract does not reserve food or alter regular prices.
+The participating
 keeper must be present; ordinary customer offers, cargo and prior wages remain
 protected. Every transfer is recorded as an authoritative event. No money,
 food, courier service or travel is invented.
@@ -15,7 +17,6 @@ from .market import _present
 DAY = 24 * 3600
 DAILY_LIMIT = 2
 HUNGER_THRESHOLD = 75
-RESERVED_UNQUOTED_RATION = 1
 
 
 def sign_market_relief(state: dict, event: DomainEvent, *, bootstrap: bool) -> None:
