@@ -250,10 +250,7 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
         and recipe["output_resource"] == "food"
         and recipe.get("wage_food") == 2
     ), default=0)
-    community_reserve = int(
-        "community_food" in stall and here == "market"
-    )
-    unpromised = food - local_labor_reserve - community_reserve
+    unpromised = food - local_labor_reserve
     if unpromised < 1:
         return None
     # Actual forest/river output is a distinct source commodity: the one
