@@ -104,7 +104,18 @@ def test_no_gift_without_on_site_need_or_real_stock(options):
         ration(s)
 
 
-def test_customer_offers_are_protected_and_one_unit_is_left_unquoted():
+def test_ration_does_not_block_any_original_customer_listing():
+    from carlos_sim.economic_autonomy import choose_local_food_offer
+    for stock in (1, 2, 4, 8):
+        old = market(food=stock)
+        new = configured(food=stock)
+        standard = choose_local_food_offer(WorldState(**old), "salma")
+        under_aid = choose_local_food_offer(WorldState(**new), "salma")
+        assert under_aid == standard, "optional help cannot alter price or sellable food"
+        assert standard is not None
+
+
+def test_customer_offers_are_protected_and_only_new_unquoted_food_can_help():
     s = configured(food=4)
     def quote(q):
         return DomainEvent("MarketOfferPosted", "salma", "seller at market", 0,
@@ -112,18 +123,20 @@ def test_customer_offers_are_protected_and_one_unit_is_left_unquoted():
                             "stock_owner_id": "market", "site_id": "market",
                             "resource": "food", "payment_resource": "coin_copper",
                             "quantity": q, "unit_price": 2})
+    # Owner may quote the WHOLE stock, precisely as without community aid.
+    post_offer(s, quote(4), market_authorized=True)
+    assert s["market_offers"]["offer"]["remaining"] == 4
+    assert choose_market_ration(WorldState(**s)) is None
     with pytest.raises(ValueError):
-        post_offer(s, quote(4), market_authorized=True)
-    post_offer(s, quote(3), market_authorized=True)
-    # A second direct listing must not double-count already quoted units.
-    second = DomainEvent("MarketOfferPosted", "salma", "new listing", 0,
-                         {**quote(1).data, "id": "other"})
-    with pytest.raises(ValueError):
-        post_offer(s, second, market_authorized=True)
+        ration(s)
+    # A physically delivered surplus unit, not in any existing quote, can
+    # qualify (the real-world test uses the actual freight reducer instead).
+    s["resources"]["market"]["food"] += 1
     assert choose_market_ration(WorldState(**s)) == "nora"
     ration(s)
-    assert s["resources"]["market"]["food"] == 3
-    assert s["market_offers"]["offer"]["remaining"] == 3
+    assert s["resources"]["market"]["food"] == 4
+    assert s["resources"]["nora"]["food"] == 1
+    assert s["market_offers"]["offer"]["remaining"] == 4
     with pytest.raises(ValueError):
         ration(s)
 
