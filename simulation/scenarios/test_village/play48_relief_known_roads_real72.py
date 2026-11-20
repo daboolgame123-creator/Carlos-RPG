@@ -32,7 +32,8 @@ def main() -> None:
     for hour in STEPS:
         if hour > args.max_hour:
             break
-        result = advance_to(path, hour, candidate=True, community_food=True)
+        result = advance_to(path, hour, candidate=True, community_food=True,
+                            cashless_relief_walk=True)
         with SQLiteEventStore(path) as db:
             state = db.load(WORLD)
         assert audit_npc_economy(state)["copper_known_total"] == 12
