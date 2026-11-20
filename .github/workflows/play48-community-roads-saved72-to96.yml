@@ -1,0 +1,56 @@
+name: PLAY48 real saved72 P0 owner relief vs P1 known roads to96
+on:
+  push:
+    branches:
+      - experiment/play48-cashless-hunger-known-road-20261120
+    paths:
+      - 'simulation/src/carlos_sim/living_world.py'
+      - 'simulation/src/carlos_sim/market_navigation.py'
+      - 'simulation/scenarios/test_village/play48_integrated_acceptance.py'
+      - 'simulation/scenarios/test_village/play48_real72_to96_community_vs_roads.py'
+      - '.github/workflows/play48-community-roads-saved72-to96.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  resume-authentic-two-saved-worlds:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Fetch actual P0 owner-relief (original, saved at 72h)
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-community-original-0-to-72-8d50804396d085bfee0722f007d5d7d7a510ee6d
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44731250285
+          github-token: ${{ github.token }}
+          path: simulation/evidence/p0
+      - name: Fetch actual P1 owner-relief + physical starvation roads (saved at 72h)
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-cashless-known-road-real72-e37b6dce6925c08ca0e528d45e19e46fe38fb470
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44733046138
+          github-token: ${{ github.token }}
+          path: simulation/evidence/p1
+      - name: Verify and resume unchanged 72h SQLite histories to 84h and 96h
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real72_to96_community_vs_roads.py --input evidence --output real96
+      - name: Preserve real comparison and both reproducible 96h event ledgers
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p0-vs-p1-real-saved72-to96-${{ github.sha }}
+          path: simulation/real96/
+          if-no-files-found: warn
