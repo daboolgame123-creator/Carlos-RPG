@@ -1,0 +1,31 @@
+name: PLAY48 original-saved72 market access & hungry cashless audit
+on:
+  push:
+    branches:
+      - experiment/play48-market-access-audit-20261120
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine-saved72-read-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Download immutable original 72h source candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-source-fair-168h-04f1f8c532058a1eb64c1a50d233c9e0619ffb4d
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44266847089
+          github-token: ${{ github.token }}
+          path: simulation/evidence
+      - name: Inspect actual hunger and personal routes, verify SQLite not mutated
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_market_access_real72_audit.py
