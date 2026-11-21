@@ -174,6 +174,7 @@ def test_cashless_relief_does_not_assume_commercial_bakery_is_a_charity_site():
         "status": "open", "site_id": "bakery", "resource": "food",
         "posted_at": 65 * 3600, "unit_price": 2, "remaining": 2,
         "payment_resource": "coin_copper",
+        "seller_id": "salma", "stock_owner_id": "bakery",
     }
     raw["market_offers"]["food-at-market"]["status"] = "open"
     raw["market_offers"]["food-at-market"]["unit_price"] = 2
