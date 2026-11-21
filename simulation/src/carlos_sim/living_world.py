@@ -100,7 +100,8 @@ class LivingWorldEngine:
                  integrated_livelihoods_enabled: bool = False,
                  community_food_enabled: bool = False,
                  cashless_relief_walk_enabled: bool = False,
-                 desperate_paid_harvest_enabled: bool = False):
+                 desperate_paid_harvest_enabled: bool = False,
+                 reserve_signed_relief_offer_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -190,6 +191,10 @@ class LivingWorldEngine:
                     economic_enabled and consumption_enabled and survival_enabled))):
             raise ValueError("community market food requires real economy and hunger")
         self.community_food_enabled = community_food_enabled
+        if (type(reserve_signed_relief_offer_enabled) is not bool
+                or (reserve_signed_relief_offer_enabled and not community_food_enabled)):
+            raise ValueError("owner-approved quote reallocation needs signed market relief")
+        self.reserve_signed_relief_offer_enabled = reserve_signed_relief_offer_enabled
         if (type(cashless_relief_walk_enabled) is not bool
                 or (cashless_relief_walk_enabled and not community_food_enabled)):
             raise ValueError("cashless relief walking requires signed community food policy")
@@ -813,6 +818,15 @@ class LivingWorldEngine:
                             production_capability=True)
                 if self.community_food_enabled:
                     from .community_food import choose_market_ration
+                    if self.reserve_signed_relief_offer_enabled:
+                        from .community_food import choose_market_relief_quote_retirement
+                        old_quote = choose_market_relief_quote_retirement(current)
+                        if old_quote is not None:
+                            keeper = current.market_stalls["market"]["keeper_id"]
+                            append(DomainEvent('MarketOfferClosed', keeper,
+                                'on-site owner reassigns aged unsold offer to signed relief',
+                                current.time, {'id': old_quote}),
+                                market_capability=True)
                     recipient = choose_market_ration(current)
                     if recipient is not None:
                         append(DomainEvent("MarketCommunityRationIssued", None,
@@ -926,7 +940,8 @@ class LivingWorldEngine:
                         economic_offers.append(grain.offer_id)
                 for keeper_id in sorted(current.npcs):
                     quote = choose_local_food_offer(
-                        current, keeper_id, adaptive=self.adaptive_market_enabled)
+                        current, keeper_id, adaptive=self.adaptive_market_enabled,
+                        reserve_signed_relief=self.reserve_signed_relief_offer_enabled)
                     if quote is None:
                         continue
                     append(DomainEvent('MarketOfferPosted', keeper_id,

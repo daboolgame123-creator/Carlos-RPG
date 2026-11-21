@@ -1,0 +1,41 @@
+name: PLAY48 genuine h168 owner-requoted relief to169 A B
+on:
+  push:
+    branches: [experiment/play48-owner-signed-relief-quote-reallocation-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real168_owner_requotes_relief_1h.py'
+      - '.github/workflows/play48-owner-quote-original168-to169.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine-saved168-to169:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore genuine P3 168h 13-NPC SQLite world, never re-seed
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine96-emergency-harvest-day7-120b232483324b833f2bb02eb9e0d42f05000cd2
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44907694479
+          github-token: ${{ github.token }}
+          path: simulation/evidence/genuine168
+      - name: Authentic P3 no-switch and P4 signed local quote retreat 168h to169h
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real168_owner_requotes_relief_1h.py
+      - name: Save both event ledgers, exact original SHA and KPI delta
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-original168-owner-quote-a-b-${{ github.sha }}
+          path: simulation/relief169/
+          if-no-files-found: warn

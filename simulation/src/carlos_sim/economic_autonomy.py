@@ -235,14 +235,17 @@ def choose_local_production(state: WorldState, npc_id: str, *,
 
 
 def choose_local_food_offer(state: WorldState, keeper_id: str, *,
-                            adaptive: bool = False) -> OfferIntent | None:
+                            adaptive: bool = False,
+                            reserve_signed_relief: bool = False) -> OfferIntent | None:
     """Local seller prices only their physically owned stock; no omniscient demand.
 
     Adaptive prices are experimental and opt-in. Previously posted quotes never
     change behind a buyer's back; a new price needs a new physical offer.
     """
     if type(adaptive) is not bool:
-        raise ValueError("adaptive market mode must be boolean")
+        raise ValueError("adaptive market offer mode must be boolean")
+    if type(reserve_signed_relief) is not bool:
+        raise ValueError("reserve_signed_relief market offer mode must be boolean")
     if not _free(state, keeper_id):
         return None
     here = state.entities[keeper_id]["location_id"]
@@ -272,6 +275,13 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
         and recipe.get("wage_food") == 2
     ), default=0)
     unpromised = food - local_labor_reserve
+    if reserve_signed_relief and here == "market":
+        # Only the real shop owner's signed daily quota, for witnessed local
+        # destitution and no solvent present buyer. An explicit withdrawal
+        # happens separately before re-quoting; old promises are untouched.
+        from .community_food import signed_local_relief_quote_capacity
+        unpromised -= signed_local_relief_quote_capacity(
+            state, unit_price=TEST_FOOD_PRICE_COPPER)
     if unpromised < 1:
         return None
     # Actual forest/river output is a distinct source commodity: the one

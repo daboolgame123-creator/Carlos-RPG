@@ -1,0 +1,40 @@
+name: PLAY48 authentic h180 work and ownership stall diagnosis
+on:
+  push:
+    branches: [experiment/play48-owner-signed-relief-quote-reallocation-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real180_stall_audit.py'
+      - '.github/workflows/play48-real180-stall-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  authentic-h180-work-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download two immutable source h180 originals
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-original-saved169-to180-e980b73e5b1bb513647d8760ea22e858abb780e6
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44926901557
+          github-token: ${{ github.token }}
+          path: simulation/evidence/genuine180
+      - name: Inspect work, debt, stock, crop and job proposals without editing
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real180_stall_audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-readonly-original-180-diagnostics-${{ github.sha }}
+          path: simulation/audit180/
+          if-no-files-found: warn

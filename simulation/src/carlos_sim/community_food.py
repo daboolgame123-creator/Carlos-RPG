@@ -36,7 +36,7 @@ def sign_market_relief(state: dict, event: DomainEvent, *, bootstrap: bool) -> N
     stall["community_food"] = {"daily_limit": DAILY_LIMIT, "payments": []}
 
 
-def _eligible(state: dict, recipient: str) -> bool:
+def _eligible(state: dict, recipient: str, *, require_unquoted: bool = True) -> bool:
     stall = state["market_stalls"].get("market", {})
     contract = stall.get("community_food")
     npc = state["npcs"].get(recipient)
@@ -63,7 +63,71 @@ def _eligible(state: dict, recipient: str) -> bool:
            for p in contract["payments"]):
         return False
     # An existing quote is a claim on real owner stock; NEVER take from it.
-    return _available_site_food(state, "market") >= 1
+    return not require_unquoted or _available_site_food(state, "market") >= 1
+
+
+
+def signed_local_relief_quote_capacity(state: WorldState, *,
+                                       unit_price: int = 2) -> int:
+    """Owner's still-unused daily food aid when there is no solvent local buyer.
+
+    Checks only the market's own contract, physical NPC positions, its own
+    inventory, and its on-site asking price. Does not invent supplies, debt,
+    promises or remote price knowledge. Never alters a pre-existing offer.
+    """
+    raw = state.to_dict()
+    stall = raw["market_stalls"].get("market", {})
+    contract = stall.get("community_food")
+    if contract is None:
+        return 0
+    keeper = stall["keeper_id"]
+    if not _present(raw, keeper, "market"):
+        return 0
+    # Do not withdraw an unsold retail quote while a real paying customer
+    # is physically present, including human-controlled shoppers.
+    for who, entity in raw["entities"].items():
+        if who == keeper or entity["location_id"] != "market":
+            continue
+        goods = raw["resources"].get(who, {})
+        is_present = (_present(raw, who, "market") if who in raw["npcs"]
+                      else entity["controller"] == "player")
+        if (is_present and type(goods.get("coin_copper")) is int
+                and goods["coin_copper"] >= unit_price):
+            return 0
+    remaining = DAILY_LIMIT - sum(
+        p["paid_at"] // DAY == raw["time"] // DAY
+        for p in contract["payments"]
+    )
+    if remaining <= 0:
+        return 0
+    eligible = sum(_eligible(raw, who, require_unquoted=False)
+                   for who in raw["npcs"])
+    return min(remaining, eligible)
+
+
+def choose_market_relief_quote_retirement(state: WorldState) -> str | None:
+    """Local owner may withdraw an OLD unsold quote to fulfill signed aid.
+
+    Close via the existing seller-authorized MarketOfferClosed event, then
+    market re-listing preserves the owner's still-needed physical rations.
+    No promised or already sold loaf is changed, and no price is rewritten.
+    """
+    stall = state.market_stalls.get("market", {})
+    if "community_food" not in stall:
+        return None
+    keeper = stall["keeper_id"]
+    for ident, offer in sorted(state.market_offers.items()):
+        if (offer["status"] != "open" or offer["site_id"] != "market"
+                or offer["stock_owner_id"] != "market"
+                or offer["seller_id"] != keeper or offer["resource"] != "food"
+                or state.time - offer["posted_at"] < 6 * 3600):
+            continue
+        budget = signed_local_relief_quote_capacity(
+            state, unit_price=offer["unit_price"])
+        if (budget > _available_site_food(state, "market")
+                and state.resources["market"]["food"] >= budget):
+            return ident
+    return None
 
 
 def choose_market_ration(state: WorldState) -> str | None:
