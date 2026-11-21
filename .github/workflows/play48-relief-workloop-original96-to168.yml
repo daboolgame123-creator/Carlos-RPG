@@ -1,0 +1,49 @@
+name: PLAY48 genuine saved96 original day7 work-vs-relief routing fix
+on:
+  push:
+    branches: [experiment/play48-relief-work-trip-loop-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_saved96_relief_work_loop_to168.py'
+      - '.github/workflows/play48-relief-workloop-original96-to168.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-96-to168-work-loop-counterfactual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve genuine saved96 P1 food economy (no re-seed)
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-87-to96-hourly-b8fb729c48d3923ffb6b30ede829839a4b82520e
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44887748817
+          github-token: ${{ github.token }}
+          path: simulation/evidence/saved96
+      - name: Retrieve authenticated old P0/P1 day7 checkpoint results only
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-original96-to168-6e7b3671f6ad3ef29bcf73bd85bec38f330ac3be
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44894923168
+          github-token: ${{ github.token }}
+          path: simulation/evidence/original168
+      - name: Continue the exact original P1 world with only bounded aid-market routing
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_saved96_relief_work_loop_to168.py
+      - name: Preserve actual physical event ledger and each completed six-hour checkpoint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-original96-workloop-repair-${{ github.sha }}
+          path: simulation/workloop168/
+          if-no-files-found: warn
