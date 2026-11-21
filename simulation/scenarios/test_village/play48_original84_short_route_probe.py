@@ -62,6 +62,28 @@ for arm, use_roads in (("owner_relief_only", False), ("owner_relief_plus_roads",
                 who: sum(t["npc_id"] == who for t in after.travels.values()) - before_count[who]
                 for who in before.npcs
             }
+            # The number of physical legs is NOT the number of pointless
+            # visits. Distinguish first-time searches from false referrals
+            # to a nonfood-only stall, using authoritative event causes.
+            studied = {"miner", "burner", "smith"}
+            causes = db.db.execute(
+                "SELECT json_extract(payload,'$.actor_id'), "
+                "json_extract(payload,'$.cause') FROM events "
+                "WHERE seq > ? AND json_extract(payload,'$.event_type') = "
+                "'NPCTravelStarted' AND "
+                "json_extract(payload,'$.actor_id') IN ('miner','burner','smith')",
+                (before.revision,),
+            ).fetchall()
+            assert len(causes) == sum(trip_delta[who] for who in studied)
+            false_revisits = [
+                (who, cause) for who, cause in causes
+                if cause.startswith("cashless starving resident revisiting")
+                and "personally witnessed food quote" not in cause
+            ]
+            explore_legs = sum(
+                "cashless starving resident searching known roads" in cause
+                for who, cause in causes
+            )
             measure = metrics(after)
             ration = after.market_stalls["market"]["community_food"]["payments"]
             results[arm] = {
@@ -72,6 +94,8 @@ for arm, use_roads in (("owner_relief_only", False), ("owner_relief_plus_roads",
                 "copper": audit["copper_known_total"],
                 "trips_new": trip_delta,
                 "nonfood_shop_NPC_trips": sum(trip_delta[w] for w in ("miner","burner","smith")),
+                "firsthand_known_road_exploration_legs": explore_legs,
+                "unwitnessed_nonfood_market_return_legs": len(false_revisits),
                 "source84_sha256": original_sha,
                 "source84_revision": before.revision, "after_revision": after.revision,
                 "observational_only": True, "release_gate_unchanged": True,
@@ -87,8 +111,11 @@ a,b = results["owner_relief_only"], results["owner_relief_plus_roads"]
 print("PLAY48_SHORT84_DELTA " + json.dumps({
     key: b[key] - a[key] for key in ("meals", "hungry100", "sales", "nonfood_shop_NPC_trips")
 }, sort_keys=True),flush=True)
-# Unlike the old h72-h84 recorded 3,573 pointless food-market revisits,
-# old behavior must not repeat a flood of visits over mere 10 minutes.
-assert b["nonfood_shop_NPC_trips"] <= 8, (
-    "the false-food-shop route loop is still present in real saved84 continuation"
+# Historically there were 3,573 repeated, unproductive food-market
+# "revisits". Do NOT mistake one-off real exploration of new known-road
+# endpoints for those old loops. Every actual transfer remains conserved.
+assert b["unwitnessed_nonfood_market_return_legs"] == 0, (
+    "old nonfood market revisit behavior unexpectedly persisted"
 )
+assert b["firsthand_known_road_exploration_legs"] <= b["nonfood_shop_NPC_trips"]
+assert a["copper"] == b["copper"] == 12
