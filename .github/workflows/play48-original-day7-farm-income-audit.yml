@@ -1,0 +1,50 @@
+name: PLAY48 verified original day7 farm income and production audit
+on:
+  push:
+    branches: [experiment/play48-real168-farm-blockage-audit-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real168_farm_income_blockage_audit.py'
+      - '.github/workflows/play48-original-day7-farm-income-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  forensic-original-p0-p1-p2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore original 96h P0/P1 state
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-87-to96-hourly-b8fb729c48d3923ffb6b30ede829839a4b82520e
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44887748817
+          github-token: ${{ github.token }}
+          path: simulation/evidence/original96
+      - name: Restore original 168h P0/P1 histories
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-original96-to168-6e7b3671f6ad3ef29bcf73bd85bec38f330ac3be
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44894923168
+          github-token: ${{ github.token }}
+          path: simulation/evidence/original168
+      - name: Restore independently repaired P2 original 168h state
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-original96-workloop-repair-8b788449e5506fb2b5f35c9380008390c41c9e33
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44902187561
+          github-token: ${{ github.token }}
+          path: simulation/evidence/fixed168
+      - name: Audit true farm east workers, wages, physical stocks and plot water without playing or mutating
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real168_farm_income_blockage_audit.py
