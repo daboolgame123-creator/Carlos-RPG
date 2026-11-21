@@ -1,0 +1,41 @@
+name: PLAY48 read-only genuine day7 livelihood gap audit
+on:
+  push:
+    branches:
+      - experiment/play48-desperate-paid-harvest-20261121
+    paths:
+      - 'simulation/scenarios/test_village/play48_day7_livelihood_gap_audit.py'
+      - '.github/workflows/play48-day7-livelihood-gap-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  read-only-original-168:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Restore authenticated P3 h168 13-NPC event ledger, without re-seeding
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine96-emergency-harvest-day7-120b232483324b833f2bb02eb9e0d42f05000cd2
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44907694479
+          github-token: ${{ github.token }}
+          path: simulation/evidence/genuine168
+      - name: Diagnose who is hungry, physically paid and near food at 168h
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_day7_livelihood_gap_audit.py --input evidence/genuine168 --output diagnosis168/day7.json
+      - name: Preserve reproducible read-only results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-day7-livelihood-audit-${{ github.sha }}
+          path: simulation/diagnosis168/day7.json
+          if-no-files-found: warn
