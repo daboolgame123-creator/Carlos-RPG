@@ -125,6 +125,7 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     for recipe_id, recipe in sorted(state.production_recipes.items()):
         if recipe["site_id"] != here or recipe["role"] != npc["role"]:
             continue
+        emergency_funded_grain_stack = False
         if desperate:
             # P5: only one genuinely planted on-site crop with existing seed,
             # water and the employer's locally funded, signed future harvest.
@@ -159,6 +160,11 @@ def choose_local_production(state: WorldState, npc_id: str, *,
                     or recipe["duration_seconds"] > 300
                     or not (is_paid_harvest or is_future_funded_planting)):
                 continue
+            # Actual paid harvest may accumulate in the SAME owner's bounded
+            # grain inventory; the existing reducer enforces finite capacity.
+            emergency_funded_grain_stack = (
+                desperate_funded_planting_enabled and is_paid_harvest
+                and recipe["output_resource"] == "grain")
         if recipe.get("input_resource") == "groundwater_reserve":
             if not finite_aquifer_enabled:
                 # No secret rain generator: original worlds remain unchanged.
@@ -241,7 +247,8 @@ def choose_local_production(state: WorldState, npc_id: str, *,
                 continue
         if (any(stocked[item] < amount for item, amount in needs)
                 or tool_amount < 1
-                or (output_amount != 0 and not finite_wilderness_batch)
+                or (output_amount != 0 and not finite_wilderness_batch
+                    and not emergency_funded_grain_stack)
                 or output_amount + recipe["output_amount"] > PRODUCTION_MAX):
             continue
         reservations = sum(
