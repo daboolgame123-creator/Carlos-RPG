@@ -1,6 +1,8 @@
 """Bounded optional owner-signed withdrawal of stale unsold quotes for real aid."""
 from __future__ import annotations
 
+import pytest
+
 from carlos_sim import DomainEvent
 from carlos_sim.domain import WorldState
 from carlos_sim.market import post_offer, close_offer, validate_market
@@ -96,3 +98,12 @@ def test_no_market_owner_contract_cannot_reserve_or_withdraw_stock():
     assert signed_local_relief_quote_capacity(WorldState(**s)) == 0
     assert choose_market_relief_quote_retirement(WorldState(**s)) is None
     assert choose_market_ration(WorldState(**s)) is None
+
+
+@pytest.mark.parametrize("invalid", [None, 1, 0, "true", [], {}])
+def test_relief_quote_flag_rejects_non_boolean_without_masking_adaptive_error(invalid):
+    s = WorldState(**_world())
+    with pytest.raises(ValueError, match="reserve_signed_relief"):
+        choose_local_food_offer(s, "salma", reserve_signed_relief=invalid)
+    with pytest.raises(ValueError, match="adaptive"):
+        choose_local_food_offer(s, "salma", adaptive=invalid)
