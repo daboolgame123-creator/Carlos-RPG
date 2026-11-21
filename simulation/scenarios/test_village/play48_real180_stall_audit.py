@@ -32,6 +32,7 @@ def describe(arm: str) -> dict:
         assert s.time == 180 * HOUR and len(s.npcs) == 13
         audit = audit_npc_economy(s)
         assert audit["copper_scope_complete"] and audit["copper_known_total"] == 12
+        serial = s.to_dict()
         stock = {
             site: {k: v for k, v in sorted(inventory.items())
                    if isinstance(v, int) and v > 0}
@@ -78,10 +79,10 @@ def describe(arm: str) -> dict:
                     if job["status"] == "running").items())),
             },
             "stock_owned_by_site_or_person": stock,
-            "farm_plots": s.farm_plots,
-            "recipes": s.production_recipes,
+            "farm_plots": serial["farm_plots"],
+            "recipes": serial["production_recipes"],
             "npcs": locals_,
-            "routines": s.npc_routines,
+            "routines": serial["npc_routines"],
             "supply_circuit_summary": {
                 who: {
                     "keys": sorted(c.keys()),
