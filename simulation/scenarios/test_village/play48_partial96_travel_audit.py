@@ -21,14 +21,14 @@ for arm in ("owner_relief_only", "owner_relief_plus_roads"):
         state = store.load(WORLD)
         assert store.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
         assert not store.db.execute("PRAGMA foreign_key_check").fetchall()
-    causes = store.db.execute(
+        causes = store.db.execute(
         "SELECT json_extract(payload, '$.actor_id'), "
         "json_extract(payload, '$.cause'), count(*) FROM events "
         "WHERE json_extract(payload, '$.event_type') = 'NPCTravelStarted' "
         "AND json_extract(payload, '$.time') >= ? "
         "GROUP BY 1, 2 ORDER BY count(*) DESC LIMIT 20",
-        (72 * HOUR,),
-    ).fetchall()
+            (72 * HOUR,),
+        ).fetchall()
     assert hashlib.sha256(db_path.read_bytes()).hexdigest() == before
     audit = audit_npc_economy(state)
     assert len(state.npcs) == 13
