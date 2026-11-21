@@ -1,0 +1,41 @@
+name: PLAY48 genuine 169h physical wages to food trial
+on:
+  push:
+    branches: [experiment/play48-desperate-paid-harvest-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real168_plus_15_to169_plus_15.py'
+      - '.github/workflows/play48-real169-paid-harvest-food.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-original-day7-hourly-followup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Get identical original day7 plus 15-minute P2 and P3 worlds
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-real168-desperate-harvest-15min-51409da381bb73973baed5fdff8ea48c47727379
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44907512298
+          github-token: ${{ github.token }}
+          path: simulation/evidence/real15
+      - name: Run real 1h physical economy with existing wages and local market prices
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real168_plus_15_to169_plus_15.py
+      - name: Archive both h169.25 real worlds on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-genuine-day7-harvest-food-${{ github.sha }}
+          path: simulation/real169/
+          if-no-files-found: warn
