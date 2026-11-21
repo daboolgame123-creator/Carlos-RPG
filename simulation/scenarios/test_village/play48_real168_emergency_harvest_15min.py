@@ -76,7 +76,7 @@ for arm,allow_desperate in (("p2_default",False),("p3_real_emergency_harvest",Tr
                 "completed_harvests_since168":len(jobs)-oldjobs,
                 "new_harvest_job_receipts":[{
                     "start":j["started_at"],"status":j["status"],
-                    "wage":j.get("work_wage"),
+                    "wage":dict(j["work_wage"]) if "work_wage" in j else None,
                 }for j in jobs if j["started_at"]>=168*HOUR],
                 "money_paid_total_historical":m["cash_wages"],
                 "farid_current_wallet":end.resources["farid"]["coin_copper"],
