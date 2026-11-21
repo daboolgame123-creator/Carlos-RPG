@@ -58,7 +58,7 @@ def describe(arm: str) -> dict:
                     {"recipe": intent.recipe_id, "reason": intent.reason}
                     if intent is not None else None),
                 "food_purchase_intent": (
-                    {"price": purchase.price, "site": purchase.site_id}
+                    {"price": purchase.price, "offer": purchase.offer_id}
                     if purchase is not None else None),
                 "running_work": sum(j["npc_id"] == who and j["status"] == "running"
                                     for j in s.production_jobs.values()),
