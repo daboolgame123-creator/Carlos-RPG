@@ -1,0 +1,41 @@
+name: PLAY48 genuine P0 P1 original96 to168 checked survival
+on:
+  push:
+    branches: [experiment/play48-saved84-short-diagnostic-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_original96_to168_checkpointed.py'
+      - '.github/workflows/play48-genuine-saved96-to168.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  preserve-real-13-npc-168h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore unchanged original 13-NPC 96h event ledgers from verified run
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-87-to96-hourly-b8fb729c48d3923ffb6b30ede829839a4b82520e
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44887748817
+          github-token: ${{ github.token }}
+          path: simulation/evidence/saved96
+      - name: Advance two original food economies 96h to168h in conserved six-hour partitions
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_original96_to168_checkpointed.py
+      - name: Preserve checkpoints and authentic event ledgers even on failure or timeout
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-genuine-original96-to168-${{ github.sha }}
+          path: simulation/real168/
+          if-no-files-found: warn
