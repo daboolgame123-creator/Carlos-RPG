@@ -10,6 +10,7 @@ from pathlib import Path
 from carlos_sim import SQLiteEventStore
 from carlos_sim.economic_diagnostics import audit_npc_economy
 from play48_integrated_acceptance import WORLD, HOUR, metrics
+from carlos_sim.market_navigation import choose_known_market_walk
 
 for arm in ("owner_relief_only", "owner_relief_plus_roads"):
     db_path = Path("evidence/partial96") / (arm + ".sqlite")
@@ -52,6 +53,28 @@ for arm in ("owner_relief_only", "owner_relief_plus_roads"):
                            state.market_stalls["market"]["community_food"]["payments"]),
             "last5_destinations": [t["destination"] for t in personal[-5:]],
         }
+    # Exercise P1 planner at the real saved84 checkpoint without advancing
+    # even a single simulated second. All knowledge comes from each NPC's
+    # personal travel/offer history, not the inspector's market inventory.
+    candidate_revisits = {}
+    for who in ("miner", "burner", "smith", "adel", "repairman"):
+        if state.resources.get(who, {}).get("coin_copper") != 0:
+            continue
+        walk = choose_known_market_walk(
+            state, who, repeat_errands=True,
+            remember_unbought_stalls=True,
+            seek_alternative_if_unaffordable=True,
+            seek_relief=True,
+        )
+        candidate_revisits[who] = (
+            {"destination": walk.destination, "route": walk.route_id,
+             "reason": walk.reason} if walk else None
+        )
+    for who in ("miner", "burner", "smith"):
+        step = candidate_revisits.get(who)
+        assert step is None or "personally witnessed food quote" not in step["reason"] or (
+            step["destination"] not in ("smithy", "charcoal_kiln", "iron_mine")
+        ), f"false food return intent for {who} at {step}"
     m = metrics(state)
     print("PLAY48_PARTIAL96_TRAVEL_AUDIT "+json.dumps({
         "arm": arm, "hour": state.time/HOUR, "revision":state.revision,
@@ -60,5 +83,6 @@ for arm in ("owner_relief_only", "owner_relief_plus_roads"):
         "community":len(state.market_stalls["market"]["community_food"]["payments"]),
         "trip_total":len(moves),"trips_last6h":len(recent),
         "travel_causes_since72": [{"npc":who,"cause":why,"trips":n} for who,why,n in causes],
+        "real84_p1_next_market_intents": candidate_revisits,
         "npcs":stats, "read_only":True, "copper":12,
     },sort_keys=True),flush=True)
