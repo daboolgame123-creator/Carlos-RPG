@@ -188,7 +188,8 @@ def test_cashless_relief_does_not_assume_commercial_bakery_is_a_charity_site():
         "work_start": 0, "work_end": 12 * 3600,
     }}
     raw["production_jobs"] = {"paid-harvest": {
-        "npc_id": "nora", "work_wage": {"paid_at": 35 * 3600},
+        "npc_id": "nora", "status": "completed",
+        "work_wage": {"paid_at": 35 * 3600},
     }}
     here = WorldState(**raw)
     # Before the fix a starving farmer repeatedly went farm→bakery→farm,
