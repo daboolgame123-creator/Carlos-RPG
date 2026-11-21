@@ -1,0 +1,33 @@
+name: PLAY48 original 96h zero-resource-injection economic diagnosis
+on:
+  push:
+    branches: [experiment/play48-saved84-short-diagnostic-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_saved96_income_food_audit.py'
+      - '.github/workflows/play48-real96-income-food-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect-authentic96h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Download unmodified 96h genuine P0/P1 original event histories
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-87-to96-hourly-b8fb729c48d3923ffb6b30ede829839a4b82520e
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44887748817
+          github-token: ${{ github.token }}
+          path: simulation/evidence/saved96
+      - name: Read-only actual food, incomes and routes inspection
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_saved96_income_food_audit.py
