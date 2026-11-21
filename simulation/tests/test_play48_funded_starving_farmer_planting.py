@@ -41,7 +41,7 @@ def test_real_funded_local_farmer_can_propose_one_seed_and_no_state_writes():
 
 @pytest.mark.parametrize("change", [
     ("money", 1), ("water", 0), ("seed", 0),
-    ("ready", 1), ("hoe", 0), ("fatigue", 70), ("at_work", False),
+    ("hoe", 0), ("fatigue", 70), ("at_work", False),
 ])
 def test_never_start_unfunded_unwatered_dangerous_or_obstructed_planting(change):
     assert propose(planted_field(**{change[0]: change[1]})) is None
@@ -83,3 +83,8 @@ def test_mode_is_strict_boolean(invalid):
 def test_new_planting_flag_cannot_silently_authorize_harvest():
     d = planted_field(ready=1)
     assert propose(d, new_flag=True, harvest=False) is None
+
+
+def test_ripe_real_crop_is_harvested_not_replanted():
+    intent = propose(planted_field(ready=1))
+    assert intent is not None and intent.recipe_id == "east-finite-harvest"
