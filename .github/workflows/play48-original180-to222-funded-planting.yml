@@ -3,6 +3,9 @@ on:
   push:
     branches: [experiment/play48-funded-starving-farmer-planting-20261121]
     paths:
+      - 'simulation/src/carlos_sim/economic_autonomy.py'
+      - 'simulation/src/carlos_sim/living_world.py'
+      - 'simulation/tests/test_play48_funded_starving_farmer_planting.py'
       - 'simulation/scenarios/test_village/play48_original180_funded_seed_to222.py'
       - '.github/workflows/play48-original180-to222-funded-planting.yml'
   workflow_dispatch:
