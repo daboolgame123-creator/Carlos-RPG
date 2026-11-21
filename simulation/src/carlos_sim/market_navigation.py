@@ -69,6 +69,11 @@ def wants_local_market(state: WorldState, npc_id: str, *, repeat_errands=False,
     if nav is not None and nav["target"] is not None:
         return False  # Explicit travel choices take precedence.
     here = entity["location_id"]
+    if is_destitute and here == "market":
+        # The real community-ration site is already physically reached.
+        # Stay available for actual on-site help instead of pointlessly
+        # wandering to a different commodity shop and immediately back.
+        return False
     if here in state.market_stalls:
         if seek_alternative_if_unaffordable:
             # On-site quotations only: the buyer never observes a distant
@@ -131,16 +136,37 @@ def choose_known_market_walk(
     here = state.entities[npc_id]["location_id"]
     own_coins = state.resources.get(npc_id, {}).get(MONEY)
     if seek_relief and own_coins == 0:
-        # Severe hunger motivates an actual search for help. This route can
-        # only revisit a shop the resident personally reached; no remote
-        # knowledge of charity stock, prices or recipient eligibility.
-        for site in sorted((set(nav["visited"]) & set(state.market_stalls)) - {here}):
+        # A market stall may sell tools, ore or coal instead of meals.
+        # Revisit ONLY food sellers personally witnessed on a completed
+        # arrival; currently posted remote offers are NOT discoverable.
+        # A six-hour clock cooldown avoids repeatedly shuttling between
+        # known, unaffordable sites without learning anything new.
+        witnessed_food_at = {}
+        for trip in state.travels.values():
+            if (trip["npc_id"] != npc_id or trip["status"] != "arrived"
+                    or trip["destination"] == here):
+                continue
+            site = trip["destination"]
+            arrived = trip["arrived_at"]
+            if (site not in nav["visited"] or site not in state.market_stalls
+                    or not any(
+                        offer["site_id"] == site and offer["resource"] == "food"
+                        and offer["posted_at"] <= arrived
+                        for offer in state.market_offers.values()
+                    )):
+                continue
+            witnessed_food_at[site] = max(
+                arrived, witnessed_food_at.get(site, -1)
+            )
+        for site, last_arrived in sorted(witnessed_food_at.items()):
+            if state.time - last_arrived < UNBOUGHT_STALL_REVISIT_SECONDS:
+                continue
             path = shortest_known_route(state, npc_id, site)
             if path:
                 return ShoppingWalkIntent(
                     npc_id, path[0], site,
                     "cashless starving resident revisiting a personally "
-                    "witnessed market, seeking help",
+                    "witnessed food quote after six hours to seek help",
                 )
     if repeat_errands:
         wage_at = _latest_wage_at(state, npc_id)
