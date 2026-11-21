@@ -29,6 +29,7 @@ def one(arm: str) -> dict:
         e = audit_npc_economy(state)
         assert e["copper_scope_complete"] and e["copper_known_total"] == 12
         rows = []
+        data = state.to_dict()  # Unfreeze nested last_decision mappingproxy values.
         for ident, n in sorted(state.npcs.items()):
             needs = n["needs"]
             food = state.resources[ident].get("food")
@@ -47,7 +48,7 @@ def one(arm: str) -> dict:
                 "proposed_job": planting.recipe_id if planting else None,
                 "proposed_sale": buying.offer_id if buying else None,
                 "next_decision_at": n["next_decision_at"],
-                "last_decision": n["last_decision"],
+                "last_decision": data["npcs"][ident]["last_decision"],
             })
         goods = {
             k: {resource: value for resource, value in sorted(v.items())
