@@ -97,8 +97,11 @@ def test_nonfood_shop_is_not_treated_as_a_personally_witnessed_food_stall():
         "destination": "charcoal_kiln", "arrived_at": 65 * 3600,
     }}
     state = WorldState(**raw)
-    assert wants_local_market(state, "nora", seek_relief=True)
-    assert choose_known_market_walk(state, "nora", seek_relief=True) is None
+    assert wants_local_market(state, "nora", seek_relief=True,
+                              seek_alternative_if_unaffordable=True)
+    assert choose_known_market_walk(
+        state, "nora", seek_relief=True,
+        seek_alternative_if_unaffordable=True) is None
 
 
 def test_last_witnessed_food_visit_has_six_hour_revisit_cooldown():
