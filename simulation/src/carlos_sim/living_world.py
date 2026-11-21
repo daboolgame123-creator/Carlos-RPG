@@ -1235,6 +1235,7 @@ class LivingWorldEngine:
                     # physical travel history; no teleport or new schema.
                     walk = choose_known_market_return(
                         current, shopper_id, repeat_errands=repeat_errands,
+                        seek_relief=self.cashless_relief_walk_enabled,
                     )
                     if walk is None and wants_local_market(
                             current, shopper_id, repeat_errands=repeat_errands,
