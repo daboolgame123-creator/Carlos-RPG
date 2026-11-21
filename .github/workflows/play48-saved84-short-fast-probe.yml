@@ -1,0 +1,39 @@
+name: PLAY48 genuine 84h short anti-loop survival probe
+on:
+  push:
+    branches:
+      - experiment/play48-saved84-short-diagnostic-20261121
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-saved84-short-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download original archived 84h P0/P1 states, not synthetic fixtures
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p0-vs-p1-real-saved72-to96-b430834ccd37ddc1162f46246c33dc543d5cb837
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44740541317
+          github-token: ${{ github.token }}
+          path: simulation/evidence/real84
+      - name: Replay just ten authentic minutes, compare real journeys and coins
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_original84_short_route_probe.py
+      - name: Archive genuine short replay event ledgers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-saved84-10min-route-probe-${{ github.sha }}
+          path: simulation/short84/
+          if-no-files-found: warn
