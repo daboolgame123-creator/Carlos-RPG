@@ -129,3 +129,42 @@ for arm in ("owner_relief_only", "owner_relief_plus_roads"):
         "read_only":True,
     }
     print("PLAY48_168_REAL_CAUSAL_AUDIT "+json.dumps(out,sort_keys=True),flush=True)
+    # Read-only detailed route audit: 262 P1 Farid "revisit" legs over
+    # 72h is incompatible with a genuine 6h-per-market arrival cooldown.
+    # Identify real source/target and completed target arrival counts.
+    import sqlite3
+    with sqlite3.connect("file:"+str(path.resolve())+"?mode=ro", uri=True) as ro:
+        patterns=ro.execute(
+            "SELECT json_extract(payload,'$.actor_id'),"
+            "json_extract(payload,'$.cause'),"
+            "json_extract(payload,'$.data.origin'),"
+            "json_extract(payload,'$.data.destination'),count(*) "
+            "FROM events WHERE json_extract(payload,'$.time') >= ? "
+            "AND json_extract(payload,'$.event_type')='NPCTravelStarted' "
+            "AND json_extract(payload,'$.actor_id') IN ('farid','nora','adel') "
+            "GROUP BY 1,2,3,4 ORDER BY count(*) DESC LIMIT 28",
+            (96*HOUR,)
+        ).fetchall()
+    market_arrivals={}
+    for who in ("farid","nora","adel"):
+        times=sorted(t["arrived_at"] for t in world.travels.values()
+                     if t["npc_id"]==who and t["status"]=="arrived"
+                     and t["destination"]=="market" and t["arrived_at"]>=96*HOUR)
+        gaps=[(b-a) for a,b in zip(times,times[1:])]
+        market_arrivals[who]={
+            "count":len(times),
+            "first_last":([times[0],times[-1]] if times else []),
+            "shortest_gap_seconds":(min(gaps) if gaps else None),
+            "count_less_than_six_hours":sum(g<6*HOUR for g in gaps),
+            "count_less_than_one_hour":sum(g<HOUR for g in gaps),
+            "last10":times[-10:],
+        }
+    print("PLAY48_168_MARKET_SHUTTLE_FOOTPRINT "+json.dumps({
+        "arm":arm,"patterns":[{
+            "npc":who,"cause":cause,"origin":from_site,
+            "destination":to_site,"trips":count
+        }for who,cause,from_site,to_site,count in patterns],
+        "personal_market_arrival_gaps":market_arrivals,
+        "read_only":True,
+    },sort_keys=True),flush=True)
+
