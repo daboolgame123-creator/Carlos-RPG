@@ -1,0 +1,31 @@
+name: PLAY48 funded hungry planting strict focus
+on:
+  push:
+    branches: [experiment/play48-funded-starving-farmer-planting-20261121]
+    paths:
+      - 'simulation/src/carlos_sim/economic_autonomy.py'
+      - 'simulation/src/carlos_sim/living_world.py'
+      - 'simulation/tests/test_play48_funded_starving_farmer_planting.py'
+      - '.github/workflows/play48-funded-starving-planting-focus.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Validate opt-in real local crop seed and existing protected economy
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_funded_starving_farmer_planting.py tests/test_play48_desperate_paid_harvest.py tests/test_play48_owner_approved_quote_relief.py
