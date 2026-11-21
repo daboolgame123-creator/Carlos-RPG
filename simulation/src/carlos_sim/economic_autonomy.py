@@ -242,8 +242,10 @@ def choose_local_food_offer(state: WorldState, keeper_id: str, *,
     Adaptive prices are experimental and opt-in. Previously posted quotes never
     change behind a buyer's back; a new price needs a new physical offer.
     """
-    if type(adaptive) is not bool or type(reserve_signed_relief) is not bool:
-        raise ValueError("market offer mode must be boolean")
+    if type(adaptive) is not bool:
+        raise ValueError("adaptive market offer mode must be boolean")
+    if type(reserve_signed_relief) is not bool:
+        raise ValueError("reserve_signed_relief market offer mode must be boolean")
     if not _free(state, keeper_id):
         return None
     here = state.entities[keeper_id]["location_id"]
