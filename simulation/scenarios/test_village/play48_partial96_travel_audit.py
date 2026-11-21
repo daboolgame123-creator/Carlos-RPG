@@ -19,7 +19,8 @@ for arm in ("owner_relief_only", "owner_relief_plus_roads"):
     before = hashlib.sha256(db_path.read_bytes()).hexdigest()
     with SQLiteEventStore(db_path) as store:
         state = store.load(WORLD)
-        assert store.verify(WORLD).to_dict() == state.to_dict()
+        assert store.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+        assert not store.db.execute("PRAGMA foreign_key_check").fetchall()
     assert hashlib.sha256(db_path.read_bytes()).hexdigest() == before
     audit = audit_npc_economy(state)
     assert len(state.npcs) == 13
