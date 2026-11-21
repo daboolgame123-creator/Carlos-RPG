@@ -1,0 +1,39 @@
+name: PLAY48 genuine h222 local work income and market blockers
+on:
+  push:
+    branches: [experiment/play48-funded-starving-farmer-planting-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real222_income_blockers.py'
+      - '.github/workflows/play48-authentic222-income-blockers.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  read-only-original222:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - uses: actions/download-artifact@v4
+        with:
+          name: play48-authentic-180to222-funded-seed-1d2a349b3bfa2ec1ecbab892bb81898d44f52bc2
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44930293599
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic222
+      - name: Inspect two verified original-world persisted h222 ledgers
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real222_income_blockers.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-authentic222-income-audit-${{ github.sha }}
+          path: simulation/real222_audit/
+          if-no-files-found: warn
