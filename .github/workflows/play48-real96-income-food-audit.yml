@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+      - run: python -m pip install pytest
       - name: Download unmodified 96h genuine P0/P1 original event histories
         uses: actions/download-artifact@v4
         with:
