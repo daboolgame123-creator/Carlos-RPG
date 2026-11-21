@@ -88,3 +88,24 @@ def test_new_planting_flag_cannot_silently_authorize_harvest():
 def test_ripe_real_crop_is_harvested_not_replanted():
     intent = propose(planted_field(ready=1))
     assert intent is not None and intent.recipe_id == "east-finite-harvest"
+
+
+def test_funded_finite_harvest_may_really_add_to_owned_grain_bin():
+    d = planted_field(ready=1)
+    d["resources"]["farm_east"]["grain"] = 12
+    assert propose(d, new_flag=False) is None
+    intent = propose(d, new_flag=True)
+    assert intent is not None and intent.recipe_id == "east-finite-harvest"
+    assert d["resources"]["farm_east"]["grain"] == 12
+    # The proposal must not pay a copper or fabricate any grain; trusted
+    # scheduled production and physical wage reducers do that later.
+    assert d["resources"]["farm_east"]["coin_copper"] == 3
+
+
+def test_existing_grain_does_not_waive_real_ripe_crop_or_wage_funding():
+    d = planted_field(ready=0)
+    d["resources"]["farm_east"]["grain"] = 12
+    assert propose(d, new_flag=True).recipe_id == "east-seed-planting"
+    d = planted_field(ready=1, money=1)
+    d["resources"]["farm_east"]["grain"] = 12
+    assert propose(d, new_flag=True) is None
