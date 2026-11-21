@@ -1,0 +1,41 @@
+name: PLAY48 genuine84-to87 prove no nonfood food-market loops
+on:
+  push:
+    branches: [experiment/play48-cashless-hunger-known-road-20261120]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real84_to87_fixed_food_route.py'
+      - '.github/workflows/play48-real84-fixed-food-route-to87.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  authentic-saved84:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve original persisted P0/P1 84h worlds from prematurely canceled test
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p0-vs-p1-real-saved72-to96-b430834ccd37ddc1162f46246c33dc543d5cb837
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44740541317
+          github-token: ${{ github.token }}
+          path: simulation/evidence/partial96
+      - name: Continue both actual original worlds from 84 to 87h with authentic food & copper
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real84_to87_fixed_food_route.py
+      - name: Preserve authentic 87h state and anti-loop receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-fixed-food-route-authentic84-to87-${{ github.sha }}
+          path: simulation/fixed-route-87/
+          if-no-files-found: warn

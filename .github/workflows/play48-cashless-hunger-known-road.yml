@@ -1,0 +1,53 @@
+name: PLAY48 cashless starvation walks personally known roads P1
+on:
+  push:
+    branches:
+      - experiment/play48-cashless-hunger-known-road-20261120
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  focused-navigation:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Prove genuine roads and default-off behavior; conserve all food
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_cashless_known_road.py tests/test_play48_community_rations.py
+  genuine-original-village:
+    # The full original 0-72h proof already passed as run 44733046138.
+    # Avoid rerunning this expensive proof on each source amendment.
+    if: github.event_name == 'workflow_dispatch'
+    needs: focused-navigation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Measure original 13 NPC village with hunger-road help, no money or food injection
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_relief_known_roads_real72.py --evidence known-road-evidence --max-hour 72
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-cashless-known-road-real72-${{ github.sha }}
+          path: simulation/known-road-evidence/
+          if-no-files-found: warn

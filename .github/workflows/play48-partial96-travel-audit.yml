@@ -1,0 +1,34 @@
+name: PLAY48 inspect partial canceled 96h genuine travel ledgers
+on:
+  push:
+    branches: [experiment/play48-cashless-hunger-known-road-20261120]
+    paths:
+      - '.github/workflows/play48-partial96-travel-audit.yml'
+      - 'simulation/scenarios/test_village/play48_partial96_travel_audit.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect-preserved-histories:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download immutable partial original saved72-to96 P0/P1 result
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p0-vs-p1-real-saved72-to96-b430834ccd37ddc1162f46246c33dc543d5cb837
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44740541317
+          github-token: ${{ github.token }}
+          path: simulation/evidence/partial96
+      - name: Audit authentic partial world times and repeated market journeys without mutating either database
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_partial96_travel_audit.py
