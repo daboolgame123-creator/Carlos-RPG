@@ -88,9 +88,11 @@ def test_nonfood_shop_is_not_treated_as_a_personally_witnessed_food_stall():
     raw["market_stalls"]["smithy"] = {"keeper_id": "nora"}
     raw["market_stalls"]["charcoal_kiln"] = {"keeper_id": "nora"}
     raw["market_offers"] = {"iron-sale": {
-        "site_id": "smithy", "resource": "iron", "posted_at": 60 * 3600,
+        "status": "open", "site_id": "smithy",
+        "resource": "iron", "posted_at": 60 * 3600,
     }, "coal-sale": {
-        "site_id": "charcoal_kiln", "resource": "coal", "posted_at": 60 * 3600,
+        "status": "open", "site_id": "charcoal_kiln",
+        "resource": "coal", "posted_at": 60 * 3600,
     }}
     raw["travels"] = {"real-coal-visit": {
         "npc_id": "nora", "status": "arrived",
