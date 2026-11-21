@@ -1,0 +1,41 @@
+name: PLAY48 true original 87h-to96h hourly conservation proof
+on:
+  push:
+    branches: [experiment/play48-saved84-short-diagnostic-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real87_to96_hourly.py'
+      - '.github/workflows/play48-real87-to96-hourly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine-hourly-87-to96:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore immutable genuine P0 and P1 13-NPC worlds recorded at 87h
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-fixed-food-route-authentic84-to87-170fbff326675848c444d59ad893a1084d0210cd
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44884352954
+          github-token: ${{ github.token }}
+          path: simulation/evidence/real87
+      - name: Physically resume both histories hourly through 96h with original attributed rain
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real87_to96_hourly.py
+      - name: Persist full original-world 87-to96 histories and every completed checkpoint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-genuine-87-to96-hourly-${{ github.sha }}
+          path: simulation/real96/
+          if-no-files-found: warn
