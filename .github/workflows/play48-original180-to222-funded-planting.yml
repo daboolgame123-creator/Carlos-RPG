@@ -1,0 +1,44 @@
+name: PLAY48 authenticated h180 to222 funded seed planting A B
+on:
+  push:
+    branches: [experiment/play48-funded-starving-farmer-planting-20261121]
+    paths:
+      - 'simulation/src/carlos_sim/economic_autonomy.py'
+      - 'simulation/src/carlos_sim/living_world.py'
+      - 'simulation/tests/test_play48_funded_starving_farmer_planting.py'
+      - 'simulation/scenarios/test_village/play48_original180_funded_seed_to222.py'
+      - '.github/workflows/play48-original180-to222-funded-planting.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  authentic-p4-vs-p5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 105
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download authentic two P4 P3 h180 event histories
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-original-saved169-to180-e980b73e5b1bb513647d8760ea22e858abb780e6
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44926901557
+          github-token: ${{ github.token }}
+          path: simulation/evidence/genuine180
+      - name: Real same-ledger no-intervention seed planting A B
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_original180_funded_seed_to222.py
+      - name: Save real owned grain, wages, food and conservation receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-authentic-180to222-funded-seed-${{ github.sha }}
+          path: simulation/funded_seed222/
+          if-no-files-found: warn

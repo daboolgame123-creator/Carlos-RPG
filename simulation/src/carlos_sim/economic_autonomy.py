@@ -83,7 +83,8 @@ def _known(value: object) -> bool:
 def choose_local_production(state: WorldState, npc_id: str, *,
                             agriculture_enabled: bool = False,
                             finite_aquifer_enabled: bool = False,
-                            desperate_paid_harvest_enabled: bool = False
+                            desperate_paid_harvest_enabled: bool = False,
+                            desperate_funded_planting_enabled: bool = False
                             ) -> ProductionIntent | None:
     """Worker starts one real batch as soon as local inputs and shift allow.
 
@@ -97,7 +98,9 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     needs = npc["needs"]
     if type(desperate_paid_harvest_enabled) is not bool:
         raise ValueError("desperate paid harvest flag must be boolean")
-    desperate = (desperate_paid_harvest_enabled
+    if type(desperate_funded_planting_enabled) is not bool:
+        raise ValueError("desperate funded planting flag must be boolean")
+    desperate = ((desperate_paid_harvest_enabled or desperate_funded_planting_enabled)
                  and needs["hunger"] > MAX_WORK_HUNGER
                  and npc["role"] == "farmer")
     if ((needs["hunger"] > MAX_WORK_HUNGER and not desperate)
@@ -122,17 +125,46 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     for recipe_id, recipe in sorted(state.production_recipes.items()):
         if recipe["site_id"] != here or recipe["role"] != npc["role"]:
             continue
+        emergency_funded_grain_stack = False
         if desperate:
-            # Hunger >=90 is an emergency. Only a SHORT, already-ripe,
-            # truly funded harvest (not planting or speculative work) can
-            # be undertaken by a capable farmer at their own field.
-            # The canonical reducer still owns consumption and wage payment.
-            if (recipe_id not in ("finite-harvest", "east-finite-harvest")
-                    or recipe.get("wage_coin") != 2
-                    or state.resources.get(here, {}).get("coin_copper", 0) < 2
-                    or state.resources.get(here, {}).get("crop_ready", 0) < 1
-                    or recipe["duration_seconds"] > 300):
+            # P5: only one genuinely planted on-site crop with existing seed,
+            # water and the employer's locally funded, signed future harvest.
+            # No automatic wages, loans, free food or speculative off-site work.
+            stock_here = state.resources.get(here, {})
+            funded_harvest = any(
+                r["site_id"] == here and r["role"] == "farmer"
+                and rid in ("finite-harvest", "east-finite-harvest")
+                and r.get("wage_coin") == 2 and r.get("input_resource") == "crop_ready"
+                for rid, r in state.production_recipes.items()
+            )
+            is_paid_harvest = (
+                desperate_paid_harvest_enabled
+                and recipe_id in ("finite-harvest", "east-finite-harvest")
+                and recipe.get("wage_coin") == 2
+                and stock_here.get("crop_ready", 0) >= 1
+            )
+            is_future_funded_planting = (
+                desperate_funded_planting_enabled
+                and recipe_id in ("seed-planting", "east-seed-planting")
+                and recipe.get("input_resource") == "seed"
+                and recipe.get("input_amount") == 1
+                and recipe.get("output_resource") == "crop_seeded"
+                and recipe.get("output_amount") == 1
+                and stock_here.get("seed", 0) >= 1
+                and stock_here.get("water", 0) >= 1
+                and stock_here.get("crop_ready", 0) == 0
+                and state.farm_plots.get(here, {}).get("status") == "idle"
+                and funded_harvest
+            )
+            if (stock_here.get("coin_copper", 0) < 2
+                    or recipe["duration_seconds"] > 300
+                    or not (is_paid_harvest or is_future_funded_planting)):
                 continue
+            # Actual paid harvest may accumulate in the SAME owner's bounded
+            # grain inventory; the existing reducer enforces finite capacity.
+            emergency_funded_grain_stack = (
+                desperate_funded_planting_enabled and is_paid_harvest
+                and recipe["output_resource"] == "grain")
         if recipe.get("input_resource") == "groundwater_reserve":
             if not finite_aquifer_enabled:
                 # No secret rain generator: original worlds remain unchanged.
@@ -215,7 +247,8 @@ def choose_local_production(state: WorldState, npc_id: str, *,
                 continue
         if (any(stocked[item] < amount for item, amount in needs)
                 or tool_amount < 1
-                or (output_amount != 0 and not finite_wilderness_batch)
+                or (output_amount != 0 and not finite_wilderness_batch
+                    and not emergency_funded_grain_stack)
                 or output_amount + recipe["output_amount"] > PRODUCTION_MAX):
             continue
         reservations = sum(
