@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+      - run: python -m pip install pytest
       - name: Restore authenticated P3 h168 13-NPC event ledger, without re-seeding
         uses: actions/download-artifact@v4
         with:
