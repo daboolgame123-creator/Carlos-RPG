@@ -14,7 +14,7 @@ from .market import (MONEY, MAX_AMOUNT, MAX_QUANTITY as MARKET_MAX, _present,
                      reserved_trade_units, trade_receipt_allowed)
 from .npc import _injury_rest_decision
 from .production import MAX_QUANTITY as PRODUCTION_MAX, recipe_inputs
-from .routines import DAY_SECONDS, routine_allows_work
+from .routines import DAY_SECONDS, routine_allows_work, is_work_shift
 
 BUY_HUNGER_THRESHOLD = 70
 MAX_WORK_HUNGER = 89
@@ -82,7 +82,8 @@ def _known(value: object) -> bool:
 
 def choose_local_production(state: WorldState, npc_id: str, *,
                             agriculture_enabled: bool = False,
-                            finite_aquifer_enabled: bool = False
+                            finite_aquifer_enabled: bool = False,
+                            desperate_paid_harvest_enabled: bool = False
                             ) -> ProductionIntent | None:
     """Worker starts one real batch as soon as local inputs and shift allow.
 
@@ -94,7 +95,12 @@ def choose_local_production(state: WorldState, npc_id: str, *,
         return None
     npc = state.npcs[npc_id]
     needs = npc["needs"]
-    if (needs["hunger"] > MAX_WORK_HUNGER
+    if type(desperate_paid_harvest_enabled) is not bool:
+        raise ValueError("desperate paid harvest flag must be boolean")
+    desperate = (desperate_paid_harvest_enabled
+                 and needs["hunger"] > MAX_WORK_HUNGER
+                 and npc["role"] == "farmer")
+    if ((needs["hunger"] > MAX_WORK_HUNGER and not desperate)
             or needs["fatigue"] > MAX_WORK_FATIGUE
             or needs["safety"] >= 75
             or _injury_rest_decision(state.injuries, npc_id) is not None):
@@ -103,7 +109,11 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     if last is not None and last["at"] == state.time:
         return None
     profile = state.npc_routines.get(npc_id)
-    if profile is None or not routine_allows_work(state, npc_id):
+    if profile is None or not (
+            routine_allows_work(state, npc_id)
+            or (desperate and is_work_shift(profile, state.time)
+                and state.entities[npc_id]["location_id"] == profile["workplace_id"])
+    ):
         # No inferred shift, wages or economic mandate for unconfigured NPCs.
         return None
     here = state.entities[npc_id]["location_id"]
@@ -112,6 +122,17 @@ def choose_local_production(state: WorldState, npc_id: str, *,
     for recipe_id, recipe in sorted(state.production_recipes.items()):
         if recipe["site_id"] != here or recipe["role"] != npc["role"]:
             continue
+        if desperate:
+            # Hunger >=90 is an emergency. Only a SHORT, already-ripe,
+            # truly funded harvest (not planting or speculative work) can
+            # be undertaken by a capable farmer at their own field.
+            # The canonical reducer still owns consumption and wage payment.
+            if (recipe_id not in ("finite-harvest", "east-finite-harvest")
+                    or recipe.get("wage_coin") != 2
+                    or state.resources.get(here, {}).get("coin_copper", 0) < 2
+                    or state.resources.get(here, {}).get("crop_ready", 0) < 1
+                    or recipe["duration_seconds"] > 300):
+                continue
         if recipe.get("input_resource") == "groundwater_reserve":
             if not finite_aquifer_enabled:
                 # No secret rain generator: original worlds remain unchanged.
