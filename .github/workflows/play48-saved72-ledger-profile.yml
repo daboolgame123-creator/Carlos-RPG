@@ -1,0 +1,53 @@
+name: PLAY48 quick saved72 ledger profiling
+on:
+  push:
+    branches:
+      - experiment/play48-cashless-hunger-known-road-20261120
+    paths:
+      - '.github/workflows/play48-saved72-ledger-profile.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect-original-saved72:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download original P0 owner-aid SQLite ledger
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-community-original-0-to-72-8d50804396d085bfee0722f007d5d7d7a510ee6d
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44731250285
+          github-token: ${{ github.token }}
+          path: simulation/evidence/p0
+      - name: Download original P1 cashless road SQLite ledger
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-cashless-known-road-real72-e37b6dce6925c08ca0e528d45e19e46fe38fb470
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44733046138
+          github-token: ${{ github.token }}
+          path: simulation/evidence/p1
+      - name: Inspect stored ledger sizes and table counts without replaying world
+        working-directory: simulation
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          for arm in ('p0', 'p1'):
+              files = sorted((Path('evidence') / arm).rglob('*.sqlite'))
+              assert len(files) == 1, (arm, [str(p) for p in files])
+              path = files[0]
+              db = sqlite3.connect(f'file:{path.resolve()}?mode=ro', uri=True)
+              print(f'PLAY48_LEDGER_PROFILE arm={arm} size_bytes={path.stat().st_size} file={path}', flush=True)
+              for (name,) in db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"):
+                  if name.startswith('sqlite_'):
+                      continue
+                  count = db.execute(f'SELECT count(*) FROM "{name}"').fetchone()[0]
+                  cols = [row[1] for row in db.execute(f'PRAGMA table_info("{name}")')]
+                  print(f'PLAY48_LEDGER_TABLE arm={arm} table={name} count={count} cols={cols}', flush=True)
+              db.close()
+          PY
