@@ -173,6 +173,7 @@ def test_cashless_relief_does_not_assume_commercial_bakery_is_a_charity_site():
     raw["market_offers"]["commercial-food-at-bakery"] = {
         "status": "open", "site_id": "bakery", "resource": "food",
         "posted_at": 65 * 3600, "unit_price": 2, "remaining": 2,
+        "payment_resource": "coin_copper",
     }
     raw["market_offers"]["food-at-market"]["unit_price"] = 2
     raw["market_offers"]["food-at-market"]["remaining"] = 2
