@@ -1,0 +1,41 @@
+name: PLAY48 physical event ledgers from confirmed85 to 87
+on:
+  push:
+    branches: [experiment/play48-saved84-short-diagnostic-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real85_to87_continuation.py'
+      - '.github/workflows/play48-real85-to87.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine85-to87:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download immutable verified authentic original P0/P1 85h ledgers
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-p0-vs-p1-real85-d6973e56d1991625188127e881203a97ff41f9e9
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44887446778
+          github-token: ${{ github.token }}
+          path: simulation/evidence/real85
+      - name: Continue only remaining genuine 2h and verify coins, market and event-cause guard
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real85_to87_continuation.py
+      - name: Preserve authentic 87h ledgers and comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-authentic-85-to87-${{ github.sha }}
+          path: simulation/real87/
+          if-no-files-found: warn
