@@ -3,10 +3,16 @@ on:
   push:
     branches:
       - experiment/play48-saved84-short-diagnostic-20261121
+    paths:
+      - 'simulation/scenarios/test_village/play48_original84_short_route_probe.py'
+      - '.github/workflows/play48-saved84-short-fast-probe.yml'
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   real-saved84-short-probe:
     runs-on: ubuntu-24.04
