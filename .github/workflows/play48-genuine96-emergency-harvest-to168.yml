@@ -1,0 +1,49 @@
+name: PLAY48 real original day7 starvation recovery with paid ripe harvest
+on:
+  push:
+    branches: [experiment/play48-desperate-paid-harvest-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_original96_desperate_harvest_to168.py'
+      - '.github/workflows/play48-genuine96-emergency-harvest-to168.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine96-to168-funded-harvest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore original P1 96h immutable original-village ledger
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-87-to96-hourly-b8fb729c48d3923ffb6b30ede829839a4b82520e
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44887748817
+          github-token: ${{ github.token }}
+          path: simulation/evidence/saved96
+      - name: Retrieve independently authenticated original P0 and P1 168h comparison
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-genuine-original96-to168-6e7b3671f6ad3ef29bcf73bd85bec38f330ac3be
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44894923168
+          github-token: ${{ github.token }}
+          path: simulation/evidence/original168
+      - name: Genuine 13 NPC conserved economy to 168 with opt-in physically paid short harvest
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_original96_desperate_harvest_to168.py
+      - name: Persist each completed 6-hour original-world checkpoint and SQLite ledger
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-genuine96-emergency-harvest-day7-${{ github.sha }}
+          path: simulation/desperate168/
+          if-no-files-found: warn

@@ -99,7 +99,8 @@ class LivingWorldEngine:
                  deferred_bakery_grain_wage_enabled: bool = False,
                  integrated_livelihoods_enabled: bool = False,
                  community_food_enabled: bool = False,
-                 cashless_relief_walk_enabled: bool = False):
+                 cashless_relief_walk_enabled: bool = False,
+                 desperate_paid_harvest_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -193,6 +194,12 @@ class LivingWorldEngine:
                 or (cashless_relief_walk_enabled and not community_food_enabled)):
             raise ValueError("cashless relief walking requires signed community food policy")
         self.cashless_relief_walk_enabled = cashless_relief_walk_enabled
+        if (type(desperate_paid_harvest_enabled) is not bool
+                or (desperate_paid_harvest_enabled and not (
+                    economic_enabled and agriculture_enabled
+                    and survival_enabled and integrated_livelihoods_enabled))):
+            raise ValueError("desperate paid harvest needs genuine agriculture and economy")
+        self.desperate_paid_harvest_enabled = desperate_paid_harvest_enabled
         if (type(deferred_bakery_grain_wage_enabled) is not bool
                 or (deferred_bakery_grain_wage_enabled and not (
                     supply_enabled and consumption_enabled
@@ -848,14 +855,24 @@ class LivingWorldEngine:
                 for worker_id in sorted(current.npcs):
                     if self.integrated_livelihoods_enabled:
                         eat_owned_food(worker_id)
-                    if self._professional_life_emergency(current, worker_id):
-                        continue
                     intent = choose_local_production(
                         current, worker_id,
                         agriculture_enabled=self.agriculture_enabled,
-                        finite_aquifer_enabled=self.finite_aquifer_pumping_enabled)
+                        finite_aquifer_enabled=self.finite_aquifer_pumping_enabled,
+                        desperate_paid_harvest_enabled=self.desperate_paid_harvest_enabled)
                     if intent is None:
                         continue
+                    if self._professional_life_emergency(current, worker_id):
+                        # No blanket hunger immunity: a physically present
+                        # farmer may choose ONE genuine, employer-funded
+                        # short harvest of an already-ripe crop. All other
+                        # professional hunger safety gates remain intact.
+                        if not (self.desperate_paid_harvest_enabled
+                                and current.npcs[worker_id]["needs"]["hunger"] >= 90
+                                and current.npcs[worker_id]["role"] == "farmer"
+                                and intent.recipe_id in (
+                                    "finite-harvest", "east-finite-harvest")):
+                            continue
                     append(DomainEvent('ProductionStarted', worker_id,
                                        'autonomous production: ' + intent.reason,
                                        current.time,

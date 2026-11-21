@@ -1,0 +1,41 @@
+name: PLAY48 genuine 168h original farmer emergency paid harvest 15min A B
+on:
+  push:
+    branches: [experiment/play48-desperate-paid-harvest-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real168_emergency_harvest_15min.py'
+      - '.github/workflows/play48-real168-desperate-harvest-15min.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-finite-original-world-trial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve immutable previous original h168 P2 13-NPC event ledger
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-original96-workloop-repair-8b788449e5506fb2b5f35c9380008390c41c9e33
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44902187561
+          github-token: ${{ github.token }}
+          path: simulation/evidence/old_p2
+      - name: Resume same P2 world twice for 15min and prove funded live harvest vs default
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real168_emergency_harvest_15min.py
+      - name: Preserve both original 168+15m immutable-start event histories
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-real168-desperate-harvest-15min-${{ github.sha }}
+          path: simulation/harvest15/
+          if-no-files-found: warn
