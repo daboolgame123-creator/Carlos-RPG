@@ -1,0 +1,32 @@
+name: PLAY48 real84 ten-minute exact travel cause audit
+on:
+  push:
+    branches:
+      - experiment/play48-saved84-short-diagnostic-20261121
+    paths:
+      - 'simulation/scenarios/test_village/play48_saved84_tenmin_cause_audit.py'
+      - '.github/workflows/play48-real-10min-travel-causes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  audit-actual-travel-event-causes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Retrieve immutable real 10m world and failed gate receipts
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-saved84-10min-route-probe-5faca58e240242ae3e96e2807997bf520aac6e50
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 44886427737
+          github-token: ${{ github.token }}
+          path: simulation/evidence/short84
+      - name: Inspect event causes without advancing the world
+        working-directory: simulation
+        run: python -u scenarios/test_village/play48_saved84_tenmin_cause_audit.py
