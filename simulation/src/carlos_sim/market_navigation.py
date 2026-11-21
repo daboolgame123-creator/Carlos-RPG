@@ -20,6 +20,9 @@ MAX_SHOPPING_DANGER = 74
 # A genuinely visited but unbought market may be retried after this much
 # simulation time, without any oracle about its *current* stock or price.
 UNBOUGHT_STALL_REVISIT_SECONDS = 6 * 3600
+# A penniless resident can try their OWN previously witnessed village aid
+# market once per day. The funded shopping cooldown remains six hours.
+CASHLESS_RELIEF_REVISIT_SECONDS = 24 * 3600
 
 
 @dataclass(frozen=True)
@@ -136,38 +139,39 @@ def choose_known_market_walk(
     here = state.entities[npc_id]["location_id"]
     own_coins = state.resources.get(npc_id, {}).get(MONEY)
     if seek_relief and own_coins == 0:
-        # A market stall may sell tools, ore or coal instead of meals.
-        # Revisit ONLY food sellers personally witnessed on a completed
-        # arrival; currently posted remote offers are NOT discoverable.
-        # A six-hour clock cooldown avoids repeatedly shuttling between
-        # known, unaffordable sites without learning anything new.
-        witnessed_food_at = {}
-        for trip in state.travels.values():
-            if (trip["npc_id"] != npc_id or trip["status"] != "arrived"
-                    or trip["destination"] == here):
-                continue
-            site = trip["destination"]
-            arrived = trip["arrived_at"]
-            if (site not in nav["visited"] or site not in state.market_stalls
-                    or not any(
-                        offer["site_id"] == site and offer["resource"] == "food"
-                        and offer["posted_at"] <= arrived
-                        for offer in state.market_offers.values()
-                    )):
-                continue
-            witnessed_food_at[site] = max(
-                arrived, witnessed_food_at.get(site, -1)
+        # The signed community relief program belongs to the real village
+        # market, not to every stall selling coal, metal or even paid food.
+        # A remembered FOOD quote must have been witnessed during the NPC's
+        # own completed market arrival; remote stock/aid terms are not read.
+        # After an unsuccessful trip, a full day must elapse before a new
+        # relief attempt. Otherwise a worker loops through the bakery en
+        # route and loses genuine opportunities to work.
+        last_food_market_arrival = max((
+            t["arrived_at"] for t in state.travels.values()
+            if t["npc_id"] == npc_id and t["status"] == "arrived"
+            and t["destination"] == "market"
+            and "market" in nav["visited"]
+            and any(
+                offer["site_id"] == "market"
+                and offer["resource"] == "food"
+                and offer["posted_at"] <= t["arrived_at"]
+                for offer in state.market_offers.values()
             )
-        for site, last_arrived in sorted(witnessed_food_at.items()):
-            if state.time - last_arrived < UNBOUGHT_STALL_REVISIT_SECONDS:
-                continue
-            path = shortest_known_route(state, npc_id, site)
-            if path:
-                return ShoppingWalkIntent(
-                    npc_id, path[0], site,
-                    "cashless starving resident revisiting a personally "
-                    "witnessed food quote after six hours to seek help",
-                )
+        ), default=None)
+        if last_food_market_arrival is not None:
+            if state.time - last_food_market_arrival < CASHLESS_RELIEF_REVISIT_SECONDS:
+                return None  # No local change to justify another aid journey.
+            if here != "market":
+                path = shortest_known_route(state, npc_id, "market")
+                if path:
+                    return ShoppingWalkIntent(
+                        npc_id, path[0], "market",
+                        "cashless starving resident revisiting their personally "
+                        "witnessed village food market after a full day",
+                    )
+            return None
+        # First-time hungry residents still explore their OWN surveyed
+        # roads below, without magically knowing a distant market exists.
     if repeat_errands:
         wage_at = _latest_wage_at(state, npc_id)
         # Only personal purchases reveal a remote food destination. A new
@@ -283,6 +287,7 @@ def choose_known_market_walk(
 
 def choose_known_market_return(
     state: WorldState, npc_id: str, *, repeat_errands=False,
+    seek_relief=False,
 ) -> ShoppingWalkIntent | None:
     """Walk back after an actual visit, whether the purchase succeeded or not.
 
@@ -303,6 +308,31 @@ def choose_known_market_return(
     if nav is None or nav["target"] is not None:
         return None
     here = entity["location_id"]
+    if type(seek_relief) is not bool:
+        raise ValueError("cashless relief return priority must be explicitly boolean")
+    if (seek_relief and here != "market"
+            and state.npcs[npc_id]["needs"]["hunger"] >= 95
+            and state.resources.get(npc_id, {}).get(MONEY) == 0
+            and state.resources.get(npc_id, {}).get("food") == 0
+            and "market" in nav["visited"]
+            and shortest_known_route(state, npc_id, "market")):
+        # Only an actor who PHYSICALLY visited and saw a food offer in the
+        # real village market may finish an overdue charity journey through
+        # a commercial intermediate stall such as the bakery. Do not route
+        # them back to work from that intermediate tile before arrival.
+        last = max((
+            t["arrived_at"] for t in state.travels.values()
+            if t["npc_id"] == npc_id and t["status"] == "arrived"
+            and t["destination"] == "market"
+            and any(
+                o["site_id"] == "market" and o["resource"] == "food"
+                and o["posted_at"] <= t["arrived_at"]
+                for o in state.market_offers.values()
+            )
+        ), default=None)
+        if (last is not None
+                and state.time - last >= CASHLESS_RELIEF_REVISIT_SECONDS):
+            return None
     # A personally completed trip is sufficient evidence of a visited stall.
     # Do not require the villager to still be on that market tile when their
     # next physical homeward road leg is due.
