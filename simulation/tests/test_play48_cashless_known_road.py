@@ -5,7 +5,8 @@ No changes to historically funded shopping unless community aid is opt-in.
 import pytest
 
 from carlos_sim.domain import WorldState
-from carlos_sim.market_navigation import wants_local_market, choose_known_market_walk
+from carlos_sim.market_navigation import (wants_local_market, choose_known_market_walk,
+                                          choose_known_market_return)
 
 
 def village(*, hunger=100, cash=0, visited_market=True, route=True, market_food=8):
@@ -37,11 +38,11 @@ def village(*, hunger=100, cash=0, visited_market=True, route=True, market_food=
         market_stalls={"market": {"keeper_id": "salma"}},
         market_offers={"food-at-market": {
             "site_id": "market", "resource": "food",
-            "posted_at": 60 * 3600,
+            "posted_at": 30 * 3600,
         }} if visited_market else {},
         travels={"actual-market-visit": {
             "npc_id": "nora", "status": "arrived",
-            "destination": "market", "arrived_at": 65 * 3600,
+            "destination": "market", "arrived_at": 40 * 3600,
         }} if visited_market else {},
     )
 
@@ -106,12 +107,12 @@ def test_nonfood_shop_is_not_treated_as_a_personally_witnessed_food_stall():
         seek_alternative_if_unaffordable=True) is None
 
 
-def test_last_witnessed_food_visit_has_six_hour_revisit_cooldown():
+def test_last_witnessed_market_relief_arrival_has_full_day_cooldown():
     raw = village().to_dict()
     raw["travels"]["actual-market-visit"]["arrived_at"] = 70 * 3600
     assert choose_known_market_walk(
         WorldState(**raw), "nora", seek_relief=True) is None
-    raw["travels"]["actual-market-visit"]["arrived_at"] = 65 * 3600
+    raw["travels"]["actual-market-visit"]["arrived_at"] = 40 * 3600
     assert choose_known_market_walk(
         WorldState(**raw), "nora", seek_relief=True) is not None
     # An offer posted after the last personal visit is REMOTE knowledge.
@@ -154,3 +155,79 @@ def test_strict_boolean_flag_validation():
     state = village()
     with pytest.raises(ValueError):
         wants_local_market(state, "nora", seek_relief=1)
+
+
+def test_cashless_relief_does_not_assume_commercial_bakery_is_a_charity_site():
+    state = village()
+    raw = state.to_dict()
+    raw["locations"]["bakery"] = {"name": "commercial bakery"}
+    raw["routes"] = {"farm-bakery": {
+        "a": "farm", "b": "bakery", "seconds": 40,
+    }, "bakery-market": {
+        "a": "bakery", "b": "market", "seconds": 50,
+    }}
+    raw["entities"]["nora"]["location_id"] = "bakery"
+    raw["navigation"]["nora"]["known_routes"] = ["farm-bakery", "bakery-market"]
+    raw["navigation"]["nora"]["visited"] = ["farm", "bakery", "market"]
+    raw["market_stalls"]["bakery"] = {"keeper_id": "salma"}
+    raw["market_offers"]["commercial-food-at-bakery"] = {
+        "status": "open", "site_id": "bakery", "resource": "food",
+        "posted_at": 65 * 3600, "unit_price": 2, "remaining": 2,
+        "payment_resource": "coin_copper",
+        "seller_id": "salma", "stock_owner_id": "bakery",
+    }
+    raw["market_offers"]["food-at-market"]["status"] = "open"
+    raw["market_offers"]["food-at-market"]["unit_price"] = 2
+    raw["market_offers"]["food-at-market"]["remaining"] = 2
+    raw["travels"]["bakery-last-arrival"] = {
+        "npc_id": "nora", "status": "arrived",
+        "origin": "farm", "destination": "bakery",
+        "start": 71 * 3600, "arrived_at": 71 * 3600 + 40,
+    }
+    raw["travels"]["actual-market-visit"]["origin"] = "bakery"
+    raw["travels"]["actual-market-visit"]["start"] = 40 * 3600 - 50
+    raw["npc_routines"] = {"nora": {
+        "home_id": "farm", "workplace_id": "farm",
+        "work_start": 0, "work_end": 12 * 3600,
+    }}
+    raw["production_jobs"] = {"paid-harvest": {
+        "npc_id": "nora", "status": "completed",
+        "work_wage": {"paid_at": 35 * 3600},
+    }}
+    here = WorldState(**raw)
+    # Before the fix a starving farmer repeatedly went farm→bakery→farm,
+    # losing the aid journey to the intermediate bakery return planner.
+    wrong_turn = choose_known_market_return(here, "nora", repeat_errands=True)
+    assert wrong_turn is not None and wrong_turn.destination == "farm"
+    assert choose_known_market_return(
+        here, "nora", repeat_errands=True, seek_relief=True) is None
+    walk = choose_known_market_walk(
+        here, "nora", seek_relief=True,
+        repeat_errands=True,
+        seek_alternative_if_unaffordable=True)
+    assert walk is not None
+    assert walk.destination == "market"
+    assert walk.route_id == "bakery-market"
+    assert "full day" in walk.reason
+
+    # After a real market arrival less than one day ago, the person must
+    # return to work, not immediately begin another pointless bread trip.
+    raw["travels"]["actual-market-visit"]["arrived_at"] = 60 * 3600
+    raw["travels"]["actual-market-visit"]["start"] = 60 * 3600 - 50
+    recent = WorldState(**raw)
+    homeward = choose_known_market_return(
+        recent, "nora", repeat_errands=True, seek_relief=True)
+    assert homeward is not None and homeward.destination == "farm"
+    assert choose_known_market_walk(
+        recent, "nora", seek_relief=True, repeat_errands=True,
+        seek_alternative_if_unaffordable=True) is None
+
+
+def test_one_day_revisit_does_not_read_distant_quote_or_remote_food():
+    state = village(market_food=0)
+    raw = state.to_dict()
+    a = WorldState(**raw)
+    raw["resources"]["market"]["food"] = 200
+    b = WorldState(**raw)
+    assert choose_known_market_walk(a, "nora", seek_relief=True) == (
+        choose_known_market_walk(b, "nora", seek_relief=True))
