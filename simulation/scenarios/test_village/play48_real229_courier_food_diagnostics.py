@@ -31,9 +31,10 @@ def main():
         assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
         cash = audit_npc_economy(s)
         assert cash["copper_scope_complete"] and cash["copper_known_total"] == 12
+        plain = s.to_dict()  # Unfreeze nested snapshot-projected mappingproxy records.
         couriers = {}
         for who, circuit in sorted(s.supply_circuits.items()):
-            contract = circuit.get("food_payroll")
+            contract = plain["supply_circuits"][who].get("food_payroll")
             receipts = contract["receipts"] if contract else []
             nav = s.navigation.get(who, {})
             meals = sorted(
