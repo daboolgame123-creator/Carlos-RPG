@@ -1,5 +1,7 @@
 name: PLAY48 P6 genuine h222 safe paid baker return A B
 on:
+  pull_request:
+    branches: [experiment/play48-funded-starving-farmer-planting-20261121]
   push:
     branches: [experiment/play48-paid-baker-return-20261122]
     paths:
