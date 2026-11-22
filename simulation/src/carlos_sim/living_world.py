@@ -105,7 +105,8 @@ class LivingWorldEngine:
                  reserve_signed_relief_offer_enabled: bool = False,
                  desperate_funded_planting_enabled: bool = False,
                  hungry_paid_baker_return_enabled: bool = False,
-                 signed_steward_wage_quote_rescue_enabled: bool = False):
+                 signed_steward_wage_quote_rescue_enabled: bool = False,
+                 voluntary_well_food_visit_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -194,6 +195,12 @@ class LivingWorldEngine:
                 or (signed_steward_wage_quote_rescue_enabled and not merchant_food_wage_enabled)):
             raise ValueError("signed steward wage quote rescue requires real merchant wages")
         self.signed_steward_wage_quote_rescue_enabled = signed_steward_wage_quote_rescue_enabled
+        if (type(voluntary_well_food_visit_enabled) is not bool
+                or (voluntary_well_food_visit_enabled and not (
+                    navigation_enabled and economic_enabled and consumption_enabled
+                    and survival_enabled and integrated_livelihoods_enabled))):
+            raise ValueError("voluntary well food visit needs real roads, owned meals and livelihoods")
+        self.voluntary_well_food_visit_enabled = voluntary_well_food_visit_enabled
         if (type(community_food_enabled) is not bool or
                 (community_food_enabled and not (
                     economic_enabled and consumption_enabled and survival_enabled))):
@@ -1097,6 +1104,56 @@ class LivingWorldEngine:
                             'same-tick sale-backed professional wage',
                             current.time, {'job_id': job_id, 'amount': wage}),
                             production_capability=True)
+            if self.voluntary_well_food_visit_enabled:
+                # A socially motivated fisher has already eaten her own meal
+                # and may donate the one real spare loaf only at a well she
+                # physically reaches along a road she personally knows.
+                # The old assistance reducer guarantees request/acceptance,
+                # identity, co-location, transfer receipts and conservation.
+                from .voluntary_well_food import (
+                    choose_local_well_request, choose_local_well_settlement)
+                paid_help = choose_local_well_settlement(current)
+                if paid_help is not None:
+                    append(DomainEvent("AssistanceFulfilled", paid_help.donor,
+                        "one voluntarily promised, physically delivered well meal",
+                        current.time, {"id": paid_help.request_id}),
+                        assistance_capability=True)
+                    assistance_transitions.append((paid_help.request_id, "fulfilled"))
+                    eat_owned_food(paid_help.recipient)
+                    busy.add(paid_help.donor)
+                    busy.add(paid_help.recipient)
+                else:
+                    # Keep already promised food physically at the well until
+                    # both people are free and able to complete the exchange.
+                    for item in current.obligations.values():
+                        if (item["status"] == "promised" and item["resource"] == "food"
+                                and item["location_id"] == "well"
+                                and current.entities[item["provider"]]["location_id"] == "well"):
+                            busy.add(item["provider"])
+                    ask = choose_local_well_request(current)
+                    if ask is not None:
+                        append(DomainEvent("AssistanceRequested", ask.recipient,
+                            "starving neighbor asks a personally present, willing fisher for a loaf",
+                            current.time, {"id": ask.request_id, "provider": ask.donor,
+                                           "resource": "food", "quantity": 1}),
+                            assistance_capability=True)
+                        append(DomainEvent("AssistanceResponded", ask.donor,
+                            "well-fed neighbor voluntarily accepts a real one-loaf request",
+                            current.time, {"id": ask.request_id, "accept": True}),
+                            assistance_capability=True)
+                        # Physically pass the loaf at the NEXT logical second,
+                        # so distinct social acts are not collapsed into one.
+                        wake_id = "well-aid-wake:" + ask.request_id
+                        append(DomainEvent("ScheduledEventCreated", None,
+                            "one-second handover for physically accepted food help",
+                            current.time, {"id": wake_id, "due": current.time + 1,
+                                           "order": current.next_schedule_order,
+                                           "kind": "signal", "payload": {"well_aid_due": ask.request_id},
+                                           "interrupt": False}),
+                            movement_capability=True)
+                        assistance_transitions.append((ask.request_id, "promised"))
+                        busy.add(ask.donor)
+                        busy.add(ask.recipient)
             if self.assistance_enabled:
                 if self.aid_relay_enabled:
                     from .npc_food_relief import (
@@ -1264,6 +1321,35 @@ class LivingWorldEngine:
                             "destination": there, "due": due_at,
                             "schedule_id": sid}), movement_capability=True)
                         busy.add(TRADER)
+            if self.voluntary_well_food_visit_enabled:
+                from .voluntary_well_food import choose_volunteer_well_visit
+                for volunteer in sorted(current.npcs):
+                    if volunteer in busy:
+                        continue
+                    walk = choose_volunteer_well_visit(current, volunteer)
+                    if walk is None:
+                        continue
+                    route = current.routes[walk.route_id]
+                    here = current.entities[volunteer]["location_id"]
+                    there = route["b"] if route["a"] == here else route["a"]
+                    travel_id = f"well-neighbor:{volunteer}:{current.time}"
+                    sid = "npc-travel:" + travel_id
+                    if travel_id in current.travels or sid in current.scheduled:
+                        raise InvalidEvent("duplicate voluntary well-visit travel ID")
+                    due_at = current.time + route["seconds"]
+                    append(DomainEvent("ScheduledEventCreated", None,
+                        "voluntary visit to personally learned village well",
+                        current.time, {"id": sid, "due": due_at,
+                                       "order": current.next_schedule_order, "kind": "signal",
+                                       "payload": {"__npc_travel_id": travel_id},
+                                       "interrupt": False}), movement_capability=True)
+                    append(DomainEvent("NPCTravelStarted", volunteer,
+                        "well-fed neighbor voluntarily walks one personally known well road",
+                        current.time, {"id": travel_id, "npc_id": volunteer,
+                                       "route_id": walk.route_id, "origin": here,
+                                       "destination": there, "due": due_at,
+                                       "schedule_id": sid}), movement_capability=True)
+                    busy.add(volunteer)
             if self.shopping_routes_enabled:
                 from .npc import _injury_rest_decision
 
