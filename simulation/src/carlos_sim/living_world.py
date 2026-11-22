@@ -23,6 +23,7 @@ from .market_navigation import (choose_known_market_walk, choose_known_market_re
                                 wants_local_market)
 from .routines import (
     choose_routine_route, is_work_shift, next_routine_boundary, routine_allows_work,
+    signed_hungry_baker_return_allowed,
 )
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
@@ -102,7 +103,8 @@ class LivingWorldEngine:
                  cashless_relief_walk_enabled: bool = False,
                  desperate_paid_harvest_enabled: bool = False,
                  reserve_signed_relief_offer_enabled: bool = False,
-                 desperate_funded_planting_enabled: bool = False):
+                 desperate_funded_planting_enabled: bool = False,
+                 hungry_paid_baker_return_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -212,6 +214,12 @@ class LivingWorldEngine:
                     and agriculture_enabled and economic_enabled and survival_enabled))):
             raise ValueError("desperate_funded_planting_enabled requires actual paid harvest livelihood")
         self.desperate_funded_planting_enabled = desperate_funded_planting_enabled
+        if (type(hungry_paid_baker_return_enabled) is not bool
+                or (hungry_paid_baker_return_enabled and not (
+                    economic_enabled and consumption_enabled and survival_enabled
+                    and food_for_work_enabled and routines_enabled and navigation_enabled))):
+            raise ValueError("hungry baker return needs genuine signed paid-work economy")
+        self.hungry_paid_baker_return_enabled = hungry_paid_baker_return_enabled
         if (type(deferred_bakery_grain_wage_enabled) is not bool
                 or (deferred_bakery_grain_wage_enabled and not (
                     supply_enabled and consumption_enabled
@@ -1524,7 +1532,9 @@ class LivingWorldEngine:
                         and not local_forage_wins and not injury_requires_rest
                         and not (self.routines_enabled and npc_id in current.npc_routines
                                  and (current.npcs[npc_id]["needs"]["fatigue"] >= 70
-                                      or current.npcs[npc_id]["needs"]["hunger"] >= 75
+                                      or (current.npcs[npc_id]["needs"]["hunger"] >= 75
+                                          and not (self.hungry_paid_baker_return_enabled
+                                              and signed_hungry_baker_return_allowed(current, npc_id)))
                                       or current.npcs[npc_id]["needs"]["safety"] >= 75))):
                     if needs_survey(current, npc_id):
                         append(DomainEvent('NPCNavigationSurveyed', npc_id,
@@ -1540,7 +1550,9 @@ class LivingWorldEngine:
                         # U-3: both fallback exploration and hungry food travel
                         # respect the previous decision cooldown in opt-in mode.
                         continue
-                    routine_intent = (choose_routine_route(current, npc_id)
+                    routine_intent = (choose_routine_route(
+                                          current, npc_id,
+                                          hungry_paid_baker_return=self.hungry_paid_baker_return_enabled)
                                       if self.routines_enabled and food_intent is None
                                       else None)
                     route_id = (food_intent.route_id if food_intent is not None
