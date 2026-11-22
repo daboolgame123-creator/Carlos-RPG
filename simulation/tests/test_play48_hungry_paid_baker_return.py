@@ -18,10 +18,11 @@ def baker_at_market(tmp_path):
     assert d["production_recipes"]["grain-to-bread"]["wage_food"] == 1
     d["entities"]["basim"]["location_id"] = "market"
     d["npcs"]["basim"]["needs"].update(hunger=82, fatigue=20, safety=0)
-    nav = d["navigation"]["basim"]
+    nav = d["navigation"].setdefault(
+        "basim", {"known_routes": [], "visited": [], "target": None})
     nav["target"] = None
-    if "bakery-market" not in nav["known_routes"]:
-        nav["known_routes"].append("bakery-market")
+    nav["known_routes"] = sorted(set(nav["known_routes"]) | {"bakery-market"})
+    nav["visited"] = sorted(set(nav["visited"]) | {"bakery", "market"})
     return d
 
 
