@@ -79,7 +79,17 @@ def audit(arm: str) -> dict:
             for who, circuit in sorted(state.supply_circuits.items())
         }
         relief = state.market_stalls["market"].get("community_food")
+        from carlos_sim.steward_food_payroll import _earned_sales, choose_steward_food_wage
+        earned, paid = _earned_sales(state, "market")
+        steward = {
+            "signed_sales_required": state.market_stalls["market"].get("food_wage_sales_required"),
+            "eligible_real_sales": len(earned),
+            "paid_loaf_wages": len(paid),
+            "unpaid_earned_loaf_wages": max(0, len(earned) // 2 - len(paid)),
+            "wage_intent_now": choose_steward_food_wage(state, "market"),
+        }
         report = {
+            "market_steward_wages": steward,
             "arm": arm, "time": state.time, "hour": 228,
             "sha256": digest,
             "headline": {k: score[k] for k in ("bread", "meals", "sales",
