@@ -1,0 +1,46 @@
+name: PLAY48 read-only genuine h228 economic lock audit
+on:
+  pull_request:
+    branches: [experiment/play48-funded-starving-farmer-planting-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real228_income_audit.py'
+      - '.github/workflows/play48-authentic228-income-audit.yml'
+  push:
+    branches: [experiment/play48-paid-baker-return-20261122]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real228_income_audit.py'
+      - '.github/workflows/play48-authentic228-income-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  local-receipt-economy-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Load untouched P5 and P6 h228 snapshots from saved experimental artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p6-real222-baker-return-deaad6587ddffa09e49d8e1930388287da7000b8
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45012030527
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic228
+      - name: Explain physical and financial blockers with no simulation actions
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real228_income_audit.py
+      - name: Persist read-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-authentic228-economic-lock-${{ github.sha }}
+          path: simulation/real228_income_audit/
+          if-no-files-found: warn
