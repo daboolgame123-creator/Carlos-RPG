@@ -56,6 +56,53 @@ def _earned_sales(state: WorldState | dict[str, Any], site: str):
     return eligible, paid
 
 
+def choose_signed_steward_wage_quote_retirement(state: WorldState, site: str) -> str | None:
+    """Owner's local, aged retail quote may be withdrawn for ALREADY earned salary.
+
+    Requires a signed genesis sales-for-food contract, two genuine customer
+    receipts per unpaid loaf, the actual on-site seller, no solvent present
+    customer, and enough physically held food to pay while retaining one
+    uncommitted operating loaf. Only proposes MarketOfferClosed; the existing
+    wage reducer decides whether a physical loaf actually changes hands.
+    Never re-prices, changes quotes in place or invents goods/currency.
+    """
+    stall = state.market_stalls.get(site)
+    if stall is None or stall.get("food_wage_sales_required") != PAYMENT_SALES:
+        return None
+    who = stall["keeper_id"]
+    raw = state.to_dict()
+    if not _present(raw, who, site):
+        return None
+    eligible, paid = _earned_sales(state, site)
+    if len(eligible) < PAYMENT_SALES * (len(paid) + 1):
+        return None
+    if _available_site_food(state, site) >= WAGE_FOOD + UNPROMISED_OPERATING_FOOD:
+        return None  # Already payable; no need to alter a retail offer.
+    from .movement import _in_transit
+    for ident, quote in sorted(state.market_offers.items()):
+        if (quote["status"] != "open" or quote["site_id"] != site
+                or quote["stock_owner_id"] != site or quote["seller_id"] != who
+                or quote["resource"] != "food"
+                or state.time - quote["posted_at"] < 6 * 3600
+                or _available_site_food(state, site) + quote["remaining"]
+                   < WAGE_FOOD + UNPROMISED_OPERATING_FOOD):
+            continue
+        # The owner may not withdraw a quote while any physical, solvent
+        # customer is present and able to buy it at its posted price.
+        for buyer, entity in raw["entities"].items():
+            if buyer == who or entity["location_id"] != site or _in_transit(raw, buyer):
+                continue
+            if (buyer in raw["npcs"] and not _present(raw, buyer, site)):
+                continue
+            if (buyer not in raw["npcs"] and entity["controller"] != "player"):
+                continue
+            cash = raw["resources"].get(buyer, {}).get("coin_copper")
+            if type(cash) is int and cash >= quote["unit_price"]:
+                return None
+        return ident
+    return None
+
+
 def choose_steward_food_wage(state: WorldState, site: str) -> str | None:
     stall = state.market_stalls.get(site)
     if stall is None or stall.get("food_wage_sales_required") != PAYMENT_SALES:

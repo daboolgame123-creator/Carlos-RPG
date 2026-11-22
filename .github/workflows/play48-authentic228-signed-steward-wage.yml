@@ -1,0 +1,64 @@
+name: PLAY48 P7 genuine h228 signed earned steward food wage A B
+on:
+  push:
+    branches: [experiment/play48-signed-market-steward-wage-20261122]
+    paths:
+      - 'simulation/src/carlos_sim/steward_food_payroll.py'
+      - 'simulation/src/carlos_sim/living_world.py'
+      - 'simulation/tests/test_play48_signed_steward_wage_quote_rescue.py'
+      - 'simulation/scenarios/test_village/play48_real228_signed_steward_wage.py'
+      - '.github/workflows/play48-authentic228-signed-steward-wage.yml'
+  pull_request:
+    branches: [experiment/play48-paid-baker-return-20261122]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Prove consent, real sale wage, no-solvent-buyer veto and default compatibility
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_signed_steward_wage_quote_rescue.py tests/test_play48_owner_approved_quote_relief.py tests/test_play48_community_rations.py
+  genuine-h228:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download authenticated P6 h228 13-NPC 12-copper history, never re-seed
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p6-real222-baker-return-deaad6587ddffa09e49d8e1930388287da7000b8
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45012030527
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic228
+      - name: One-hour two-arm event-sourced P6 vs P7 genuine earned wage comparison
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real228_signed_steward_wage.py
+      - name: Preserve saved ledgers and financial conservation proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-p7-genuine228-signed-steward-${{ github.sha }}
+          path: simulation/real228_steward_wage/
+          if-no-files-found: warn
