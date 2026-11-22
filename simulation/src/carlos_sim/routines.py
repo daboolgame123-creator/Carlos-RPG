@@ -60,8 +60,34 @@ def is_work_shift(profile: Any, world_time: int) -> bool:
     start, end = profile["work_start"], profile["work_end"]
     return (start <= now < end) if start < end else (now >= start or now < end)
 
-def choose_routine_route(state: WorldState, npc_id: str) -> RoutineIntent | None:
+def signed_hungry_baker_return_allowed(state: WorldState, npc_id: str) -> bool:
+    """An able, hungry baker may choose the known work commute for signed food wages.
+
+    Does not look at remote grain, bread or cash; travel can still find an empty
+    bakery and no payment is awarded without actually finished work.
+    """
+    profile = state.npc_routines.get(npc_id)
+    npc = state.npcs.get(npc_id)
+    if profile is None or npc is None or npc["role"] != "baker":
+        return False
+    needs = npc["needs"]
+    if not (75 <= needs["hunger"] < 90 and needs["fatigue"] < 70
+            and needs["safety"] < 75 and is_work_shift(profile, state.time)
+            and state.entities[npc_id]["location_id"] != profile["workplace_id"]):
+        return False
+    return any(
+        recipe["site_id"] == profile["workplace_id"]
+        and recipe["role"] == "baker" and recipe["output_resource"] == "food"
+        and recipe.get("wage_food") == 1
+        for recipe in state.production_recipes.values()
+    )
+
+
+def choose_routine_route(state: WorldState, npc_id: str, *,
+                         hungry_paid_baker_return: bool = False) -> RoutineIntent | None:
     """Decide one physical known-road leg; no state mutation and no remote inspection."""
+    if type(hungry_paid_baker_return) is not bool:
+        raise ValueError("hungry paid baker return flag must be boolean")
     profile = state.npc_routines.get(npc_id)
     if profile is None or npc_id not in state.npcs:
         return None
@@ -78,8 +104,9 @@ def choose_routine_route(state: WorldState, npc_id: str) -> RoutineIntent | None
     npc = state.npcs[npc_id]
     # This is a voluntary schedule; a hungry, exhausted or frightened person
     # must not blindly commute. No remote information or food is consulted.
-    if (npc["needs"]["hunger"] >= 75 or npc["needs"]["fatigue"] >= 70
-            or npc["needs"]["safety"] >= 75):
+    if ((npc["needs"]["hunger"] >= 75 and not (
+            hungry_paid_baker_return and signed_hungry_baker_return_allowed(state, npc_id)))
+            or npc["needs"]["fatigue"] >= 70 or npc["needs"]["safety"] >= 75):
         return None
     at_work = is_work_shift(profile, state.time)
     dest = profile["workplace_id"] if at_work else profile["home_id"]
