@@ -83,6 +83,31 @@ def choose_volunteer_well_visit(state: WorldState, who: str) -> VolunteerWellVis
     return VolunteerWellVisit(who, route[0])
 
 
+def volunteer_waits_to_offer(state: WorldState, who: str) -> bool:
+    """Spend at most one real hour witnessing nearby needs after arriving.
+
+    People resting at the well cannot transact until their current activity
+    ends. A visitor need not immediately depart before anyone can speak.
+    This has no distant knowledge, force, transfer, or indefinite waiting.
+    """
+    if (not _prepared_fisher(state, who)
+            or state.entities[who]["location_id"] != "well"):
+        return False
+    latest_arrival = max((
+        t["arrived_at"] for t in state.travels.values()
+        if t["npc_id"] == who and t["status"] == "arrived"
+        and t["destination"] == "well"
+    ), default=None)
+    if latest_arrival is None or not 0 <= state.time - latest_arrival < 3600:
+        return False
+    return any(
+        peer != who and state.entities[peer]["location_id"] == "well"
+        and state.npcs[peer]["needs"]["hunger"] >= MIN_NEIGHBOR_HUNGER
+        and state.resources.get(peer, {}).get("food") == 0
+        for peer in state.npcs
+    )
+
+
 def choose_local_well_request(state: WorldState) -> NeighborAid | None:
     """Starving neighbor sees a WILLING, well-fed donor physically at the well.
 
