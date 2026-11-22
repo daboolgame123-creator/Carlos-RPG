@@ -1,5 +1,7 @@
 name: PLAY48 P8 authentic h229 courier earned relief and road audit
 on:
+  pull_request:
+    branches: [experiment/play48-signed-market-steward-wage-20261122]
   push:
     branches: [experiment/play48-courier-earned-food-diagnosis-20261122]
     paths:
