@@ -1,5 +1,10 @@
 name: PLAY48 read-only genuine h228 economic lock audit
 on:
+  pull_request:
+    branches: [experiment/play48-funded-starving-farmer-planting-20261121]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real228_income_audit.py'
+      - '.github/workflows/play48-authentic228-income-audit.yml'
   push:
     branches: [experiment/play48-paid-baker-return-20261122]
     paths:
@@ -22,7 +27,7 @@ jobs:
       - name: Load untouched P5 and P6 h228 snapshots from saved experimental artifact
         uses: actions/download-artifact@v4
         with:
-          name: play48-p6-real222-baker-return-b58ac42d688916e9c0d6643b975f744efafff9eb
+          name: play48-p6-real222-baker-return-deaad6587ddffa09e49d8e1930388287da7000b8
           repository: daboolgame123-creator/Carlos-RPG
           run-id: 45012030527
           github-token: ${{ github.token }}
