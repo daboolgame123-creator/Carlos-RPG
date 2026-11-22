@@ -1322,12 +1322,17 @@ class LivingWorldEngine:
                             "schedule_id": sid}), movement_capability=True)
                         busy.add(TRADER)
             if self.voluntary_well_food_visit_enabled:
-                from .voluntary_well_food import choose_volunteer_well_visit
+                from .voluntary_well_food import (
+                    choose_volunteer_well_visit, volunteer_waits_to_offer)
                 for volunteer in sorted(current.npcs):
                     if volunteer in busy:
                         continue
                     walk = choose_volunteer_well_visit(current, volunteer)
                     if walk is None:
+                        if volunteer_waits_to_offer(current, volunteer):
+                            # At most 1h at the physical well, not endless
+                            # idle or a demand to give to a remote recipient.
+                            busy.add(volunteer)
                         continue
                     route = current.routes[walk.route_id]
                     here = current.entities[volunteer]["location_id"]
