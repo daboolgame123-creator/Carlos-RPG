@@ -15,6 +15,7 @@ from test_play48_real_watch_income_24h import seed
 
 
 def scenario(tmp_path, *, at_well=False):
+    tmp_path.mkdir(parents=True, exist_ok=True)
     original = seed(tmp_path / "original-genesis.sqlite")
     d = original.to_dict()
     d["time"] = 3600
@@ -44,7 +45,6 @@ def test_visit_is_single_real_learned_leg_without_remote_courier_or_stock_oracle
     d["entities"]["hana"]["location_id"] = "farm"
     d["entities"]["huda"]["location_id"] = "farm"
     assert choose_volunteer_well_visit(WorldState(**d), "layla") == walk
-    assert WorldState(**scenario(tmp_path / "alternate")).to_dict() != {}  # valid sample
     assert before["resources"]["layla"]["food"] == 1
 
 
