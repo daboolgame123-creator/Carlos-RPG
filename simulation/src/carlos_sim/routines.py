@@ -75,6 +75,9 @@ def signed_hungry_baker_return_allowed(state: WorldState, npc_id: str) -> bool:
             and needs["safety"] < 75 and is_work_shift(profile, state.time)
             and state.entities[npc_id]["location_id"] != profile["workplace_id"]):
         return False
+    from .npc import _injury_rest_decision
+    if _injury_rest_decision(state.injuries, npc_id) is not None:
+        return False
     return any(
         recipe["site_id"] == profile["workplace_id"]
         and recipe["role"] == "baker" and recipe["output_resource"] == "food"
