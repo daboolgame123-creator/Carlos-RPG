@@ -10,6 +10,7 @@ from carlos_sim.domain import WorldState, apply_event
 from carlos_sim.voluntary_well_food import (
     choose_volunteer_well_visit,
     choose_local_well_request, choose_local_well_settlement,
+    volunteer_waits_to_offer,
 )
 from test_play48_real_watch_income_24h import seed
 
@@ -106,3 +107,24 @@ def test_no_request_without_needy_present_partner_or_fisher_consent(tmp_path):
     d["relations"].setdefault("layla", {})["hana"] = -25
     d["relations"].setdefault("layla", {})["huda"] = -25
     assert choose_local_well_request(WorldState(**d)) is None
+
+
+def test_short_real_well_wait_for_busy_hungry_neighbor_not_indefinite(tmp_path):
+    d = scenario(tmp_path, at_well=True)
+    d["travels"]["observed-fisher-arrival"] = {
+        "npc_id": "layla", "route_id": "well-river",
+        "origin": "riverbank", "destination": "well", "start": 3320,
+        "due": 3500, "schedule_id": "npc-travel:observed-fisher-arrival",
+        "status": "arrived", "arrived_at": 3500,
+    }
+    d["actions"]["resting-recipient"] = {
+        "npc_id": "hana", "status": "running",
+    }
+    assert volunteer_waits_to_offer(WorldState(**d), "layla")
+    # The donation planner must wait for the real activity to finish.
+    assert choose_local_well_request(WorldState(**d)) is not None  # Huda free
+    d["actions"]["resting-other"] = {"npc_id": "huda", "status": "running"}
+    assert choose_local_well_request(WorldState(**d)) is None
+    assert volunteer_waits_to_offer(WorldState(**d), "layla")
+    d["time"] = 7100  # arrival + 1h exactly: never hold indefinitely
+    assert not volunteer_waits_to_offer(WorldState(**d), "layla")
