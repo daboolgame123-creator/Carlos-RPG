@@ -1,0 +1,42 @@
+name: PLAY48 P8 authentic h229 courier earned relief and road audit
+on:
+  pull_request:
+    branches: [experiment/play48-signed-market-steward-wage-20261122]
+  push:
+    branches: [experiment/play48-courier-earned-food-diagnosis-20261122]
+    paths:
+      - 'simulation/scenarios/test_village/play48_real229_courier_food_diagnostics.py'
+      - '.github/workflows/play48-authentic229-courier-diagnosis.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine-saved-courier-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore actual P7 paid steward h229 ledger
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p7-genuine228-signed-steward-d432dc04166552c3eea90881a8ba7617f2207042
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45021814734
+          github-token: ${{ github.token }}
+          path: simulation/evidence/real229
+      - name: Read-only previous courier claims, meals, roads and physical food
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real229_courier_food_diagnostics.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-real229-courier-food-audit-${{ github.sha }}
+          path: simulation/real229_courier_diagnostics/
+          if-no-files-found: warn
