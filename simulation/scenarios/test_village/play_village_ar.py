@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import shlex
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -21,7 +22,7 @@ from play_village_local import HELP, create_session, execute
 # These are aliases for commands the original player gateway ALREADY supports.
 # IDs remain explicit, original and case-sensitive (e.g. "home-market").
 ALIASES = {
-    "المشهد": "scene", "المكان": "scene", "انظر": "look",
+    "المشهد": "scene", "مشهد": "scene", "المكان": "scene", "انظر": "look",
     "الذاكرة": "remember", "تذكر": "remember",
     "الحالة": "status", "المخزون": "supplies", "الاحتياجات": "needs",
     "العروض": "offers", "الطعام": "food", "المشتريات": "purchases",
@@ -182,7 +183,31 @@ def render_ar(result) -> None:
         print(line)
 
 
+def configure_windows_console_utf8() -> None:
+    """Use UTF-8 for Arabic on a real Windows console, never a redirected pipe.
+
+    This fixes the classic Windows PowerShell OEM-code-page mismatch without
+    changing the player's commands or the underlying world. Other consoles,
+    unsupported Windows APIs and redirected test processes remain untouched.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        if kernel32.GetConsoleWindow():
+            kernel32.SetConsoleOutputCP(65001)
+            kernel32.SetConsoleCP(65001)
+            for stream in (sys.stdin, sys.stdout, sys.stderr):
+                if stream.isatty() and hasattr(stream, "reconfigure"):
+                    stream.reconfigure(encoding="utf-8", errors="replace")
+    except (OSError, AttributeError, ValueError):
+        # Do not prevent playable startup on unusual terminal hosts.
+        pass
+
+
 def main() -> None:
+    configure_windows_console_utf8()
     print("كارلوس — قرية مستقلة قابلة للعب بالعربية (تجربة مؤقتة)")
     print("7 شخصيات مستقلة، طرق حقيقية، موارد محدودة. لا يوجد حفظ دائم أو اتصال بالإنترنت.")
     print("هذه ليست القصة الأصلية. اكتب «مساعدة» للأوامر.")
