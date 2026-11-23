@@ -6,6 +6,7 @@ Only prospective on-site agreement and subsequent verified, paid freight.
 from __future__ import annotations
 import hashlib
 import json
+import os
 import shutil
 from pathlib import Path
 from carlos_sim import SQLiteEventStore, TimeEngine
@@ -14,7 +15,7 @@ from play48_integrated_acceptance import WORLD, HOUR, engine, metrics, conserve_
 
 SRC=Path("evidence/authentic236")
 OUT=Path("real236_local_market_food_wage")
-CHECKPOINTS=(237,240,244)
+CHECKPOINTS=(237,) if os.environ.get("PLAY48_P10_SMOKE") == "1" else (237,240,244)
 
 
 def info(s, arm):
@@ -107,6 +108,16 @@ def main():
             "release_gate":"PLAY48_NO_GO",
         }
         print("PLAY48_P10_MINUS_P9 "+json.dumps(delta[str(hour)],sort_keys=True),flush=True)
+    if os.environ.get("PLAY48_P10_SMOKE") == "1":
+        first_control, first_candidate = a["237"], b["237"]
+        assert first_candidate["huda_signed_local_market_wage"], (
+            "Huda never signed a genuine in-person local wage")
+        assert first_candidate["huda_actual_paid_market_wages"] > 0, (
+            "no real market-food pay despite verified eligible grain freight")
+        assert first_candidate["huda"]["meals"] > first_control["huda"]["meals"], (
+            "paid food never became an actual Huda meal")
+        assert first_candidate["huda"]["hunger"] < first_control["huda"]["hunger"], (
+            "food wage produced no observable hunger relief")
     (OUT/"comparison.json").write_text(
         json.dumps({"control":a,"candidate":b,"delta":delta},
                    sort_keys=True,indent=2),encoding="utf8")
