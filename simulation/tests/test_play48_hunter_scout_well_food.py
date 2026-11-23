@@ -49,6 +49,8 @@ def hunter(tmp_path):
     d["npcs"]["omar"]["needs"].update(hunger=30, fatigue=20, safety=0)
     d["resources"]["omar"]["food"] = 1
     d["entities"]["omar"]["location_id"] = "hunting_woods"
+    d["navigation"].setdefault(
+        "omar", {"known_routes": [], "visited": [], "target": None})
     d["navigation"]["omar"]["target"] = None
     d["navigation"]["omar"]["known_routes"] = [
         "bakery-market", "market-watch-post", "market-woods",
