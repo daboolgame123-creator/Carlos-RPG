@@ -1,0 +1,32 @@
+name: Carlos real Chromium native Arabic form click
+on:
+  push:
+    branches: [feature/carlos-arabic-browser-local-play-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-chromium-click:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            path_sep: ':'
+          - os: windows-2022
+            path_sep: ';'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install Playwright driver for CI only (use preinstalled runner Chrome)
+        run: python -m pip install playwright
+      - name: Click native RTL form in actual Chromium browser
+        working-directory: simulation
+        env:
+          PYTHONPATH: src${{ matrix.path_sep }}scenarios/test_village
+          PYTHONIOENCODING: utf-8
+        run: python -u scenarios/test_village/playable_browser_chromium_probe.py
