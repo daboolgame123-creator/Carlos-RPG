@@ -920,9 +920,12 @@ class LivingWorldEngine:
                                   "recipient_id": recipient, "amount": 1}
                         if receiving_during_rest:
                             ration["receive_while_resting"] = True
+                        reason = (
+                            "market-owned unquoted ration for present penniless hungry resident"
+                            if not receiving_during_rest else
+                            "owner transfers an actual unquoted ration to a co-present resting resident")
                         append(DomainEvent("MarketCommunityRationIssued", None,
-                            "one actual market-owned unquoted ration from locally present owner",
-                            current.time, ration), market_capability=True)
+                            reason, current.time, ration), market_capability=True)
                         # The loaf is now the resting resident's *owned* good.
                         # Eating is separately forbidden until their scheduled
                         # rest completes; no meal or hunger is forged here.
