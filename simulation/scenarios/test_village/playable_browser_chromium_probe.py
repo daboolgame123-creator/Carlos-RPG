@@ -56,43 +56,55 @@ def main() -> None:
             try:
                 page = browser.new_page()
                 page.goto(url)
+                page.locator('script[src="/ui.js"]').wait_for(state="attached")
+                page.get_by_role("button", name="حدّث المشهد", exact=True).wait_for()
+                navigation_events = []
+                page.on("framenavigated", lambda frame: (
+                    navigation_events.append(frame.url)
+                    if frame == page.main_frame else None
+                ))
                 assert "الموقع: المنزل (home)" in page.locator("body").inner_text()
+
                 with page.expect_response(lambda r: r.url.endswith("/act")) as receipt:
                     page.get_by_role("button", name="حدّث المشهد", exact=True).click()
-                response = receipt.value
-                req = response.request
-                interesting = {
-                    k: v for k, v in req.headers.items()
-                    if k.lower() in ("host", "origin", "referer",
-                                    "sec-fetch-site", "sec-fetch-mode",
-                                    "content-type")
-                }
-                print("CHROMIUM_REAL_FORM_STATUS", response.status, flush=True)
-                print("CHROMIUM_REAL_FORM_HEADERS", interesting, flush=True)
-                print("CHROMIUM_REFERRER_POLICY",
-                      response.headers.get("referrer-policy"), flush=True)
-                assert response.status == 303, (
-                    "Real browser did not pass first form POST; status=" +
-                    str(response.status) + " headers=" + repr(interesting)
-                )
-                page.wait_for_url(url)
-                assert "المشهد الحالي" in page.locator("body").inner_text()
-                # WEB-02: test location-derived visible buttons rather than
-                # manually typed raw commands.
+                assert receipt.value.status == 200
+                assert receipt.value.headers.get("x-carlos-partial") == "1"
+                page.get_by_text("أنت في المنزل.").wait_for()
+
                 with page.expect_response(lambda r: r.url.endswith("/act")) as travel:
                     page.get_by_role("button", name=re.compile("اذهب إلى السوق")).click()
-                assert travel.value.status == 303
-                page.wait_for_url(url)
-                assert "في الطريق" in page.locator("body").inner_text()
+                assert travel.value.status == 200
+                page.get_by_text(re.compile("كارلوس في الطريق")).first.wait_for()
                 with page.expect_response(lambda r: r.url.endswith("/act")) as advance:
                     page.get_by_role("button", name=re.compile("أكمل الرحلة")).click()
-                assert advance.value.status == 303
-                page.wait_for_url(url)
-                assert "الموقع: السوق (market)" in page.locator("body").inner_text()
-                assert "تحدث إلى سلمى" in page.locator("body").inner_text()
+                assert advance.value.status == 200
+                page.get_by_text("الموقع: السوق (market)").wait_for()
                 assert page.get_by_role("progressbar").count() == 2
                 assert "غير مُحاكى بعد" in page.locator("body").inner_text()
-                print("CHROMIUM_REAL_WEB02_BUTTONS_AND_BARS_PASS", flush=True)
+
+                with page.expect_response(lambda r: r.url.endswith("/act")) as greet:
+                    page.get_by_role("button", name="تحدث إلى سلمى").click()
+                assert greet.value.status == 200
+                page.get_by_text("«مرحبا»").wait_for()
+                assert "استقبل التحية" in page.locator("body").inner_text()
+
+                with page.expect_response(lambda r: r.url.endswith("/act")) as waiting:
+                    page.get_by_role("button", name="انتظر 30 ثانية").click()
+                assert waiting.value.status == 200
+                page.get_by_role("spinbutton", name="كمية الشراء").wait_for()
+                page.get_by_role("spinbutton", name="كمية الشراء").fill("2")
+                page.get_by_text("الإجمالي: 4 نحاس").wait_for()
+                with page.expect_response(lambda r: r.url.endswith("/act")) as purchase:
+                    page.get_by_role("button", name="اشتر الكمية").click()
+                assert purchase.value.status == 200
+                page.get_by_text("تم شراء 2 طعام", exact=False).wait_for()
+                assert "نحاس: 6" in page.locator("body").inner_text()
+                assert "طعام: 2" in page.locator("body").inner_text()
+                assert navigation_events == [], (
+                    "Actions must update the current document, not navigate "
+                    + repr(navigation_events)
+                )
+                print("CHROMIUM_REAL_WEB03_NO_RELOAD_BULK_BUY_AND_TALK_PASS", flush=True)
             finally:
                 browser.close()
     finally:
