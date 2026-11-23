@@ -80,6 +80,7 @@ PAGE_START = """<!doctype html>
   <h1>كارلوس — القرية الحيّة</h1>
   <p class="sub">نسخة لعب تجريبية محلية بالعربية. سبع شخصيات مستقلة، وقت حقيقي داخل المحاكاة، وموارد محدودة.</p>
   <p class="sub">هذه ليست القصة الأصلية. الحفظ مؤقت ويُحذف عند إغلاق البرنامج. لا يوجد اتصال بخادم خارجي.</p>
+  <p class="sub">إصدار الواجهة: WEB-01 / AUTH-DIAGNOSTIC-2</p>
 </header>
 """
 PAGE_END = """<p class="hint">تحرك بالأوامر الفعلية مثل: اذهب home-market ، ثم انتظر 90.
@@ -166,6 +167,35 @@ def handler_for(session: BrowserPlaySession):
             expected = "127.0.0.1:" + str(self.server.server_address[1])
             return self.client_address[0] == "127.0.0.1" and host == expected
 
+        def _forbidden(self, reason: str):
+            """Explain a denied request without echoing secrets or user input."""
+            reasons = {
+                "HOST": "عنوان الصفحة أو الاتصال ليس من جهازك المحلي.",
+                "PATH": "مسار الأمر غير صحيح.",
+                "ORIGIN": "المتصفح أرسل مصدرًا مختلفًا عن عنوان اللعبة.",
+                "NULL_ORIGIN": "المتصفح أرسل مصدرًا مجهولًا من صفحة أخرى.",
+                "CSRF": "رمز حماية الجلسة غير صحيح أو غير موجود. افتح صفحة اللعبة من جديد.",
+            }
+            explanation = reasons.get(reason, "رُفض الطلب بسبب فحص الأمان.")
+            body = (
+                '<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8">'
+                '<title>كارلوس — طلب مرفوض</title>'
+                '<body style="font:18px Tahoma,Arial,sans-serif;'
+                'background:#121c27;color:#edf3f9;padding:2rem">'
+                '<h1>تعذر تنفيذ الأمر (403)</h1>'
+                f'<p>{escape(explanation)}</p><p>رمز التشخيص: '
+                f'<b dir="ltr">{escape(reason)}</b></p>'
+                '<p>WEB-01 / AUTH-DIAGNOSTIC-2</p>'
+                '<a href="/" style="color:#edb76f">العودة إلى صفحة اللعبة</a>'
+                '</body></html>'
+            ).encode("utf-8")
+            self.send_response(403, "Forbidden")
+            self._security_headers()
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def _security_headers(self):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
@@ -183,7 +213,7 @@ def handler_for(session: BrowserPlaySession):
 
         def do_GET(self):
             if not self._host_ok():
-                self.send_error(403)
+                self._forbidden("HOST")
                 return
             if self.path != "/":
                 self.send_error(404)
@@ -197,13 +227,28 @@ def handler_for(session: BrowserPlaySession):
             self.wfile.write(body)
 
         def do_POST(self):
-            if not self._host_ok() or self.path != "/act":
-                self.send_error(403)
+            if not self._host_ok():
+                self._forbidden("HOST")
+                return
+            if self.path != "/act":
+                self._forbidden("PATH")
                 return
             expected_origin = "http://127.0.0.1:" + str(self.server.server_address[1])
-            if self.headers.get("Origin") not in (None, expected_origin):
-                self.send_error(403)
+            origin = self.headers.get("Origin")
+            if origin not in (None, "null", expected_origin):
+                self._forbidden("ORIGIN")
                 return
+            if origin == "null":
+                # Some browser privacy modes strip a same-page form's Origin.
+                # Never allow a cross-site null Origin. A valid random CSRF
+                # token remains REQUIRED below, even for same-site requests.
+                fetch_site = self.headers.get("Sec-Fetch-Site")
+                referer = self.headers.get("Referer")
+                if (fetch_site not in (None, "same-origin")
+                        or (referer is not None
+                            and not referer.startswith(expected_origin + "/"))):
+                    self._forbidden("NULL_ORIGIN")
+                    return
             content_type = self.headers.get("Content-Type", "").split(";", 1)[0]
             length = self.headers.get("Content-Length", "")
             if (content_type != "application/x-www-form-urlencoded"
@@ -220,7 +265,7 @@ def handler_for(session: BrowserPlaySession):
                 if (len(fields.get("csrf", [])) != 1
                         or not hmac.compare_digest(fields["csrf"][0], session.csrf)
                         or len(fields.get("command", [])) != 1):
-                    self.send_error(403)
+                    self._forbidden("CSRF")
                     return
                 raw = fields["command"][0]
             except (UnicodeDecodeError, ValueError, KeyError):
