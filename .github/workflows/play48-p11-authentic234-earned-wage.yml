@@ -24,7 +24,7 @@ jobs:
         working-directory: simulation
         env:
           PYTHONPATH: src:tests:scenarios/test_village
-        run: python -m pytest -q tests/test_play48_local_courier_food_wage.py tests/test_play48_hunter_well_visit.py tests/test_play48_local_emergency_courier_aid.py
+        run: python -m pytest -q tests/test_play48_local_courier_food_wage.py tests/test_play48_p11_recurring_grain_salary.py tests/test_play48_hunter_well_visit.py tests/test_play48_local_emergency_courier_aid.py
   real-p7-p10-p11:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
