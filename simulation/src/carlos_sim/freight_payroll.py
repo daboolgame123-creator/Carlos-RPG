@@ -163,7 +163,9 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
         return
     if (type(c) is not dict or set(c) not in (
             {"site_id", "resource", "interval_seconds", "receipts"},
-            {"site_id", "resource", "interval_seconds", "receipts", "signed_at"})
+            {"site_id", "resource", "interval_seconds", "receipts", "signed_at"},
+            {"site_id", "resource", "interval_seconds", "receipts", "signed_at",
+             "initial_grain_service"})
             or (c["site_id"], c["resource"]) not in (("bakery", "grain"), ("market", "food"))
             or type(c["interval_seconds"]) is not int
             or not 12 * 3600 <= c["interval_seconds"] <= 48 * 3600
@@ -174,6 +176,25 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
                 or (c["site_id"], c["resource"]) != ("market", "food")
                 or c["interval_seconds"] != 12 * 3600))):
         raise ValueError("invalid recurring freight contract")
+    if "initial_grain_service" in c:
+        proof = c["initial_grain_service"]
+        if (not isinstance(proof, dict)
+                or set(proof) != {"delivery", "delivered_at"}
+                or type(proof["delivery"]) is not int
+                or type(proof["delivered_at"]) is not int
+                or not 0 <= c["signed_at"] - proof["delivered_at"] <= 600
+                or not c["receipts"]
+                or c["receipts"][0]["delivery"] != proof["delivery"]
+                or c["receipts"][0]["delivered_at"] != c["signed_at"]
+                or not any(r["delivery"] == proof["delivery"]
+                           and r["delivered_at"] == proof["delivered_at"]
+                           for r in circuit.get("grain_purchase", {}).get("receipts", ()))
+                or any(o["courier_id"] == who
+                       and any(p["service_deliveries"] == proof["delivery"]
+                               and p["paid_at"] is not None
+                               for p in o.get("deferred_grain_services", ()))
+                       for o in state["courier_provisions"].values())):
+            raise ValueError("first local grain route service must be physically delivered once")
     last_time, last_delivery, unpaid = (c.get("signed_at", -c["interval_seconds"])
                                         - c["interval_seconds"]), 0, False
     for r in c["receipts"]:
@@ -232,11 +253,36 @@ def agree_local_market_freight_wage(state: dict, event: DomainEvent, *,
         raise ValueError("future market food contract requires two consenting present parties")
     # An old, bounded bakery grain wage remains an independently enforceable
     # obligation. A new market agreement only earns on FUTURE food deliveries.
-    state["supply_circuits"][p["courier_id"]]["food_payroll"] = {
-        "site_id": "market", "resource": "food",
-        "interval_seconds": 12 * 3600,
-        "signed_at": state["time"], "receipts": [],
-    }
+    who = p["courier_id"]
+    circuit = state["supply_circuits"][who]
+    contract = {"site_id": "market", "resource": "food",
+                "interval_seconds": 12 * 3600,
+                "signed_at": state["time"], "receipts": []}
+    # The courier may have ALREADY transported farm grain to the bakery
+    # on this same tour and met the market owner just 40s afterward.
+    # This is a legitimate signing-day settlement of one earlier,
+    # authenticated UNPAID physical service, not payment for presence.
+    recent = next((x for x in reversed(
+        circuit.get("grain_purchase", {}).get("receipts", ()))
+        if (x["delivery"] == circuit["deliveries"]
+            and 0 <= state["time"] - x["delivered_at"] <= 600)), None)
+    if recent is not None and not any(
+        previous["courier_id"] == who and any(
+            x["service_deliveries"] == recent["delivery"]
+            and x["paid_at"] is not None
+            for x in previous.get("deferred_grain_services", ()))
+        for previous in state["courier_provisions"].values()
+    ):
+        contract["initial_grain_service"] = {
+            "delivery": recent["delivery"],
+            "delivered_at": recent["delivered_at"],
+        }
+        contract["receipts"].append({
+            "delivery": recent["delivery"],
+            "delivered_at": state["time"],
+            "payment": None,
+        })
+    circuit["food_payroll"] = contract
 
 
 def choose_market_wage_quote_retirement(state: WorldState, who: str) -> str | None:
