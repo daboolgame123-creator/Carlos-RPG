@@ -60,7 +60,7 @@ def main():
         report={
             "source_sha256":sha,"hour":236,"npcs":npcs,
             "well_assistance":reqs,"site_stocks":site_stocks,
-            "community_relief":s.market_stalls["market"].get("community_food"),
+            "community_relief":s.to_dict()["market_stalls"]["market"].get("community_food"),
             "courier_rounds":{k:dict(v) for k,v in s.to_dict()["supply_circuits"].items()},
             "copper_total":12,
         }
