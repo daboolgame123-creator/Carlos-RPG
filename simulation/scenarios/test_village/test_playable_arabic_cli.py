@@ -18,6 +18,7 @@ from play_village_local import create_session, execute
 
 @pytest.mark.parametrize(("text", "expected"), [
     ("المشهد", ["scene"]),
+    ("مشهد", ["scene"]),
     ("انظر", ["look"]),
     ("الحالة", ["status"]),
     ("المخزون", ["supplies"]),
