@@ -167,7 +167,7 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
             or type(c["interval_seconds"]) is not int
             or not 12 * 3600 <= c["interval_seconds"] <= 48 * 3600
             or type(c["receipts"]) is not list
-            or any(x["courier_id"] == who for x in state["courier_provisions"].values())):
+            or not _previous_wages_fully_satisfied(state, who)):
         raise ValueError("invalid recurring freight contract")
     last_time, last_delivery, unpaid = -c["interval_seconds"], 0, False
     for r in c["receipts"]:
@@ -187,3 +187,93 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
                     or q["worker_after"] - q["worker_before"] != 1):
                 raise ValueError("freight payment must conserve actual food")
         last_time, last_delivery, unpaid = r["delivered_at"], r["delivery"], q is None
+
+
+# PLAY48 P10: Real market employer and a physically present working courier may
+# agree a NEW prospective in-kind wage after a previous bounded contract is
+# actually spent. Never re-open or mutate the old signed service contract.
+LOCAL_MARKET_HIRE_INTERVAL = 12 * 3600
+
+
+def _previous_wages_fully_satisfied(state: dict, who: str) -> bool:
+    """No existing funding or documented claim is lost by a new job agreement."""
+    for c in state["courier_provisions"].values():
+        if c["courier_id"] != who:
+            continue
+        if "deferred_grain_services" in c:
+            # This historical bakery contract expires at its original signed
+            # ceiling; every delivery must already have actually been paid.
+            proof = c["deferred_grain_services"]
+            if (c["remaining"] != 0 or len(proof) != c["authorized_total_units"]
+                    or any(row["paid_at"] is None for row in proof)):
+                return False
+        elif (c["remaining"] != 0
+              or c["total_units"] < c["authorized_total_units"]):
+            return False
+    return True
+
+
+def _local_market_hire_eligible(state: dict, who: str) -> bool:
+    """A real, locally witnessed prospective wage, not a free-food grant.
+
+    The original contract can be exhausted; the next job is a new agreement
+    for FUTURE authentic deliveries. It only becomes payable from real and
+    unquoted employer food, never from customer orders or courier custody.
+    """
+    from .market import _present
+    site = "market"
+    circuit = state["supply_circuits"].get(who)
+    stall = state["market_stalls"].get(site)
+    keeper = stall["keeper_id"] if stall else None
+    if (circuit is None or keeper not in state["npcs"]
+            or who not in state["npcs"] or who == keeper
+            or state["npcs"][who]["role"] != "courier"
+            or state["npcs"][keeper]["role"] != "merchant"
+            or "food_payroll" in circuit
+            or circuit["index"] != 3 or circuit["carry"] is not None
+            or circuit["deliveries"] < 1
+            or site != circuit["stops"][3]
+            or not _previous_wages_fully_satisfied(state, who)
+            or not _worker_present_and_free(state, who, site)
+            or not _worker_present_and_free(state, keeper, site)
+            or not _present(state, keeper, site)
+            or _available_site_food(state, site) < 1):
+        return False
+    needs = state["npcs"][who]["needs"]
+    return (needs["hunger"] < 90 and needs["fatigue"] < 70
+            and needs["safety"] < 75)
+
+
+def choose_local_market_employment(state: WorldState, who: str) -> bool:
+    """Pure opt-in choice, grounded in the two workers' actual same-place facts."""
+    return _local_market_hire_eligible(state.to_dict(), who)
+
+
+def sign_local_market_employment(state: dict, event: DomainEvent, *,
+                                 market_authorized: bool,
+                                 supply_authorized: bool) -> None:
+    """Authority and consent at the merchant's REAL stall before future work.
+
+    Does not move, mint or escrow food and never create a paid work receipt.
+    The existing cargo reducer will independently sign future labor receipts;
+    its existing wage reducer alone can later pay one genuinely owned loaf.
+    """
+    p = event.data
+    if (not market_authorized or not supply_authorized
+            or event.time == 0
+            or set(p) != {"courier_id", "site_id", "resource", "interval_seconds"}
+            or type(p.get("courier_id")) is not str
+            or p.get("site_id") != "market"
+            or p.get("resource") != "food"
+            or type(p.get("interval_seconds")) is not int
+            or p["interval_seconds"] != LOCAL_MARKET_HIRE_INTERVAL):
+        raise ValueError("local employment needs both trusted market and freight authority")
+    who = p["courier_id"]
+    stall = state["market_stalls"].get("market")
+    if (stall is None or event.actor_id != stall["keeper_id"]
+            or not _local_market_hire_eligible(state, who)):
+        raise ValueError("unavailable courier, employer or real food, or active earlier wage")
+    state["supply_circuits"][who]["food_payroll"] = {
+        "site_id": "market", "resource": "food",
+        "interval_seconds": LOCAL_MARKET_HIRE_INTERVAL, "receipts": [],
+    }
