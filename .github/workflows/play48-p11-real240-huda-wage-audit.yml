@@ -1,0 +1,37 @@
+name: PLAY48 P11 original h240 Huda employer and wage diagnosis
+on:
+  push:
+    branches: [experiment/play48-p11-huda-earned-wage-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  actual-wage-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore genuine P10 Huda rescue ledger at hour 240
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p10-authentic-huda-99411c76ace7b90ad2f51051d694215a9a8bfe6e
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45174348082
+          github-token: ${{ github.token }}
+          path: simulation/evidence/p10_h240
+      - name: Report authentic owner wage and 241-244 hour recovery without behavior changes
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_p11_real240_wage_audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p11-real240-wage-diagnosis-${{ github.sha }}
+          path: simulation/real240_huda_wage_audit/
+          if-no-files-found: warn
