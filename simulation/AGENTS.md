@@ -1,3 +1,7 @@
+## CURRENT OWNER DECISION — 2026-11-23 (read first for engine work)
+
+**Before any new PLAY-48 economy implementation**, read [the binding world-first progress decision](docs/CARLOS_OWNER_DECISION_WORLD_FIRST_2026-11-23.md). The owner explicitly rejects endless per-character starvation fixes and perfect-population-survival gates. Death/poverty can be legitimate emergence; correct only demonstrated systemic/integrity defects; distinguish technical correctness from economic sustainability. Favor a playable autonomous world, bounded diagnostic scope, and short status updates. This decision refines the phase scope, **not** the event ledger, conservation, test/compatibility requirements or `main` protection. Prior phase rules requiring perfect economic recovery cannot silently supersede this explicit newer decision.
+
 # Simulation Development Agent Rules — Carlos RPG
 
 Scope: `simulation/` only. These rules supplement the root `AGENTS.md`; they do not change the original interactive story.
