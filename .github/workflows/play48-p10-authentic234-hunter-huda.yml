@@ -1,0 +1,73 @@
+name: PLAY48 P10 authentic h234 hunter-to-Huda rescue
+on:
+  push:
+    branches: [experiment/play48-p10-hunter-physical-huda-rescue-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Original P9 aid, P8 offshift and P10 hunter regressions
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_hunter_well_visit.py tests/test_play48_local_emergency_courier_aid.py tests/test_play48_offshift_shopkeeper_homeward.py
+  full-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: All simulation regressions with both optional flags OFF by default
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: python -m pytest -q
+  authentic-h234:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve exact original genuine P7 hour-234 ledger
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p7-real228-steward-wage-8a31e3c9cbd03a5f6ebb24e75d00abbc73d2a7ca
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45145919540
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic234
+      - name: Re-run untouched 13-person history with P9 versus opt-in P10
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real234_hunter_huda.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p10-authentic-huda-${{ github.sha }}
+          path: simulation/real234_hunter_huda/
+          if-no-files-found: warn
