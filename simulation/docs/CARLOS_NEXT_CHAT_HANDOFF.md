@@ -1,3 +1,15 @@
+# أحدث واجهة قابلة للعب — WEB-01 (23 نوفمبر 2026)
+
+**مشكلة مؤكدة لدى المستخدم:** Windows Terminal على Windows 10 يعرض العربية المشكولة لكن لا يعالج اتجاه RTL/BiDi صحيحًا؛ ضبط `chcp 65001` وPython UTF-8 والخطوط لم يُصلحها. لا تكرر نصائح ترميز لا تعالج السبب. [Windows Terminal RTL upstream](https://github.com/microsoft/terminal/issues/18659).
+
+**الحل الجديد:** فرع `feature/carlos-arabic-browser-local-play-20261123`، [Draft PR #182](https://github.com/daboolgame123-creator/Carlos-RPG/pull/182)، واجهة HTML محلية بالعربية داخل المتصفح، فوق محرك القرية نفسه، بلا مكتبات إضافية أو شبكة خارجية. راجع `simulation/docs/PLAYABLE_ARABIC_BROWSER_2026-11-23.md` و`simulation/scenarios/test_village/play_village_browser.py`. تشغيلها من `simulation` عبر `$env:PYTHONPATH="src"; python scenarios/test_village/play_village_browser.py` بعد جلب الفرع. العنوان المحلي يُطبع ASCII ويُفتح في المتصفح. جلسة SQLite مؤقتة فقط؛ لا `main` ولا ملفات قصة حقيقية.
+
+**دليل آلي مؤكد:** workflow [#45257849501](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/45257849501): **65 passed لكل Windows 2022/Python3.13 وUbuntu/Python3.10/3.13**، بما فيها HTML RTL، subprocess HTTP المحلي، رفض Host/Origin/CSRF، وحركة 90 ثانية فعلية والحفظ. اختبار الانحدار الشامل على رأس PR يجب التحقق منه منفصلًا قبل الادعاء بإغلاق المهمة. لم يؤكد المستخدم بعد ظهور المتصفح بصورة صحيحة على جهازه؛ اطلب فحص تجربة الاستخدام إذا كانت هناك نتيجة جديدة.
+
+**سياسة المالك مستمرة:** لا ندور في ترقيع الجوع الفردي؛ التجربة المرئية أولى ما لم يوجد عيب سببي عام. لا دمج تلقائي للفروع Draft.
+
+---
+
 # أحدث عمل قابل للعب — AR-01 (23 نوفمبر 2026)
 
 **ابدأ من قرار المالك `CARLOS_OWNER_DECISION_WORLD_FIRST_2026-11-23.md` ثم من [دليل تشغيل كارلوس بالعربية](PLAYABLE_ARABIC_CLI_2026-11-23.md).**
