@@ -93,8 +93,63 @@ output { color:#daeaf4; }
         font-family:Consolas,monospace; color:#cde3ed; }
 .help { color:#a9bed0; font-size:.92rem; }
 .footer { padding-top:15px; text-align:center; color:#94abba; font-size:.86rem; }
+/* WEB-03: finite quantity form and genuine recorded conversations. */
+.buy-form { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.buy-form label { display:flex; gap:8px; align-items:center; }
+.buy-form input[type=number] { color:#fff; background:#122636; border:1px solid #688fa9;
+    border-radius:7px; padding:7px; width:80px; font:inherit; direction:ltr; }
+.buy-form output { min-width:120px; color:#ecc58d; }
+.conversation { background:#122637; border:1px solid #446076; border-radius:9px;
+                padding:12px; margin:10px 0; }
+.conversation p { white-space:pre-wrap; overflow-wrap:anywhere; }
 @media(max-width:760px) { main{padding:12px;} header{padding:17px;} .layout{grid-template-columns:1fr;} }
 """
+
+
+
+REACTIONS = {
+    "acknowledged": "استقبل التحية.",
+    "welcomed": "رحّب بعرض المساعدة.",
+    "considered": "أبدى استعداده للنظر في طلب المساعدة.",
+    "refused": "رفض طلب المساعدة.",
+    "distrusted": "تعامل مع عرض المساعدة بريبة.",
+    "alarmed": "أبدى انزعاجًا من التهديد.",
+}
+SPEECH_KINDS = {
+    "greeting": "تحية",
+    "offer_help": "عرض مساعدة",
+    "request_help": "طلب مساعدة",
+    "threat": "تهديد",
+}
+
+
+def _reaction_label(value: Any) -> str:
+    # Never invent an NPC's spoken words or convert a behavioral outcome to a quote.
+    return REACTIONS.get(str(value), "رد فعل مسجل: " + str(value))
+
+
+def _conversation_panel(conversations: Any) -> str:
+    details = conversations.details if hasattr(conversations, "details") else {}
+    recent = details.get("recent", ()) if isinstance(details, dict) else ()
+    parts = ['<section class="card" id="conversations"><h2>محادثات كارلوس</h2>']
+    if not recent:
+        parts.append('<p class="muted">لم تتحدث مع أحد بعد. تحدث مع شخصية حاضرة لرؤية النتيجة.</p>')
+    for entry in list(recent)[:4]:
+        recipient = _person_name(entry.get("recipient_id"))
+        words = str(entry.get("text", ""))
+        kind = SPEECH_KINDS.get(str(entry.get("kind")), str(entry.get("kind")))
+        reaction = _reaction_label(entry.get("reaction"))
+        parts.extend([
+            '<div class="conversation">',
+            f'<h3>محادثة مع {_h(recipient)} · {_h(kind)}</h3>',
+            f'<p><strong>قلت:</strong> «{_h(words)}»</p>',
+            f'<p><strong>استجابة {_h(recipient)} المسجلة:</strong> {_h(reaction)}</p>',
+            '</div>',
+        ])
+    parts.append('<p class="help">هذه استجابات سلوكية مسجلة فعلًا، '
+                 'وليست جملًا منطوقة أو حوارات حرة اخترعها النظام.</p>')
+    parts.append('</section>')
+    return "".join(parts)
 
 
 def _h(value: Any) -> str:
@@ -303,8 +358,27 @@ def _offers_panel(offers: Any, supplies: Any, csrf: str) -> str:
             f'{_h(RESOURCE_LABELS.get(payment, payment))}'
             '</div>'
         ])
-        if payment == "coin_copper" and price is not None and wallet is not None and wallet >= price and qty:
-            bits.append(_button(csrf, f"اشتر {name} 1 {price}", "اشتر وحدة واحدة"))
+        if (payment == "coin_copper" and price is not None
+                and wallet is not None and qty is not None and qty > 0
+                and (price == 0 or wallet >= price)):
+            # This limit is only a UI convenience. Server/ledger recheck all
+            # stock, owner, price and copper values when the user submits.
+            limit = min(qty, 1000, wallet // price if price > 0 else qty)
+            bits.extend([
+                f'<form method="post" action="/act" class="buy-form" '
+                f'data-unit-price="{price}">',
+                f'<input type="hidden" name="csrf" value="{_h(csrf)}">',
+                '<input type="hidden" name="action" value="buy">',
+                f'<input type="hidden" name="offer_id" value="{_h(name)}">',
+                f'<input type="hidden" name="unit_price" value="{price}">',
+                '<label>الكمية',
+                f'<input type="number" name="quantity" min="1" max="{limit}" '
+                'value="1" required aria-label="كمية الشراء">',
+                '</label>',
+                f'<output aria-live="polite">الإجمالي: {price} نحاس</output>',
+                '<button type="submit" class="primary">اشتر الكمية</button>',
+                '</form>',
+            ])
         else:
             bits.append('<span class="muted">الشراء غير متاح حاليًا بموارد كارلوس.</span>')
         bits.append('</div>')
@@ -376,7 +450,10 @@ def friendly_result(result: Any, command: str, before: Any, after: Any) -> str:
             + " مقابل " + str(details.get("total_paid", "?")) + " من النقود الفعلية."
         )
     if status == "interacted":
-        return "تحدث كارلوس مع " + _person_name(details.get("recipient_id")) + ". سجّل المحرك الاستجابة."
+        who = _person_name(details.get("recipient_id"))
+        return ("تحدث كارلوس مع " + who + ". رد فعله المسجل: "
+                + _reaction_label(details.get("reaction"))
+                + " اقرأ كلماتك كما سجلت في لوحة المحادثات.")
     if status == "gifted":
         return "سُلّمت الهدية إلى " + _person_name(details.get("recipient_id")) + " وسُجّل نقلها."
     if status == "foraging":
@@ -404,21 +481,23 @@ def render_web02(gateway: Any, csrf: str, notice: str) -> bytes:
     needs = gateway.needs()
     offers = gateway.offers()
     food = gateway.check_food()
+    conversations = gateway.conversations()
 
     bits = [
         '<!doctype html><html lang="ar" dir="rtl"><head>',
         '<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
         '<meta name="referrer" content="same-origin">',
         '<title>كارلوس — القرية الحيّة</title><style>',
-        STYLE, '</style></head><body><main>',
+        STYLE, '</style><script src="/ui.js" defer></script></head><body><main>',
         '<header><h1>كارلوس — القرية الحيّة</h1>',
         '<p>مرحبًا بك في القرية. تحرّك بحرية، تحدث مع الناس، وتابع ما يحدث حولك.</p>',
         '<p class="muted">العالم مستقل وموارده محدودة؛ لا تفرض الواجهة تصرفات على السكان.</p>',
-        '<small>تجربة محلية مؤقتة · WEB-02 · AUTH-DIAGNOSTIC-2</small></header>',
+        '<small>تجربة محلية مؤقتة · WEB-03 · AUTH-DIAGNOSTIC-2</small></header>',
         '<div class="layout"><div class="column">',
         _scene_panel(scene, csrf),
         _offers_panel(offers, supplies, csrf),
         _actions_panel(scene, supplies, food, csrf),
+        _conversation_panel(conversations),
         '<section class="card"><h2>آخر نتيجة</h2>',
         f'<div class="result" role="status">{_h(notice)}</div></section>',
         '</div><div class="column">',

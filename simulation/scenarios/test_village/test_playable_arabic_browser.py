@@ -38,7 +38,8 @@ def test_html_is_real_rtl_player_view_with_no_world_mutation(tmp_path):
         assert "ممتلكات كارلوس" in page
         assert "نحاس: 10" in page
         assert '<input type="hidden" name="csrf"' in page
-        assert '<script' not in page
+        assert '<script src="/ui.js" defer></script>' in page
+        assert '<script>alert' not in page
         assert db.verify(WORLD).to_dict() == before
     finally:
         clock.close_session(WORLD)
@@ -147,7 +148,7 @@ def test_real_loopback_http_interaction_in_arabic_and_csrf_guard(live_browser):
     html = _get(url)
     assert '<html lang="ar" dir="rtl">' in html
     assert "الموقع: المنزل (home)" in html
-    assert "<script" not in html
+    assert '<script src="/ui.js" defer></script>' in html
     csrf_match = re.search(r'name="csrf" value="([^"]+)"', html)
     assert csrf_match, "anti-CSRF field missing"
     csrf = unescape(csrf_match.group(1))
