@@ -33,14 +33,51 @@ def sign_contract(state: dict, event: DomainEvent, *, bootstrap: bool) -> None:
                                "interval_seconds": p["interval_seconds"], "receipts": []}
 
 
+def _claimed_prior_bakery_service(state: dict, who: str, delivery: int) -> bool:
+    """Never earn a second salary for the same old signed bakery service."""
+    return any(
+        obligation["courier_id"] == who and
+        any(row["service_deliveries"] == delivery
+            for row in obligation.get("deferred_grain_services", ()))
+        for obligation in state["courier_provisions"].values()
+    )
+
+
+def _authentic_grain_receipt(circuit: dict, delivery: int, at: int) -> bool:
+    return any(
+        row["delivery"] == delivery and row["delivered_at"] == at
+        for row in circuit.get("grain_purchase", {}).get("receipts", ())
+    )
+
+
 def record_delivery(state: dict, who: str, resource: str) -> None:
-    """Called only after the authoritative cargo debit/delivery has succeeded."""
+    """Run ONLY after authoritative physically delivered cargo is debited.
+
+    Original legacy contracts still earn on their original worksite/resource.
+    A prospectively signed market salary may pay for later real grain freight
+    at the market only after the worker first reaches that payer by road.
+    Neither travel, mere presence nor a market visit earns an extra loaf.
+    """
     circuit = state["supply_circuits"][who]
     contract = circuit.get("food_payroll")
     if contract is None:
         return
-    if (resource != contract["resource"]
-            or state["entities"][who]["location_id"] != contract["site_id"]):
+    on_signed_market_grain_route = (
+        "signed_at" in contract and contract["site_id"] == "market"
+        and resource == "grain"
+        and state["entities"][who]["location_id"] == "bakery"
+        and state["time"] > contract["signed_at"]
+        and _authentic_grain_receipt(
+            circuit, circuit["deliveries"], state["time"])
+        and not _claimed_prior_bakery_service(
+            state, who, circuit["deliveries"])
+    )
+    on_original_route = (
+        "signed_at" not in contract
+        and resource == contract["resource"]
+        and state["entities"][who]["location_id"] == contract["site_id"]
+    )
+    if not (on_signed_market_grain_route or on_original_route):
         return
     receipts = contract["receipts"]
     if receipts and (receipts[-1]["payment"] is None or
@@ -189,15 +226,22 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
                 or not any(r["delivery"] == proof["delivery"]
                            and r["delivered_at"] == proof["delivered_at"]
                            for r in circuit.get("grain_purchase", {}).get("receipts", ()))
-                or any(o["courier_id"] == who
-                       and any(p["service_deliveries"] == proof["delivery"]
-                               and p["paid_at"] is not None
-                               for p in o.get("deferred_grain_services", ()))
-                       for o in state["courier_provisions"].values())):
+                or _claimed_prior_bakery_service(
+                    state, who, proof["delivery"])):
             raise ValueError("first local grain route service must be physically delivered once")
     last_time, last_delivery, unpaid = (c.get("signed_at", -c["interval_seconds"])
                                         - c["interval_seconds"]), 0, False
-    for r in c["receipts"]:
+    for idx, r in enumerate(c["receipts"]):
+        # For the signed market contract, every *later* receipt is rechecked
+        # against authoritative grain-purchase evidence on EVERY replay.
+        # The first receipt's historic proof is checked separately above.
+        if ("signed_at" in c
+                and (idx != 0 or "initial_grain_service" not in c)
+                and (not _authentic_grain_receipt(
+                    circuit, r.get("delivery"), r.get("delivered_at"))
+                or _claimed_prior_bakery_service(
+                    state, who, r.get("delivery")))):
+            raise ValueError("market freight wage must follow unremunerated authentic grain delivery")
         if (type(r) is not dict or set(r) != {"delivery", "delivered_at", "payment"}
                 or type(r["delivery"]) is not int or not last_delivery < r["delivery"] <= circuit["deliveries"]
                 or type(r["delivered_at"]) is not int
@@ -266,13 +310,8 @@ def agree_local_market_freight_wage(state: dict, event: DomainEvent, *,
         circuit.get("grain_purchase", {}).get("receipts", ()))
         if (x["delivery"] == circuit["deliveries"]
             and 0 <= state["time"] - x["delivered_at"] <= 600)), None)
-    if recent is not None and not any(
-        previous["courier_id"] == who and any(
-            x["service_deliveries"] == recent["delivery"]
-            and x["paid_at"] is not None
-            for x in previous.get("deferred_grain_services", ()))
-        for previous in state["courier_provisions"].values()
-    ):
+    if (recent is not None
+            and not _claimed_prior_bakery_service(state, who, recent["delivery"])):
         contract["initial_grain_service"] = {
             "delivery": recent["delivery"],
             "delivered_at": recent["delivered_at"],
