@@ -182,7 +182,7 @@ def handler_for(session: BrowserPlaySession):
             self.send_header("X-Frame-Options", "DENY")
             self.send_header(
                 "Content-Security-Policy",
-                "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
+                "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; "
                 "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
             )
 
