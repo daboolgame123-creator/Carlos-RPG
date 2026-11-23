@@ -56,7 +56,7 @@ def test_location_specific_actions_are_generated_from_visible_local_routes_only(
         assert "اذهب إلى السوق" in home
         assert "تحدث إلى سلمى" not in home
         assert "اذهب إلى المخبز" not in home
-        assert "اشتر وحدة واحدة" not in home
+        assert "اشتر الكمية" not in home
         assert 'name="command" value="كل"' not in home
 
         ui.command("اذهب home-market")
@@ -89,7 +89,7 @@ def test_market_buy_button_appears_only_when_actual_offer_can_be_paid(tmp_path):
         ui.command("اذهب home-market")
         ui.command("انتظر 90")
         page = ui.page().decode("utf-8")
-        assert "اشتر وحدة واحدة" not in page  # shopkeeper resting until t=120
+        assert "اشتر الكمية" not in page  # shopkeeper resting until t=120
 
         ui.command("انتظر 30")
         page = ui.page().decode("utf-8")
@@ -97,8 +97,10 @@ def test_market_buy_button_appears_only_when_actual_offer_can_be_paid(tmp_path):
         assert offers
         quote = next(x for x in offers if x["resource"] == "food")
         assert quote["unit_price"] == 2
-        assert "اشتر وحدة واحدة" in page
-        assert f'name="command" value="اشتر {quote["offer_id"]} 1 2"' in page
+        assert "اشتر الكمية" in page
+        assert f'name="offer_id" value="{quote["offer_id"]}"' in page
+        assert 'name="quantity"' in page
+        assert 'name="unit_price" value="2"' in page
 
         ui.command(f"اشتر {quote['offer_id']} 1 2")
         assert "تم شراء 1 طعام" in ui.notice
