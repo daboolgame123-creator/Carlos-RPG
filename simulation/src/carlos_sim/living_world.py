@@ -138,10 +138,9 @@ class LivingWorldEngine:
         self.assistance_enabled = assistance_enabled
         if (type(local_emergency_courier_help_enabled) is not bool
                 or (local_emergency_courier_help_enabled
-                    and not (assistance_enabled and economic_enabled
-                             and consumption_enabled and survival_enabled
-                             and navigation_enabled))):
-            raise ValueError('voluntary emergency courier assistance needs enabled real help, economy, needs and movement')
+                    and not (economic_enabled and consumption_enabled
+                             and survival_enabled and navigation_enabled))):
+            raise ValueError('voluntary emergency courier assistance needs real economy, hunger, food consumption and navigation')
         self.local_emergency_courier_help_enabled = local_emergency_courier_help_enabled
         if (type(aid_relay_enabled) is not bool or
                 (aid_relay_enabled and not (
