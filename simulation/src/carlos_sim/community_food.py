@@ -120,7 +120,7 @@ def _aged_quote_relisted_after_paid_market_freight(
         c = circuit.get("food_payroll")
         if (not c or "signed_at" not in c
                 or (c["site_id"], c["resource"]) != ("market", "food")
-                or c["signed_at"] != posted
+                or c["signed_at"] > posted
                 or not any(r["payment"] is not None
                            and r["payment"]["paid_at"] == posted
                            for r in c["receipts"])):
