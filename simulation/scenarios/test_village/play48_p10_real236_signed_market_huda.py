@@ -26,7 +26,9 @@ def facts(s,arm):
             "huda":m["npcs"]["huda"],"hana":m["npcs"]["hana"],
             "huda_deliveries":c["deliveries"],
             "huda_has_new_signed_contract":contract is not None,
-            "huda_authentic_service_receipts":list(contract["receipts"]) if contract else [],
+            "huda_authentic_service_receipts":(
+                s.to_dict()["supply_circuits"]["huda"]["food_payroll"]["receipts"]
+                if contract else []),
             "huda_paid_food_wages":sum(r["payment"] is not None for r in contract["receipts"]) if contract else 0,
             "market_food":s.resources["market"]["food"],
             "market_unquoted_food":_available_site_food(s,"market"),
