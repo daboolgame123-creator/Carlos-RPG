@@ -36,7 +36,26 @@ def sign_market_relief(state: dict, event: DomainEvent, *, bootstrap: bool) -> N
     stall["community_food"] = {"daily_limit": DAILY_LIMIT, "payments": []}
 
 
-def _eligible(state: dict, recipient: str, *, require_unquoted: bool = True) -> bool:
+def _resting_recipient_on_site(state: dict, recipient: str) -> bool:
+    """Rest may coexist with accepting a real loaf; never with eating it.
+
+    The recipient must actually be in the market, stationary, not producing,
+    and have exactly one ongoing local REST action. This is not permission to
+    eat, work, trade, walk or receive another ration during that action.
+    """
+    if (state["entities"].get(recipient, {}).get("location_id") != "market"
+            or any(t["npc_id"] == recipient and t["status"] == "traveling"
+                   for t in state["travels"].values())
+            or any(j["npc_id"] == recipient and j["status"] == "running"
+                   for j in state["production_jobs"].values())):
+        return False
+    tasks = [a for a in state["actions"].values()
+             if a["npc_id"] == recipient and a["status"] == "running"]
+    return len(tasks) == 1 and tasks[0]["action"] == "rest"
+
+
+def _eligible(state: dict, recipient: str, *, require_unquoted: bool = True,
+              receive_while_resting: bool = False) -> bool:
     stall = state["market_stalls"].get("market", {})
     contract = stall.get("community_food")
     npc = state["npcs"].get(recipient)
@@ -45,8 +64,11 @@ def _eligible(state: dict, recipient: str, *, require_unquoted: bool = True) -> 
     keeper = stall["keeper_id"]
     if not _present(state, keeper, "market"):
         return False
-    if (not _worker_present_and_free(state, recipient, "market")
-            or not _present(state, recipient, "market")
+    free_on_site = (_worker_present_and_free(state, recipient, "market")
+                    and _present(state, recipient, "market"))
+    resting_on_site = (receive_while_resting
+                       and _resting_recipient_on_site(state, recipient))
+    if (not (free_on_site or resting_on_site)
             or npc["needs"]["hunger"] < HUNGER_THRESHOLD):
         return False
     goods = state["resources"].get(recipient, {})
@@ -167,13 +189,15 @@ def choose_market_relief_quote_retirement(
     return None
 
 
-def choose_market_ration(state: WorldState) -> str | None:
-    """One locally witnessed need, highest actual hunger first; no remote oracle."""
+def choose_market_ration(state: WorldState, *,
+                         receive_while_resting: bool = False) -> str | None:
+    """One locally witnessed need, highest hunger first; no remote oracle."""
     if "community_food" not in state.market_stalls.get("market", {}):
         return None
     raw = state.to_dict()
     for who in sorted(raw["npcs"], key=lambda w: (-raw["npcs"][w]["needs"]["hunger"], w)):
-        if _eligible(raw, who):
+        if _eligible(raw, who,
+                     receive_while_resting=receive_while_resting):
             return who
     return None
 
@@ -181,11 +205,20 @@ def choose_market_ration(state: WorldState) -> str | None:
 def pay_market_ration(state: dict, event: DomainEvent, *,
                       market_authorized: bool) -> None:
     p = event.data
+    base_keys = {"site_id", "recipient_id", "amount"}
+    resting = p.get("receive_while_resting") is True
+    correct_shape = (
+        set(p) == base_keys or
+        (resting and set(p) == base_keys | {"receive_while_resting"})
+    )
     if (not market_authorized or event.actor_id is not None
-            or set(p) != {"site_id", "recipient_id", "amount"}
+            or not correct_shape
             or p["site_id"] != "market" or p["amount"] != 1
             or type(p["recipient_id"]) is not str
-            or not _eligible(state, p["recipient_id"])):
+            or not _eligible(state, p["recipient_id"],
+                             receive_while_resting=resting)
+            or (resting and not _resting_recipient_on_site(
+                state, p["recipient_id"]))):
         raise ValueError("community ration requires signed, local, unfunded need")
     recipient = p["recipient_id"]
     source = state["resources"]["market"]["food"]

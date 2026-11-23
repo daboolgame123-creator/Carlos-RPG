@@ -1,0 +1,36 @@
+name: PLAY48 P12 authentic h264 market bakery hunger diagnosis
+on:
+  push:
+    branches: [experiment/play48-p12-market-bakery-h264-diagnostics-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  immutable-h264-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Download exact passed P11 authentic h264 ledgers
+        uses: actions/download-artifact@v4
+        with:
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45186883684
+          name: play48-p11-renewable-h264-af1025807f4fb5f3b653bdd6a8dbee3bb01f8455
+          path: simulation/evidence/p12_real264
+          github-token: ${{ github.token }}
+      - name: Read-only local needs ownership quotes daily aid and bakery activity
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_p12_h264_access_audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p12-authentic-h264-access-${{ github.sha }}
+          path: simulation/play48_p12_h264_access_audit.json
+          if-no-files-found: warn

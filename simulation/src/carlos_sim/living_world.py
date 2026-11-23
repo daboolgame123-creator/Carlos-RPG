@@ -109,7 +109,8 @@ class LivingWorldEngine:
                  offshift_steward_homeward_enabled: bool = False,
                  local_emergency_courier_help_enabled: bool = False,
                  hunter_well_visit_enabled: bool = False,
-                 local_market_freight_wage_enabled: bool = False):
+                 local_market_freight_wage_enabled: bool = False,
+                 resting_market_ration_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -219,6 +220,10 @@ class LivingWorldEngine:
                     economic_enabled and consumption_enabled and survival_enabled))):
             raise ValueError("community market food requires real economy and hunger")
         self.community_food_enabled = community_food_enabled
+        if (type(resting_market_ration_enabled) is not bool
+                or (resting_market_ration_enabled and not community_food_enabled)):
+            raise ValueError("resting ration receipt requires signed local community food")
+        self.resting_market_ration_enabled = resting_market_ration_enabled
         if (type(reserve_signed_relief_offer_enabled) is not bool
                 or (reserve_signed_relief_offer_enabled and not community_food_enabled)):
             raise ValueError("owner-approved quote reallocation needs signed market relief")
@@ -902,13 +907,30 @@ class LivingWorldEngine:
                                 'on-site owner reassigns aged unsold offer to signed relief',
                                 current.time, {'id': old_quote}),
                                 market_capability=True)
-                    recipient = choose_market_ration(current)
+                    recipient = choose_market_ration(
+                        current,
+                        receive_while_resting=self.resting_market_ration_enabled)
                     if recipient is not None:
+                        from .community_food import _resting_recipient_on_site
+                        receiving_during_rest = (
+                            self.resting_market_ration_enabled
+                            and _resting_recipient_on_site(
+                                current.to_dict(), recipient))
+                        ration = {"site_id": "market",
+                                  "recipient_id": recipient, "amount": 1}
+                        if receiving_during_rest:
+                            ration["receive_while_resting"] = True
+                        reason = (
+                            "market-owned unquoted ration for present penniless hungry resident"
+                            if not receiving_during_rest else
+                            "owner transfers an actual unquoted ration to a co-present resting resident")
                         append(DomainEvent("MarketCommunityRationIssued", None,
-                            "market-owned unquoted ration for present penniless hungry resident",
-                            current.time, {"site_id": "market", "recipient_id": recipient,
-                                           "amount": 1}), market_capability=True)
-                        eat_owned_food(recipient)
+                            reason, current.time, ration), market_capability=True)
+                        # The loaf is now the resting resident's *owned* good.
+                        # Eating is separately forbidden until their scheduled
+                        # rest completes; no meal or hunger is forged here.
+                        if not receiving_during_rest:
+                            eat_owned_food(recipient)
                 if (self.professional_procurement_enabled or
                         self.multi_professional_markets_enabled):
                     from .professional_trade import choose_workshop_input_deposit
