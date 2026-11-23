@@ -23,7 +23,7 @@ from .market_navigation import (choose_known_market_walk, choose_known_market_re
                                 wants_local_market)
 from .routines import (
     choose_routine_route, is_work_shift, next_routine_boundary, routine_allows_work,
-    signed_hungry_baker_return_allowed,
+    signed_hungry_baker_return_allowed, keeper_must_stay_at_counter,
 )
 from .rumors import choose_rumor_round
 from .agriculture import choose_local_growth
@@ -105,7 +105,8 @@ class LivingWorldEngine:
                  reserve_signed_relief_offer_enabled: bool = False,
                  desperate_funded_planting_enabled: bool = False,
                  hungry_paid_baker_return_enabled: bool = False,
-                 signed_steward_wage_quote_release_enabled: bool = False):
+                 signed_steward_wage_quote_release_enabled: bool = False,
+                 offshift_steward_homeward_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -333,6 +334,12 @@ class LivingWorldEngine:
                 "economy_only is incompatible"
             )
         self.professional_full_life_enabled = professional_full_life_enabled
+        if (type(offshift_steward_homeward_enabled) is not bool
+                or (offshift_steward_homeward_enabled and not (
+                    professional_full_life_enabled and routines_enabled
+                    and navigation_enabled))):
+            raise ValueError('offshift steward homeward requires real work routines and navigation')
+        self.offshift_steward_homeward_enabled = offshift_steward_homeward_enabled
         if (type(hungry_woodcutter_work_enabled) is not bool
                 or (hungry_woodcutter_work_enabled
                     and not professional_full_life_enabled)):
@@ -1480,8 +1487,9 @@ class LivingWorldEngine:
                     # danger or injury is urgent, ordinary full-life decisions
                     # take precedence instead.
                     site = current.entities[npc_id]["location_id"]
-                    stall = current.market_stalls.get(site)
-                    keeper = stall is not None and stall["keeper_id"] == npc_id
+                    keeper = keeper_must_stay_at_counter(
+                        current, npc_id,
+                        offshift_homeward_enabled=self.offshift_steward_homeward_enabled)
                     professional = (
                         routine_allows_work(current, npc_id)
                         and any(recipe["site_id"] == site
