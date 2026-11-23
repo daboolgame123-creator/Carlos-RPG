@@ -10,11 +10,19 @@ from carlos_sim.voluntary_well_food import (
     hunter_can_seek_well, choose_hunter_well_visit, choose_local_well_request,
     choose_local_well_settlement, volunteer_waits_to_offer,
 )
-from test_play48_voluntary_well_food import scenario
+from test_play48_finite_hunt_fish_roads import seed
 
 
 def hunter(tmp_path):
-    d = scenario(tmp_path)
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    d = seed(tmp_path / "real-finite-hunter-genesis.sqlite").to_dict()
+    d["time"] = 3600
+    d["npcs"]["hana"]["needs"].update(hunger=55, fatigue=20, safety=0)
+    d["npcs"]["huda"]["needs"].update(hunger=100, fatigue=20, safety=0)
+    d["resources"]["hana"]["food"] = 0
+    d["resources"]["huda"]["food"] = 0
+    d["entities"]["hana"]["location_id"] = "well"
+    d["entities"]["huda"]["location_id"] = "well"
     d["npcs"]["omar"]["needs"].update(hunger=30, fatigue=20, safety=0)
     d["resources"]["omar"]["food"] = 1
     d["entities"]["omar"]["location_id"] = "hunting_woods"
