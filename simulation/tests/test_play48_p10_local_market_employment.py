@@ -138,3 +138,20 @@ def test_recent_real_market_arrival_allows_bounded_wait_until_salma_finishes_res
     unresolved_old_wage=mock.to_dict()
     unresolved_old_wage["courier_provisions"]["huda-future-bakery"]["deferred_grain_services"][0]["paid_at"]=None
     assert not waits_for_local_market_hire(WorldState(**unresolved_old_wage),"huda")
+
+
+def test_witness_real_incoming_market_food_before_unloading_not_customer_quote(local_work_meeting):
+    # PURE mock: previous customer offer covers all market stock. A physically
+    # held new loaf going to that market can establish prospective terms,
+    # but *cannot* be paid until the cargo reducer actually delivers it.
+    d=local_work_meeting.to_dict()
+    d["resources"]["market"]["food"]=4
+    d["resources"]["huda"]["food"]=1
+    d["supply_circuits"]["huda"]["carry"]={
+        "source":"bakery","destination":"market","resource":"food"}
+    s=WorldState(**d)
+    from carlos_sim.food_for_work import _available_site_food
+    assert _available_site_food(s,"market")==0
+    assert choose_local_market_employment(s,"huda")
+    d["supply_circuits"]["huda"]["carry"]["resource"]="water"
+    assert not choose_local_market_employment(WorldState(**d),"huda")
