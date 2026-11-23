@@ -33,11 +33,25 @@ def main() -> None:
         assert matched, "did not start: " + repr(startup)
         url = matched.group(1)
         with sync_playwright() as playwright:
+            # Hosted Windows Actions runners provide Google Chrome without
+            # requiring a heavyweight browser install in the game or CI.
+            chrome = (shutil.which("google-chrome") or
+                      shutil.which("chromium") or
+                      shutil.which("chromium-browser"))
+            if sys.platform == "win32" and chrome is None:
+                chrome = next((str(candidate)
+                               for root in (os.environ.get("PROGRAMFILES"),
+                                            os.environ.get("PROGRAMFILES(X86)"),
+                                            os.environ.get("LOCALAPPDATA"))
+                               if root
+                               for candidate in (
+                                   Path(root) / "Google" / "Chrome" /
+                                   "Application" / "chrome.exe",
+                               )
+                               if candidate.is_file()), None)
+            assert chrome, "preinstalled Chrome not found on CI runner"
             browser = playwright.chromium.launch(
-                headless=True,
-                executable_path=(shutil.which('google-chrome') or
-                                 shutil.which('chromium') or
-                                 shutil.which('chromium-browser') or None),
+                headless=True, executable_path=chrome,
             )
             try:
                 page = browser.new_page()
