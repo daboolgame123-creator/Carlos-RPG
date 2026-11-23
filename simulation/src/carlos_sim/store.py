@@ -393,6 +393,10 @@ class SQLiteEventStore:
             if (bootstrap or not supply_authorized or not production_authorized
                     or world_id not in self._active_worlds):
                 raise InvalidEvent("deferred bakery food payroll needs active supply and production authorities")
+        if any(e.event_type == "LocalFreightFoodAgreementSigned" for e in events):
+            if (bootstrap or not supply_authorized or not market_authorized
+                    or world_id not in self._active_worlds):
+                raise InvalidEvent("live freight wage agreement needs protected active market and supply capabilities")
         if any(e.event_type in ("SupplyCargoPicked", "SupplyCargoDelivered",
                                "RecurringFreightWagePaid") for e in events):
             if not supply_authorized or world_id not in self._active_worlds:
