@@ -127,12 +127,14 @@ def _get(url, **headers):
         return response.read().decode("utf-8")
 
 
-def _post(url, csrf, command, *, origin=None, host=None):
+def _post(url, csrf, command, *, origin=None, host=None, fetch_site=None):
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     if origin is not None:
         headers["Origin"] = origin
     if host is not None:
         headers["Host"] = host
+    if fetch_site is not None:
+        headers["Sec-Fetch-Site"] = fetch_site
     data = urlencode({"csrf": csrf, "command": command}).encode("ascii")
     with urlopen(Request(url + "act", data=data, headers=headers), timeout=45) as response:
         # urllib follows safe 303 and gets the resulting GET page.
@@ -158,15 +160,24 @@ def test_real_loopback_http_interaction_in_arabic_and_csrf_guard(live_browser):
     with pytest.raises(HTTPError) as exc:
         _post(url, "wrong", "انتظر 90")
     assert exc.value.code == 403
+    assert "CSRF" in exc.value.read().decode("utf-8")
     with pytest.raises(HTTPError) as exc:
         _post(url, csrf, "انتظر 90", origin="https://evil.example")
     assert exc.value.code == 403
-    # Regression: do not weaken the strict Origin gate to accept "null".
-    # The browser-facing Referrer-Policy must instead preserve the origin.
+    # Privacy-aware fallback: a genuine same-origin form with a real CSRF
+    # token may report Origin:null; requests flagged cross-site never pass.
     with pytest.raises(HTTPError) as exc:
-        _post(url, csrf, "انتظر 90", origin="null")
+        _post(url, csrf, "انتظر 90", origin="null", fetch_site="cross-site")
     assert exc.value.code == 403
+    assert "NULL_ORIGIN" in exc.value.read().decode("utf-8")
+    with pytest.raises(HTTPError) as exc:
+        _post(url, "wrong", "انتظر 90", origin="null",
+              fetch_site="same-origin")
+    assert exc.value.code == 403
+    assert "CSRF" in exc.value.read().decode("utf-8")
     assert "الزمن: 0 ثانية" in _get(url)
+    html = _post(url, csrf, "مشهد", origin="null", fetch_site="same-origin")
+    assert "المشهد الحالي" in html and "الزمن: 0 ثانية" in html
 
     html = _post(url, csrf, "مشهد", origin=url.rstrip("/"))
     assert "المشهد الحالي" in html and "الزمن: 0 ثانية" in html
