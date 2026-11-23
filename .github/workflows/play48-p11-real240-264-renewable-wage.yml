@@ -1,0 +1,39 @@
+name: PLAY48 P11 authentic h240-to-h264 renewable salary endurance
+on:
+  push:
+    branches: [experiment/play48-p11-huda-earned-wage-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  genuine-renewal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download exact genuine P10/P11 saved h240 ledgers from passed job
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p11-real234-wage-26e069c6946fbe78d82deb6813232950a0ed7c44
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45182715222
+          github-token: ${{ github.token }}
+          path: simulation/evidence/p11_real240
+      - name: Authentic replay h244 h252 h264 with conserved bread and coins
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_p11_real240_renewable_wage.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p11-renewable-h264-${{ github.sha }}
+          path: simulation/real240_renewable_market_wage/
+          if-no-files-found: warn

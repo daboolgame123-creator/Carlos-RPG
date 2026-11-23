@@ -315,13 +315,14 @@ def project_cargo(state: dict, event: DomainEvent, *, supply_authorized: bool) -
         record["deliveries"] += 1
         from .grain_purchase import record_delivery as record_grain_purchase
         record_grain_purchase(state, who, resource)
-        from .freight_payroll import record_delivery
-        record_delivery(state, who, resource)
-        # The delivered grain is authoritative physical employment proof.
-        # Do NOT pay or reserve food until a later authentic bakery batch.
+        # Register the original earlier-signed bakery promise FIRST. A new
+        # prospective market-food contract must never double-claim the SAME
+        # delivered grain if the finite bakery wage has an available slot.
         if current == "bakery" and resource == "grain" and record["index"] == 2:
             from .deferred_bakery_payroll import register_local_grain_service
             register_local_grain_service(state, who)
+        from .freight_payroll import record_delivery
+        record_delivery(state, who, resource)
     else:
         raise ValueError("unrecognized supply cargo event")
 

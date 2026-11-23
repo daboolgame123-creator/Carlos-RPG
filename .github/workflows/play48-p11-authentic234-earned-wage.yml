@@ -1,0 +1,55 @@
+name: PLAY48 P11 authentic saved h234 earned Huda food wage
+on:
+  push:
+    branches: [experiment/play48-p11-huda-earned-wage-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  wage-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: P9 aid P10 hunter and signed P11 salary no forgery
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_local_courier_food_wage.py tests/test_play48_p11_recurring_grain_salary.py tests/test_play48_hunter_well_visit.py tests/test_play48_local_emergency_courier_aid.py
+  real-p7-p10-p11:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Original saved P7 h234 village, no source modification
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p7-real228-steward-wage-8a31e3c9cbd03a5f6ebb24e75d00abbc73d2a7ca
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45145919540
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic234
+      - name: A/B exact history P10 only vs P11 signed grain-backed employer food
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real234_huda_earned_wage.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p11-real234-wage-${{ github.sha }}
+          path: simulation/real234_huda_food_wage/
+          if-no-files-found: warn

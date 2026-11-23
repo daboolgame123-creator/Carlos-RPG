@@ -108,7 +108,8 @@ class LivingWorldEngine:
                  signed_steward_wage_quote_release_enabled: bool = False,
                  offshift_steward_homeward_enabled: bool = False,
                  local_emergency_courier_help_enabled: bool = False,
-                 hunter_well_visit_enabled: bool = False):
+                 hunter_well_visit_enabled: bool = False,
+                 local_market_freight_wage_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -147,6 +148,11 @@ class LivingWorldEngine:
                 (hunter_well_visit_enabled and not local_emergency_courier_help_enabled)):
             raise ValueError("hunter well visit needs co-present authorized local assistance")
         self.hunter_well_visit_enabled = hunter_well_visit_enabled
+        if (type(local_market_freight_wage_enabled) is not bool or
+                (local_market_freight_wage_enabled and not
+                 (integrated_livelihoods_enabled and supply_enabled and economic_enabled))):
+            raise ValueError("local freight food wages require physical integrated economy and supply")
+        self.local_market_freight_wage_enabled = local_market_freight_wage_enabled
         if (type(aid_relay_enabled) is not bool or
                 (aid_relay_enabled and not (
                     assistance_enabled and consumption_enabled and survival_enabled
@@ -608,6 +614,24 @@ class LivingWorldEngine:
                 # A courier may transfer exactly one local unit at an authentic
                 # stop and then traverse a physically configured adjacent road.
                 for courier in sorted(current.supply_circuits):
+                    if self.local_market_freight_wage_enabled:
+                        from .freight_payroll import (
+                            choose_local_market_freight_agreement,
+                            choose_market_wage_quote_retirement)
+                        if choose_local_market_freight_agreement(current, courier):
+                            employer = current.market_stalls["market"]["keeper_id"]
+                            append(DomainEvent("LocalFreightFoodAgreementSigned", employer,
+                                "present employer signs earned market food wage for authentic grain freight",
+                                current.time,
+                                {"courier_id": courier, "site_id": "market",
+                                 "resource": "food", "interval_seconds": 12 * 3600}),
+                                market_capability=True, supply_capability=True)
+                        old_quote = choose_market_wage_quote_retirement(current, courier)
+                        if old_quote is not None:
+                            append(DomainEvent("MarketOfferClosed",
+                                current.market_stalls["market"]["keeper_id"],
+                                "owner retires stale unsold market quote to honor physical freight wage",
+                                current.time, {"id": old_quote}), market_capability=True)
                     if self.integrated_livelihoods_enabled:
                         from .freight_payroll import choose_payment
                         earned = choose_payment(current, courier)
@@ -650,6 +674,15 @@ class LivingWorldEngine:
                                            {"courier_id": courier,
                                             "resource": resource}),
                                supply_capability=True)
+                        if (self.local_market_freight_wage_enabled
+                                and act == 'SupplyCargoDelivered'):
+                            from .freight_payroll import choose_market_wage_quote_retirement
+                            old_quote = choose_market_wage_quote_retirement(current, courier)
+                            if old_quote is not None:
+                                append(DomainEvent("MarketOfferClosed",
+                                    current.market_stalls["market"]["keeper_id"],
+                                    "owner retires unpaid quote for actual delivered cargo wage",
+                                    current.time, {"id": old_quote}), market_capability=True)
                         if (self.integrated_livelihoods_enabled
                                 and act == 'SupplyCargoDelivered'):
                             # The newly recorded service must settle BEFORE
@@ -860,7 +893,9 @@ class LivingWorldEngine:
                     from .community_food import choose_market_ration
                     if self.reserve_signed_relief_offer_enabled:
                         from .community_food import choose_market_relief_quote_retirement
-                        old_quote = choose_market_relief_quote_retirement(current)
+                        old_quote = choose_market_relief_quote_retirement(
+                            current, preserve_paid_wage_quote_age=
+                            self.local_market_freight_wage_enabled)
                         if old_quote is not None:
                             keeper = current.market_stalls["market"]["keeper_id"]
                             append(DomainEvent('MarketOfferClosed', keeper,

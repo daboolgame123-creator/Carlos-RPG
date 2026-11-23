@@ -20,7 +20,7 @@ OUT = Path("real234_courier_aid")
 HOURS = (235, 236, 240)
 
 
-def run_arm(source: Path, label: str, enabled: bool, *, hunter_visit: bool = False) -> dict:
+def run_arm(source: Path, label: str, enabled: bool, *, hunter_visit: bool = False, market_wage: bool = False) -> dict:
     dest = OUT / (label + ".sqlite")
     shutil.copyfile(source, dest)
     rows = {}
@@ -50,6 +50,7 @@ def run_arm(source: Path, label: str, enabled: bool, *, hunter_visit: bool = Fal
             runner.offshift_steward_homeward_enabled = True
             runner.local_emergency_courier_help_enabled = enabled
             runner.hunter_well_visit_enabled = hunter_visit
+            runner.local_market_freight_wage_enabled = market_wage
             for hour in HOURS:
                 state = runner.advance(
                     WORLD, seconds=hour * HOUR - state.time,
@@ -80,6 +81,9 @@ def run_arm(source: Path, label: str, enabled: bool, *, hunter_visit: bool = Fal
                     "layla": m["npcs"]["layla"],
                     "omar": m["npcs"]["omar"],
                     "deliveries": m["deliveries"],
+                    "huda_contract": (state.to_dict()["supply_circuits"]["huda"].get("food_payroll")),
+                    "huda_freight_wages": sum(r["payment"] is not None for r in
+                        state.supply_circuits["huda"].get("food_payroll", {}).get("receipts", ())),
                     "bread": m["bread"], "meals": m["meals"],
                     "starving": m["starving"], "cash_wages": m["cash_wages"],
                     "market_food": state.resources["market"]["food"],
