@@ -10,12 +10,35 @@ from carlos_sim.voluntary_well_food import (
     hunter_can_seek_well, choose_hunter_well_visit, choose_local_well_request,
     choose_local_well_settlement, volunteer_waits_to_offer,
 )
-from test_play48_finite_hunt_fish_roads import seed
+from carlos_sim import DomainEvent, SQLiteEventStore
+from test_play38_multi_farm_couriers import seed_two_field_world, WORLD
+from test_play47_closure_endurance import DAY
+from test_play48_finite_hunt_fish_roads import _ecology_bootstrap
 
 
 def hunter(tmp_path):
     tmp_path.mkdir(parents=True, exist_ok=True)
-    d = seed(tmp_path / "real-finite-hunter-genesis.sqlite").to_dict()
+    # Reuse the genuine finite-ecology genesis without the older standalone
+    # test's obsolete rules_version==63 assertion: current world rules are 71.
+    with SQLiteEventStore(tmp_path / "real-finite-hunter-genesis.sqlite") as db:
+        seed_two_field_world(
+            db, east_growth_seconds=DAY, east_grain_yield=12,
+            initial_water=2, initial_market_food=3,
+            market_wallets=True, hungry_market_buyers=True,
+            cash_return=True, waged_harvest=True,
+            harvest_wage_copper=2, bootstrap=_ecology_bootstrap,
+        )
+        original = db.load(WORLD)
+        s = db.append(WORLD, "real-finite-ecology-initial-facts",
+            original.revision, [
+                DomainEvent("WaterSourceConfigured", None, "finite water", 0,
+                            {"site_id": "well", "capacity": 8}),
+                DomainEvent("MetabolismPolicyConfigured", None, "finite hunger", 0,
+                            {"hunger_seconds_per_point": 3600,
+                             "activity_hunger_percent": 20}),
+            ], bootstrap=True)
+        d = s.to_dict()
+    assert "omar" in d["npcs"] and len(d["npcs"]) == 13
     d["time"] = 3600
     d["npcs"]["hana"]["needs"].update(hunger=55, fatigue=20, safety=0)
     d["npcs"]["huda"]["needs"].update(hunger=100, fatigue=20, safety=0)
