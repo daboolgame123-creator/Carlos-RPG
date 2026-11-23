@@ -56,6 +56,17 @@ def audit_one(name: str) -> dict:
     ]
     bakery = state.resources["bakery"]
     market = state.resources["market"]
+    keeper = stall["keeper_id"]
+    keeper_tasks = [
+        {"action": a["action"], "due": a["due"]}
+        for a in state.actions.values()
+        if a["npc_id"] == keeper and a["status"] == "running"
+    ]
+    keeper_travels = [
+        {"due": v["due"], "destination": v["destination"]}
+        for v in state.travels.values()
+        if v["npc_id"] == keeper and v["status"] == "traveling"
+    ]
     food_quotes = [
         {"offer_id": ident, "remaining": o["remaining"],
          "unit_price": o["unit_price"], "posted_at": o["posted_at"]}
@@ -94,6 +105,9 @@ def audit_one(name: str) -> dict:
         "market_owned_bread": market.get("food", 0),
         "unquoted_unreserved_market_bread": _available_site_food(state, "market"),
         "food_quotes": food_quotes,
+        "market_keeper": keeper,
+        "market_keeper_running_tasks": keeper_tasks,
+        "market_keeper_traveling": keeper_travels,
         "relief_daily_cap": relief["daily_limit"],
         "relief_used_today": len(payments_today),
         "relief_recipients_today": [p["recipient_id"] for p in payments_today],
