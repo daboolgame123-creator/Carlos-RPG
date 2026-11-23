@@ -25,7 +25,7 @@ def test_verified_vitals_and_unimplemented_hunger_fatigue_are_distinct(tmp_path)
     try:
         before = db.verify(WORLD).to_dict()
         html = ui.page().decode("utf-8")
-        assert "WEB-02" in html
+        assert "WEB-03" in html
         assert "الصحة (HP)" in html
         assert "التحمّل (ST)" in html
         assert 'aria-valuenow="12"' in html
