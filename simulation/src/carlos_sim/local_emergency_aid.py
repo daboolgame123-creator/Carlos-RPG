@@ -16,7 +16,7 @@ MAX_DONOR_HUNGER = 40
 MAX_DONOR_FATIGUE = 69
 
 
-def choose_local_emergency_courier_help(state: WorldState) -> tuple[str, str] | None:
+def choose_local_emergency_courier_help(state: WorldState, *, allow_hunter: bool = False) -> tuple[str, str] | None:
     """Return (requester, willing donor), observing only co-present village people.
 
     A donation is *not* made here; it still needs an authentic request,
@@ -57,7 +57,9 @@ def choose_local_emergency_courier_help(state: WorldState) -> tuple[str, str] | 
                     or helper["needs"]["fatigue"] > MAX_DONOR_FATIGUE
                     or helper["needs"]["safety"] >= 75
                     or carried.get("food", 0) < 1
-                    or carried.get("coin_copper", 0) < 1
+                    or (carried.get("coin_copper", 0) < 1 and not (
+                        allow_hunter and helper["role"] == "hunter"
+                        and helper["needs"]["hunger"] <= 35))
                     or state.relations.get(donor, {}).get(recipient, 0) < 0):
                 continue
             committed = sum(
