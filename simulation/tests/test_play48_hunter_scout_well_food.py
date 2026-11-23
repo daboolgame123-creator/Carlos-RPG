@@ -53,7 +53,8 @@ def hunter(tmp_path):
         "omar", {"known_routes": [], "visited": [], "target": None})
     d["navigation"]["omar"]["target"] = None
     d["navigation"]["omar"]["known_routes"] = [
-        "bakery-market", "market-watch-post", "market-woods",
+        rid for rid in ("bakery-market", "market-watch-post", "market-woods")
+        if rid in d["routes"]
     ]
     d["navigation"]["omar"]["visited"] = ["hunting_woods", "market"]
     return d
@@ -85,7 +86,9 @@ def test_first_woods_journey_then_study_real_bakery_farm_road_then_well(tmp_path
     d["entities"]["omar"]["location_id"] = "bakery"
     nav = d["navigation"]["omar"]
     nav["visited"].append("bakery")
-    nav["known_routes"] += ["bakery-smithy", "farm-bakery", "east-bakery"]
+    nav["known_routes"] += [rid for rid in
+                            ("bakery-smithy", "farm-bakery", "east-bakery")
+                            if rid in d["routes"]]
     assert choose_hunter_well_visit(WorldState(**d), "omar").route_id == "farm-bakery"
     d["time"] = 4140
     d["entities"]["omar"]["location_id"] = "farm"
