@@ -16,7 +16,7 @@ from carlos_sim import SQLiteEventStore, TimeEngine
 from carlos_sim.store import InvalidEvent, RevisionConflict, DuplicateCommand
 from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 from play_physical_supply import WORLD
-from play_village_local import create_session, execute
+from play_village_local import HELP, create_session, execute
 
 # These are aliases for commands the original player gateway ALREADY supports.
 # IDs remain explicit, original and case-sensitive (e.g. "home-market").
@@ -55,6 +55,15 @@ KEYS = {
     "payment_resource": "عملة_الدفع", "total_paid": "الإجمالي_المدفوع",
     "recipient_id": "المستلم", "total": "المجموع", "recent": "الأحدث",
     "profile": "الملف", "configured": "مُهيأ", "quest_id": "معرف_المهمة",
+}
+LOCATION_NAMES = {
+    "home": "المنزل", "market": "السوق", "bakery": "المخبز",
+    "farm": "الحقل", "well": "البئر",
+}
+NPC_NAMES = {
+    "carlos": "كارلوس", "basim": "باسم", "salma": "سلمى",
+    "adel": "عادل", "nora": "نورا", "huda": "هدى",
+    "omar": "عمر", "layla": "ليلى",
 }
 STATUS = {
     "present": "المشهد الحالي", "traveling": "في الطريق",
@@ -118,7 +127,9 @@ def lines_ar(result) -> list[str]:
     if result is None:
         return []
     if isinstance(result, str):
-        return [HELP_AR if result != "quit" else "انتهت الجلسة."] if result != "quit" else ["انتهت الجلسة."]
+        if result == "quit":
+            return ["انتهت الجلسة."]
+        return [HELP_AR if result == HELP else result]
     if isinstance(result, dict):
         # The handoff's schema must stay byte-field compatible with consumers.
         # It already contains ONLY the player-authorized public projection.
@@ -127,16 +138,23 @@ def lines_ar(result) -> list[str]:
     details = result.details
     lines = [f"{status} | الزمن: {result.time} ثانية"]
     if result.status == "present":
-        lines.append(f"الموقع: {details['location_name']} ({details['location_id']})")
+        location_id = details["location_id"]
+        place_name = LOCATION_NAMES.get(location_id, details["location_name"])
+        lines.append(f"الموقع: {place_name} ({location_id})")
         people = details["occupants"]
         lines.append("الأشخاص الحاضرون: " + (
-            "، ".join(f"{p['name']} ({p['id']})" for p in people) if people
+            "، ".join(
+                f"{NPC_NAMES.get(p['id'], p['name'])} ({p['id']})"
+                for p in people
+            ) if people
             else "لا أحد"
         ))
         exits = details["exits"]
         lines.append("الطرق المعروفة من هنا: " + (
             "، ".join(
-                f"{p['route_id']} إلى {p['destination']} ({p['seconds']} ثانية)"
+                f"{p['route_id']} إلى "
+                f"{LOCATION_NAMES.get(p['destination'], p['destination'])} "
+                f"({p['seconds']} ثانية)"
                 for p in exits
             ) if exits else "لا توجد"
         ))
