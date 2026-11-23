@@ -107,7 +107,8 @@ class LivingWorldEngine:
                  hungry_paid_baker_return_enabled: bool = False,
                  signed_steward_wage_quote_release_enabled: bool = False,
                  offshift_steward_homeward_enabled: bool = False,
-                 local_emergency_courier_help_enabled: bool = False):
+                 local_emergency_courier_help_enabled: bool = False,
+                 hunter_well_visit_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -142,6 +143,10 @@ class LivingWorldEngine:
                              and survival_enabled and navigation_enabled))):
             raise ValueError('voluntary emergency courier assistance needs real economy, hunger, food consumption and navigation')
         self.local_emergency_courier_help_enabled = local_emergency_courier_help_enabled
+        if (type(hunter_well_visit_enabled) is not bool or
+                (hunter_well_visit_enabled and not local_emergency_courier_help_enabled)):
+            raise ValueError("hunter well visit needs co-present authorized local assistance")
+        self.hunter_well_visit_enabled = hunter_well_visit_enabled
         if (type(aid_relay_enabled) is not bool or
                 (aid_relay_enabled and not (
                     assistance_enabled and consumption_enabled and survival_enabled
@@ -1113,7 +1118,8 @@ class LivingWorldEngine:
                             production_capability=True)
             if self.local_emergency_courier_help_enabled:
                 from .local_emergency_aid import choose_local_emergency_courier_help
-                urgent = choose_local_emergency_courier_help(current)
+                urgent = choose_local_emergency_courier_help(
+                    current, allow_hunter=self.hunter_well_visit_enabled)
                 if urgent is not None:
                     recipient, donor = urgent
                     request_id = f'p9-well:{recipient}:{current.time}'
@@ -1300,6 +1306,47 @@ class LivingWorldEngine:
                             "destination": there, "due": due_at,
                             "schedule_id": sid}), movement_capability=True)
                         busy.add(TRADER)
+            if self.hunter_well_visit_enabled:
+                from .hunter_well_visit import (
+                    hunter_seeks_well, choose_hunter_well_leg,
+                    hunter_waits_at_well, PREFIX)
+                for who in sorted(current.npcs):
+                    if who in busy:
+                        continue
+                    # The decision to visit a public well is made without
+                    # knowing distant hunger, occupants or inventories.
+                    if hunter_seeks_well(current, who):
+                        if needs_survey(current, who):
+                            append(DomainEvent("NPCNavigationSurveyed", who,
+                                "hunter studies only adjoining real public roads",
+                                current.time, {"npc_id": who}),
+                                movement_capability=True)
+                        rid = choose_hunter_well_leg(current, who)
+                        if rid is not None:
+                            here = current.entities[who]["location_id"]
+                            edge = current.routes[rid]
+                            dest = edge["b"] if here == edge["a"] else edge["a"]
+                            due = current.time + edge["seconds"]
+                            tid = f"{PREFIX}{who}:{current.time}"
+                            sid = "npc-travel:" + tid
+                            if tid in current.travels or sid in current.scheduled:
+                                raise InvalidEvent("duplicate volunteer hunter journey")
+                            append(DomainEvent("ScheduledEventCreated", None,
+                                "hunter scheduled actual adjacent-road arrival",
+                                current.time, {"id": sid, "due": due,
+                                  "order": current.next_schedule_order,
+                                  "kind": "signal", "payload": {"__npc_travel_id": tid},
+                                  "interrupt": False}), movement_capability=True)
+                            append(DomainEvent("NPCTravelStarted", who,
+                                "hunter visits communal well via a known physical road",
+                                current.time, {"id": tid, "npc_id": who,
+                                "route_id": rid, "origin": here,
+                                "destination": dest, "due": due,
+                                "schedule_id": sid}), movement_capability=True)
+                            busy.add(who)
+                            continue
+                    if hunter_waits_at_well(current, who):
+                        busy.add(who)
             if self.shopping_routes_enabled:
                 from .npc import _injury_rest_decision
 
