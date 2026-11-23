@@ -45,19 +45,19 @@ def test_real_local_offer_requires_both_employer_and_worker_present(tmp_path):
     assert signed.resources["market"]["food"] == before
     assert signed.resources["huda"]["food"] == 0
     assert signed.supply_circuits["huda"]["food_payroll"]["signed_at"] == d["time"]
-    assert signed.supply_circuits["huda"]["food_payroll"]["receipts"] == []
+    assert not signed.supply_circuits["huda"]["food_payroll"]["receipts"]
     assert not choose_local_market_freight_agreement(signed, "huda")
     assert choose_market_wage_quote_retirement(signed, "huda") is None
     assert len(signed.npcs) == 13
 
 
 @pytest.mark.parametrize("change", [
-    lambda d: d["entities"]["huda"].update(location_id="well"),
+    lambda d: (d["entities"]["huda"].update(location_id="bakery"), d["supply_circuits"]["huda"].update(index=2)),
     lambda d: d["entities"]["salma"].update(location_id="bakery"),
     lambda d: d["npcs"]["huda"]["needs"].update(hunger=92),
     lambda d: d["npcs"]["huda"]["needs"].update(fatigue=72),
     lambda d: d["resources"]["market"].update(food=0),
-    lambda d: d["supply_circuits"]["huda"].update(index=2),
+    lambda d: (d["entities"]["huda"].update(location_id="bakery"), d["supply_circuits"]["huda"].update(index=2)),
 ])
 def test_never_automatically_sign_without_real_consent_or_stock(tmp_path, change):
     d=market_candidate(tmp_path)
