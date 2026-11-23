@@ -1,4 +1,4 @@
-name: PLAY48 P12 authentic unchanged h264 to h270 bakery rescue gate
+name: PLAY48 P12 authentic h264 A/B resting ration baker rescue gate
 on:
   push:
     branches: [experiment/play48-p12-market-bakery-h264-diagnostics-20261123]
@@ -7,7 +7,7 @@ permissions:
   contents: read
   actions: read
 jobs:
-  unchanged-post264-world:
+  genuine-p11-versus-p12:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -25,7 +25,7 @@ jobs:
           name: play48-p11-renewable-h264-af1025807f4fb5f3b653bdd6a8dbee3bb01f8455
           path: simulation/evidence/p12_real264
           github-token: ${{ github.token }}
-      - name: Replay genuine h264 to h265 h266 h270 with old engine flags unchanged
+      - name: Two-arm real P11 vs opt-in P12 h264 to h270, audited original SHA
         working-directory: simulation
         env:
           PYTHONPATH: src:scenarios/test_village
@@ -33,6 +33,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: play48-p12-unmodified-h270-${{ github.sha }}
+          name: play48-p12-resting-a-b-h270-${{ github.sha }}
           path: simulation/play48_p12_short_continuation/comparison.json
           if-no-files-found: warn
