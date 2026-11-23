@@ -607,6 +607,21 @@ class LivingWorldEngine:
                 # A courier may transfer exactly one local unit at an authentic
                 # stop and then traverse a physically configured adjacent road.
                 for courier in sorted(current.supply_circuits):
+                    if self.local_market_freight_employment_enabled:
+                        from .freight_payroll import (
+                            choose_local_market_employment,
+                            LOCAL_MARKET_HIRE_INTERVAL)
+                        if choose_local_market_employment(current, courier):
+                            employer = current.market_stalls['market']['keeper_id']
+                            append(DomainEvent(
+                                'LocalMarketFreightEmploymentSigned', employer,
+                                'rested market steward and courier agree prospective'
+                                ' wage at their ACTUAL shared worksite',
+                                current.time, {'courier_id': courier,
+                                               'site_id': 'market',
+                                               'resource': 'food',
+                                               'interval_seconds': LOCAL_MARKET_HIRE_INTERVAL}),
+                                market_capability=True, supply_capability=True)
                     if self.integrated_livelihoods_enabled:
                         from .freight_payroll import choose_payment
                         earned = choose_payment(current, courier)
@@ -822,6 +837,14 @@ class LivingWorldEngine:
                     if self.integrated_livelihoods_enabled:
                         from .freight_payroll import waits_for_local_payment
                         if waits_for_local_payment(current, courier):
+                            busy.add(courier)
+                            continue
+                    if self.local_market_freight_employment_enabled:
+                        from .freight_payroll import waits_for_local_market_hire
+                        if waits_for_local_market_hire(current, courier):
+                            # Let a genuinely scheduled steward rest finish.
+                            # Never strand a courier longer than one hour
+                            # after her physically recorded market arrival.
                             busy.add(courier)
                             continue
                     if needs_survey(current, courier):
