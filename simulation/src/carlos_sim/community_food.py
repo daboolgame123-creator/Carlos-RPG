@@ -105,7 +105,41 @@ def signed_local_relief_quote_capacity(state: WorldState, *,
     return min(remaining, eligible)
 
 
-def choose_market_relief_quote_retirement(state: WorldState) -> str | None:
+def _aged_quote_relisted_after_paid_market_freight(
+        state: WorldState, offer: dict) -> bool:
+    """Keep the ORIGINAL six-hour age of a quote closed to pay a real wage.
+
+    The new quote must be the exact immediate replacement of an old,
+    six-hour-aged market-owned listing. Its predecessor must have been
+    withdrawn at the same instant a documented market freight wage was
+    physically debited. This never makes pledged food unquoted: the owner
+    still explicitly closes the replacement, under original relief checks.
+    """
+    posted = offer["posted_at"]
+    for circuit in state.supply_circuits.values():
+        c = circuit.get("food_payroll")
+        if (not c or "signed_at" not in c
+                or (c["site_id"], c["resource"]) != ("market", "food")
+                or c["signed_at"] != posted
+                or not any(r["payment"] is not None
+                           and r["payment"]["paid_at"] == posted
+                           for r in c["receipts"])):
+            continue
+        return any(
+            old["status"] == "closed"
+            and old["site_id"] == "market"
+            and old["stock_owner_id"] == "market"
+            and old["resource"] == "food"
+            and old["closed_at"] == posted
+            and posted - old["posted_at"] >= 6 * 3600
+            for old in state.market_offers.values()
+        )
+    return False
+
+
+def choose_market_relief_quote_retirement(
+        state: WorldState, *, preserve_paid_wage_quote_age: bool = False
+) -> str | None:
     """Local owner may withdraw an OLD unsold quote to fulfill signed aid.
 
     Close via the existing seller-authorized MarketOfferClosed event, then
@@ -120,7 +154,10 @@ def choose_market_relief_quote_retirement(state: WorldState) -> str | None:
         if (offer["status"] != "open" or offer["site_id"] != "market"
                 or offer["stock_owner_id"] != "market"
                 or offer["seller_id"] != keeper or offer["resource"] != "food"
-                or state.time - offer["posted_at"] < 6 * 3600):
+                or (state.time - offer["posted_at"] < 6 * 3600
+                    and not (preserve_paid_wage_quote_age
+                        and _aged_quote_relisted_after_paid_market_freight(
+                            state, offer)))):
             continue
         budget = signed_local_relief_quote_capacity(
             state, unit_price=offer["unit_price"])
