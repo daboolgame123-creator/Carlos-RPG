@@ -44,6 +44,10 @@ def main():
     assert first["payment"]["worker_after"]-first["payment"]["worker_before"]==1
     assert new["240"]["huda"]["meals"]>old["240"]["huda"]["meals"], "no consumed earned wage"
     assert new["240"]["huda"]["hunger"]<old["240"]["huda"]["hunger"], "wage did not improve worker's real hunger"
+    # A paid courier must not block an already signed, source-owned,
+    # physically co-present community ration by resetting quote age.
+    assert new["240"]["starving"]<=old["240"]["starving"], (
+        "wage-driven market re-listing denied an existing real ration")
     (OUT/"comparison.json").write_text(json.dumps({
         "origin_sha256":old_hash,"control":old,"candidate":new,
         "status":"PLAY48_NO_GO"},indent=2,sort_keys=True),encoding="utf8")
