@@ -106,7 +106,8 @@ class LivingWorldEngine:
                  desperate_funded_planting_enabled: bool = False,
                  hungry_paid_baker_return_enabled: bool = False,
                  signed_steward_wage_quote_release_enabled: bool = False,
-                 offshift_steward_homeward_enabled: bool = False):
+                 offshift_steward_homeward_enabled: bool = False,
+                 local_emergency_courier_help_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -135,6 +136,12 @@ class LivingWorldEngine:
         if type(assistance_enabled) is not bool:
             raise ValueError("assistance_enabled must be boolean")
         self.assistance_enabled = assistance_enabled
+        if (type(local_emergency_courier_help_enabled) is not bool
+                or (local_emergency_courier_help_enabled
+                    and not (economic_enabled and consumption_enabled
+                             and survival_enabled and navigation_enabled))):
+            raise ValueError('voluntary emergency courier assistance needs real economy, hunger, food consumption and navigation')
+        self.local_emergency_courier_help_enabled = local_emergency_courier_help_enabled
         if (type(aid_relay_enabled) is not bool or
                 (aid_relay_enabled and not (
                     assistance_enabled and consumption_enabled and survival_enabled
@@ -1104,6 +1111,28 @@ class LivingWorldEngine:
                             'same-tick sale-backed professional wage',
                             current.time, {'job_id': job_id, 'amount': wage}),
                             production_capability=True)
+            if self.local_emergency_courier_help_enabled:
+                from .local_emergency_aid import choose_local_emergency_courier_help
+                urgent = choose_local_emergency_courier_help(current)
+                if urgent is not None:
+                    recipient, donor = urgent
+                    request_id = f'p9-well:{recipient}:{current.time}'
+                    if request_id in current.obligations:
+                        raise InvalidEvent('duplicate physical emergency assistance request')
+                    append(DomainEvent('AssistanceRequested', recipient,
+                        'starving courier personally asks passing neighbor for one real loaf',
+                        current.time, {'id': request_id, 'provider': donor,
+                                       'resource': 'food', 'quantity': 1}),
+                        assistance_capability=True)
+                    append(DomainEvent('AssistanceResponded', donor,
+                        'healthy local neighbor voluntarily accepts one-loaf request',
+                        current.time, {'id': request_id, 'accept': True}),
+                        assistance_capability=True)
+                    append(DomainEvent('AssistanceFulfilled', donor,
+                        'personally handed conserved owned loaf to stranded courier',
+                        current.time, {'id': request_id}),
+                        assistance_capability=True)
+                    eat_owned_food(recipient)
             if self.assistance_enabled:
                 if self.aid_relay_enabled:
                     from .npc_food_relief import (
@@ -1701,7 +1730,8 @@ class LivingWorldEngine:
                                       action_authorized=True,
                                       movement_authorized=(self.navigation_enabled or self.supply_enabled or recorded_player_sighting),
                                       social_authorized=(self.social_enabled or self.rumors_enabled),
-                                      assistance_authorized=self.assistance_enabled,
+                                      assistance_authorized=(self.assistance_enabled or
+                                          self.local_emergency_courier_help_enabled),
                                       consumption_authorized=self.consumption_enabled,
                                       survival_authorized=self.survival_enabled,
                                       production_authorized=self.economic_enabled,
