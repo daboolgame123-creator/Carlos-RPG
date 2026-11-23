@@ -1730,7 +1730,8 @@ class LivingWorldEngine:
                                       action_authorized=True,
                                       movement_authorized=(self.navigation_enabled or self.supply_enabled or recorded_player_sighting),
                                       social_authorized=(self.social_enabled or self.rumors_enabled),
-                                      assistance_authorized=self.assistance_enabled,
+                                      assistance_authorized=(self.assistance_enabled or
+                                          self.local_emergency_courier_help_enabled),
                                       consumption_authorized=self.consumption_enabled,
                                       survival_authorized=self.survival_enabled,
                                       production_authorized=self.economic_enabled,
