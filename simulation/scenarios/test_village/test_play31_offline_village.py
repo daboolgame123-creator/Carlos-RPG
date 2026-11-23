@@ -8,6 +8,7 @@ import sys
 import pytest
 
 from carlos_sim import SQLiteEventStore, TimeEngine
+from carlos_sim.domain import SCHEMA_VERSION, RULES_VERSION
 from carlos_sim.store import InvalidEvent
 from play_physical_supply import WORLD, PEOPLE, audit_physical_supply, seed_physical_supply
 from play_village_local import create_session, execute, HELP, MAX_WAIT
@@ -25,7 +26,7 @@ def test_playable_bootstrap_is_seven_real_npcs_finite_seed_water_and_carlos_prof
     try:
         state = db.verify(WORLD)
         assert len(state.npcs) == len(PEOPLE) == 7
-        assert state.schema_version == 41 and state.rules_version == 55
+        assert (state.schema_version, state.rules_version) == (SCHEMA_VERSION, RULES_VERSION)
         assert state.entities["carlos"]["location_id"] == "home"
         assert state.routes["home-market"]["seconds"] == 90
         assert "carlos" in state.rpg_profiles
