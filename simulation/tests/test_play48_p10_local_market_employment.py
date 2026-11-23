@@ -60,6 +60,20 @@ def test_h244_no_retrospective_contract_or_food_without_a_real_meeting(authentic
 
 def test_new_market_job_has_strict_real_local_dual_authority(local_work_meeting):
     s=local_work_meeting
+    if not choose_local_market_employment(s,"huda"):
+        from carlos_sim.freight_payroll import _previous_wages_fully_satisfied
+        from carlos_sim.food_for_work import _available_site_food,_worker_present_and_free
+        from carlos_sim.market import _present
+        print("P10_MOCK_MEETING_DIAGNOSTIC", {
+            "previous_wages_settled":_previous_wages_fully_satisfied(s.to_dict(),"huda"),
+            "huda_at_market_free":_worker_present_and_free(s,"huda","market"),
+            "salma_at_market_free":_worker_present_and_free(s,"salma","market"),
+            "salma_market_present":_present(s.to_dict(),"salma","market"),
+            "unquoted_market_food":_available_site_food(s,"market"),
+            "circuit":dict(s.supply_circuits["huda"]),
+            "salma_running_actions":[dict(a) for a in s.actions.values() if a["npc_id"]=="salma" and a["status"]=="running"],
+            "huda_running_actions":[dict(a) for a in s.actions.values() if a["npc_id"]=="huda" and a["status"]=="running"],
+        },flush=True)
     assert choose_local_market_employment(s,"huda")
     for market,supply,actor in ((False,False,"salma"),
                                 (True,False,"salma"),
