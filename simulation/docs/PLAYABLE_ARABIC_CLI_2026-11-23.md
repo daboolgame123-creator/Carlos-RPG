@@ -15,6 +15,23 @@ python scenarios/test_village/play_village_ar.py
 
 يلزم Python 3.10 أو أحدث فقط، دون API أو نموذج لغوي أو اتصال بالإنترنت عند التشغيل.
 
+## معالجة عرض العربية على Windows PowerShell
+
+بعد تشغيل اللعبة يمكن إدخال `مشهد` أو `المشهد`؛ كلاهما يعرض المشهد نفسه. تُحاول واجهة Windows تلقائيًا ضبط صفحة ترميز وحدة التحكم إلى UTF-8 دون تغيير ملفات الحفظ أو المحرك.
+
+إذا ظلت العربية رموزًا غريبة في PowerShell التقليدي، أوقف اللعبة بـ `Ctrl+C` وشغّل من مجلد `simulation`:
+
+```powershell
+chcp 65001
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONPATH = "src"
+python -X utf8 scenarios/test_village/play_village_ar.py
+```
+
+إذا استمرت الحروف غير متصلة أو مشوهة رغم نجاح الترميز، جرّب **Windows Terminal** بخط عربي مناسب؛ بعض نسخ وحدة التحكم القديمة لا تدعم وصل الحروف العربية جيدًا.
+
 ## تجربة حقيقية
 
 ```text
