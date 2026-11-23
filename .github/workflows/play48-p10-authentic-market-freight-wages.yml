@@ -35,7 +35,36 @@ jobs:
         env:
           PYTHONPATH: src:tests:scenarios/test_village
         run: python -m pytest -q tests/test_play48_p10_local_freight_agreement.py tests/test_play48_hunter_scout_well_food.py tests/test_play48_voluntary_well_food.py
+  smoke-genuine-h237:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - uses: actions/download-artifact@v4
+        with:
+          name: play48-p8-real229-well-food-a-b-ba0162ae3692638a073cdd0197b4f02b57c551a1
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45026222815
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic236
+      - name: Confirm real paid grain service and consumed Huda wage by h237
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+          PLAY48_P10_SMOKE: '1'
+        run: python -u scenarios/test_village/play48_real236_local_market_freight_wages.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p10-first-hour-proof-${{ github.sha }}
+          path: simulation/real236_local_market_food_wage/
+          if-no-files-found: warn
   real:
+    needs: [smoke-genuine-h237]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
