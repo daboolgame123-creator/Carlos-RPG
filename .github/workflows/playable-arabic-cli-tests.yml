@@ -1,0 +1,33 @@
+name: Carlos playable AR-01 Arabic CLI
+on:
+  push:
+    branches: [feature/playable-arabic-cli-20261123]
+  pull_request:
+    paths:
+      - 'simulation/scenarios/test_village/play_village_ar.py'
+      - 'simulation/scenarios/test_village/test_playable_arabic_cli.py'
+      - '.github/workflows/playable-arabic-cli-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  player-arabic-gateway:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Python compile and Arabic CLI real-world tests
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+          PYTHONIOENCODING: utf-8
+        run: |
+          python -m py_compile scenarios/test_village/play_village_ar.py scenarios/test_village/test_playable_arabic_cli.py
+          python -m pytest -q scenarios/test_village/test_playable_arabic_cli.py scenarios/test_village/test_play31_offline_village.py scenarios/test_village/test_play31_acceptance_journey.py
