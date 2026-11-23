@@ -45,7 +45,7 @@ jobs:
           run-id: 45145919540
           github-token: ${{ github.token }}
           path: simulation/evidence/authentic234
-      - name: Compare copied histories to 244h with genuine physical food and wage ledger
+      - name: Compare copied histories to 240h with genuine physical food and wage ledger
         working-directory: simulation
         env:
           PYTHONPATH: src:scenarios/test_village
