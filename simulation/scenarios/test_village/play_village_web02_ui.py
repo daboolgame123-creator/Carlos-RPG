@@ -193,8 +193,7 @@ def _status_panel(status: Any, needs: Any, supplies: Any) -> str:
         q = _num(owned.get(res))
         if q is not None:
             pieces.append(
-                f'<span class="balance">{_h(RESOURCE_LABELS[res])}: '
-                f'<b>{q}</b></span>'
+                f'<span class="balance">{_h(RESOURCE_LABELS[res])}: {q}</span>'
             )
     pieces.append('</div></section>')
     return "".join(pieces)
