@@ -78,3 +78,35 @@ def test_no_retroactive_or_double_bakery_salary_on_new_market_contract(tmp_path)
     }
     record_delivery(d,"huda","grain")
     assert c["food_payroll"]["receipts"]==[], "one freight delivery cannot earn twice"
+
+
+def test_old_quote_age_kept_after_subsequent_paid_wage():
+    """A second REAL wage cannot reset an old aid listing's clock."""
+    from types import SimpleNamespace
+    from carlos_sim.community_food import (
+        _aged_quote_relisted_after_paid_market_freight,
+    )
+    due=900000
+    old={
+        "status":"closed","site_id":"market","stock_owner_id":"market",
+        "resource":"food","posted_at":due-7*3600,"closed_at":due,
+    }
+    contract={
+        "site_id":"market","resource":"food","signed_at":due-14*3600,
+        "receipts":[{"payment":{"paid_at":due}}],
+    }
+    state=SimpleNamespace(
+        supply_circuits={"huda":{"food_payroll":contract}},
+        market_offers={"old":old},
+    )
+    assert _aged_quote_relisted_after_paid_market_freight(
+        state,{"posted_at":due})
+    assert not _aged_quote_relisted_after_paid_market_freight(
+        state,{"posted_at":due+1})
+    old["posted_at"]=due-5*3600
+    assert not _aged_quote_relisted_after_paid_market_freight(
+        state,{"posted_at":due})
+    old["posted_at"]=due-7*3600
+    contract["receipts"][0]["payment"]=None
+    assert not _aged_quote_relisted_after_paid_market_freight(
+        state,{"posted_at":due})
