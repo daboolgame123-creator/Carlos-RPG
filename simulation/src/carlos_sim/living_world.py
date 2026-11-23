@@ -104,7 +104,8 @@ class LivingWorldEngine:
                  desperate_paid_harvest_enabled: bool = False,
                  reserve_signed_relief_offer_enabled: bool = False,
                  desperate_funded_planting_enabled: bool = False,
-                 hungry_paid_baker_return_enabled: bool = False):
+                 hungry_paid_baker_return_enabled: bool = False,
+                 signed_steward_wage_quote_release_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -189,6 +190,11 @@ class LivingWorldEngine:
                     economic_enabled and consumption_enabled))):
             raise ValueError("steward food wages require real economy and consumption")
         self.merchant_food_wage_enabled = merchant_food_wage_enabled
+        if (type(signed_steward_wage_quote_release_enabled) is not bool
+                or (signed_steward_wage_quote_release_enabled
+                    and not merchant_food_wage_enabled)):
+            raise ValueError('signed steward wage quote release requires enabled earned merchant food wages')
+        self.signed_steward_wage_quote_release_enabled = signed_steward_wage_quote_release_enabled
         if (type(community_food_enabled) is not bool or
                 (community_food_enabled and not (
                     economic_enabled and consumption_enabled and survival_enabled))):
@@ -1030,6 +1036,15 @@ class LivingWorldEngine:
                 # All courier cash/commodity slots and customer quotes remain intact.
                 if self.merchant_food_wage_enabled:
                     from .steward_food_payroll import choose_steward_food_wage
+                    if self.signed_steward_wage_quote_release_enabled:
+                        from .steward_food_payroll import choose_steward_earned_wage_quote_retirement
+                        old_quote = choose_steward_earned_wage_quote_retirement(current)
+                        if old_quote is not None:
+                            keeper = current.market_stalls['market']['keeper_id']
+                            append(DomainEvent('MarketOfferClosed', keeper,
+                                'owner withdraws aged unsold quote for already earned wage',
+                                current.time, {'id': old_quote}),
+                                market_capability=True)
                     for steward_site in sorted(current.market_stalls):
                         earned = choose_steward_food_wage(current, steward_site)
                         if earned is None:
