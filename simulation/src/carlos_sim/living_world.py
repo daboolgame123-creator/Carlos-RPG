@@ -106,7 +106,8 @@ class LivingWorldEngine:
                  desperate_funded_planting_enabled: bool = False,
                  hungry_paid_baker_return_enabled: bool = False,
                  signed_steward_wage_quote_rescue_enabled: bool = False,
-                 voluntary_well_food_visit_enabled: bool = False):
+                 voluntary_well_food_visit_enabled: bool = False,
+                 hunter_well_food_visit_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -201,6 +202,10 @@ class LivingWorldEngine:
                     and survival_enabled and integrated_livelihoods_enabled))):
             raise ValueError("voluntary well food visit needs real roads, owned meals and livelihoods")
         self.voluntary_well_food_visit_enabled = voluntary_well_food_visit_enabled
+        if (type(hunter_well_food_visit_enabled) is not bool or
+                (hunter_well_food_visit_enabled and not voluntary_well_food_visit_enabled)):
+            raise ValueError("hunter's visited-road well aid needs physical P8 assistance enabled")
+        self.hunter_well_food_visit_enabled = hunter_well_food_visit_enabled
         if (type(community_food_enabled) is not bool or
                 (community_food_enabled and not (
                     economic_enabled and consumption_enabled and survival_enabled))):
@@ -1112,7 +1117,8 @@ class LivingWorldEngine:
                 # identity, co-location, transfer receipts and conservation.
                 from .voluntary_well_food import (
                     choose_local_well_request, choose_local_well_settlement)
-                paid_help = choose_local_well_settlement(current)
+                paid_help = choose_local_well_settlement(
+                    current, allow_hunter=self.hunter_well_food_visit_enabled)
                 if paid_help is not None:
                     append(DomainEvent("AssistanceFulfilled", paid_help.donor,
                         "one voluntarily promised, physically delivered well meal",
@@ -1130,7 +1136,8 @@ class LivingWorldEngine:
                                 and item["location_id"] == "well"
                                 and current.entities[item["provider"]]["location_id"] == "well"):
                             busy.add(item["provider"])
-                    ask = choose_local_well_request(current)
+                    ask = choose_local_well_request(
+                        current, allow_hunter=self.hunter_well_food_visit_enabled)
                     if ask is not None:
                         append(DomainEvent("AssistanceRequested", ask.recipient,
                             "starving neighbor asks a personally present, willing fisher for a loaf",
@@ -1323,13 +1330,27 @@ class LivingWorldEngine:
                         busy.add(TRADER)
             if self.voluntary_well_food_visit_enabled:
                 from .voluntary_well_food import (
-                    choose_volunteer_well_visit, volunteer_waits_to_offer)
+                    choose_volunteer_well_visit, volunteer_waits_to_offer,
+                    hunter_can_seek_well, choose_hunter_well_visit)
                 for volunteer in sorted(current.npcs):
                     if volunteer in busy:
                         continue
                     walk = choose_volunteer_well_visit(current, volunteer)
+                    if (walk is None and self.hunter_well_food_visit_enabled
+                            and hunter_can_seek_well(current, volunteer)):
+                        # A woodland visitor learns ONLY adjacent roads at
+                        # the location physically reached; no remote route
+                        # or starving neighbor can be read from afar.
+                        if needs_survey(current, volunteer):
+                            append(DomainEvent("NPCNavigationSurveyed", volunteer,
+                                "hunter personally sees adjacent roads while seeking public well",
+                                current.time, {"npc_id": volunteer}),
+                                movement_capability=True)
+                        walk = choose_hunter_well_visit(current, volunteer)
                     if walk is None:
-                        if volunteer_waits_to_offer(current, volunteer):
+                        if volunteer_waits_to_offer(
+                                current, volunteer,
+                                allow_hunter=self.hunter_well_food_visit_enabled):
                             # At most 1h at the physical well, not endless
                             # idle or a demand to give to a remote recipient.
                             busy.add(volunteer)
