@@ -162,19 +162,25 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
     if c is None:
         return
     if (type(c) is not dict or set(c) !=
-            {"site_id", "resource", "interval_seconds", "receipts"}
+            ({"site_id", "resource", "interval_seconds", "receipts"},
+             {"site_id", "resource", "interval_seconds", "receipts", "signed_at"})
             or (c["site_id"], c["resource"]) not in (("bakery", "grain"), ("market", "food"))
             or type(c["interval_seconds"]) is not int
             or not 12 * 3600 <= c["interval_seconds"] <= 48 * 3600
             or type(c["receipts"]) is not list
-            or any(x["courier_id"] == who for x in state["courier_provisions"].values())):
+            or (("signed_at" not in c) and any(x["courier_id"] == who for x in state["courier_provisions"].values()))
+            or ("signed_at" in c and (type(c["signed_at"]) is not int
+                or not 0 < c["signed_at"] <= state["time"]
+                or (c["site_id"], c["resource"]) != ("market", "food")
+                or c["interval_seconds"] != 12 * 3600))):
         raise ValueError("invalid recurring freight contract")
-    last_time, last_delivery, unpaid = -c["interval_seconds"], 0, False
+    last_time, last_delivery, unpaid = (c.get("signed_at", -c["interval_seconds"])
+                                        - c["interval_seconds"]), 0, False
     for r in c["receipts"]:
         if (type(r) is not dict or set(r) != {"delivery", "delivered_at", "payment"}
                 or type(r["delivery"]) is not int or not last_delivery < r["delivery"] <= circuit["deliveries"]
                 or type(r["delivered_at"]) is not int
-                or not 0 <= r["delivered_at"] <= state["time"]
+                or not c.get("signed_at", 0) <= r["delivered_at"] <= state["time"]
                 or r["delivered_at"] - last_time < c["interval_seconds"] or unpaid):
             raise ValueError("invalid or duplicate physical service evidence")
         q = r["payment"]
@@ -187,3 +193,88 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
                     or q["worker_after"] - q["worker_before"] != 1):
                 raise ValueError("freight payment must conserve actual food")
         last_time, last_delivery, unpaid = r["delivered_at"], r["delivery"], q is None
+
+
+def choose_local_market_freight_agreement(state: WorldState, who: str) -> bool:
+    """An employed courier and Salma meet locally to sign a future, earned wage."""
+    circuit = state.supply_circuits.get(who)
+    if (not circuit or "food_payroll" in circuit or circuit["index"] != 3
+            or circuit["stops"][3] != "market"
+            or state.npcs[who]["role"] != "courier"
+            or state.entities[who]["location_id"] != "market"):
+        return False
+    from .market import _present
+    employer = state.market_stalls.get("market", {}).get("keeper_id")
+    if not employer or not _present(state.to_dict(), employer, "market"):
+        return False
+    from .npc import _injury_rest_decision
+    needs = state.npcs[who]["needs"]
+    if (needs["hunger"] >= 90 or needs["fatigue"] >= 70
+            or needs["safety"] >= 75
+            or _injury_rest_decision(state.injuries, who) is not None
+            or not _worker_present_and_free(state.to_dict(), who, "market")):
+        return False
+    stock = state.resources.get("market", {}).get("food")
+    return type(stock) is int and stock >= 2
+
+
+def agree_local_market_freight_wage(state: dict, event: DomainEvent, *,
+                                    supply_authorized: bool,
+                                    market_authorized: bool) -> None:
+    p = event.data
+    if (not supply_authorized or not market_authorized
+            or set(p) != {"courier_id", "site_id", "resource", "interval_seconds"}
+            or p["site_id"] != "market" or p["resource"] != "food"
+            or p["interval_seconds"] != 12 * 3600
+            or event.actor_id != state["market_stalls"]["market"]["keeper_id"]
+            or not choose_local_market_freight_agreement(
+                WorldState.from_dict(state), p["courier_id"])):
+        raise ValueError("future market food contract requires two consenting present parties")
+    # An old, bounded bakery grain wage remains an independently enforceable
+    # obligation. A new market agreement only earns on FUTURE food deliveries.
+    state["supply_circuits"][p["courier_id"]]["food_payroll"] = {
+        "site_id": "market", "resource": "food",
+        "interval_seconds": 12 * 3600,
+        "signed_at": state["time"], "receipts": [],
+    }
+
+
+def choose_market_wage_quote_retirement(state: WorldState, who: str) -> str | None:
+    """Retire a stale owner quote only when earned wage is already pending."""
+    c = state.supply_circuits.get(who, {}).get("food_payroll", {})
+    receipts = c.get("receipts", ())
+    if (not c.get("signed_at") or c["site_id"] != "market"
+            or not receipts or receipts[-1]["payment"] is not None
+            or state.entities[who]["location_id"] != "market"):
+        return None
+    raw = state.to_dict()
+    from .market import _present
+    from .movement import _in_transit
+    employer = state.market_stalls["market"]["keeper_id"]
+    if not _present(raw, employer, "market"):
+        return None
+    from .steward_food_payroll import _earned_sales, PAYMENT_SALES
+    sales, wages = _earned_sales(state, "market")
+    hold = 3 if len(sales) >= PAYMENT_SALES * (len(wages) + 1) else 2
+    if _available_site_food(state, "market") >= hold:
+        return None
+    for oid, q in sorted(state.market_offers.items()):
+        if (q["status"] != "open" or q["site_id"] != "market"
+                or q["stock_owner_id"] != "market" or q["seller_id"] != employer
+                or q["resource"] != "food"
+                or state.time - q["posted_at"] < 6 * 3600
+                or _available_site_food(state, "market") + q["remaining"] < hold):
+            continue
+        for buyer, person in raw["entities"].items():
+            if (buyer == employer or person["location_id"] != "market"
+                    or _in_transit(raw, buyer)):
+                continue
+            if buyer in raw["npcs"] and not _present(raw, buyer, "market"):
+                continue
+            if buyer not in raw["npcs"] and person["controller"] != "player":
+                continue
+            cash = raw["resources"].get(buyer, {}).get("coin_copper")
+            if type(cash) is int and cash >= q["unit_price"]:
+                return None
+        return oid
+    return None
