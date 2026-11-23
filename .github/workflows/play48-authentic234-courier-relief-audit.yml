@@ -2,6 +2,8 @@ name: PLAY48 genuine h234 physical courier rescue audit
 on:
   push:
     branches: [experiment/play48-real234-courier-relief-audit-20261123]
+  pull_request:
+    branches: [experiment/play48-signed-steward-wage-quote-release-20261123]
   workflow_dispatch:
 permissions:
   contents: read
