@@ -649,6 +649,14 @@ class LivingWorldEngine:
                                                "service_deliveries": service,
                                                "amount": 1}),
                                 supply_capability=True, production_capability=True)
+                    if self.local_market_freight_employment_enabled:
+                        from .freight_payroll import waits_for_local_market_hire
+                        if waits_for_local_market_hire(current, courier):
+                            # Wait briefly BEFORE unloading one genuine parcel.
+                            # Salma may be finishing an actual timed rest; the
+                            # meeting is not signed or payable while she rests.
+                            busy.add(courier)
+                            continue
                     for _ in range(2):
                         # One authoritative manifest for both policy and
                         # reducer. A signed grain/bread farm-return leg can
