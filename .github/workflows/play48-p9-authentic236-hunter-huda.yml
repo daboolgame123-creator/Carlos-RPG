@@ -1,0 +1,64 @@
+name: PLAY48 P9 real h236 hunter-to-Huda food and courier restart A B
+on:
+  push:
+    branches: [experiment/play48-p9-second-courier-finite-food-20261123]
+    paths:
+      - 'simulation/src/carlos_sim/voluntary_well_food.py'
+      - 'simulation/src/carlos_sim/living_world.py'
+      - 'simulation/tests/test_play48_hunter_scout_well_food.py'
+      - 'simulation/scenarios/test_village/play48_real236_hunter_second_courier.py'
+      - '.github/workflows/play48-p9-authentic236-hunter-huda.yml'
+  pull_request:
+    branches: [experiment/play48-courier-earned-food-diagnosis-20261122]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Test local route learning, authentic donor property and unmodified P8
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: python -m pytest -q tests/test_play48_hunter_scout_well_food.py tests/test_play48_voluntary_well_food.py
+  genuine-h236:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve exact h236 P8 authenticated saved 13-NPC world
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p8-real229-well-food-a-b-ba0162ae3692638a073cdd0197b4f02b57c551a1
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45026222815
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic236
+      - name: Two identical h236 event history copies through h244 P8 vs P9
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real236_hunter_second_courier.py
+      - name: Save both real world ledgers and difference reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: play48-p9-h236-h244-real-hunter-${{ github.sha }}
+          path: simulation/real236_hunter_second_courier/
+          if-no-files-found: warn
