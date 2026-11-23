@@ -13,6 +13,7 @@ from html import escape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 import secrets
+import shlex
 from tempfile import TemporaryDirectory
 from urllib.parse import parse_qs
 import webbrowser
@@ -181,13 +182,22 @@ def handler_for(session: BrowserPlaySession):
             self.send_header("X-Frame-Options", "DENY")
             self.send_header(
                 "Content-Security-Policy",
-                "default-src 'none'; style-src 'unsafe-inline'; "
+                "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; "
                 "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
             )
 
         def do_GET(self):
             if not self._host_ok():
                 self._forbidden("HOST")
+                return
+            if self.path == "/ui.js":
+                body = Path(__file__).with_name("play_village_web03.js").read_bytes()
+                self.send_response(200)
+                self._security_headers()
+                self.send_header("Content-Type", "text/javascript; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
                 return
             if self.path != "/":
                 self.send_error(404)
@@ -234,23 +244,57 @@ def handler_for(session: BrowserPlaySession):
                 fields = parse_qs(
                     self.rfile.read(int(length)).decode("utf-8"),
                     keep_blank_values=True, strict_parsing=True,
-                    max_num_fields=3,
+                    max_num_fields=5,
                 )
                 if (len(fields.get("csrf", [])) != 1
-                        or not hmac.compare_digest(fields["csrf"][0], session.csrf)
-                        or len(fields.get("command", [])) != 1):
+                        or not hmac.compare_digest(fields["csrf"][0], session.csrf)):
                     self._forbidden("CSRF")
                     return
-                raw = fields["command"][0]
+                if set(fields) == {"csrf", "command"} and len(fields["command"]) == 1:
+                    raw = fields["command"][0]
+                elif (set(fields) ==
+                      {"csrf", "action", "offer_id", "quantity", "unit_price"}
+                      and fields.get("action") == ["buy"]
+                      and all(len(values) == 1 for values in fields.values())):
+                    offer_id = fields["offer_id"][0]
+                    qty_text, price_text = fields["quantity"][0], fields["unit_price"][0]
+                    if (not offer_id or len(offer_id) > 128 or
+                            not qty_text.isascii() or not qty_text.isdecimal() or
+                            not price_text.isascii() or not price_text.isdecimal()):
+                        self.send_error(400)
+                        return
+                    quantity, price = int(qty_text), int(price_text)
+                    if not 1 <= quantity <= 1000 or not 0 <= price <= 100000000:
+                        self.send_error(400)
+                        return
+                    # A single genuinely player-chosen buy action; the ledger
+                    # rechecks physical quantity and quote price before transfer.
+                    raw = ("buy " + shlex.quote(offer_id) + " " +
+                           str(quantity) + " " + str(price))
+                else:
+                    self.send_error(400)
+                    return
             except (UnicodeDecodeError, ValueError, KeyError):
                 self.send_error(400)
                 return
             session.command(raw)
-            self.send_response(303)
-            self._security_headers()
-            self.send_header("Location", "/")
-            self.send_header("Content-Length", "0")
-            self.end_headers()
+            if self.headers.get("X-Carlos-Partial") == "1":
+                # Same-origin progressive enhancement. The old POST/303/GET
+                # remains the functioning no-JS fallback.
+                body = session.page()
+                self.send_response(200)
+                self._security_headers()
+                self.send_header("X-Carlos-Partial", "1")
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            else:
+                self.send_response(303)
+                self._security_headers()
+                self.send_header("Location", "/")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
 
     return Handler
 
