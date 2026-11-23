@@ -16,6 +16,22 @@ python scenarios/test_village/play_village_browser.py
 
 **يُرجى إبقاء نافذة PowerShell مفتوحة أثناء اللعب.** عند الانتهاء اضغط `Ctrl+C` فيها؛ تُحذف قاعدة SQLite التجريبية، ولا يُمسّ `main` أو قصة كارلوس الأصلية.
 
+## إصلاح خطأ 403 عند النقر (23 نوفمبر 2026)
+
+تم العثور على سبب مؤكد في ترويسة الخادم: `Referrer-Policy: no-referrer` تجعل متصفحات الويب ترسل `Origin: null` عند تقديم نموذج HTML عادي، فيرفضه فحص `Origin` الصارم. تغيّرت السياسة إلى **`same-origin`**، التي تسمح بإرسال المصدر الصحيح عند طلبات نفس الموقع المحلي، وتحجب معلومات الإحالة عند الانتقال إلى مواقع أخرى. **لم نلغِ فحص Origin أو رمز CSRF**.
+
+للترقية من النسخة التي كانت تعرض 403، أغلق اللعبة في PowerShell بـ Ctrl+C، ثم نفّذ من جذر مجلد `Carlos-RPG-AR`:
+
+```powershell
+cd C:\Users\dell\Carlos-RPG-AR
+git pull --ff-only
+cd simulation
+$env:PYTHONPATH = "src"
+python scenarios/test_village/play_village_browser.py
+```
+
+لأنك موجود بالفعل على فرع `feature/carlos-arabic-browser-local-play-20261123`، يكفي `git pull`، ولا تنشئ مجلدًا جديدًا. اختبار جديد يؤكد أن `Origin: null` لا يزال مرفوضًا، وأن طلبات المصدر الحقيقي تنجح.
+
 ## التفاعل
 
 - صفحة ذات اتجاه يمين ← يسار تعرض **المشهد الفعلي** و**ممتلكات كارلوس فقط**، مع أزرار للمشهد والملاحظة والحالة والمخزون والعروض والمساعدة.
