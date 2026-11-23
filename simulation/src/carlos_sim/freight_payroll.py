@@ -161,9 +161,9 @@ def validate_contract(state: dict, who: str, circuit: dict) -> None:
     c = circuit.get("food_payroll")
     if c is None:
         return
-    if (type(c) is not dict or set(c) !=
-            ({"site_id", "resource", "interval_seconds", "receipts"},
-             {"site_id", "resource", "interval_seconds", "receipts", "signed_at"})
+    if (type(c) is not dict or set(c) not in (
+            {"site_id", "resource", "interval_seconds", "receipts"},
+            {"site_id", "resource", "interval_seconds", "receipts", "signed_at"})
             or (c["site_id"], c["resource"]) not in (("bakery", "grain"), ("market", "food"))
             or type(c["interval_seconds"]) is not int
             or not 12 * 3600 <= c["interval_seconds"] <= 48 * 3600
