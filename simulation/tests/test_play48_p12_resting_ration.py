@@ -20,6 +20,7 @@ from test_play48_community_rations import configured
 def resting_market():
     s = configured(food=4, hunger=100, cash=0)
     s["time"] = 3600
+    s["npcs"]["nora"]["last_decision"] = None
     s["actions"]["rest:nora"] = {
         "npc_id": "nora", "action": "rest",
         "start": 3600, "due": 3720, "schedule_id": "npc-action:rest:nora",
@@ -61,7 +62,7 @@ def test_resting_citizen_receives_actual_loaf_then_eats_only_after_rest():
 
 @pytest.mark.parametrize("block", [
     "not_market", "traveling", "working", "producing",
-    "two_actions", "rest_completed", "solvent", "already_fed", "not_hungry",
+    "two_actions", "solvent", "already_fed", "not_hungry",
     "keeper_resting", "no_stock", "quoted_stock",
 ])
 def test_never_pays_unqualified_resting_recipient(block):
@@ -77,8 +78,6 @@ def test_never_pays_unqualified_resting_recipient(block):
     if block == "two_actions":
         s["actions"]["other"] = {"npc_id": "nora", "status": "running",
                                   "action": "work"}
-    if block == "rest_completed":
-        s["actions"]["rest:nora"]["status"] = "completed"
     if block == "solvent":
         s["resources"]["nora"]["coin_copper"] = 2
     if block == "already_fed":
@@ -119,3 +118,17 @@ def test_explicit_rest_receipt_never_changes_daily_cap_or_merchant_consent():
     with pytest.raises(ValueError):
         pay_market_ration(s, event(s), market_authorized=True)
     validate_market_relief(s, s["market_stalls"]["market"])
+
+
+def test_rest_receipt_flag_cannot_be_used_to_bypass_normal_idle_eligibility():
+    s = resting_market()
+    s["actions"]["rest:nora"]["status"] = "completed"
+    assert choose_market_ration(WorldState(**s)) == "nora"
+    assert choose_market_ration(
+        WorldState(**s), receive_while_resting=True) == "nora"
+    # Ordinary owner-signed local aid remains valid, but the separate
+    # rest-only marker cannot be smuggled into a free recipient's receipt.
+    with pytest.raises(ValueError):
+        pay_market_ration(s, event(s, rest=True), market_authorized=True)
+    pay_market_ration(s, event(s, rest=False), market_authorized=True)
+    assert s["resources"]["nora"]["food"] == 1
