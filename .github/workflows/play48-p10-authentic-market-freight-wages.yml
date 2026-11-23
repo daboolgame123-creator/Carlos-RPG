@@ -10,6 +10,8 @@ on:
       - 'simulation/tests/test_play48_p10_local_freight_agreement.py'
       - 'simulation/scenarios/test_village/play48_real236_local_market_freight_wages.py'
       - '.github/workflows/play48-p10-authentic-market-freight-wages.yml'
+  pull_request:
+    branches: [experiment/play48-p9-second-courier-finite-food-20261123]
   workflow_dispatch:
 permissions:
   contents: read
