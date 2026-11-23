@@ -19,6 +19,15 @@ def sample(tmp_path):
     d = seed(tmp_path / "p7-synthetic.sqlite").to_dict()
     assert d["entities"]["salma"]["location_id"] == "market"
     d["time"] = 10 * 3600
+    # Isolate a synthetic owner/shop micro-ledger from other bootstrap offers
+    # and cash-holding shoppers. Real-history protection is tested separately.
+    d["market_offers"].clear()
+    d["market_trades"].clear()
+    for who, person in d["entities"].items():
+        if person["location_id"] == "market" and who != "salma":
+            wallet = d["resources"].get(who)
+            if wallet is not None and "coin_copper" in wallet:
+                wallet["coin_copper"] = 0
     d["market_stalls"]["market"]["food_wage_sales_required"] = 2
     d["market_stalls"]["market"].pop("community_food", None)
     d["resources"]["market"]["food"] = 8
