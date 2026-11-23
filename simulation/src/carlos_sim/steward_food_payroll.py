@@ -144,3 +144,63 @@ def validate_steward_food_wage_receipt(state: dict[str, Any],
     sold_through = sum(1 for _, t in eligible if t["executed_at"] <= at)
     if sold_through < PAYMENT_SALES * paid_through:
         raise ValueError("steward payroll exceeds completed sale service")
+
+
+def choose_steward_earned_wage_quote_retirement(
+        state: WorldState, site: str = "market") -> str | None:
+    """Owner may withdraw an aged, UNSOLD quote to honour already earned wages.
+
+    A quote is not a completed sale. Close it by the existing on-site seller
+    event, then the standard signed food-payroll reducer transfers the real
+    loaf. Refuse active solvent buyers, unrelated owners/cargo and all
+    unsupported sites. Protect the owner's signed relief budget first.
+    """
+    stall = state.market_stalls.get(site)
+    if (site != "market" or stall is None
+            or stall.get("food_wage_sales_required") != PAYMENT_SALES):
+        return None
+    keeper = stall["keeper_id"]
+    raw = state.to_dict()
+    if (state.npcs.get(keeper, {}).get("role") != "merchant"
+            or not _present(raw, keeper, site)):
+        return None
+    earned, paid = _earned_sales(state, site)
+    if len(earned) < PAYMENT_SALES * (len(paid) + 1):
+        return None
+    if type(state.resources.get(keeper, {}).get("food")) is not int:
+        return None
+    if state.resources[keeper]["food"] >= MAX_AMOUNT:
+        return None
+
+    for ident, offer in sorted(state.market_offers.items()):
+        if (offer["status"] != "open" or offer["site_id"] != site
+                or offer["stock_owner_id"] != site or offer["seller_id"] != keeper
+                or offer["resource"] != "food"
+                or offer["payment_resource"] != "coin_copper"
+                or type(offer["remaining"]) is not int or offer["remaining"] < 1
+                or state.time - offer["posted_at"] < 6 * 3600):
+            continue
+        # Never retire a listed customer loaf when a real solvent NPC or
+        # human buyer is standing here; do not rely on a remote wallet oracle.
+        from .market import _buyer_present
+        if any(
+            who != keeper and entity["location_id"] == site
+            and _buyer_present(raw, who, site)
+            and type(raw["resources"].get(who, {}).get("coin_copper")) is int
+            and raw["resources"][who]["coin_copper"] >= offer["unit_price"]
+            for who, entity in raw["entities"].items()
+        ):
+            continue
+        # Owner-signed hunger relief retains first call on its remaining
+        # daily allocation. Wage withdrawal cannot cancel that promise.
+        from .community_food import signed_local_relief_quote_capacity
+        if signed_local_relief_quote_capacity(
+                state, unit_price=offer["unit_price"]) > 0:
+            continue
+        # Check physical unpromised inventory AS IF this specific open
+        # quote were retired, without changing state or stealing cargo.
+        if (_available_site_food(state, site) + offer["remaining"]
+                < WAGE_FOOD + UNPROMISED_OPERATING_FOOD):
+            continue
+        return ident
+    return None
