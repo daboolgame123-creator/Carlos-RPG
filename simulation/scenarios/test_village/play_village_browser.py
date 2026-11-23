@@ -169,7 +169,11 @@ def handler_for(session: BrowserPlaySession):
         def _security_headers(self):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
-            self.send_header("Referrer-Policy", "no-referrer")
+            # Native HTML form POSTs send Origin: null under no-referrer,
+            # which the strict same-origin guard correctly rejects.
+            # same-origin retains referrer information ONLY for this
+            # loopback origin and sends the real Origin for local POSTs.
+            self.send_header("Referrer-Policy", "same-origin")
             self.send_header("X-Frame-Options", "DENY")
             self.send_header(
                 "Content-Security-Policy",
