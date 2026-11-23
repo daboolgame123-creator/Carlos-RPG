@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
@@ -32,7 +33,12 @@ def main() -> None:
         assert matched, "did not start: " + repr(startup)
         url = matched.group(1)
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = playwright.chromium.launch(
+                headless=True,
+                executable_path=(shutil.which('google-chrome') or
+                                 shutil.which('chromium') or
+                                 shutil.which('chromium-browser') or None),
+            )
             try:
                 page = browser.new_page()
                 page.goto(url)
