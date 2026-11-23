@@ -17,7 +17,12 @@ def signed(tmp_path):
     s=apply_event(WorldState.from_dict(d),offer(d),
                   supply_authorized=True,market_authorized=True)
     assert not s.supply_circuits["huda"]["food_payroll"]["receipts"]
-    return s.to_dict()
+    d=s.to_dict()
+    # Isolated projection fixture: the original tiny genesis does not sign
+    # a grain-purchase account. Add only the record slot read by the pure
+    # freight proof policy; the genuine event-ledger test stays separate.
+    d["supply_circuits"]["huda"]["grain_purchase"]={"receipts":[]}
+    return d
 
 
 def test_future_food_salary_requires_real_later_grain_receipt(tmp_path):
@@ -62,11 +67,14 @@ def test_no_retroactive_or_double_bakery_salary_on_new_market_contract(tmp_path)
     c["grain_purchase"]["receipts"].append({
         "delivery":service,"delivered_at":d["time"],
         "loaded_at":None,"received_at":None})
-    old_contract=next(v for v in d["courier_provisions"].values()
-                      if v["courier_id"]=="huda" and
-                      "deferred_grain_services" in v)
-    old_contract["deferred_grain_services"].append({
-        "service_deliveries":service,"earned_at":d["time"],"paid_at":None
-    })
+    # Existing bakery service is a distinct creditor. Do not pay it again,
+    # even if its historical bakery payment is still pending.
+    d["courier_provisions"]["prior-claim-test"]={
+        "courier_id":"huda",
+        "deferred_grain_services":[{
+            "service_deliveries":service,"earned_at":d["time"],
+            "paid_at":None,
+        }],
+    }
     record_delivery(d,"huda","grain")
     assert c["food_payroll"]["receipts"]==[], "one freight delivery cannot earn twice"
