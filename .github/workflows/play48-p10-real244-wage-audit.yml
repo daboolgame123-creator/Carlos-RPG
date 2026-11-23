@@ -1,0 +1,35 @@
+name: PLAY48 P10 genuine h244 unpaid courier and quoted food audit
+on:
+  push:
+    branches: [experiment/play48-p10-local-signed-food-employment-20261123]
+    paths:
+      - 'simulation/scenarios/test_village/play48_p10_real244_wage_audit.py'
+      - '.github/workflows/play48-p10-real244-wage-audit.yml'
+  pull_request:
+    branches: [experiment/play48-p9-second-courier-finite-food-20261123]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Restore untouched P9 h244 from successful real A/B
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p9-h236-h244-real-hunter-b5da2c348f8380c65e1353cc85fa698c6702f050
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45132668990
+          github-token: ${{ github.token }}
+          path: simulation/evidence/p9_real244
+      - name: Check actual contract and food rights only
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_p10_real244_wage_audit.py
