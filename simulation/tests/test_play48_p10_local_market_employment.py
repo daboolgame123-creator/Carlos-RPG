@@ -9,7 +9,8 @@ import pytest
 from carlos_sim import SQLiteEventStore,DomainEvent,InvalidEvent
 from carlos_sim.domain import WorldState,apply_event
 from carlos_sim.freight_payroll import (
-    choose_local_market_employment,LOCAL_MARKET_HIRE_INTERVAL)
+    choose_local_market_employment,waits_for_local_market_hire,
+    LOCAL_MARKET_HIRE_INTERVAL,LOCAL_MARKET_MEETING_MAX_WAIT)
 from play48_integrated_acceptance import WORLD,HOUR
 
 SOURCE=Path("evidence/p9_real244")
@@ -110,3 +111,30 @@ def test_new_signed_contract_cannot_be_paid_without_future_physical_delivery(loc
             {"courier_id":"huda","delivery":23}),supply_authorized=True)
     assert s.resources["market"]["food"]==12
     assert s.resources["huda"]["food"]==0
+
+
+def test_recent_real_market_arrival_allows_bounded_wait_until_salma_finishes_rest(authentic_world):
+    d=authentic_world.to_dict()
+    d["entities"]["huda"]["location_id"]="market"
+    d["npcs"]["huda"]["needs"]["hunger"]=78
+    d["supply_circuits"]["huda"]["index"]=3
+    d["supply_circuits"]["huda"]["carry"]=None
+    # This is a deliberately hypothetical rights fixture (not real history):
+    # model one previously arrived physical market journey, and use the
+    # original genuine 244h Salma rest due at +120 seconds.
+    d["travels"]["hypothetical-market-arrival"]={
+        "npc_id":"huda","status":"arrived","destination":"market",
+        "arrived_at":d["time"]-120,
+    }
+    mock=WorldState(**d)
+    assert not choose_local_market_employment(mock,"huda")
+    assert waits_for_local_market_hire(mock,"huda")
+    time_expired=mock.to_dict()
+    time_expired["time"]+=LOCAL_MARKET_MEETING_MAX_WAIT
+    assert not waits_for_local_market_hire(WorldState(**time_expired),"huda")
+    out_of_food=mock.to_dict()
+    out_of_food["resources"]["market"]["food"]=0
+    assert not waits_for_local_market_hire(WorldState(**out_of_food),"huda")
+    unresolved_old_wage=mock.to_dict()
+    unresolved_old_wage["courier_provisions"]["huda-future-bakery"]["deferred_grain_services"][0]["paid_at"]=None
+    assert not waits_for_local_market_hire(WorldState(**unresolved_old_wage),"huda")
