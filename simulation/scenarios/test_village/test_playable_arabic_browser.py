@@ -50,7 +50,7 @@ def test_actual_arabic_browser_actions_keep_ledger_authoritative(tmp_path):
     try:
         before = db.verify(WORLD).to_dict()
         ui.command("مشهد")
-        assert "المشهد الحالي" in ui.notice
+        assert "أنت في المنزل" in ui.notice
         assert db.verify(WORLD).to_dict() == before
         ui.command("اذهب home-market")
         assert "في الطريق" in ui.notice
