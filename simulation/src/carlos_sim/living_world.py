@@ -893,7 +893,9 @@ class LivingWorldEngine:
                     from .community_food import choose_market_ration
                     if self.reserve_signed_relief_offer_enabled:
                         from .community_food import choose_market_relief_quote_retirement
-                        old_quote = choose_market_relief_quote_retirement(current)
+                        old_quote = choose_market_relief_quote_retirement(
+                            current, preserve_paid_wage_quote_age=
+                            self.local_market_freight_wage_enabled)
                         if old_quote is not None:
                             keeper = current.market_stalls["market"]["keeper_id"]
                             append(DomainEvent('MarketOfferClosed', keeper,
