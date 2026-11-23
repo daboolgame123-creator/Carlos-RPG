@@ -18,6 +18,10 @@ from test_play48_hunter_well_visit import hunter_state as hunter
 
 def market_candidate(tmp_path):
     d = hunter(tmp_path)
+    # The P10 synthetic donor fixture moves the clock to h234 without
+    # executing its original appointments. Use its earliest valid isolated
+    # appointment time for *projection* tests, not a forged future save.
+    d["time"] = 3600
     d["entities"]["huda"]["location_id"] = "market"
     d["npcs"]["huda"]["needs"].update(hunger=76, fatigue=30, safety=0)
     d["supply_circuits"]["huda"]["index"] = 3
