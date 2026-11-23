@@ -93,7 +93,8 @@ def test_read_only_arabic_views_do_not_advance_or_expose_private_world_state(tmp
             presentation = "\n".join(lines_ar(execute(
                 gateway, translate_command("المشهد"), 1
             )))
-            assert "الموقع:" in presentation
+            assert "الموقع: المنزل (home)" in presentation
+            assert "كارلوس (carlos)" in presentation
             assert "home-market" in presentation
             assert "الأشخاص الحاضرون:" in presentation
             inventory = "\n".join(lines_ar(execute(
