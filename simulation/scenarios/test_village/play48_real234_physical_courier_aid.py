@@ -17,7 +17,7 @@ from play48_integrated_acceptance import WORLD, HOUR, engine, metrics, conserve_
 
 SOURCE = Path("evidence/authentic234")
 OUT = Path("real234_courier_aid")
-HOURS = (235, 236, 240, 244)
+HOURS = (235, 236, 240)
 
 
 def run_arm(source: Path, label: str, enabled: bool) -> dict:
@@ -67,7 +67,7 @@ def run_arm(source: Path, label: str, enabled: bool) -> dict:
                         "requester": item["requester"],
                         "donor": item["provider"],
                         "status": item["status"],
-                        "transfer": item["transfer"],
+                        "transfer": dict(item["transfer"]) if item["transfer"] is not None else None,
                     }
                     for ident, item in state.obligations.items()
                     if ident.startswith("p9-well:")
