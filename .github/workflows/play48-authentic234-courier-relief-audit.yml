@@ -1,0 +1,33 @@
+name: PLAY48 genuine h234 physical courier rescue audit
+on:
+  push:
+    branches: [experiment/play48-real234-courier-relief-audit-20261123]
+  pull_request:
+    branches: [experiment/play48-signed-steward-wage-quote-release-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-h234-read-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve real immutable P7 signed wage hour 234 ledger
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p7-real228-steward-wage-8a31e3c9cbd03a5f6ebb24e75d00abbc73d2a7ca
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45145919540
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic234
+      - name: Inspect donor locations, routes, quote protection, and unpaid contracts
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real234_courier_relief_audit.py

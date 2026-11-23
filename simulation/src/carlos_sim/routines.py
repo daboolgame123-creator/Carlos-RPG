@@ -157,3 +157,25 @@ def next_routine_boundary(state: WorldState) -> int | None:
                 transition += DAY_SECONDS
             candidates.append(transition)
     return min(candidates) if candidates else None
+
+
+def keeper_must_stay_at_counter(state: WorldState, npc_id: str, *,
+                                offshift_homeward_enabled: bool = False) -> bool:
+    """On-duty local steward is free for actual sales, not fictional actions.
+
+    Optional P8 permits an OFF-DUTY steward with a real configured shift to
+    rejoin ordinary survival and homeward walking. Never reads distant needs
+    or goods, changes any stock, or allows an absent/unregistered seller.
+    """
+    if type(offshift_homeward_enabled) is not bool:
+        raise ValueError("offshift steward homeward requires boolean flag")
+    here = state.entities[npc_id]["location_id"]
+    stall = state.market_stalls.get(here)
+    if stall is None or stall["keeper_id"] != npc_id:
+        return False
+    if not offshift_homeward_enabled:
+        return True
+    profile = state.npc_routines.get(npc_id)
+    if profile is None:
+        return True
+    return is_work_shift(profile, state.time)
