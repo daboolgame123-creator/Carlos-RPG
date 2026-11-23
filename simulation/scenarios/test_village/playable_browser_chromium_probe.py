@@ -58,7 +58,7 @@ def main() -> None:
                 page.goto(url)
                 assert "الموقع: المنزل (home)" in page.locator("body").inner_text()
                 with page.expect_response(lambda r: r.url.endswith("/act")) as receipt:
-                    page.get_by_role("button", name="مشهد", exact=True).click()
+                    page.get_by_role("button", name="حدّث المشهد", exact=True).click()
                 response = receipt.value
                 req = response.request
                 interesting = {
@@ -77,19 +77,22 @@ def main() -> None:
                 )
                 page.wait_for_url(url)
                 assert "المشهد الحالي" in page.locator("body").inner_text()
-                page.get_by_role("textbox", name="أمر كارلوس").fill("اذهب home-market")
+                # WEB-02: test location-derived visible buttons rather than
+                # manually typed raw commands.
                 with page.expect_response(lambda r: r.url.endswith("/act")) as travel:
-                    page.get_by_role("button", name="تنفيذ الأمر").click()
+                    page.get_by_role("button", name=re.compile("اذهب إلى السوق")).click()
                 assert travel.value.status == 303
                 page.wait_for_url(url)
                 assert "في الطريق" in page.locator("body").inner_text()
-                page.get_by_role("textbox", name="أمر كارلوس").fill("انتظر 90")
                 with page.expect_response(lambda r: r.url.endswith("/act")) as advance:
-                    page.get_by_role("button", name="تنفيذ الأمر").click()
+                    page.get_by_role("button", name=re.compile("أكمل الرحلة")).click()
                 assert advance.value.status == 303
                 page.wait_for_url(url)
                 assert "الموقع: السوق (market)" in page.locator("body").inner_text()
-                print("CHROMIUM_REAL_ARABIC_GAMEPLAY_PASS", flush=True)
+                assert "تحدث إلى سلمى" in page.locator("body").inner_text()
+                assert page.get_by_role("progressbar").count() == 2
+                assert "غير مُحاكى بعد" in page.locator("body").inner_text()
+                print("CHROMIUM_REAL_WEB02_BUTTONS_AND_BARS_PASS", flush=True)
             finally:
                 browser.close()
     finally:
