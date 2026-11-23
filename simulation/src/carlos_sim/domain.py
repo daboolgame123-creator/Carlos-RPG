@@ -526,6 +526,11 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind == "RecurringFreightWageSigned":
         from .freight_payroll import sign_contract
         sign_contract(d, e, bootstrap=bootstrap)
+    elif kind == "LocalMarketFreightEmploymentSigned":
+        from .freight_payroll import sign_local_market_employment
+        sign_local_market_employment(
+            d, e, market_authorized=market_authorized,
+            supply_authorized=supply_authorized)
     elif kind == "GrainPurchaseSigned":
         from .grain_purchase import sign_contract
         sign_contract(d, e, bootstrap=bootstrap)
