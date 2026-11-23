@@ -19,13 +19,13 @@ jobs:
         include:
           - os: ubuntu-24.04
             python-version: '3.10'
-            path-sep: ':'
+            path_sep: ':'
           - os: ubuntu-24.04
             python-version: '3.13'
-            path-sep: ':'
+            path_sep: ':'
           - os: windows-2022
             python-version: '3.13'
-            path-sep: ';'
+            path_sep: ';'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -35,7 +35,7 @@ jobs:
       - name: Python compile and Arabic CLI real-world tests
         working-directory: simulation
         env:
-          PYTHONPATH: src${{ matrix.path-sep }}scenarios/test_village
+          PYTHONPATH: src${{ matrix.path_sep }}scenarios/test_village
           PYTHONIOENCODING: utf-8
         run: |
           python -m py_compile scenarios/test_village/play_village_ar.py scenarios/test_village/test_playable_arabic_cli.py
