@@ -64,11 +64,8 @@ def at(s) -> dict:
     }
 
 
-def main() -> None:
-    assert SOURCE.is_file()
-    original_hash = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
-    OUT.mkdir(exist_ok=False)
-    copy = OUT / "p11_h264_to_h270.sqlite"
+def arm(name: str, *, resting_ration: bool) -> dict:
+    copy = OUT / (name + ".sqlite")
     shutil.copyfile(SOURCE, copy)
     rows = {}
     with SQLiteEventStore(copy) as db:
@@ -82,11 +79,12 @@ def main() -> None:
             for flag in FLAGS:
                 setattr(sim, flag, True)
             sim.local_market_freight_wage_enabled = True
+            sim.resting_market_ration_enabled = resting_ration
             for hour in HOURS:
                 if hour > HOURS[0]:
                     state = sim.advance(
                         WORLD, seconds=hour * HOUR - state.time,
-                        command_id=f"p12-diagnose-h{hour}",
+                        command_id=f"p12-{name}-h{hour}",
                         expected_revision=state.revision,
                     ).state
                 assert len(state.npcs) == 13
@@ -94,17 +92,56 @@ def main() -> None:
                 cash = audit_npc_economy(state)
                 assert cash["copper_scope_complete"] and cash["copper_known_total"] == 12
                 assert db.db.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+                assert db.db.execute("PRAGMA foreign_key_check").fetchall() == []
+                db.snapshot(WORLD)
+                assert db.load(WORLD).to_dict() == state.to_dict()
                 rows[str(hour)] = at(state)
-                print("PLAY48_P12_BAKERY_SHORT " + json.dumps(
-                    rows[str(hour)], sort_keys=True), flush=True)
+                print("PLAY48_P12_BAKERY_SHORT " + json.dumps({
+                    "arm": name, **rows[str(hour)]
+                }, sort_keys=True), flush=True)
         finally:
             clock.close_session(WORLD)
+    (OUT / (name + ".json")).write_text(
+        json.dumps(rows, indent=2, sort_keys=True), encoding="utf8")
+    return rows
+
+
+def main() -> None:
+    assert SOURCE.is_file()
+    original_hash = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
+    OUT.mkdir(exist_ok=False)
+    control = arm("P11_original", resting_ration=False)
+    candidate = arm("P12_resting_receipt", resting_ration=True)
     assert hashlib.sha256(SOURCE.read_bytes()).hexdigest() == original_hash
+    comparison = {}
+    for hour in HOURS[1:]:
+        a, b = control[str(hour)], candidate[str(hour)]
+        delta = {
+            "hour": hour,
+            "basim_hunger_delta": b["baker_hunger"] - a["baker_hunger"],
+            "basim_received_ration": any(
+                p["who"] == "basim" for p in b["day_relief_receipts"]),
+            "market_food_delta": b["market_owned_food"] - a["market_owned_food"],
+            "last_baking_at": b["last_real_baking_at"],
+            "hungry100_delta": len(b["hungry_100"]) - len(a["hungry_100"]),
+            "day_ration_count": len(b["day_relief_receipts"]),
+            "gate": "PLAY48_NO_GO",
+        }
+        comparison[str(hour)] = delta
+        print("PLAY48_P12_BAKERY_COMPARISON " + json.dumps(
+            delta, sort_keys=True), flush=True)
     (OUT / "comparison.json").write_text(json.dumps({
         "immutable_original_h264_sha256": original_hash,
-        "records": rows,
-        "status": "P12_DIAGNOSTIC_ONLY / PLAY48_NO_GO",
+        "control": control, "candidate": candidate, "diff": comparison,
+        "gate": "P12_EXPERIMENT_NO_GO / PLAY48_NO_GO",
     }, indent=2, sort_keys=True), encoding="utf8")
+    # No invented bread, no extra ration: a *genuine* signed third daily
+    # transfer must remain impossible, whether Basim recovered or not.
+    assert all(len(row["day_relief_receipts"]) <= 2
+               for row in candidate.values())
+    assert candidate["270"]["baker_hunger"] < control["270"]["baker_hunger"], (
+        "resting-ration experiment failed to improve the actual bread worker")
+
 
 
 if __name__ == "__main__":
