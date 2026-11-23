@@ -107,7 +107,8 @@ class LivingWorldEngine:
                  hungry_paid_baker_return_enabled: bool = False,
                  signed_steward_wage_quote_rescue_enabled: bool = False,
                  voluntary_well_food_visit_enabled: bool = False,
-                 hunter_well_food_visit_enabled: bool = False):
+                 hunter_well_food_visit_enabled: bool = False,
+                 local_market_freight_employment_enabled: bool = False):
         if clock.store is not store:
             raise ValueError('the clock and living-world coordinator must share a store')
         if type(max_events_per_advance) is not int or max_events_per_advance < 1:
@@ -206,6 +207,12 @@ class LivingWorldEngine:
                 (hunter_well_food_visit_enabled and not voluntary_well_food_visit_enabled)):
             raise ValueError("hunter's visited-road well aid needs physical P8 assistance enabled")
         self.hunter_well_food_visit_enabled = hunter_well_food_visit_enabled
+        if (type(local_market_freight_employment_enabled) is not bool
+                or (local_market_freight_employment_enabled and not (
+                    integrated_livelihoods_enabled and supply_enabled
+                    and economic_enabled and consumption_enabled))):
+            raise ValueError("local courier food employment requires real cargo, food and trades")
+        self.local_market_freight_employment_enabled = local_market_freight_employment_enabled
         if (type(community_food_enabled) is not bool or
                 (community_food_enabled and not (
                     economic_enabled and consumption_enabled and survival_enabled))):
@@ -642,6 +649,26 @@ class LivingWorldEngine:
                                            {"courier_id": courier,
                                             "resource": resource}),
                                supply_capability=True)
+                        if (self.local_market_freight_employment_enabled
+                                and act == 'SupplyCargoDelivered'):
+                            # A NEW voluntary local agreement follows evidence
+                            # of real market freight, not an imagined wage or
+                            # retroactive receipt. A signed earlier contract
+                            # must be wholly exhausted AND physically paid.
+                            from .freight_payroll import (
+                                choose_local_market_employment,
+                                LOCAL_MARKET_HIRE_INTERVAL)
+                            if choose_local_market_employment(current, courier):
+                                keeper = current.market_stalls['market']['keeper_id']
+                                append(DomainEvent(
+                                    'LocalMarketFreightEmploymentSigned', keeper,
+                                    'market steward and present courier agree prospective'
+                                    ' food wage after verified freight service',
+                                    current.time, {
+                                        'courier_id': courier, 'site_id': 'market',
+                                        'resource': 'food',
+                                        'interval_seconds': LOCAL_MARKET_HIRE_INTERVAL}),
+                                    market_capability=True, supply_capability=True)
                         if (self.integrated_livelihoods_enabled
                                 and act == 'SupplyCargoDelivered'):
                             # The newly recorded service must settle BEFORE
