@@ -1,0 +1,58 @@
+name: PLAY48 P9 authentic local physical courier food rescue
+on:
+  push:
+    branches: [experiment/play48-real234-physical-courier-aid-20261123]
+  pull_request:
+    branches: [experiment/play48-real234-courier-relief-audit-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Donation consent, physical ownership, wage and offshift regression
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: |
+          python -m pytest -q tests/test_play48_local_emergency_courier_aid.py tests/test_play48_offshift_shopkeeper_homeward.py
+  genuine-h234-rescue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Retrieve immutable owner-earned P7 actual 234 hour saved world
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p7-real228-steward-wage-8a31e3c9cbd03a5f6ebb24e75d00abbc73d2a7ca
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45145919540
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic234
+      - name: Compare copied histories to 244h with genuine physical food and wage ledger
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real234_physical_courier_aid.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p9-real234-physical-courier-aid-${{ github.sha }}
+          path: simulation/real234_courier_aid/
+          if-no-files-found: warn
