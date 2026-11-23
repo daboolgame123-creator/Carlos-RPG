@@ -1,0 +1,58 @@
+name: PLAY48 P7 genuine signed market wage A B
+on:
+  push:
+    branches: [experiment/play48-signed-steward-wage-quote-release-20261123]
+  pull_request:
+    branches: [experiment/play48-paid-baker-return-20261122]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  strict-focus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install pytest
+      - name: Strict signed wage, protected quotes and default-off regressions
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:tests:scenarios/test_village
+        run: |
+          python -m pytest -q tests/test_play48_steward_earned_wage_quote_release.py tests/test_play48_hungry_paid_baker_return.py
+  genuine-saved-p6-vs-p7:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python -m pip install pytest
+      - name: Download immutable P6 authentic 228 hour histories
+        uses: actions/download-artifact@v4
+        with:
+          name: play48-p6-real222-baker-return-0ad20c5e5c0662550f66cf393a0db74ae2fcf25f
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45021526037
+          github-token: ${{ github.token }}
+          path: simulation/evidence/authentic228
+      - name: Advance two matching independent P6 histories to 234 hours
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_real228_signed_steward_quote_release.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p7-real228-steward-wage-${{ github.sha }}
+          path: simulation/real228_steward_wage/
+          if-no-files-found: warn
