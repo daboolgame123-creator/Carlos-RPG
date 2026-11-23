@@ -14,10 +14,10 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Install browser for CI only (not game runtime)
+      - name: Install Playwright driver for CI only (use preinstalled runner Chrome)
         run: |
           python -m pip install playwright
-          python -m playwright install --with-deps chromium
+          which google-chrome || which chromium || true
       - name: Click native RTL form in actual Chromium browser
         working-directory: simulation
         env:
