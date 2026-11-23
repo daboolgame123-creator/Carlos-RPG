@@ -5,6 +5,8 @@ on:
     paths:
       - 'simulation/scenarios/test_village/play48_p10_real244_wage_audit.py'
       - '.github/workflows/play48-p10-real244-wage-audit.yml'
+  pull_request:
+    branches: [experiment/play48-p9-second-courier-finite-food-20261123]
 permissions:
   contents: read
   actions: read
