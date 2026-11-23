@@ -214,11 +214,12 @@ def _previous_wages_fully_satisfied(state: dict, who: str) -> bool:
 
 
 def _local_market_hire_eligible(state: dict, who: str) -> bool:
-    """A real, locally witnessed prospective wage, not a free-food grant.
+    """A witnessed wage for subsequent unloading, not a free-food grant.
 
-    The original contract can be exhausted; the next job is a new agreement
-    for FUTURE authentic deliveries. It only becomes payable from real and
-    unquoted employer food, never from customer orders or courier custody.
+    At a worksite, an able courier may negotiate BEFORE surrendering the
+    physically carried market-bound FOOD, or before later freight. No loaf
+    transfers until actual delivery has completed and created its own receipt.
+    No existing posted offer is ever overridden.
     """
     from .market import _present
     site = "market"
@@ -230,14 +231,23 @@ def _local_market_hire_eligible(state: dict, who: str) -> bool:
             or state["npcs"][who]["role"] != "courier"
             or state["npcs"][keeper]["role"] != "merchant"
             or "food_payroll" in circuit
-            or circuit["index"] != 3 or circuit["carry"] is not None
+            or circuit["index"] != 3
+            or (circuit["carry"] is not None
+                and circuit["carry"].get("resource") != "food")
             or circuit["deliveries"] < 1
             or site != circuit["stops"][3]
             or not _previous_wages_fully_satisfied(state, who)
             or not _worker_present_and_free(state, who, site)
             or not _worker_present_and_free(state, keeper, site)
-            or not _present(state, keeper, site)
-            or _available_site_food(state, site) < 1):
+            or not _present(state, keeper, site)):
+        return False
+    # The one REAL carried market-bound loaf can fund its OWN unloading:
+    # signing happens BEFORE physical transfer, a wage receipt is established
+    # only AFTER the canonical SupplyCargoDelivered reducer succeeds. Existing
+    # posted offers remain fully protected; never pay against promised stock.
+    incoming = circuit["carry"] is not None
+    local_free = _available_site_food(state, site)
+    if local_free < (0 if incoming else 1):
         return False
     needs = state["npcs"][who]["needs"]
     return (needs["hunger"] < 90 and needs["fatigue"] < 70
@@ -293,7 +303,9 @@ def waits_for_local_market_hire(state: WorldState, who: str) -> bool:
     from .npc import _injury_rest_decision
     c = state.supply_circuits.get(who)
     if (c is None or "food_payroll" in c or c["index"] != 3
-            or c["carry"] is not None or c["deliveries"] < 1
+            or (c["carry"] is not None
+                and c["carry"].get("resource") != "food")
+            or c["deliveries"] < 1
             or state.entities[who]["location_id"] != "market"
             or not _previous_wages_fully_satisfied(state.to_dict(), who)
             or not _worker_present_and_free(state, who, "market")):
