@@ -23,6 +23,7 @@ from carlos_sim.time_engine import AdvanceLimitExceeded, SessionClosed
 from play_physical_supply import WORLD
 from play_village_ar import HELP_AR, lines_ar, translate_command
 from play_village_local import create_session, execute
+from play_village_web02_ui import friendly_result, render_web02
 
 
 # This is a LOCAL app, not an HTTP API for an untrusted or remote network.
@@ -111,47 +112,20 @@ class BrowserPlaySession:
             if line == "help":
                 self.notice = HELP_AR
                 return
+            # Display only real gateway-confirmed effects. Inspecting is read-only.
+            before = self.gateway.inspect()
             self.serial += 1
             result = execute(self.gateway, line, self.serial)
-            self.notice = "\n".join(lines_ar(result)) or "نُفذ الأمر."
+            after = self.gateway.inspect()
+            self.notice = friendly_result(result, line, before, after)
         except (ValueError, PermissionError, InvalidEvent, RevisionConflict,
                 DuplicateCommand, AdvanceLimitExceeded, SessionClosed) as exc:
             self.notice = "رُفض الأمر: " + str(exc)
 
     def page(self) -> bytes:
-        scene = "\n".join(lines_ar(self.gateway.inspect()))
-        supplies = "\n".join(lines_ar(self.gateway.supplies()))
-        token = escape(self.csrf, quote=True)
-        pieces = [PAGE_START, '<div class="grid">']
-        pieces.extend([
-            '<section><h2>المشهد المباشر</h2><div class="display" dir="auto">',
-            escape(scene),
-            '</div></section><section><h2>ممتلكات كارلوس</h2>',
-            '<div class="display" dir="auto">',
-            escape(supplies),
-            '</div></section><section class="wide"><h2>الأوامر</h2>',
-            '<div class="buttons">',
-        ])
-        for label, command in BUTTONS:
-            pieces.append(
-                '<form method="post" action="/act">'
-                f'<input type="hidden" name="csrf" value="{token}">'
-                f'<input type="hidden" name="command" value="{escape(command, quote=True)}">'
-                f'<button type="submit">{escape(label)}</button></form>'
-            )
-        pieces.extend([
-            '</div><form class="command" method="post" action="/act">',
-            f'<input type="hidden" name="csrf" value="{token}">',
-            '<input type="text" name="command" dir="auto" maxlength="1000" '
-            'aria-label="أمر كارلوس" placeholder="مثال: اذهب home-market" '
-            'required autocomplete="off">',
-            '<button type="submit" class="primary">تنفيذ الأمر</button>',
-            '</form></section><section class="wide"><h2>آخر نتيجة</h2>',
-            '<div class="notice display" dir="auto" role="status">',
-            escape(self.notice),
-            '</div></section></div>', PAGE_END,
-        ])
-        return "".join(pieces).encode("utf-8")
+        # WEB-02: presentation only. All generated controls still submit to
+        # the exact same CSRF-protected, local PlayerGateway POST executor.
+        return render_web02(self.gateway, self.csrf, self.notice)
 
 
 def handler_for(session: BrowserPlaySession):
