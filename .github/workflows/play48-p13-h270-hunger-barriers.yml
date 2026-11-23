@@ -1,0 +1,38 @@
+name: PLAY48 P13 authentic h270 six-hungry-person barrier diagnosis
+on:
+  push:
+    branches: [experiment/play48-p13-h270-hunger-barriers-20261123]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  immutable-h270-diagnosis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install integration imports
+        run: python -m pip install pytest
+      - name: Download exact proven P11 h264 SQLite (immutable input)
+        uses: actions/download-artifact@v4
+        with:
+          repository: daboolgame123-creator/Carlos-RPG
+          run-id: 45186883684
+          name: play48-p11-renewable-h264-af1025807f4fb5f3b653bdd6a8dbee3bb01f8455
+          path: simulation/evidence/p13_real264
+          github-token: ${{ github.token }}
+      - name: Replay P12 genuine h264 to h270 and classify all six observed access barriers
+        working-directory: simulation
+        env:
+          PYTHONPATH: src:scenarios/test_village
+        run: python -u scenarios/test_village/play48_p13_h270_hunger_barriers.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: play48-p13-h270-barriers-${{ github.sha }}
+          path: simulation/play48_p13_h270_hunger_audit/barriers.json
+          if-no-files-found: warn
