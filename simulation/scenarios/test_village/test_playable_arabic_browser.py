@@ -117,6 +117,10 @@ def _get(url, **headers):
     with urlopen(Request(url, headers=headers), timeout=30) as response:
         assert response.headers["Content-Type"] == "text/html; charset=utf-8"
         assert response.headers["Cache-Control"] == "no-store"
+        # A native HTML form POST under 'no-referrer' sends Origin: null,
+        # which would be 403 here. same-origin preserves the correct origin
+        # without leaking a Referer to another website.
+        assert response.headers["Referrer-Policy"] == "same-origin"
         assert response.headers["Content-Security-Policy"].startswith(
             "default-src 'none';"
         )
@@ -156,6 +160,11 @@ def test_real_loopback_http_interaction_in_arabic_and_csrf_guard(live_browser):
     assert exc.value.code == 403
     with pytest.raises(HTTPError) as exc:
         _post(url, csrf, "انتظر 90", origin="https://evil.example")
+    assert exc.value.code == 403
+    # Regression: do not weaken the strict Origin gate to accept "null".
+    # The browser-facing Referrer-Policy must instead preserve the origin.
+    with pytest.raises(HTTPError) as exc:
+        _post(url, csrf, "انتظر 90", origin="null")
     assert exc.value.code == 403
     assert "الزمن: 0 ثانية" in _get(url)
 
