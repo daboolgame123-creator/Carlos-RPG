@@ -277,3 +277,50 @@ def sign_local_market_employment(state: dict, event: DomainEvent, *,
         "site_id": "market", "resource": "food",
         "interval_seconds": LOCAL_MARKET_HIRE_INTERVAL, "receipts": [],
     }
+
+
+LOCAL_MARKET_MEETING_MAX_WAIT = 3600
+
+
+def waits_for_local_market_hire(state: WorldState, who: str) -> bool:
+    """A courier can wait briefly at a REAL market for a resting steward.
+
+    The meeting is NOT an agreement, payroll, purchase or new resource. A
+    documented actual market arrival is required; expiry is tied to that real
+    arrival rather than an unlimited count of reattempts. Only when the
+    merchant finishes a scheduled rest may the normal local signer run.
+    """
+    from .npc import _injury_rest_decision
+    c = state.supply_circuits.get(who)
+    if (c is None or "food_payroll" in c or c["index"] != 3
+            or c["carry"] is not None or c["deliveries"] < 1
+            or state.entities[who]["location_id"] != "market"
+            or not _previous_wages_fully_satisfied(state.to_dict(), who)
+            or not _worker_present_and_free(state, who, "market")):
+        return False
+    needs = state.npcs[who]["needs"]
+    if (needs["hunger"] >= 90 or needs["fatigue"] >= 70
+            or needs["safety"] >= 75
+            or _injury_rest_decision(state.injuries, who) is not None):
+        return False
+    latest_arrival = max((
+        t["arrived_at"] for t in state.travels.values()
+        if t["npc_id"] == who and t["status"] == "arrived"
+        and t["destination"] == "market"
+    ), default=None)
+    if (latest_arrival is None
+            or not 0 <= state.time-latest_arrival < LOCAL_MARKET_MEETING_MAX_WAIT):
+        return False
+    stall = state.market_stalls.get("market")
+    keeper = stall["keeper_id"] if stall else None
+    if (keeper not in state.npcs
+            or state.npcs[keeper]["role"] != "merchant"
+            or state.entities[keeper]["location_id"] != "market"
+            or type(state.resources.get("market",{}).get("food")) is not int
+            or state.resources["market"]["food"] <= 0):
+        return False
+    return any(
+        action["npc_id"] == keeper and action["status"] == "running"
+        and action["action"] == "rest"
+        and state.time < action["due"] <= latest_arrival + LOCAL_MARKET_MEETING_MAX_WAIT
+        for action in state.actions.values())
