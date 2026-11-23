@@ -120,6 +120,7 @@ def test_live_local_buy_quantity_over_partial_post_with_csrf_and_bad_input_rejec
     with urlopen(url, timeout=15) as response:
         first = response.read().decode("utf-8")
         assert "script-src 'self'" in response.headers["Content-Security-Policy"]
+        assert "connect-src 'self'" in response.headers["Content-Security-Policy"]
     token = unescape(re.search(r'name="csrf" value="([^"]+)"', first).group(1))
     origin = url.rstrip("/")
     for command in ("اذهب home-market", "انتظر 90", "انتظر 30"):
