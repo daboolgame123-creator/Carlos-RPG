@@ -64,7 +64,28 @@ def main() -> None:
             "resource": o["resource"], "status": o["status"],
             "site": o["location_id"], "created_at": o["created_at"],
         } for oid, o in state.obligations.items() if o["status"] in ("requested", "promised")]
+        layla_trip = sorted([
+            {"id": ident, "origin": trip["origin"],
+             "destination": trip["destination"], "route_id": trip["route_id"],
+             "arrived_at": trip.get("arrived_at")}
+            for ident, trip in state.travels.items()
+            if trip["npc_id"] == "layla" and trip["status"] == "arrived"
+        ], key=lambda row: (row["arrived_at"], row["id"]))
+        fisher_home = state.npc_routines["layla"]["home_id"]
+        homeward = shortest_known_route(state, "layla", fisher_home)
         report = {
+            "fisher_return_diagnostics": {
+                "home": fisher_home, "routine": dict(state.npc_routines["layla"]),
+                "known_routes": list(state.navigation["layla"]["known_routes"]),
+                "visited": list(state.navigation["layla"]["visited"]),
+                "home_path_known": list(homeward) if homeward else [],
+                "last_five_arrivals": layla_trip[-5:],
+                "known_contacts": dict(state.relations.get("layla", {})),
+                "fisher_help_requesters": {
+                    who: state.relations.get(who, {}).get("layla", 0)
+                    for who in ("hana", "huda")
+                },
+            },
             "source_sha256": digest, "time": state.time,
             "summary": {k: metrics(state)[k] for k in ("bread", "meals", "starving", "cash_wages")},
             "residents": residents, "site_resources": materials, "open_offers": offers,
