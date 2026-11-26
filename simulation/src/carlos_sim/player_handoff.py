@@ -19,6 +19,11 @@ def player_handoff(gateway: PlayerGateway) -> dict[str, object]:
     """
     if type(gateway) is not PlayerGateway:
         raise TypeError("trusted local PlayerGateway required")
+    with gateway.store.read_consistent(gateway.world_id):
+        return _player_handoff_read(gateway)
+
+
+def _player_handoff_read(gateway: PlayerGateway) -> dict[str, object]:
     scene = gateway.inspect()
     status = gateway.status()
     memory = gateway.recall()

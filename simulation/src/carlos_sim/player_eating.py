@@ -51,8 +51,8 @@ def player_meal_history(store, state: WorldState, player_id: str,
     total = 0
     recent: list[dict[str, Any]] = []
     for (raw,) in store.db.execute(
-            "SELECT payload FROM events WHERE world_id=? ORDER BY seq DESC",
-            (state.world_id,)):
+            "SELECT payload FROM events WHERE world_id=? AND seq<=? ORDER BY seq DESC",
+            (state.world_id, state.revision)):
         obj = json.loads(raw)
         if (obj.get("event_type") != "PlayerFoodEaten"
                 or obj.get("actor_id") != player_id):

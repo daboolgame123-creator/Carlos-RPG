@@ -10,7 +10,7 @@ WEB-03 عند `985977b` اجتاز [الانحدار النهائي](https://git
 | ID | المهمة | الاعتماد | التصنيف | الحالة عند الإيداع | الدليل/الخطوة التالية |
 |---|---|---|---|---|---|
 | NEEDS-01 | احتياجات كارلوس وأكل وراحة فعلية وواجهة عربية | WEB-03 أخضر | READY_FOR_VERIFICATION | LOCAL_VERIFIED / FINAL_CI_PENDING | Schema46/Rules72، اختبارات محلية وتوافق أصلي؛ فحص آخر SHA في PR الفرع `feature/carlos-engine-needs-20261126` |
-| READ-01 | تقليل replay المتكرر وعرض نتائج الأوامر | NEEDS-01 متحقق | CHAT_EXECUTABLE | PLANNED | قياس أولي موجود بالخطة؛ مقارنة مخرجات وأحداث قبل تحسين مسار القراءة |
+| READ-01 | تقليل replay المتكرر وعرض نتائج الأوامر | NEEDS-01: PR #185، رأس `416e26b6c037b2fc504c8454d9b607aadeee7eba` وفحوصه الـ11 ناجحة | CHAT_EXECUTABLE | CLOSED_TECHNICALLY / LOCAL_VERIFIED على `feature/carlos-read01-20261126`، Python 3.10/3.12/3.13: 1935 passed + 1 skipped | [تحليل ونتائج 26 نوفمبر](READ_01_ANALYSIS_2026-11-26.md)؛ الخطوة التالية PLAY-LOOP: تحليل مهنة توصيل حقيقية من موارد وأجور موجودة |
 | PLAY-LOOP | عمل حقيقي مدفوع للاعب | READ-01 وعقد العمل | BLOCKED_BY_DEPENDENCY | PLANNED | مصدر مواد/أجر موجود، وقت وإنجاز وحماية من الدفع المكرر |
 | SAVE-01 | استئناف القرية واستعادة نسخة | عقد إصدار مثبت | CHAT_PARTIAL_EXTERNAL_GATE | PLANNED | أدوات اختبار موجودة؛ اعتماد P0 وترحيل قديم يظلان مستقلين |
 

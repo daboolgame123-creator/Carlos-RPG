@@ -23,8 +23,8 @@ def player_conversation_history(store: SQLiteEventStore, state: WorldState,
     recent: list[dict[str, Any]] = []
     total = 0
     for (raw,) in store.db.execute(
-            "SELECT payload FROM events WHERE world_id=? ORDER BY seq DESC",
-            (state.world_id,)):
+            "SELECT payload FROM events WHERE world_id=? AND seq<=? ORDER BY seq DESC",
+            (state.world_id, state.revision)):
         event_obj = json.loads(raw)
         if (event_obj.get("event_type") != "SocialMessageSent"
                 or event_obj.get("actor_id") != player_id):
