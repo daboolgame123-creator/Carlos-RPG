@@ -13,7 +13,7 @@ from test_gathering_autonomy import make_world, NAMES
 
 
 def test_schema_and_rules_versions():
-    assert SCHEMA_VERSION == 45
+    assert SCHEMA_VERSION == 46
     from release_contract import assert_current_version
     assert_current_version(SCHEMA_VERSION, RULES_VERSION)
 

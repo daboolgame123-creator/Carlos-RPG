@@ -1,7 +1,7 @@
 """CARLOS AR browser: genuine offline seven-NPC village with readable RTL Arabic.
 
-Zero third-party dependencies, network bound to 127.0.0.1 ONLY, no script
-resources, no external calls, no production/canonical save. All actions are
+Zero third-party dependencies, network bound to 127.0.0.1 ONLY, no external
+resources or calls, no production/canonical save. All actions are
 executed by the pre-existing player-authorized gateway, not by HTML/AI.
 Use Ctrl+C in the parent console to discard the temporary SQLite test world.
 """
@@ -311,7 +311,7 @@ def main() -> None:
     with TemporaryDirectory(prefix="carlos-play-browser-") as directory:
         with SQLiteEventStore(Path(directory) / "demo.sqlite") as db:
             clock = TimeEngine(db)
-            gateway = create_session(db, clock)
+            gateway = create_session(db, clock, player_needs_enabled=True)
             session = BrowserPlaySession(gateway)
             try:
                 with HTTPServer(("127.0.0.1", args.port), handler_for(session)) as server:

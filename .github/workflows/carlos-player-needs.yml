@@ -1,0 +1,73 @@
+name: Carlos player needs, rest and Arabic play
+on:
+  pull_request:
+    paths:
+      - 'simulation/src/carlos_sim/**'
+      - 'simulation/tests/**'
+      - 'simulation/scenarios/test_village/**'
+      - '.github/workflows/carlos-player-needs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  player-needs:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python-version: '3.10'
+            path_sep: ':'
+          - os: ubuntu-24.04
+            python-version: '3.13'
+            path_sep: ':'
+          - os: windows-2022
+            python-version: '3.13'
+            path_sep: ';'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/checkout@v5
+        with:
+          ref: 985977b42fb41e4f56e751c70ef8cd3495c7f503
+          path: reviewed-web03
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify exact candidate and original WEB-03 source
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -c "import os, subprocess; assert subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip() == os.environ['EXPECTED_HEAD']; assert subprocess.check_output(['git','-C','reviewed-web03','rev-parse','HEAD'], text=True).strip() == '985977b42fb41e4f56e751c70ef8cd3495c7f503'"
+      - name: Install test tools only
+        run: python -m pip install pytest playwright
+      - name: Player needs, authority, replay and legacy gameplay
+        working-directory: simulation
+        env:
+          PYTHONPATH: src${{ matrix.path_sep }}tests${{ matrix.path_sep }}scenarios/test_village
+          PYTHONIOENCODING: utf-8
+        run: |
+          python -m pytest -q tests/test_player_needs.py tests/test_player_needs_store.py tests/test_player_needs_gateway.py tests/test_survival.py tests/test_player_sustenance_batch_14.py tests/test_player_eating_batch_13.py tests/test_player_timed_foraging_batch_12.py tests/test_player_gateway.py tests/test_knowledge_compatibility.py
+          python -m pytest -q scenarios/test_village/test_playable_needs.py scenarios/test_village/test_playable_web03.py scenarios/test_village/test_playable_web02.py scenarios/test_village/test_playable_arabic_browser.py scenarios/test_village/test_playable_arabic_cli.py scenarios/test_village/test_play31_offline_village.py scenarios/test_village/test_play31_acceptance_journey.py
+      - name: Refuse authentic 45-71 save without mutation and reopen in original reader
+        working-directory: simulation
+        env:
+          PYTHONPATH: src${{ matrix.path_sep }}scenarios/test_village
+          PYTHONIOENCODING: utf-8
+        run: python scenarios/test_village/verify_player_needs_compatibility.py --predecessor ../reviewed-web03
+      - name: Real Chromium trade, eat, timed rest, mobile and no-JS fallback
+        working-directory: simulation
+        env:
+          PYTHONPATH: src${{ matrix.path_sep }}scenarios/test_village
+          PYTHONIOENCODING: utf-8
+        run: python -u scenarios/test_village/playable_browser_chromium_probe.py

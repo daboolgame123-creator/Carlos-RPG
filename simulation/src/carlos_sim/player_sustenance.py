@@ -1,7 +1,8 @@
-"""PLAY-14: verified meal and local ownership evidence, not fake player vitals.
+"""Verified own meals, ownership, and explicitly configured player needs.
 
-NPC hunger/fatigue is NOT applicable to the player. Likewise, an RPG ST
-value is not assumed to represent caloric energy, and meals do not heal HP.
+NPC hunger/fatigue is never used as player state. RPG ST remains separate
+from physical fatigue, and meals never heal HP. Unconfigured worlds keep
+the original honest unavailable projection.
 """
 from __future__ import annotations
 
@@ -16,8 +17,8 @@ EDIBLE = ("food", "bread")
 def player_sustenance_view(store, state: WorldState, player_id: str) -> dict[str, Any]:
     """Read verified player-only meal events and initialized personal food.
 
-    No thresholds, inferred hunger percent, guesses at nutrition, NPC memory,
-    remote food stocks, automatic consumption or synthetic zero balances.
+    No inferred hunger, NPC memory, remote food stocks, automatic consumption
+    or synthetic zero balances. Needs are read only from their own ledger.
     """
     if (player_id not in state.entities
             or state.entities[player_id]["controller"] != "player"):
@@ -27,8 +28,8 @@ def player_sustenance_view(store, state: WorldState, player_id: str) -> dict[str
         raise RuntimeError("world changed while projecting meal timing")
     most_recent: dict[str, Any] | None = None
     for (raw,) in store.db.execute(
-        "SELECT payload FROM events WHERE world_id=? ORDER BY seq DESC",
-        (state.world_id,),
+        "SELECT payload FROM events WHERE world_id=? AND seq<=? ORDER BY seq DESC",
+        (state.world_id, state.revision),
     ):
         record = json.loads(raw)
         if (record.get("event_type") != "PlayerFoodEaten"
@@ -58,4 +59,8 @@ def player_sustenance_view(store, state: WorldState, player_id: str) -> dict[str
             for kind in EDIBLE
         },
     }
+    needs = state.player_needs.get(player_id)
+    if needs is not None:
+        result['hunger'] = needs['hunger']
+        result['fatigue'] = needs['fatigue']
     return result

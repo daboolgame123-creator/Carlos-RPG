@@ -35,7 +35,9 @@ def main() -> None:
         with sync_playwright() as playwright:
             # Hosted Windows Actions runners provide Google Chrome without
             # requiring a heavyweight browser install in the game or CI.
-            chrome = (shutil.which("google-chrome") or
+            managed_chrome = Path(playwright.chromium.executable_path)
+            chrome = ((str(managed_chrome) if managed_chrome.is_file() else None) or
+                      shutil.which("google-chrome") or
                       shutil.which("chromium") or
                       shutil.which("chromium-browser"))
             if sys.platform == "win32" and chrome is None:
@@ -79,8 +81,10 @@ def main() -> None:
                     page.get_by_role("button", name=re.compile("أكمل الرحلة")).click()
                 assert advance.value.status == 200
                 page.get_by_text("الموقع: السوق (market)").wait_for()
-                assert page.get_by_role("progressbar").count() == 2
-                assert "غير مُحاكى بعد" in page.locator("body").inner_text()
+                assert page.get_by_role("progressbar").count() == 4
+                assert "غير مُحاكى بعد" not in page.locator("body").inner_text()
+                assert page.get_by_role("progressbar", name="الجوع", exact=True).get_attribute("aria-valuenow") == "20"
+                assert page.get_by_role("progressbar", name="التعب", exact=True).get_attribute("aria-valuenow") == "10"
 
                 with page.expect_response(lambda r: r.url.endswith("/act")) as greet:
                     page.get_by_role("button", name="تحدث إلى سلمى").click()
@@ -100,11 +104,60 @@ def main() -> None:
                 page.get_by_text("تم شراء 2 طعام", exact=False).wait_for()
                 assert "نحاس: 6" in page.locator("body").inner_text()
                 assert "طعام: 2" in page.locator("body").inner_text()
+
+                # Advance actual world time, then consume one of the purchased
+                # units. The renderer cannot invent the resulting need values.
+                page.get_by_role("textbox", name="أمر كارلوس").fill("انتظر 180")
+                with page.expect_response(lambda r: r.url.endswith("/act")):
+                    page.get_by_role("button", name="تنفيذ الأمر", exact=True).click()
+                page.locator('[aria-label="الجوع"][aria-valuenow="21"]').wait_for()
+                with page.expect_response(lambda r: r.url.endswith("/act")):
+                    page.get_by_role("button", name="كل وحدة من طعامك", exact=True).click()
+                page.get_by_text("أكل كارلوس وحدة من طعامه. المتبقي: 1.", exact=True).wait_for()
+                assert page.get_by_role("progressbar", name="الجوع", exact=True).get_attribute("aria-valuenow") == "0"
+                assert "طعام: 1" in page.locator("body").inner_text()
+
+                with page.expect_response(lambda r: r.url.endswith("/act")):
+                    page.get_by_role("button", name="استرح 30 دقيقة", exact=True).click()
+                page.get_by_role("button", name=re.compile("أكمل الراحة")).wait_for()
+                assert page.get_by_role("button", name=re.compile("اذهب إلى")).count() == 0
+                assert page.get_by_role("button", name="كل وحدة من طعامك", exact=True).count() == 0
+                assert page.get_by_role("button", name=re.compile("تحدث إلى")).count() == 0
+                assert page.get_by_role("progressbar", name="التعب", exact=True).get_attribute("aria-valuenow") == "10"
+                with page.expect_response(lambda r: r.url.endswith("/act")):
+                    page.get_by_role("button", name="انتظر 90 ثانية", exact=True).click()
+                page.locator('form:has(input[name="command"][value="انتظر 1710"]) button').wait_for()
+                assert page.get_by_role("progressbar", name="التعب", exact=True).get_attribute("aria-valuenow") == "10"
+                with page.expect_response(lambda r: r.url.endswith("/act")):
+                    page.get_by_role("button", name=re.compile("أكمل الراحة")).click()
+                page.get_by_text(re.compile("اكتملت راحة كارلوس")).wait_for()
+                assert page.get_by_role("progressbar", name="التعب", exact=True).get_attribute("aria-valuenow") == "0"
+                assert page.get_by_role("progressbar", name="الجوع", exact=True).get_attribute("aria-valuenow") == "6"
+                assert page.get_by_role("progressbar", name="الصحة (HP)", exact=True).get_attribute("aria-valuenow") == "12"
+                assert page.get_by_role("progressbar", name="التحمّل (ST)", exact=True).get_attribute("aria-valuenow") == "8"
+                assert "نحاس: 6" in page.locator("body").inner_text()
+                assert "طعام: 1" in page.locator("body").inner_text()
+
+                page.set_viewport_size({"width": 390, "height": 844})
+                assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
                 assert navigation_events == [], (
                     "Actions must update the current document, not navigate "
                     + repr(navigation_events)
                 )
+                # Native forms still work when JavaScript is disabled.
+                fallback = browser.new_context(java_script_enabled=False)
+                try:
+                    plain = fallback.new_page()
+                    plain.goto(url)
+                    with plain.expect_navigation():
+                        plain.get_by_role("button", name="حدّث المشهد", exact=True).click()
+                    assert plain.url == url
+                    assert plain.get_by_role("progressbar").count() == 4
+                    assert plain.get_by_role("progressbar", name="الجوع", exact=True).get_attribute("aria-valuenow") == "6"
+                finally:
+                    fallback.close()
                 print("CHROMIUM_REAL_WEB03_NO_RELOAD_BULK_BUY_AND_TALK_PASS", flush=True)
+                print("CHROMIUM_REAL_NEEDS01_EAT_REST_PARTIAL_MOBILE_AND_NOJS_PASS", flush=True)
             finally:
                 browser.close()
     finally:

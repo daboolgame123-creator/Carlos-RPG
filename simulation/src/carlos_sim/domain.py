@@ -10,8 +10,8 @@ from collections.abc import Mapping
 from hashlib import sha256
 import json
 
-SCHEMA_VERSION = 45
-RULES_VERSION = 71
+SCHEMA_VERSION = 46
+RULES_VERSION = 72
 
 
 def _thaw(value: Any) -> Any:
@@ -86,6 +86,7 @@ class WorldState:
     survival_progress: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
     metabolism_policy: Mapping[str, int] = field(default_factory=dict)
     rpg_profiles: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    player_needs: Mapping[str, Mapping[str, int]] = field(default_factory=dict)
     player_quests: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     injuries: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     treatments: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
@@ -138,6 +139,7 @@ class WorldState:
         object.__setattr__(self, "survival_progress", _freeze(_json_copy(self.survival_progress)))
         object.__setattr__(self, "metabolism_policy", _freeze(_json_copy(self.metabolism_policy)))
         object.__setattr__(self, "rpg_profiles", _freeze(_json_copy(self.rpg_profiles)))
+        object.__setattr__(self, "player_needs", _freeze(_json_copy(self.player_needs)))
         object.__setattr__(self, "player_quests", _freeze(_json_copy(self.player_quests)))
         object.__setattr__(self, "injuries", _freeze(_json_copy(self.injuries)))
         object.__setattr__(self, "treatments", _freeze(_json_copy(self.treatments)))
@@ -189,7 +191,8 @@ class WorldState:
                            "foraging_attempts": self.foraging_attempts,
                            "survival_progress": self.survival_progress,
                             "metabolism_policy": self.metabolism_policy,
-                           "rpg_profiles": self.rpg_profiles, "player_quests": self.player_quests, "injuries": self.injuries, "treatments": self.treatments,
+                           "rpg_profiles": self.rpg_profiles, "player_needs": self.player_needs,
+                           "player_quests": self.player_quests, "injuries": self.injuries, "treatments": self.treatments,
                            "environment_cycles": self.environment_cycles, "farm_plots": self.farm_plots, "supply_circuits": self.supply_circuits,
                            "courier_provisions": self.courier_provisions,
                             "hydrology_sources": self.hydrology_sources,
@@ -232,7 +235,7 @@ class WorldState:
 
     @classmethod
     def _decode_checked(cls, d: dict[str, Any], *, normalize_json: bool) -> WorldState:
-        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "courier_provisions", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
+        if not isinstance(d, dict) or set(d) != {"world_id", "time", "revision", "schema_version", "rules_version", "entities", "locations", "resources", "scheduled", "next_schedule_order", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_needs", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "courier_provisions", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers"}:
             raise ValueError("invalid world snapshot")
         if d["schema_version"] != SCHEMA_VERSION or d["rules_version"] != RULES_VERSION:
             raise ValueError("unsupported world version")
@@ -240,7 +243,7 @@ class WorldState:
             raise ValueError("invalid world identity/time/revision")
         if type(d["next_schedule_order"]) is not int or d["next_schedule_order"] < 1:
             raise ValueError("invalid schedule order")
-        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "courier_provisions", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
+        if any(not isinstance(d[k], dict) for k in ("entities", "locations", "resources", "scheduled", "npcs", "actions", "routes", "travels", "observations", "navigation", "relations", "social_messages", "obligations", "consumptions", "gatherings", "foraging_attempts", "survival_progress", "metabolism_policy", "rpg_profiles", "player_needs", "player_quests", "injuries", "treatments", "environment_cycles", "farm_plots", "supply_circuits", "courier_provisions", "hydrology_sources", "production_recipes", "production_jobs", "market_stalls", "market_offers", "market_trades", "loan_contracts", "loan_repayments", "npc_temperaments", "npc_routines", "rumor_deliveries", "property_takings", "property_sightings", "property_claims", "local_institutions", "complaint_desks", "property_complaints", "property_title_origins", "property_custody_lots", "property_custody_moves", "property_permissions", "registered_claim_balances", "registered_claim_offers", "registered_claim_transfers")):
             raise ValueError("invalid state collections")
         for owner, balances in d["resources"].items():
             if owner not in d["entities"] and owner not in d["locations"]:
@@ -274,6 +277,9 @@ class WorldState:
         validate_player_schedules(d)
         from .player_foraging import validate_player_forage_schedules
         validate_player_forage_schedules(d)
+        from .player_needs import validate_player_needs, validate_player_rest_schedules
+        validate_player_needs(d)
+        validate_player_rest_schedules(d)
         from .navigation import validate_navigation
         validate_navigation(d)
         from .social import validate_social
@@ -606,6 +612,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
     elif kind in ("PlayerRPGInitialized", "PlayerVitalChanged"):
         from .rpg_state import project_rpg_event
         project_rpg_event(d, e, bootstrap=bootstrap, rpg_authorized=rpg_authorized)
+    elif kind == "PlayerNeedsInitialized":
+        from .player_needs import initialize_player_needs
+        initialize_player_needs(d, e, bootstrap=bootstrap)
     elif kind in ("PlayerObserved", "PlayerHearsayReceived"):
         from .player_perception import validate_player_perception_event
         validate_player_perception_event(
@@ -695,6 +704,16 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
                     or d["resources"][site]["wild_food"] < 1
                     or type(d["resources"].get(who, {}).get("food")) is not int):
                 raise ValueError("player forage needs known local source and owned food balance")
+        if "__player_rest" in p["payload"]:
+            if (bootstrap or not action_authorized or not movement_authorized
+                    or e.actor_id is not None
+                    or set(p["payload"]) != {"__player_rest"} or p["interrupt"]):
+                raise ValueError("player rest requires dedicated trusted runtime action")
+            reservation = p["payload"]["__player_rest"]
+            if (not isinstance(reservation, Mapping)
+                    or type(reservation.get("started_at")) is not int
+                    or reservation["started_at"] != state.time):
+                raise ValueError("player rest must start at the current world time")
         d["scheduled"][p["id"]] = {k: _thaw(p[k]) for k in ("due", "order", "kind", "payload", "interrupt")}
         d["next_schedule_order"] += 1
     elif kind == "ScheduledEventCancelled":
@@ -708,6 +727,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
             raise ValueError("cannot cancel an active player journey without an explicit policy")
         if "__player_forage" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel a timed player forage without an explicit policy")
+        if "__player_rest" in d["scheduled"][p["id"]]["payload"]:
+            raise ValueError("cannot cancel a timed player rest without an explicit policy")
         if "__environment_cycle" in d["scheduled"][p["id"]]["payload"]:
             raise ValueError("cannot cancel an environmental renewal cycle")
         if "__production_job" in d["scheduled"][p["id"]]["payload"]:
@@ -740,6 +761,9 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if "__player_forage" in scheduled["payload"]:
             from .player_foraging import complete_player_forage
             complete_player_forage(d, p["id"], scheduled["payload"]["__player_forage"], state.time)
+        if "__player_rest" in scheduled["payload"]:
+            from .player_needs import complete_player_rest
+            complete_player_rest(d, p["id"], scheduled["payload"]["__player_rest"], state.time)
         if "__environment_cycle" in scheduled["payload"]:
             from .environment import complete_environment_cycle
             complete_environment_cycle(d, p["id"], scheduled["payload"], state.time)
@@ -766,6 +790,8 @@ def apply_event(state: WorldState, event: DomainEvent, *, bootstrap: bool = Fals
         if survival_authorized:
             from .survival import apply_survival_elapsed
             apply_survival_elapsed(d, p["to"] - p["from"])
+        from .player_needs import apply_player_needs_elapsed
+        apply_player_needs_elapsed(d, p["to"] - p["from"])
     else:
         raise ValueError(f"unknown event type: {kind}")
     # Reconcile every material stock delta against opt-in traceable lots.

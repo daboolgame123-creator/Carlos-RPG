@@ -25,18 +25,20 @@ HELP = (
     "move <route-id> | wait <1-21600 seconds> | "
     "talk <npc-id> <greeting|offer_help|request_help|threat> <words> | "
     "buy <offer-id> <quantity> <unit-price> | "
-    "eat | give <npc-id> <resource> <quantity> | "
+    "eat | rest | give <npc-id> <resource> <quantity> | "
     "forage | askfood <npc-id> <site-id> | "
     "accept <quest-id> | claim <quest-id> | help | quit"
 )
 MAX_WAIT = 21600
 
 
-def create_session(db: SQLiteEventStore, clock: TimeEngine) -> PlayerGateway:
+def create_session(db: SQLiteEventStore, clock: TimeEngine, *,
+                   player_needs_enabled: bool = False) -> PlayerGateway:
     """One real, physically bounded 7-NPC village; player controls only Carlos."""
     seed_physical_supply(
         db, personal_food=2, harvest_yield=3,
         initial_market_food=2, playable_demo=True,
+        player_needs_enabled=player_needs_enabled,
     )
     clock.open_session(WORLD)
     return PlayerGateway(
@@ -99,6 +101,8 @@ def execute(gateway: PlayerGateway, line: str, serial: int):
         return gateway.buy(args[0], int(args[1]), int(args[2]), **kwargs)
     if verb == "eat" and not args:
         return gateway.eat("food", **kwargs)
+    if verb == "rest" and not args:
+        return gateway.rest(**kwargs)
     if verb == "give" and len(args) == 3:
         return gateway.give(args[0], args[1], int(args[2]), **kwargs)
     if verb == "forage" and not args:
