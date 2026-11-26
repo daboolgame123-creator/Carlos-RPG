@@ -38,9 +38,13 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
                          one_hungry_market_buyer: bool = False,
                          staff_provisions: bool = False,
                          playable_demo: bool = False,
+                         player_needs_enabled: bool = False,
                          trusted_genesis_hook=None) -> None:
     if type(playable_demo) is not bool:
         raise ValueError('playable_demo must be a boolean trusted setup flag')
+    if (type(player_needs_enabled) is not bool
+            or (player_needs_enabled and not playable_demo)):
+        raise ValueError('player_needs_enabled requires the playable demo')
     if type(market_wallets) is not bool:
         raise ValueError('market_wallets must be a boolean trusted setup flag')
     if type(initial_market_food) is not int or not 0 <= initial_market_food <= 3:
@@ -108,6 +112,10 @@ def seed_physical_supply(store, *, water: int = 2, seed: int = 1,
             'owner_id': PLAYER, 'resource': 'food',
             'previous': None, 'current': 0, 'source': 'initialization',
         }))
+        if player_needs_enabled:
+            events.append(e('PlayerNeedsInitialized', {
+                'player_id': PLAYER, 'hunger': 20, 'fatigue': 10,
+            }))
     for who, role, location, hunger, fatigue in PEOPLE:
         events.extend((
             e("EntityCreated", {

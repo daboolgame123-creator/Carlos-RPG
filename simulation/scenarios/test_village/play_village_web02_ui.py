@@ -4,8 +4,8 @@ No world state reads, no simulation controls, no private NPC projections:
 the caller supplies public/player-scoped gateway views. HTML forms only send
 existing player actions back through the original verified executor.
 
-The player has real fixture RPG HP/ST, but *no modeled hunger or fatigue*
-(PlayerGateway.needs() says not_modeled). Never invent percentages for these.
+The player has real fixture RPG HP/ST. NEEDS-01 displays hunger/fatigue only
+when explicitly initialized by the engine; legacy worlds stay unmodeled.
 """
 from __future__ import annotations
 
@@ -170,7 +170,7 @@ def _num(value: Any) -> int | None:
 
 
 def _button(csrf: str, command: str, caption: str, *, primary: bool = False) -> str:
-    # Avoid JS and keep every player action a genuine, explicit POST.
+    # Every player action is an explicit POST, with a working no-JS fallback.
     return (
         '<form method="post" action="/act">'
         f'<input type="hidden" name="csrf" value="{_h(csrf)}">'
@@ -235,8 +235,17 @@ def _status_panel(status: Any, needs: Any, supplies: Any) -> str:
                        note="قيمة الشخصية الحقيقية في ملف الاختبار"))
     pieces.append(_bar("التحمّل (ST)", vitals.get("st"), color="st",
                        note="تحمّل RPG؛ ليس مقياس التعب الجسدي"))
-    pieces.append(_unknown_bar("الجوع", "لا توجد نسبة جوع لكارلوس في المحرك حاليًا"))
-    pieces.append(_unknown_bar("التعب", "لا توجد نسبة تعب لكارلوس في المحرك حاليًا"))
+    for key, label, note in (
+        ("hunger", "الجوع", "يزداد مع مرور وقت العالم، ويخف بتناول طعامك."),
+        ("fatigue", "التعب", "يزداد مع مرور الوقت خارج الراحة، ويخف عند اكتمالها."),
+    ):
+        value = _num(need.get(key))
+        if value is not None and value <= 100:
+            pieces.append(_bar(label, {"current": value, "max": 100},
+                               color="need", note=note))
+        else:
+            pieces.append(_unknown_bar(
+                label, f"لا توجد نسبة {label[2:]} لكارلوس في المحرك حاليًا"))
     last = need.get("seconds_since_last_meal")
     pieces.append(
         f'<p class="muted">آخر وجبة موثقة: '
@@ -283,11 +292,25 @@ def _scene_panel(scene: Any, csrf: str) -> str:
 
     place = str(details["location_id"])
     name = _known_place(place)
+    activity = details.get("activity", {})
+    busy = isinstance(activity, dict) and activity.get("kind") in ("resting", "foraging")
     pieces.extend([
         f'<div class="location">الموقع: {_h(name)} ({_h(place)})</div>',
         '<p class="muted">ما تراه هنا فقط؛ لا نكشف مواقع الشخصيات البعيدة.</p>',
-        '<hr class="sep"><h3>الأشخاص الموجودون هنا</h3><div class="people">'
     ])
+    if busy:
+        resting = activity["kind"] == "resting"
+        remaining = _num(activity.get("remaining_seconds")) or 0
+        pieces.append(
+            '<p class="notice">' + ("كارلوس يستريح" if resting else "كارلوس يبحث عن الطعام")
+            + " · متبقّي " + _h(_time_label(remaining)) + ".</p>"
+        )
+        if remaining > 0:
+            caption = "أكمل الراحة" if resting else "أكمل البحث"
+            pieces.append(_button(
+                csrf, "انتظر " + str(min(remaining, 21600)),
+                caption + " (" + _time_label(min(remaining, 21600)) + ")", primary=True))
+    pieces.append('<hr class="sep"><h3>الأشخاص الموجودون هنا</h3><div class="people">')
     activities = {
         str(a.get("actor_id")): a.get("activity")
         for a in details.get("activities", ())
@@ -307,7 +330,8 @@ def _scene_panel(scene: Any, csrf: str) -> str:
             f'<strong>{_h(person)}</strong> '
             f'<span class="person-note">— {_h(action_label)}</span>'
             '</span>'
-            + _button(csrf, f"تحدث {person_id} تحية مرحبا", f"تحدث إلى {person}")
+            + ("" if busy else _button(
+                csrf, f"تحدث {person_id} تحية مرحبا", f"تحدث إلى {person}"))
             + '</div>'
         )
     pieces.append('</div><hr class="sep"><h3>الطرق من موقعك</h3><div class="routes">')
@@ -325,7 +349,8 @@ def _scene_panel(scene: Any, csrf: str) -> str:
         pieces.append(
             '<div class="person"><span><bdi class="code">'
             + _h(route) + '</bdi></span>'
-            + _button(csrf, "اذهب " + route, label, primary=True)
+            + (f'<span class="muted">{_h(label)}</span>' if busy else
+               _button(csrf, "اذهب " + route, label, primary=True))
             + '</div>'
         )
     pieces.append('</div></section>')
@@ -386,17 +411,29 @@ def _offers_panel(offers: Any, supplies: Any, csrf: str) -> str:
     return "".join(bits)
 
 
-def _actions_panel(scene: Any, supplies: Any, local_food: Any, csrf: str) -> str:
+def _actions_panel(scene: Any, supplies: Any, local_food: Any, csrf: str,
+                   needs: Any = None) -> str:
     bits = ['<section class="card" id="actions"><h2>ماذا تريد أن تفعل؟</h2>']
     bits.append('<p class="muted">اختر فعلًا واضحًا. لن يتحرك كارلوس تلقائيًا.</p>')
+    activity = scene.details.get("activity", {})
+    busy = isinstance(activity, dict) and activity.get("kind") in ("resting", "foraging")
     bits.append('<h3>الوقت والمراقبة</h3><div class="group">')
-    bits.extend(_button(csrf, command, label) for command, label in (
-        ("مشهد", "حدّث المشهد"), ("انظر", "انظر حولك"),
+    choices = [
+        ("مشهد", "حدّث المشهد"),
         ("انتظر 30", "انتظر 30 ثانية"), ("انتظر 90", "انتظر 90 ثانية"),
         ("مساعدة", "كيف ألعب؟"),
-    ))
+    ]
+    if scene.status == "present" and not busy:
+        choices.insert(1, ("انظر", "انظر حولك"))
+    bits.extend(_button(csrf, command, label) for command, label in choices)
     bits.append('</div>')
-    if scene.status == "present":
+    if scene.status == "present" and not busy:
+        need = needs.details if hasattr(needs, "details") else {}
+        if (isinstance(need, dict) and _num(need.get("fatigue")) is not None
+                and _num(need.get("hunger")) is not None):
+            bits.append('<h3>الراحة</h3><div class="group">')
+            bits.append(_button(csrf, "استرح", "استرح 30 دقيقة"))
+            bits.append('</div>')
         own = supplies.details.get("balances", {})
         food = _num(own.get("food")) if isinstance(own, dict) else None
         if food is not None and food > 0:
@@ -440,6 +477,15 @@ def friendly_result(result: Any, command: str, before: Any, after: Any) -> str:
         elapsed = details.get("elapsed")
         if before.status == "traveling" and after.status == "present":
             return "وصل كارلوس إلى " + _known_place(after.details.get("location_id")) + "."
+        if details.get("rest_result") == "completed":
+            return "اكتملت راحة كارلوس. حُدّث التعب بعد الراحة الفعلية؛ راجع حالتك."
+        if "rest_remaining_seconds" in details:
+            return ("كارلوس يستريح. الوقت المتبقي: "
+                    + _time_label(details["rest_remaining_seconds"]) + ".")
+        if details.get("forage_result") == "collected":
+            return "انتهى البحث، وجمع كارلوس وحدة طعام فعلية من المكان."
+        if details.get("forage_result") == "depleted":
+            return "انتهى البحث دون طعام؛ المصدر لم يعد متاحًا عند اكتماله."
         if status == "foraging":
             return "مرّ الوقت وما زال كارلوس يبحث عن الطعام."
         return "مرّ من الزمن " + _time_label(elapsed) + ". تواصل القرية نشاطها وفق المحرك."
@@ -449,6 +495,12 @@ def friendly_result(result: Any, command: str, before: Any, after: Any) -> str:
             + RESOURCE_LABELS.get(str(details.get("resource")), str(details.get("resource")))
             + " مقابل " + str(details.get("total_paid", "?")) + " من النقود الفعلية."
         )
+    if status == "ate":
+        return ("أكل كارلوس وحدة من طعامه. المتبقي: "
+                + str(details.get("remaining_owned", "؟")) + ".")
+    if status == "resting":
+        return ("بدأ كارلوس الراحة في مكانه. الوقت المتبقي: "
+                + _time_label(details.get("remaining_seconds")) + ".")
     if status == "interacted":
         who = _person_name(details.get("recipient_id"))
         return ("تحدث كارلوس مع " + who + ". رد فعله المسجل: "
@@ -464,6 +516,8 @@ def friendly_result(result: Any, command: str, before: Any, after: Any) -> str:
         return "ممتلكات كارلوس معروضة في اللوحة الجانبية."
     if status == "offers":
         return "عروض البيع المتاحة معروضة في لوحة السوق."
+    if status == "needs":
+        return "راجع الجوع والتعب وآخر وجبة في لوحة حالة كارلوس."
     if status == "ready":
         elapsed = details.get("elapsed")
         return "مرّ من الزمن " + _time_label(elapsed) + "."
@@ -482,6 +536,8 @@ def render_web02(gateway: Any, csrf: str, notice: str) -> bytes:
     offers = gateway.offers()
     food = gateway.check_food()
     conversations = gateway.conversations()
+    modeled_needs = (type(needs.details.get("hunger")) is int
+                     and type(needs.details.get("fatigue")) is int)
 
     bits = [
         '<!doctype html><html lang="ar" dir="rtl"><head>',
@@ -492,11 +548,12 @@ def render_web02(gateway: Any, csrf: str, notice: str) -> bytes:
         '<header><h1>كارلوس — القرية الحيّة</h1>',
         '<p>مرحبًا بك في القرية. تحرّك بحرية، تحدث مع الناس، وتابع ما يحدث حولك.</p>',
         '<p class="muted">العالم مستقل وموارده محدودة؛ لا تفرض الواجهة تصرفات على السكان.</p>',
-        '<small>تجربة محلية مؤقتة · WEB-03 · AUTH-DIAGNOSTIC-2</small></header>',
+        '<small>تجربة محلية مؤقتة · WEB-03'
+        + (' · NEEDS-01' if modeled_needs else '') + '</small></header>',
         '<div class="layout"><div class="column">',
         _scene_panel(scene, csrf),
         _offers_panel(offers, supplies, csrf),
-        _actions_panel(scene, supplies, food, csrf),
+        _actions_panel(scene, supplies, food, csrf, needs),
         _conversation_panel(conversations),
         '<section class="card"><h2>آخر نتيجة</h2>',
         f'<div class="result" role="status">{_h(notice)}</div></section>',
@@ -505,7 +562,9 @@ def render_web02(gateway: Any, csrf: str, notice: str) -> bytes:
         '<section class="card"><h2>كيف ألعب؟</h2>',
         '<p>اضغط على وجهة من «الطرق»، ثم استخدم الانتظار لإكمال الرحلة.</p>',
         '<p>تحدّث فقط إلى شخص موجود أمامك. لا تظهر عروض شراء إلا عند توافرها فعلًا.</p>',
-        '<p class="help">التحمّل ST ليس مؤشر التعب، والجوع والتعب لم يُنفّذا لكارلوس بعد.</p>',
+        ('<p class="help">الجوع والتعب من حالة كارلوس الفعلية. '
+         'الوقت يمر بأوامرك؛ اختر الراحة ثم أكمل مدتها.</p>' if modeled_needs else
+         '<p class="help">التحمّل ST ليس مؤشر التعب، والجوع والتعب لم يُنفّذا لكارلوس بعد.</p>'),
         '</section></div></div>',
         '<p class="footer">هذه ليست القصة الأصلية، ولا يوجد حفظ دائم. '
         'لإنهاء الجلسة وحذف العالم المؤقت اضغط Ctrl+C في نافذة Python.</p>',

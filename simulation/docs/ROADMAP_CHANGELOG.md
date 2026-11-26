@@ -1,5 +1,14 @@
 # سجل تغييرات خارطة الطريق — Carlos RPG
 
+## 2026-11-26 — مراجعة شاملة واستكمال احتياجات اللاعب
+
+بناء على طلب المالك بتحليل المشروع ومواصلة تطوير المحرك، روجعت البنية والاقتصاد واللعب
+والحفظ والاختبارات بالتوازي. أضيفت [خطة واضحة بمعايير قبول](ENGINE_REVIEW_AND_PLAN_2026-11-26.md)
+وفُعّل تنفيذ NEEDS-01: جوع وتعب وأكل وراحة فعلية لكارلوس في قرية الاختبار، مع Schema46/Rules72
+ورفض آمن للحفظ القديم. يأتي بعدها تحسين القراءة وحلقة العمل والحفظ والخريطة. قرار23نوفمبر
+يسبق اشتراط إنقاذ السكان في السجل التاريخي؛ لا إعادة تصنيف نتائج اقتصادية فاشلة إلى نجاح.
+التحقق المحلي موثق؛ CI النهائي في طلب الدمج، والمراجعة الخارجية/P0 يظلان منفصلين.
+
 ## 2026-11-11 — terminal negative decision for PLAY-48
 
 **Result:** `PLAY48_EXECUTION_ENDED / PLAY48_ACCEPTANCE_FAILED / RELEASE_NO_GO`. The original bounded repeatable workshop/material loops and the separate true farm bread transport are technically verified, including [Rules61 1696×2 suite and 48h physical delivery #43043085485](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43043085485). The actual 13-NPC 96h run [#43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) confirms total hunger by day4 and zero post72 activity. This ends the lengthy experiment **without reinterpreting failed economic acceptance as a passed phase**. No PLAY49, production save migration, main merge or RELEASE_GO. Full [terminal phase decision](PLAY_48_PHASE_TERMINAL_DISPOSITION_2026-11-11.md) is authoritative.

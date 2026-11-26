@@ -30,6 +30,7 @@ ALIASES = {
     "المهام": "quests", "تسليم": "handoff",
     "اذهب": "move", "تحرك": "move", "انتظر": "wait",
     "تحدث": "talk", "اشتر": "buy", "كل": "eat", "كُل": "eat",
+    "استرح": "rest", "راحة": "rest", "ارتاح": "rest",
     "اعط": "give", "أعط": "give", "ابحث": "forage",
     "اطلب_طعام": "askfood", "اقبل": "accept", "استلم": "claim",
     "مساعدة": "help", "خروج": "quit", "اخرج": "quit",
@@ -43,7 +44,7 @@ ORIGINAL = {
     "scene", "look", "remember", "status", "supplies", "needs",
     "offers", "food", "purchases", "meals", "gifts", "conversations",
     "quests", "handoff", "move", "wait", "talk", "buy", "eat",
-    "give", "forage", "askfood", "accept", "claim", "help", "quit", "exit",
+    "rest", "give", "forage", "askfood", "accept", "claim", "help", "quit", "exit",
 }
 KEYS = {
     "location_id": "معرف_الموقع", "location_name": "اسم_الموقع",
@@ -56,6 +57,8 @@ KEYS = {
     "payment_resource": "عملة_الدفع", "total_paid": "الإجمالي_المدفوع",
     "recipient_id": "المستلم", "total": "المجموع", "recent": "الأحدث",
     "profile": "الملف", "configured": "مُهيأ", "quest_id": "معرف_المهمة",
+    "hunger": "الجوع", "fatigue": "التعب", "rest_result": "نتيجة_الراحة",
+    "rest_remaining_seconds": "المتبقي_للراحة", "activity": "النشاط",
 }
 LOCATION_NAMES = {
     "home": "المنزل", "market": "السوق", "bakery": "المخبز",
@@ -71,6 +74,7 @@ STATUS = {
     "rpg_status": "حالة كارلوس", "supplies": "ممتلكات كارلوس",
     "offers": "عروض البيع المحلية", "purchased": "شراء موثق",
     "gifted": "هدية موثقة", "foraging": "بحث عن طعام",
+    "ate": "وجبة موثقة", "resting": "يستريح",
     "needs": "احتياجات كارلوس", "memory": "ذكريات كارلوس",
     "quests": "المهام", "quest_accepted": "مهمة مقبولة",
     "quest_reward_claimed": "مكافأة مستلمة",
@@ -84,6 +88,7 @@ HELP_AR = """الأوامر العربية (ويمكنك استخدام الأو
   تحدث salma تحية مرحبا      حوار مع شخصية موجودة في موقعك
   اشتر <معرف_العرض> 1 2       شراء وحدة بالسعر الفعلي المعروض
   كل                         أكل طعام يملكه كارلوس بالفعل
+  استرح                      بدء راحة لمدة 30 دقيقة عند تفعيل احتياجات اللاعب
   اعط salma food 1           منح مورد مملوك لشخصية قريبة
   ابحث                       محاولة جمع طعام محلي موجود
   اطلب_طعام <npc-id> <site-id>

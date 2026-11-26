@@ -1,4 +1,24 @@
-# Carlos Simulation — Phase 01-A
+# Carlos Simulation
+
+## Current development — 26 November 2026
+
+The current experimental player branch is `feature/carlos-engine-needs-20261126`,
+based on verified WEB-03. See the [whole-project review and ordered plan](docs/ENGINE_REVIEW_AND_PLAN_2026-11-26.md)
+and [live handoff](docs/CARLOS_NEXT_CHAT_HANDOFF.md). It adds genuine player hunger,
+food consumption and timed rest to the local Arabic browser (Schema46 / Rules72).
+Old45/71 saves are rejected unchanged; this is not a production migration.
+
+From `simulation/`, start the disposable seven-NPC village:
+
+```bash
+PYTHONPATH=src python scenarios/test_village/play_village_browser.py
+```
+
+All world time remains explicit; NPCs continue during player waits/rest. The browser
+world is deleted on exit. Current verification evidence is in the branch's draft PR.
+The dated phase sections below are historical, not a complete current feature list.
+
+## Original Phase 01-A introduction
 
 Independent, offline Python core for *test worlds only*. **No actual Carlos story data is imported or changed.**
 

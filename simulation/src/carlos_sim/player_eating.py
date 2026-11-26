@@ -1,7 +1,7 @@
 """PLAY-13: explicit one-unit consumption of genuinely owned player food.
 
-Neither nutrition/hunger nor HP/ST/MP changes are justified by this event.
-A recorded physical meal is not a medical or motivational assertion.
+Opt-in player needs receive their fixed test-world hunger relief. RPG HP/ST/MP
+remain unchanged; a recorded meal does not imply medical recovery.
 """
 from __future__ import annotations
 
@@ -31,10 +31,15 @@ def project_player_food_eaten(state: dict[str, Any], event: DomainEvent, *,
     if any(s["payload"].get("__player_forage", {}).get("player_id") == who
            for s in state["scheduled"].values()):
         raise ValueError("cannot eat while busy foraging")
+    if any(s["payload"].get("__player_rest", {}).get("player_id") == who
+           for s in state["scheduled"].values()):
+        raise ValueError("cannot eat while resting")
     balance = state["resources"].get(who, {}).get(item)
     if type(balance) is not int or balance < 1:
         raise ValueError("eating requires positive initialized player ownership")
     state["resources"][who][item] = balance - 1
+    from .player_needs import apply_player_meal
+    apply_player_meal(state, who)
 
 
 def player_meal_history(store, state: WorldState, player_id: str,

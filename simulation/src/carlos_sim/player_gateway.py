@@ -93,6 +93,17 @@ class PlayerGateway:
             for rid, r in sorted(state.routes.items())
             if place in (r['a'], r['b'])
         )
+        from .player_foraging import player_forage_signal
+        from .player_needs import player_rest_signal
+        activity = None
+        for kind, pending in (
+            ('resting', player_rest_signal(state, self.player_id)),
+            ('foraging', player_forage_signal(state, self.player_id)),
+        ):
+            if pending is not None:
+                activity = {'kind': kind,
+                            'remaining_seconds': pending[1]['due'] - state.time}
+                break
         return PlayerCommandResult(state.world_id, state.time, state.revision,
                                    'present', {
             'location_id': place, 'location_name': state.locations[place]['name'],
@@ -100,6 +111,7 @@ class PlayerGateway:
             # Present-only, qualitative behavior: never NPC intentions or
             # hidden medical facts. This is not a persistent player sighting.
             'activities': visible_player_activities(state, self.player_id),
+            **({'activity': activity} if activity is not None else {}),
         })
 
     def observe(self, *, command_id: str,
@@ -107,7 +119,7 @@ class PlayerGateway:
         """Record explicitly chosen local sight; inspect stays read-only."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot observe while travelling')
         from .movement import _visible
@@ -171,7 +183,7 @@ class PlayerGateway:
         """Accept only a published scenario quest; no NPC actions are implied."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         committed = self.store.append(
             self.world_id, "player-quest:accept:" + cid, expected_revision,
             [DomainEvent("PlayerQuestAccepted", self.player_id,
@@ -187,7 +199,7 @@ class PlayerGateway:
         """Claim one reward, conserved by the event reducer at the actual stall."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         committed = self.store.append(
             self.world_id, "player-quest:claim:" + cid, expected_revision,
             [DomainEvent("PlayerQuestRewardClaimed", self.player_id,
@@ -230,7 +242,7 @@ class PlayerGateway:
                                                  'recent': recent})
 
     def needs(self) -> PlayerCommandResult:
-        """Verified time since last real meal, without invented hunger or ST."""
+        """Own configured physiology and verified meals; never infer RPG ST."""
         state = self._state()
         from .player_sustenance import player_sustenance_view
         details = player_sustenance_view(self.store, state, self.player_id)
@@ -282,8 +294,10 @@ class PlayerGateway:
         from .movement import _in_transit
         quotes = []
         from .player_foraging import player_forage_signal
+        from .player_needs import player_rest_signal
         if (player_travel_signal(state, self.player_id) is None
-                and player_forage_signal(state, self.player_id) is None):
+                and player_forage_signal(state, self.player_id) is None
+                and player_rest_signal(state, self.player_id) is None):
             site = state.entities[self.player_id]['location_id']
             raw = state.to_dict()
             for ident, o in sorted(state.market_offers.items()):
@@ -311,7 +325,7 @@ class PlayerGateway:
         """
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot purchase while travelling')
         from .market import MAX_QUANTITY, MAX_PRICE, _id
@@ -353,7 +367,7 @@ class PlayerGateway:
         """
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot hand over goods while travelling')
         from .market import _id, MAX_QUANTITY
@@ -377,10 +391,50 @@ class PlayerGateway:
              'quantity': quantity},
         )
 
-    def _deny_forage_busy(self, state) -> None:
+    def _deny_busy(self, state) -> None:
+        """Keep all existing action gates exclusive for both timed activities."""
         from .player_foraging import player_forage_signal
+        from .player_needs import player_rest_signal
         if player_forage_signal(state, self.player_id) is not None:
             raise ValueError('player busy foraging; wait for completion')
+        if player_rest_signal(state, self.player_id) is not None:
+            raise ValueError('player busy resting; wait for completion')
+
+    def rest(self, *, command_id: str, expected_revision: int) -> PlayerCommandResult:
+        """Start explicit, location-locked rest; recovery occurs at its due tick."""
+        from .player_needs import REST_SECONDS
+        cid = self._command_id(command_id)
+        state = self._state(expected_revision)
+        if self.store.db.execute(
+                'SELECT 1 FROM commands WHERE world_id=? AND command_id=?',
+                (self.world_id, 'player-rest:' + cid)).fetchone():
+            raise DuplicateCommand('player rest command already recorded')
+        self._deny_busy(state)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot rest while travelling')
+        if self.player_id not in state.player_needs:
+            raise ValueError('player needs are not configured for this world')
+        due = state.time + REST_SECONDS
+        if due > 2**63 - 1:
+            raise ValueError('world time would overflow')
+        site = state.entities[self.player_id]['location_id']
+        schedule_id = 'player-rest:' + self.player_id + ':' + cid
+        event = DomainEvent(
+            'ScheduledEventCreated', None, 'human explicitly started local rest',
+            state.time, {
+                'id': schedule_id, 'due': due,
+                'order': state.next_schedule_order, 'kind': 'signal',
+                'interrupt': False,
+                'payload': {'__player_rest': {
+                    'player_id': self.player_id, 'site_id': site,
+                    'started_at': state.time}},
+            })
+        saved = self.store.append(
+            self.world_id, 'player-rest:' + cid, expected_revision,
+            [event], movement_authorized=True, action_authorized=True)
+        return PlayerCommandResult(
+            saved.world_id, saved.time, saved.revision, 'resting',
+            {'site_id': site, 'remaining_seconds': REST_SECONDS})
 
     def check_food(self) -> PlayerCommandResult:
         """See only a qualitative food source at the player's actual site."""
@@ -401,6 +455,7 @@ class PlayerGateway:
                 'SELECT 1 FROM commands WHERE world_id=? AND command_id=?',
                 (self.world_id, 'player-forage:' + cid)).fetchone():
             raise DuplicateCommand('player foraging command already recorded')
+        self._deny_busy(state)
         from .player_foraging import local_food_view, FORAGE_SECONDS
         view = local_food_view(state, self.player_id)
         if view['status'] == 'traveling':
@@ -449,7 +504,7 @@ class PlayerGateway:
                 (self.world_id, 'player-eat:' + cid)).fetchone():
             from .store import DuplicateCommand
             raise DuplicateCommand('player meal command already recorded')
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot eat while travelling')
         if type(resource) is not str or resource not in ('food', 'bread'):
@@ -464,10 +519,14 @@ class PlayerGateway:
                 'human explicitly consumed one own food unit with no assumed medical effect',
                 state.time, {'resource': resource, 'quantity': 1})],
             consumption_authorized=True)
+        details = {'resource': resource, 'quantity': 1,
+                   'remaining_owned': done.resources[self.player_id][resource],
+                   'health_effect': 'not_modeled'}
+        if self.player_id in done.player_needs:
+            details['hunger_before'] = state.player_needs[self.player_id]['hunger']
+            details['hunger_after'] = done.player_needs[self.player_id]['hunger']
         return PlayerCommandResult(done.world_id, done.time, done.revision,
-                                   'ate', {'resource': resource, 'quantity': 1,
-                                           'remaining_owned': done.resources[self.player_id][resource],
-                                           'health_effect': 'not_modeled'})
+                                   'ate', details)
 
     def ask_food(self, recipient_id: str, site_id: str, *,
                  command_id: str, expected_revision: int) -> PlayerCommandResult:
@@ -480,7 +539,7 @@ class PlayerGateway:
         """
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot ask questions while travelling')
         if (not isinstance(recipient_id, str) or recipient_id not in state.npcs
@@ -534,7 +593,7 @@ class PlayerGateway:
         """Start an adjacent journey; arrival occurs only when its due event fires."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('player already travelling')
         if not isinstance(route_id, str) or route_id not in state.routes:
@@ -571,7 +630,9 @@ class PlayerGateway:
         cid = self._command_id(command_id)
         before = self._state(expected_revision)
         from .player_foraging import player_forage_signal
+        from .player_needs import player_rest_signal
         foraging_before = player_forage_signal(before, self.player_id)
+        resting_before = player_rest_signal(before, self.player_id)
         if type(seconds) is not int or seconds <= 0:
             raise ValueError('wait seconds must be a positive integer')
         result = self.engine.advance(
@@ -581,6 +642,7 @@ class PlayerGateway:
         now = result.state
         transit = player_travel_signal(now, self.player_id)
         still_foraging = player_forage_signal(now, self.player_id)
+        still_resting = player_rest_signal(now, self.player_id)
         details = {
             'elapsed': result.elapsed_seconds, 'remaining': result.remaining_seconds,
             'interrupted': result.interrupted,
@@ -629,8 +691,16 @@ class PlayerGateway:
                 details['forage_site_id'] = payload['site_id']
             elif still_foraging is not None:
                 details['forage_remaining_seconds'] = still_foraging[1]['due'] - now.time
+        if resting_before is not None:
+            ident, _schedule, payload = resting_before
+            if ident in result.fired_ids:
+                details['rest_result'] = 'completed'
+                details['rest_site_id'] = payload['site_id']
+            elif still_resting is not None:
+                details['rest_remaining_seconds'] = still_resting[1]['due'] - now.time
         return PlayerCommandResult(now.world_id, now.time, now.revision,
                                    'traveling' if transit is not None else
+                                   'resting' if still_resting is not None else
                                    'foraging' if still_foraging is not None else 'ready',
                                    details)
 
@@ -639,7 +709,7 @@ class PlayerGateway:
         """Deliver only an explicit player speech act; NPC chooses its reaction."""
         cid = self._command_id(command_id)
         state = self._state(expected_revision)
-        self._deny_forage_busy(state)
+        self._deny_busy(state)
         if player_travel_signal(state, self.player_id) is not None:
             raise ValueError('cannot interact while travelling')
         if (not isinstance(recipient_id, str)

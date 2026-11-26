@@ -13,6 +13,13 @@ class IntegrityError(Exception): pass
 class UnsupportedVersion(Exception): pass
 class DuplicateCommand(Exception): pass
 
+
+def _schedules_player_rest(event: DomainEvent) -> bool:
+    payload = event.data.get("payload")
+    return (event.event_type == "ScheduledEventCreated"
+            and isinstance(payload, Mapping) and "__player_rest" in payload)
+
+
 class SQLiteEventStore:
     def __init__(self, path: str | Path):
         self.db = sqlite3.connect(str(path), isolation_level=None)
@@ -100,6 +107,11 @@ class SQLiteEventStore:
         state = self._decode_state(row[4], row[5])
         if state.world_id != world_id or state.revision != 0:
             raise IntegrityError("invalid initial state")
+        # Needs are opt-in facts established by a recorded bootstrap event;
+        # an initial snapshot must not silently invent them or a player rest.
+        if state.player_needs or any("__player_rest" in item["payload"]
+                                     for item in state.scheduled.values()):
+            raise IntegrityError("player needs and rest require recorded events")
         if use_snapshot:
             snap = self.db.execute("SELECT revision,state,hash FROM snapshots WHERE world_id=? ORDER BY revision DESC LIMIT 1",(world_id,)).fetchone()
             if snap:
@@ -113,7 +125,8 @@ class SQLiteEventStore:
         replay_query = (
             "SELECT e.seq, e.payload, e.hash, c.request_hash, c.bootstrap, "
             "c.action_authorized, c.movement_authorized, c.social_authorized, "
-            "c.assistance_authorized, c.consumption_authorized, c.survival_authorized, c.rpg_authorized, c.production_authorized, c.market_authorized, c.loan_authorized, c.taking_authorized, c.claim_authorized, c.complaint_authorized, c.permission_authorized, c.claim_transfer_authorized, c.injury_authorized, c.recovery_authorized, c.gift_authorized, c.agriculture_authorized, c.supply_authorized, c.hydrology_authorized "
+            "c.assistance_authorized, c.consumption_authorized, c.survival_authorized, c.rpg_authorized, c.production_authorized, c.market_authorized, c.loan_authorized, c.taking_authorized, c.claim_authorized, c.complaint_authorized, c.permission_authorized, c.claim_transfer_authorized, c.injury_authorized, c.recovery_authorized, c.gift_authorized, c.agriculture_authorized, c.supply_authorized, c.hydrology_authorized, "
+            "e.command_id, c.first_revision, c.last_revision "
             "FROM events AS e LEFT JOIN commands AS c "
             "ON e.world_id=c.world_id AND e.command_id=c.command_id "
             "WHERE e.world_id=? AND e.seq>? ORDER BY e.seq"
@@ -121,7 +134,8 @@ class SQLiteEventStore:
         for (seq, raw, stored_hash, command_hash, bootstrap,
              action_authorized, movement_authorized, social_authorized,
              assistance_authorized, consumption_authorized,
-             survival_authorized, rpg_authorized, production_authorized, market_authorized, loan_authorized, taking_authorized, claim_authorized, complaint_authorized, permission_authorized, claim_transfer_authorized, injury_authorized, recovery_authorized, gift_authorized, agriculture_authorized, supply_authorized, hydrology_authorized) in self.db.execute(
+             survival_authorized, rpg_authorized, production_authorized, market_authorized, loan_authorized, taking_authorized, claim_authorized, complaint_authorized, permission_authorized, claim_transfer_authorized, injury_authorized, recovery_authorized, gift_authorized, agriculture_authorized, supply_authorized, hydrology_authorized,
+             recorded_command_id, first_revision, last_revision) in self.db.execute(
                  replay_query, (world_id, state.revision)):
             if seq != state.revision + 1:
                 raise IntegrityError("event sequence gap")
@@ -131,8 +145,14 @@ class SQLiteEventStore:
                     raise IntegrityError("event hash mismatch")
                 if command_hash is None:
                     raise IntegrityError("event command is missing")
+                event = DomainEvent.from_dict(raw_data)
+                if _schedules_player_rest(event) and (
+                        bootstrap or not action_authorized or not movement_authorized
+                        or not recorded_command_id.startswith("player-rest:")
+                        or first_revision != seq or last_revision != seq):
+                    raise IntegrityError("player rest lacks explicit command provenance")
                 state = apply_event(
-                    state, DomainEvent.from_dict(raw_data),
+                    state, event,
                     bootstrap=bool(bootstrap),
                     action_authorized=bool(action_authorized),
                     movement_authorized=bool(movement_authorized),
@@ -187,6 +207,13 @@ class SQLiteEventStore:
             raise ValueError("command ID, expected revision and nonempty event batch required")
         if type(bootstrap) is not bool or type(clock_authorized) is not bool or type(npc_authorized) is not bool or type(action_authorized) is not bool or type(movement_authorized) is not bool or type(social_authorized) is not bool or type(assistance_authorized) is not bool or type(consumption_authorized) is not bool or type(survival_authorized) is not bool or type(rpg_authorized) is not bool or type(production_authorized) is not bool or type(market_authorized) is not bool or type(loan_authorized) is not bool or type(taking_authorized) is not bool or type(claim_authorized) is not bool or type(complaint_authorized) is not bool or type(permission_authorized) is not bool or type(claim_transfer_authorized) is not bool or type(injury_authorized) is not bool or type(recovery_authorized) is not bool or type(gift_authorized) is not bool or type(agriculture_authorized) is not bool or type(supply_authorized) is not bool or type(hydrology_authorized) is not bool:
             raise ValueError("capability flags must be boolean")
+        if any(e.event_type == "PlayerNeedsInitialized" for e in events) and not bootstrap:
+            raise InvalidEvent("player needs require recorded trusted bootstrap")
+        if any(_schedules_player_rest(e) for e in events):
+            if (bootstrap or not action_authorized or not movement_authorized
+                    or world_id not in self._active_worlds
+                    or not command_id.startswith("player-rest:") or len(events) != 1):
+                raise InvalidEvent("player rest requires one explicit active player action")
         if (any(e.event_type == "RecoveryStarted" for e in events)
                 or any(e.event_type == "ScheduledEventCreated" and "__npc_recovery" in e.data.get("payload", {}) for e in events)):
             if not recovery_authorized or world_id not in self._active_worlds:
