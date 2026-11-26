@@ -260,6 +260,49 @@ class PlayerGateway:
         return PlayerCommandResult(state.world_id, state.time, state.revision,
                                    'meals', details)
 
+    def deposit_material(self, recipe_id: str, resource: str, quantity: int, *,
+                         command_id: str,
+                         expected_revision: int) -> PlayerCommandResult:
+        """Carry owned inputs into the local site of this player's signed job."""
+        cid = self._command_id(command_id)
+        if not isinstance(recipe_id, str) or not recipe_id:
+            raise ValueError('a contracted production recipe is required')
+        from .production import MAX_BATCH, MAX_NAME, _valid_name, recipe_inputs
+        if (not _valid_name(resource, MAX_NAME) or type(quantity) is not int
+                or not 1 <= quantity <= MAX_BATCH):
+            raise ValueError('valid material and bounded positive quantity required')
+        state = self._state(expected_revision)
+        event_id = 'player-workshop-deposit:' + cid
+        if self.store.db.execute(
+                'SELECT 1 FROM commands WHERE world_id=? AND command_id=?',
+                (self.world_id, event_id)).fetchone():
+            raise DuplicateCommand('player material deposit command already recorded')
+        self._deny_busy(state)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot deposit workshop material while travelling')
+        recipe = state.production_recipes.get(recipe_id)
+        if recipe is None or recipe.get('player_worker_id') != self.player_id:
+            raise PermissionError('this player has no signed contract for that recipe')
+        site = recipe['site_id']
+        if state.entities[self.player_id]['location_id'] != site:
+            raise ValueError('player must be physically present at the contracted worksite')
+        if resource not in {name for name, _amount in recipe_inputs(recipe)}:
+            raise ValueError('material is not an input to the contracted recipe')
+        committed = self.store.append(
+            self.world_id, event_id, expected_revision,
+            [DomainEvent(
+                'WorkshopMaterialDeposited', self.player_id,
+                'player carried owned material into the contracted workshop',
+                state.time, {'site_id': site, 'resource': resource,
+                             'quantity': quantity},
+            )], production_authorized=True, market_authorized=True)
+        return PlayerCommandResult(
+            committed.world_id, committed.time, committed.revision,
+            'material_deposited', {
+                'site_id': site, 'resource': resource,
+                'quantity': quantity,
+            })
+
     def work(self, recipe_id: str, *, command_id: str,
              expected_revision: int) -> PlayerCommandResult:
         """Start one explicitly contracted, local production job as Carlos.

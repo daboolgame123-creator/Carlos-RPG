@@ -1,6 +1,6 @@
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
-## الحالة الحالية — 26 نوفمبر 2026
+## الحالة الحالية — 27 نوفمبر 2026
 
 المرجع الأحدث: [مراجعة الأنظمة وخطة التنفيذ](ENGINE_REVIEW_AND_PLAN_2026-11-26.md).
 WEB-03 عند `985977b` اجتاز [الانحدار النهائي](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/45275029234).
@@ -13,7 +13,7 @@ WEB-03 عند `985977b` اجتاز [الانحدار النهائي](https://git
 | READ-01 | تقليل replay المتكرر وعرض نتائج الأوامر | NEEDS-01: PR #185، رأس `416e26b6c037b2fc504c8454d9b607aadeee7eba` وفحوصه الـ11 ناجحة | CHAT_EXECUTABLE | CLOSED_TECHNICALLY / LOCAL_VERIFIED، كود `f4c795784b9f80a87ddd68794ca88bb3565168fc` على `feature/carlos-read01-20261126`؛ Python 3.10/3.12/3.13: 1935 passed + 1 skipped | [تحليل ونتائج 26 نوفمبر](READ_01_ANALYSIS_2026-11-26.md)؛ التالي تحليل PLAY-LOOP |
 | PLAY-LOOP | عمل حقيقي مدفوع للاعب — خبّاز | READ-01 محقق محليًا؛ عقد المهنة والتمويل | CHAT_EXECUTABLE | IMPLEMENTED / LOCAL_VERIFIED على `feature/carlos-player-baker-20261126`، كود/اختبارات `06d61da77c2df656cd5ac672bd4fd63f5557714b` | [تحليل ونتائج 26 نوفمبر](PLAY_LOOP_ANALYSIS_2026-11-26.md)؛ 3.13 كامل: 1942 passed + 1 skipped؛ 3.10 كامل: 1941 + 1 skipped قبل اختبار التكامل الأخير، وملف المهنة النهائي 7/7 على 3 إصدارات |
 | SAVE-01 | استئناف القرية واستعادة نسخة | عقد إصدار مثبت | CHAT_PARTIAL_EXTERNAL_GATE | LOCAL_VERIFIED / FULL REGRESSION GREEN: 1944 passed + 1 skipped على Python 3.10 و3.13 | [تحليل ونتائج SAVE-01](SAVE_01_ANALYSIS_2026-11-26.md)، الاختبارات الموجهة 63/63 على Python 3.12؛ P0 والمراجعة المستقلة مفتوحان |
-| WORLD-01 | تكوين العالم التجريبي والمهن والمواقع | SAVE-01 موثق تقنيًا؛ دون اعتماد حفظ إنتاجي | CHAT_EXECUTABLE | IN_PROGRESS — WORLD-01a عقد حداد اللاعب محقق محليًا؛ parent scope مفتوح | [تحليل ونتيجة WORLD-01a](WORLD_01_ANALYSIS_2026-11-27.md)، الانحدار 1947 passed + 1 skipped على Python 3.10/3.13؛ التالي تحليل مصدر فعلي لمدخلات الورشة |
+| WORLD-01 | تكوين العالم التجريبي والمهن والمواقع | SAVE-01 موثق تقنيًا؛ دون اعتماد حفظ إنتاجي | CHAT_EXECUTABLE | IN_PROGRESS — WORLD-01b توريد حدادة اللاعب محقق محليًا على `feature/carlos-world01b-player-supply-20261127`؛ parent scope مفتوح | [تحليل WORLD-01b ونتيجته](WORLD_01B_PLAYER_WORKSHOP_SUPPLY_ANALYSIS_2026-11-27.md)؛ 1949 passed + 1 skipped على Python 3.12؛ التالي تحليل مصدر إنتاج الخام/الفحم نفسه |
 
 الأقسام التالية سجل تاريخي؛ لا تتقدم على الحالة الحالية أو سياسة المالك.
 
