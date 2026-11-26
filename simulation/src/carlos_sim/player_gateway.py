@@ -6,6 +6,7 @@ may construct the object and hold a SQLiteEventStore capability.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any
 
 from .domain import DomainEvent, _thaw
@@ -259,6 +260,46 @@ class PlayerGateway:
         return PlayerCommandResult(state.world_id, state.time, state.revision,
                                    'meals', details)
 
+    def work(self, recipe_id: str, *, command_id: str,
+             expected_revision: int) -> PlayerCommandResult:
+        """Start one explicitly contracted, local production job as Carlos.
+
+        Only a recipe naming this player at trusted world bootstrap is usable.
+        Inputs/tools stay at the real site; existing production completion and
+        funded payroll reducers settle the result during an explicit wait.
+        """
+        cid = self._command_id(command_id)
+        if not isinstance(recipe_id, str) or not recipe_id:
+            raise ValueError('a contracted production recipe is required')
+        state = self._state(expected_revision)
+        if self.store.db.execute(
+                'SELECT 1 FROM commands WHERE world_id=? AND command_id=?',
+                (self.world_id, 'player-production:' + cid)).fetchone():
+            raise DuplicateCommand('player production command already recorded')
+        self._deny_busy(state)
+        if player_travel_signal(state, self.player_id) is not None:
+            raise ValueError('cannot start work while travelling')
+        recipe = state.production_recipes.get(recipe_id)
+        if recipe is None or recipe.get('player_worker_id') != self.player_id:
+            raise PermissionError('this player has no signed contract for that recipe')
+        site = recipe['site_id']
+        if state.entities[self.player_id]['location_id'] != site:
+            raise ValueError('player must be physically present at the contracted worksite')
+        job_id = 'player-' + sha256(cid.encode('ascii')).hexdigest()[:32]
+        event = DomainEvent(
+            'ProductionStarted', self.player_id,
+            'player explicitly started contracted local production',
+            state.time, {'id': job_id, 'recipe_id': recipe_id,
+                         'npc_id': self.player_id})
+        committed = self.store.append(
+            self.world_id, 'player-production:' + cid, expected_revision,
+            [event], production_authorized=True)
+        job = committed.production_jobs[job_id]
+        return PlayerCommandResult(
+            committed.world_id, committed.time, committed.revision,
+            'production_started', {'job_id': job_id, 'recipe_id': recipe_id,
+                                   'site_id': site, 'due': job['due']})
+
     def gifts(self, limit: int = 20) -> PlayerCommandResult:
         """Read only verified, bounded records of this player's delivered gifts.
 
@@ -395,6 +436,9 @@ class PlayerGateway:
         """Keep all existing action gates exclusive for both timed activities."""
         from .player_foraging import player_forage_signal
         from .player_needs import player_rest_signal
+        from .production import is_producing
+        if is_producing(state.to_dict(), self.player_id):
+            raise ValueError('player busy working; wait for completion')
         if player_forage_signal(state, self.player_id) is not None:
             raise ValueError('player busy foraging; wait for completion')
         if player_rest_signal(state, self.player_id) is not None:

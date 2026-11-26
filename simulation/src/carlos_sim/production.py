@@ -80,8 +80,12 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
         return False
     compound = "inputs" in recipe
     expected = _RECIPE_COMPOUND if compound else _RECIPE_LEGACY
-    if set(recipe) not in (expected, expected | {"wage_coin"},
-                           expected | {"wage_food"}):
+    shapes = {frozenset(expected), frozenset(expected | {"wage_coin"}),
+              frozenset(expected | {"wage_food"})}
+    if "player_worker_id" in recipe:
+        shapes.update(frozenset(shape | {"player_worker_id"})
+                      for shape in (expected, expected | {"wage_coin"}))
+    if frozenset(recipe) not in shapes:
         return False
     if (not _valid_name(recipe["id"], MAX_ID)
             or not isinstance(recipe["site_id"], str)
@@ -135,6 +139,19 @@ def recipe_shape_ok(recipe: Any, locations: dict[str, Any],
             or recipe["wage_food"] not in (1, 2)
             or not _known(stocks.get("food"))):
         return False
+    if "player_worker_id" in recipe:
+        worker = recipe["player_worker_id"]
+        wage = recipe.get("wage_coin")
+        if (type(worker) is not str
+                or not _valid_name(worker, MAX_ID)
+                or not _known(wage)
+                or wage < 1
+                or not _known(stocks.get("coin_copper"))):
+            return False
+        # Player contracts are a named, funded bootstrap agreement. They do
+        # not grant a profession globally or create an employer balance.
+        # This field is checked against the actual player entity by the
+        # state-aware validator below (recipe_shape_ok only knows maps).
     return True
 
 def configure_recipe(state: dict[str, Any], event: DomainEvent, *,
@@ -144,6 +161,14 @@ def configure_recipe(state: dict[str, Any], event: DomainEvent, *,
             or not recipe_shape_ok(p, state["locations"], state["resources"])
             or p["id"] in state["production_recipes"]):
         raise ValueError("recipe requires finite, initialized time-zero materials")
+    player_worker = p.get("player_worker_id")
+    if (player_worker is not None
+            and (player_worker not in state["entities"]
+                 or state["entities"][player_worker]["controller"] != "player")):
+        raise ValueError("player work contract must name an existing player entity")
+    if (player_worker is not None
+            and state["resources"][p["site_id"]]["coin_copper"] < p["wage_coin"]):
+        raise ValueError("player work contract requires its full wage at signing")
     state["production_recipes"][p["id"]] = dict(p)
 
 
@@ -173,10 +198,16 @@ def start_production(state: dict[str, Any], event: DomainEvent, *,
         raise ValueError("production start requires trusted capability and fresh ID")
     who, recipe_id = p["npc_id"], p["recipe_id"]
     recipe = state["production_recipes"].get(recipe_id) if isinstance(recipe_id, str) else None
-    if (recipe is None or not isinstance(who, str) or who not in state["npcs"]
-            or event.actor_id != who
-            or state["npcs"][who]["role"] != recipe["role"]):
-        raise ValueError("production requires its real trained NPC worker")
+    if recipe is None or not isinstance(who, str) or event.actor_id != who:
+        raise ValueError("production requires a contracted, named worker")
+    if "player_worker_id" in recipe:
+        worker_valid = (who == recipe["player_worker_id"]
+                        and state["entities"].get(who, {}).get("controller") == "player")
+    else:
+        worker_valid = (who in state["npcs"]
+                        and state["npcs"][who]["role"] == recipe["role"])
+    if not worker_valid:
+        raise ValueError("production requires its contracted worker or trained NPC")
     site = recipe["site_id"]
     if state["entities"][who]["location_id"] != site:
         raise ValueError("worker must be physically at the workshop")
@@ -186,7 +217,20 @@ def start_production(state: dict[str, Any], event: DomainEvent, *,
             or any(t["npc_id"] == who and t["status"] == "traveling"
                    for t in state["travels"].values())):
         raise ValueError("worker cannot work twice or produce while traveling")
+    if state["entities"][who]["controller"] == "player":
+        from .movement import _in_transit
+        from .player_foraging import player_forage_signal
+        from .player_needs import player_rest_signal
+        player_state = WorldState.from_dict(state)
+        if (_in_transit(state, who)
+                or player_forage_signal(player_state, who) is not None
+                or player_rest_signal(player_state, who) is not None):
+            raise ValueError("player cannot start production while busy or traveling")
     stocks = state["resources"].get(site, {})
+    if "player_worker_id" in recipe:
+        payer = stocks.get("coin_copper")
+        if not _known(payer) or payer < recipe["wage_coin"]:
+            raise ValueError("player work requires the agreed wage to be locally funded")
     needs = recipe_inputs(recipe)
     before_by = {item: stocks.get(item) for item, _ in needs}
     output_before = stocks.get(recipe["output_resource"])
@@ -334,6 +378,11 @@ def validate_production_state(state: dict[str, Any]) -> None:
                                        state["resources"])
                 or rec["id"] != ident):
             raise ValueError("invalid persisted recipe")
+        player_worker = rec.get("player_worker_id")
+        if (player_worker is not None
+                and (player_worker not in state["entities"]
+                     or state["entities"][player_worker]["controller"] != "player")):
+            raise ValueError("persisted player work contract has no matching player")
     busy: set[str] = set()
     reservation_count: dict[tuple[str, str], int] = {}
     for ident, job in jobs.items():
@@ -368,8 +417,14 @@ def validate_production_state(state: dict[str, Any]) -> None:
                 and job["input_after"] ==
                 job["input_before"] - recipe["input_amount"]
             )
-        if (who not in state["npcs"]
-                or state["npcs"][who]["role"] != recipe["role"]
+        worker_valid = (
+            who in state["npcs"]
+            and state["npcs"][who]["role"] == recipe["role"]
+            if who in state["npcs"] else
+            recipe.get("player_worker_id") == who
+            and state["entities"].get(who, {}).get("controller") == "player"
+        )
+        if (not worker_valid
                 or job["site_id"] != recipe["site_id"]
                 or type(job["started_at"]) is not int or job["started_at"] < 0
                 or type(job["due"]) is not int

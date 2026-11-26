@@ -869,6 +869,22 @@ class LivingWorldEngine:
                          "destination": destination, "due": due_at,
                          "schedule_id": sid}), movement_capability=True)
                     busy.add(courier)
+            # A player's explicitly contracted production job belongs to the
+            # action they started, even in worlds where autonomous NPC trade
+            # is disabled. Settle only its existing funded site wage; this
+            # does not enable any NPC market or production policy.
+            for job_id in sorted(current.production_jobs):
+                job = current.production_jobs[job_id]
+                recipe = current.production_recipes[job["recipe_id"]]
+                if recipe.get("player_worker_id") != job["npc_id"]:
+                    continue
+                wage = choose_local_production_wage(current, job_id)
+                if wage is None:
+                    continue
+                append(DomainEvent("ProductionWagePaid", None,
+                    "funded wage for completed player-contracted work",
+                    current.time, {"job_id": job_id, "amount": wage}),
+                    production_capability=True)
             if self.economic_enabled:
                 # PLAY-41: money already walked by a real courier can pay
                 # *one completed, pre-agreed job* locally. A job remains
@@ -1829,6 +1845,14 @@ class LivingWorldEngine:
                    survival_capability=self.survival_enabled)
 
         # A complete unit of work: no partial SQLite commits for multiple NPCs.
+        player_contract_payroll = any(
+            event.event_type == "ProductionWagePaid"
+            and (job := current.production_jobs.get(
+                event.data.get("job_id"))) is not None
+            and current.production_recipes[job["recipe_id"]].get(
+                "player_worker_id") == job["npc_id"]
+            for event in events
+        )
         committed = self.store.append(world_id, command_id, expected_revision, events,
                                       clock_authorized=True, npc_authorized=True,
                                       action_authorized=True,
@@ -1838,7 +1862,8 @@ class LivingWorldEngine:
                                           self.local_emergency_courier_help_enabled),
                                       consumption_authorized=self.consumption_enabled,
                                       survival_authorized=self.survival_enabled,
-                                      production_authorized=self.economic_enabled,
+                                      production_authorized=(self.economic_enabled
+                                                             or player_contract_payroll),
                                       market_authorized=self.economic_enabled,
                                       agriculture_authorized=self.agriculture_enabled,
                                       supply_authorized=self.supply_enabled)
