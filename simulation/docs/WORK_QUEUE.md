@@ -11,7 +11,7 @@ WEB-03 عند `985977b` اجتاز [الانحدار النهائي](https://git
 |---|---|---|---|---|---|
 | NEEDS-01 | احتياجات كارلوس وأكل وراحة فعلية وواجهة عربية | WEB-03 أخضر | READY_FOR_VERIFICATION | LOCAL_VERIFIED / FINAL_CI_PENDING | Schema46/Rules72، اختبارات محلية وتوافق أصلي؛ فحص آخر SHA في PR الفرع `feature/carlos-engine-needs-20261126` |
 | READ-01 | تقليل replay المتكرر وعرض نتائج الأوامر | NEEDS-01: PR #185، رأس `416e26b6c037b2fc504c8454d9b607aadeee7eba` وفحوصه الـ11 ناجحة | CHAT_EXECUTABLE | CLOSED_TECHNICALLY / LOCAL_VERIFIED، كود `f4c795784b9f80a87ddd68794ca88bb3565168fc` على `feature/carlos-read01-20261126`؛ Python 3.10/3.12/3.13: 1935 passed + 1 skipped | [تحليل ونتائج 26 نوفمبر](READ_01_ANALYSIS_2026-11-26.md)؛ التالي تحليل PLAY-LOOP |
-| PLAY-LOOP | عمل حقيقي مدفوع للاعب | READ-01 محقق محليًا؛ عقد العمل يُحلل قبل التنفيذ | CHAT_EXECUTABLE | PLANNED | تحليل أول مهنة للاعب ومصدر حمولة وأجر موجودين؛ التوصيل مرشح إذا ثبتت السببية |
+| PLAY-LOOP | عمل حقيقي مدفوع للاعب — خبّاز | READ-01 محقق محليًا؛ عقد المهنة والتمويل | CHAT_EXECUTABLE | IMPLEMENTED / LOCAL_VERIFIED على `feature/carlos-player-baker-20261126`، كود/اختبارات `06d61da77c2df656cd5ac672bd4fd63f5557714b` | [تحليل ونتائج 26 نوفمبر](PLAY_LOOP_ANALYSIS_2026-11-26.md)؛ 3.13 كامل: 1942 passed + 1 skipped؛ 3.10 كامل: 1941 + 1 skipped قبل اختبار التكامل الأخير، وملف المهنة النهائي 7/7 على 3 إصدارات |
 | SAVE-01 | استئناف القرية واستعادة نسخة | عقد إصدار مثبت | CHAT_PARTIAL_EXTERNAL_GATE | PLANNED | أدوات اختبار موجودة؛ اعتماد P0 وترحيل قديم يظلان مستقلين |
 
 الأقسام التالية سجل تاريخي؛ لا تتقدم على الحالة الحالية أو سياسة المالك.
