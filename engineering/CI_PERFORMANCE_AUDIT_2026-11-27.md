@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-28
 
-**Status:** `AB_VALIDATED_LOCALLY / REALISTIC_SCALE_LOCAL / EXACT_SHA_CI_PENDING / CI-00_PARTIAL / CI-03_PARTIAL`
+**Status:** `AB_VALIDATED_LOCALLY / REALISTIC_SCALE_LOCAL / EXACT_SHA_FULL_CI_PASS / CI-00_PARTIAL / CI-03_PARTIAL`
 
 **Work branch:** `chore/carlos-ci-performance-audit-20261127`
 
@@ -10,9 +10,9 @@
 
 **PR #185:** still open and draft; head `416e26b6c037b2fc504c8454d9b607aadeee7eba`; no merge or PR update was made.
 
-**Realistic scale benchmark source:** `d399ffc970b139a5359208cf7c9fb8ee80395dd8` (including configurable checkpoint intervals). Earlier full regression run #46076122193 passed on parent code SHA `460c5992a939fc7e86d40650c8d63875fc814b00`; it does not include the new checkpoint option. Exact-SHA full CI for `d399ffc970b139a5359208cf7c9fb8ee80395dd8` is running as run [#46080863733](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46080863733).
+**Realistic scale benchmark source:** `d399ffc970b139a5359208cf7c9fb8ee80395dd8` (including configurable checkpoint intervals). Earlier full regression run #46076122193 passed on parent code SHA `460c5992a939fc7e86d40650c8d63875fc814b00`; it does not include the new checkpoint option. Exact-SHA full CI for `d399ffc970b139a5359208cf7c9fb8ee80395dd8` passed as run [#46080863733](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46080863733): **1,958 passed, 1 skipped** in each Python job; all 90 steps in each job succeeded.
 
-**Parent-code regression:** [run #46076122193](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46076122193) passed on SHA `460c5992a939fc7e86d40650c8d63875fc814b00`: both Python jobs and every smoke/compatibility step succeeded; each reported **1,958 passed, 1 skipped**. The added `--checkpoint-seconds` harness option is pending exact-SHA validation in run #46080863733.
+**Parent-code regression:** [run #46076122193](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46076122193) passed on SHA `460c5992a939fc7e86d40650c8d63875fc814b00`: both Python jobs and every smoke/compatibility step succeeded; each reported **1,958 passed, 1 skipped**. The `--checkpoint-seconds` harness option is included in the exact-SHA pass #46080863733.
 
 The measured A/B change is limited to the three-day test fixture: it writes a derived SQLite snapshot after each quarter-day advance and asserts the snapshot equals the returned world state. It does not change engine behavior, workflow definitions, event history, saves, or story files. The current `main` branch was not used.
 
@@ -174,8 +174,11 @@ Python 3.12.14, 900 simulated seconds, median of two fresh SQLite samples; the h
 | 2 | 8 | 249 | 0.374539 s | 0.196628 s | 0.003231 s | 0.193952 s | 168 |
 | 4 | 16 | 487 | 1.244678 s | 0.593786 s | 0.005411 s | 0.595127 s | 324 |
 | 8 | 32 | 963 | 4.182911 s | 2.056551 s | 0.010046 s | 2.037985 s | 636 |
+| 16 | 64 | 1,915 | 16.807431 s | 8.018000 s | 0.020195 s | 7.925410 s | 1,260 |
 
 The one-sector case repeated on Python 3.10.22 and 3.13.5 with the same 130-event count, activity totals, event digest `816ef09901a399489930bd4cf1d5669a9fa2f5b7283bef10e042a009c08a7d1e`, and state digest `bc8463b3010384c3fa1183d737986a38f25eaa0b3d5f367485fc92970ee71d9b` as Python 3.12.14.
+
+The 16-sector/64-NPC sample was run on documentation-only successor SHA `70111cfe7ed86633dad480f9075482b00195eb57`; the benchmark source file is unchanged from `d399ffc970b139a5359208cf7c9fb8ee80395dd8`. Two samples produced identical event digest `203c6b6586a132a79ab43f1c72d2ee79beef8baefaeab40aa197155330c242e9` and state digest `f81ef63c3e6dff98dad4a3e0871ccad86a0a386ee4a13cc2db1eff684e823b5f`. The run recorded 192 NPC decisions, 48 completed production jobs and wages, 16 local trades, 32 completed trips, 64 meals, and 32 social messages; it remained a set of independent sectors without shared-market contention.
 
 cProfile of the 32-NPC workload recorded 184,834,696 calls (141,111,550 primitive) in 64.964 profiler seconds. `domain.apply_event` accumulated 60.811 s, `_decode_checked` 48.848 s, `SQLiteEventStore.load` 34.660 s, `LivingWorldEngine.advance` 31.593 s, `_freeze` 19.093 s, `_thaw` 12.488 s, and `SQLiteEventStore.verify` 14.175 s. These totals overlap. Profiled median advance/replay were 15.797/7.088 s versus unprofiled 4.183/2.057 s; profiler time is diagnostic only.
 
@@ -185,4 +188,4 @@ Three 96-hour diagnostics were stopped before completion: no-checkpoint and six-
 
 - CI-00 is partial: required checks could not be read, and the 160-workflow inventory has not yet mapped every branch filter, duplicate behavior, and historical dependency.
 - CI-03 has a local full-suite duration profile, cProfile traces, population/replay/reducer baselines, the realistic 4–32-NPC multi-sector baseline, and a test-only checkpoint A/B. The 96-hour diagnostic was stopped while still advancing events and produced no usable result. Shared-market/long-horizon measurements remain open.
-- Parent benchmark code passed full exact-SHA Python 3.10/3.13 CI at `460c5992a939fc7e86d40650c8d63875fc814b00`; checkpoint-harness SHA `d399ffc970b139a5359208cf7c9fb8ee80395dd8` awaits run #46080863733. No engine or workflow optimization has been implemented.
+- Checkpoint-harness SHA `d399ffc970b139a5359208cf7c9fb8ee80395dd8` passed exact-SHA CI #46080863733: 1,958 passed + 1 skipped in each Python version, all 90 steps succeeded. No engine or workflow optimization has been implemented.
