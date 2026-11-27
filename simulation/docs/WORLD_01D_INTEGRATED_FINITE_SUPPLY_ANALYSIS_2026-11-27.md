@@ -93,9 +93,39 @@ demonstrated reason; do not add opening stock or relax ownership checks to make 
   migration, schema/rules change, original-story change, UI work, `main` change, or PR
   #185 change.
 
-## Next execution
+## Results — 2026-11-27
 
-Implement the test-only world if all of the above contracts can be established with
-existing reducers. If a missing rule requires a new policy decision, stop and record
-the blocker rather than inventing one. Keep WORLD-01 open after this bounded test;
-production-save approval remains `P0_PRODUCTION_NOT_APPROVED`.
+Implemented the joined world in `simulation/tests/test_world01d_integrated_finite_supply.py`.
+The existing engine contracts completed the entire finite chain without a source or
+schema change: the miner and woodcutter produced one unit each from their declared
+reserves; the burner spent its own copper to buy and physically deliver actual wood;
+the timed kiln recipe produced charcoal; Carlos bought the actual local ore and
+charcoal, carried and deposited both at the forge, then completed one funded fitting
+contract. A second mine extraction was rejected after the reserve was exhausted.
+Trade ownership, copper conservation, event replay, snapshot verification, and reopen
+state matched.
+
+- The new integration test plus WORLD-01b/c, PLAY-46, and PLAY-48M focused regressions:
+  **7 passed** on Python 3.12.14.
+- Full local suite on the code/test commit `7b5dddb5d1d51c0432bf2870672edd1c68e783e4`:
+  Python 3.13.5 — **1952 passed, 1 skipped** (19:19); Python 3.10.22 — **1952 passed,
+  1 skipped** (26:01).
+- GitHub Actions [#45922155158](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/45922155158)
+  passed both Python jobs on that exact code/test SHA. Its logs report **1952 passed,
+  1 skipped** for each version.
+
+No engine source, Schema46/Rules73, story, UI, `main`, saved-world migration, or PR #185
+was changed. This is one finite test-world batch; it does not establish renewable
+resources, sustainable employment, population survival, or a production-world setup.
+
+## Technical status and next analysis
+
+WORLD-01d is `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. The wider
+WORLD-01 scope remains `IN_PROGRESS`; production-save approval remains
+`P0_PRODUCTION_NOT_APPROVED`.
+
+Next, analyze WORLD-01e: whether the engine needs a reusable, explicit world setup
+contract for locations, roads, finite reserves, stalls, recipes, and funded jobs, or
+whether the existing event-based genesis contracts already provide the needed world
+composition. Define a small acceptance test before changing engine code. Keep the
+scope simulation-only and outside the UI.
