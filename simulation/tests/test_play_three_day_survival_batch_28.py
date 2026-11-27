@@ -47,6 +47,10 @@ def test_real_three_day_endurance_and_conservation(tmp_path, personal_food):
                         arrived, seed=1, water=2, buyer_copper=2,
                         personal_food=personal_food,
                     )
+                    # Bound repeated reads to the quarter-day delta. The
+                    # final verify() below still rebuilds the full history
+                    # from genesis and checks this derived checkpoint.
+                    assert db.snapshot(WORLD).to_dict() == arrived.to_dict()
                 state = db.load(WORLD)
                 daily_actions = sum(
                     action["start"] >= daily_before.time
