@@ -2,13 +2,15 @@
 
 **Date:** 2026-11-27
 
-**Status:** `AB_VALIDATED_LOCALLY / CI-00_PARTIAL / CI-03_PARTIAL / FULL_CI_PENDING`
+**Status:** `AB_VALIDATED_LOCALLY / PRIOR_FULL_CI_PASS / REALISTIC_SCALE_LOCAL / FINAL_CI_PENDING / CI-00_PARTIAL / CI-03_PARTIAL`
 
 **Work branch:** `chore/carlos-ci-performance-audit-20261127`
 
 **Audit base HEAD:** `80881060da8cffc897f81b979882a9235d890ac4` (source-equivalent to tested code SHA `0f7664fe8e2cc1b3147b9ed223e059c81c9bc4c8`; intervening changes before this audit were documentation only).
 
 **PR #185:** still open and draft; head `416e26b6c037b2fc504c8454d9b607aadeee7eba`; no merge or PR update was made.
+
+**Realistic scale benchmark source:** `8218cdc173d3df67dba4544a0e42d086e97ea689`. The benchmark was run locally on this exact code SHA; final full regression CI for this addition is pending.
 
 The measured A/B change is limited to the three-day test fixture: it writes a derived SQLite snapshot after each quarter-day advance and asserts the snapshot equals the returned world state. It does not change engine behavior, workflow definitions, event history, saves, or story files. The current `main` branch was not used.
 
@@ -135,13 +137,31 @@ Workflow inventory is presence-based and overlapping: **160** `.github/workflows
 ## Recommendations and next step
 
 1. **A/B test-only optimization — locally validated.** Checkpoint derived snapshots after each quarter-day advance. Both scenarios retained all conservation/activity assertions; event counts, aggregate digests, final outcomes, and the final full genesis replay matched. The two cases ran 75.1% faster in the same-machine sample.
-2. **Run the full exact-SHA Python 3.10/3.13 matrix before treating this change as closed.** If the two cases remain a large share of runtime, consider moving them to a parallel endurance shard while making one aggregate required result wait for every shard. Do not remove them or defer a release gate. Confirm required checks and isolation before editing workflows.
-3. **Add a realistic world benchmark before optimizing NPC scheduling.** Hold work rules and simulated horizon fixed; scale population through representative production, materials, wages, eating, routes, and interactions. Record decisions, events, state hashes, full-replay time, snapshot load time, and SQLite writes for each size. Keep the event log as truth and require identical deterministic outcomes before/after any optimization.
-4. **Do not optimize the pure survival reducer first.** It reaches 1,000 NPCs in about 27 ms in isolation; current evidence points more strongly to repeated replay and whole-engine state validation.
-5. **Design fast feedback separately from release evidence.** Use targeted tests for the changed engine area during development; run the full exact-SHA Python 3.10/3.13 matrix for closure. A docs-only path needs an explicit always-running success/failure aggregate so required checks cannot silently become skipped.
+2. **The checkpoint optimization passed full exact-SHA CI.** Run #46071708587 passed on SHA `ee791a6ed761b7ad92e8253fdd72955d01a3c121`: both Python 3.10 and 3.13 reported **1,958 passed, 1 skipped**, and all smoke/compatibility steps passed. This run predates the scale harness below; the latest harness SHA still needs its own full matrix.
+3. **Initial realistic scale benchmark — locally verified.** [The opt-in harness](../simulation/scenarios/test_village/bench_realistic_world_scale.py) scales 4–32 NPCs across 1–8 finite sectors for 900 simulated seconds, exercising autonomous decisions, funded production wages, wood/charcoal material trades, road travel, owned-food consumption, recorded speech, SQLite snapshots, and genesis replay. Two independent databases per size produced identical event/state digests. Measurements are in the next section.
+4. **Next measurement before optimizing NPC scheduling.** Extend the harness to a longer fixed horizon and a controlled shared-market case; retain event-ledger determinism and do not turn local timings into CI thresholds or capacity claims.
+5. **Do not optimize the pure survival reducer first.** It reaches 1,000 NPCs in about 27 ms in isolation; current evidence points more strongly to repeated replay and whole-engine state validation.
+6. **Design fast feedback separately from release evidence.** Use targeted probes for changes; run the full exact-SHA Python 3.10/3.13 matrix for code closure. A docs-only path needs an explicit always-running success/failure aggregate so required checks cannot silently become skipped.
+
+### Realistic multi-sector scale baseline
+
+Environment: Python **3.12.14**, Linux `6.18.57-x86_64-with-glibc2.41`, harness SHA `8218cdc173d3df67dba4544a0e42d086e97ea689`. Each point simulates **900 seconds**, has **3** finite timber units and exactly funded job cycles per sector, and reports the median of **2 fresh SQLite databases**. Timings are descriptive; there is no hardware-dependent pass threshold.
+
+| Sectors | NPCs | Events | Advance median | Full genesis replay | Snapshot load | Snapshot write | SQLite rows changed by advance |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 4 | 130 | 0.141 s | 0.068 s | 0.0019 s | 0.075 s | 90 |
+| 2 | 8 | 249 | 0.374 s | 0.187 s | 0.0029 s | 0.177 s | 168 |
+| 4 | 16 | 487 | 1.195 s | 0.585 s | 0.0054 s | 0.574 s | 324 |
+| 8 | 32 | 963 | 4.141 s | 1.966 s | 0.0088 s | 1.967 s | 636 |
+
+Across the 32-NPC run, the log contains **96** recorded NPC decisions, **24** completed jobs and paid wages, **8** material trades, **16** completed trips, **32** meals, and **16** recorded social messages. Opening and closing copper totals match, and starting personal food equals remaining food plus consumed meals. The harness verifies SQLite integrity, compares the snapshot-loaded state with the returned state, and compares full genesis replay with both; each repeated pair has identical event-ledger and state digests.
+
+The one-sector case also ran twice each on Python **3.10.22** and **3.13.5**. Both versions produced the same 130-event count, event-ledger digest, state digest, and activity counts as Python 3.12.14. Their wall times are recorded by the harness but are not compared across Python versions.
+
+This is a representative, deliberately bounded workload: sectors repeat independently and do not compete in one shared market. It covers several existing engine systems together, but it is not a 96-hour/seven-day sustainability test or a performance forecast. Work grew faster than the event count in these samples; that is a profiling lead, not proof of a specific bottleneck.
 
 ### Remaining audit gaps
 
 - CI-00 is partial: required checks could not be read, and the 160-workflow inventory has not yet mapped every branch filter, duplicate behavior, and historical dependency.
-- CI-03 has a local full-suite duration profile, one representative cProfile, simple population/replay/reducer baselines, and a locally validated test-only checkpoint A/B. It does not yet profile a realistic multi-sector world at 96 hours or seven days, and the existing 100-NPC engine benchmark is deliberately trivial.
-- The changed test has not yet passed a full exact-SHA Python 3.10/3.13 CI run. No engine or workflow optimization has been implemented.
+- CI-03 now has a local full-suite duration profile, one representative cProfile, simple population/replay/reducer baselines, the realistic 4–32-NPC multi-sector baseline above, and a test-only checkpoint A/B with full exact-SHA CI. The longer-horizon/shared-market measurement is still open.
+- Full exact-SHA Python 3.10/3.13 CI for the new benchmark commit is pending. No engine or workflow optimization has been implemented.
