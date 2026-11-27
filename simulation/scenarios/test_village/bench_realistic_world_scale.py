@@ -183,7 +183,8 @@ def _total_resource(state, resource: str) -> int:
     return sum(balance.get(resource, 0) for balance in state.resources.values())
 
 
-def run_sample(sectors: int, seconds: int, batch_units: int) -> dict:
+def run_sample(sectors: int, seconds: int, batch_units: int,
+               checkpoint_seconds: int) -> dict:
     npc_count = sectors * 4
     with TemporaryDirectory(prefix="carlos-world-scale-") as temp:
         database = Path(temp) / "world.sqlite"
@@ -207,25 +208,45 @@ def run_sample(sectors: int, seconds: int, batch_units: int) -> dict:
                 for npc_id in opening.npcs
             )
             trace: list[str] = []
-            rows_before = store.db.total_changes
-            store.db.set_trace_callback(trace.append)
-            started = perf_counter()
-            try:
-                outcome = engine.advance(
-                    WORLD, seconds=seconds, command_id="benchmark:advance",
-                    expected_revision=opening.revision,
-                )
-            finally:
-                advance_seconds = perf_counter() - started
-                store.db.set_trace_callback(None)
-            advance_rows = store.db.total_changes - rows_before
-            advance_statements = _write_statement_count(trace)
+            advance_seconds = 0.0
+            advance_rows = 0
+            snapshot_seconds = 0.0
+            snapshot_rows = 0
+            advance_commands = 0
+            checkpoint_count = 0
+            current = opening
+            outcome = None
+            while current.time < seconds:
+                target = min(seconds, current.time + checkpoint_seconds)
+                command_id = ("benchmark:advance" if advance_commands == 0 and target == seconds
+                              else f"benchmark:advance:{target}")
+                rows_before = store.db.total_changes
+                store.db.set_trace_callback(trace.append)
+                started = perf_counter()
+                try:
+                    outcome = engine.advance(
+                        WORLD, seconds=target - current.time,
+                        command_id=command_id,
+                        expected_revision=current.revision,
+                    )
+                finally:
+                    advance_seconds += perf_counter() - started
+                    store.db.set_trace_callback(None)
+                advance_rows += store.db.total_changes - rows_before
+                advance_commands += 1
+                current = outcome.state
 
-            snapshot_rows_before = store.db.total_changes
-            snapshot_started = perf_counter()
-            store.snapshot(WORLD)
-            snapshot_seconds = perf_counter() - snapshot_started
-            snapshot_rows = store.db.total_changes - snapshot_rows_before
+                # A derived snapshot bounds replay for the next interval.
+                # The independent genesis verification below remains intact.
+                snapshot_rows_before = store.db.total_changes
+                snapshot_started = perf_counter()
+                store.snapshot(WORLD)
+                snapshot_seconds += perf_counter() - snapshot_started
+                snapshot_rows += store.db.total_changes - snapshot_rows_before
+                checkpoint_count += 1
+            if outcome is None:
+                raise AssertionError("benchmark must advance positive logical time")
+            advance_statements = _write_statement_count(trace)
 
             load_started = perf_counter()
             snapshot_state = store.load(WORLD)
@@ -281,6 +302,8 @@ def run_sample(sectors: int, seconds: int, batch_units: int) -> dict:
                 "revision": outcome.state.revision,
                 "events": len(manifest),
                 "activity": activity,
+                "advance_commands": advance_commands,
+                "snapshot_checkpoints": checkpoint_count,
                 "opening_copper": opening_copper,
                 "final_copper": final_copper,
                 "opening_personal_food": opening_personal_food,
@@ -311,14 +334,18 @@ def run_sample(sectors: int, seconds: int, batch_units: int) -> dict:
             return result
 
 
-def measure(sectors: int, seconds: int, batch_units: int, repeats: int) -> dict:
-    samples = [run_sample(sectors, seconds, batch_units) for _ in range(repeats)]
+def measure(sectors: int, seconds: int, batch_units: int,
+            checkpoint_seconds: int, repeats: int) -> dict:
+    samples = [run_sample(sectors, seconds, batch_units, checkpoint_seconds)
+               for _ in range(repeats)]
     for key in ("state_digest", "event_ledger_digest", "events", "activity"):
         if any(sample[key] != samples[0][key] for sample in samples[1:]):
             raise AssertionError(f"independent runs diverged for {key} at {sectors} sectors")
     return {
         "sectors": sectors,
         "npcs": sectors * 4,
+        "advance_commands": samples[0]["advance_commands"],
+        "snapshot_checkpoints": samples[0]["snapshot_checkpoints"],
         "repeats": repeats,
         "repeatability_verified": True,
         "state_digest": samples[0]["state_digest"],
@@ -355,14 +382,17 @@ def main() -> None:
                         help="fixed logical duration for every population (default: 900)")
     parser.add_argument("--batch-units", type=int, default=3,
                         help="finite timber units and exactly funded job cycles per sector")
+    parser.add_argument("--checkpoint-seconds", type=int, default=21_600,
+                        help="maximum logical seconds per advance before a derived snapshot (default: 6 hours)")
     parser.add_argument("--repeats", type=int, default=2,
                         help="fresh SQLite worlds per scale point; digests must match")
     args = parser.parse_args()
     if (not args.sectors or any(type(value) is not int or value < 1 for value in args.sectors)
             or type(args.seconds) is not int or args.seconds < 1
             or type(args.batch_units) is not int or not 1 <= args.batch_units <= 20
+            or type(args.checkpoint_seconds) is not int or args.checkpoint_seconds < 1
             or type(args.repeats) is not int or args.repeats < 2):
-        parser.error("sectors/seconds must be positive, batch-units 1..20, repeats at least 2")
+        parser.error("sectors/seconds/checkpoint must be positive, batch-units 1..20, repeats at least 2")
     root = Path(__file__).resolve().parents[3]
     report = {
         "benchmark": "realistic-world-scale-v1",
@@ -371,6 +401,7 @@ def main() -> None:
         "platform": platform.platform(),
         "scope": {
             "duration_seconds": args.seconds,
+            "checkpoint_interval_seconds": args.checkpoint_seconds,
             "npcs_per_sector": 4,
             "finite_timber_and_funded_job_cycles_per_sector": args.batch_units,
             "systems": ["autonomous decisions", "production", "funded wages",
@@ -380,7 +411,8 @@ def main() -> None:
                        "not a production capacity claim"],
         },
         "results": [
-            measure(sectors, args.seconds, args.batch_units, args.repeats)
+            measure(sectors, args.seconds, args.batch_units,
+                    args.checkpoint_seconds, args.repeats)
             for sectors in args.sectors
         ],
     }
