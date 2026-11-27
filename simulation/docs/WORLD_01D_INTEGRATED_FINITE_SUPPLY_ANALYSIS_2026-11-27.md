@@ -124,8 +124,6 @@ WORLD-01d is `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. The wider
 WORLD-01 scope remains `IN_PROGRESS`; production-save approval remains
 `P0_PRODUCTION_NOT_APPROVED`.
 
-Next, analyze WORLD-01e: whether the engine needs a reusable, explicit world setup
-contract for locations, roads, finite reserves, stalls, recipes, and funded jobs, or
-whether the existing event-based genesis contracts already provide the needed world
-composition. Define a small acceptance test before changing engine code. Keep the
-scope simulation-only and outside the UI.
+Next, WORLD-01e checks the same finite chain under full-life NPC policies and needs.
+The focused WORLD-01d world does not establish that mixed-policy integration.
+See [the pre-execution analysis](WORLD_01E_FULL_LIFE_FINITE_SUPPLY_ANALYSIS_2026-11-27.md).
