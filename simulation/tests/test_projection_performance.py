@@ -5,7 +5,7 @@ import math
 import pytest
 
 from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine, WorldState
-from carlos_sim.domain import canonical, canonical_hash
+from carlos_sim.domain import _freeze, canonical, canonical_hash
 from carlos_sim.store import InvalidEvent
 from test_survival import make, tick
 
@@ -48,6 +48,33 @@ def test_canonical_mapping_fallback_and_frozen_types():
     assert canonical(nested) == '{"one":[2,{"three":4}]}'
     assert canonical_hash(nested) == canonical_hash({"one": [2, {"three": 4}]})
 
+
+def test_freeze_preserves_scalar_and_container_contracts():
+    class DictSubclass(dict):
+        pass
+
+    class ListSubclass(list):
+        pass
+
+    source = DictSubclass({
+        "z": ListSubclass([None, False, 7, 2.5, "text"]),
+        "a": DictSubclass({"y": 2, "b": "nested"}),
+    })
+    frozen = _freeze(source)
+
+    assert isinstance(frozen, MappingProxyType)
+    assert list(frozen) == ["a", "z"]
+    assert isinstance(frozen["a"], MappingProxyType)
+    assert list(frozen["a"]) == ["b", "y"]
+    assert isinstance(frozen["z"], tuple)
+    assert frozen["z"] == (None, False, 7, 2.5, "text")
+    assert [type(value) for value in frozen["z"]] == [
+        type(None), bool, int, float, str,
+    ]
+    with pytest.raises(TypeError):
+        frozen["z"] = ()
+    with pytest.raises(AttributeError):
+        frozen["z"].append("changed")
 
 def test_from_dict_freezes_original_mutable_input():
     state = WorldState("test", locations={"square": {"name": "Square"}})
