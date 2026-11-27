@@ -90,3 +90,28 @@ First run the focused full-life case. If existing reducers and policy flags comp
 the finite chain, keep the change test-only. If they do not, stop and classify the
 specific failure before considering an engine patch. Keep WORLD-01 and
 `P0_PRODUCTION_NOT_APPROVED` open until their own broader gates are satisfied.
+
+## Verified outcome
+
+Implemented as a parameterized integration regression in
+`simulation/tests/test_world01d_integrated_finite_supply.py`; no engine source,
+schema, rules, story, UI, or persistent-save behavior changed. The same finite
+mine → timber/charcoal → Carlos forge chain passes in focused-economy and
+full-life modes. In full-life mode, hunger rises naturally, no food is created or
+consumed, and no relief or rescue policy is enabled. Conservation, funded wages,
+physical custody, finite-reserve rejection, replay, snapshot, and reopen assertions
+remain in the test.
+
+The focused regression bundle passed **40 passed, 1 skipped** on Python 3.12.14.
+The complete `simulation/tests` suite passed **1953 passed, 1 skipped** on Python
+3.10.22 and Python 3.13.5. GitHub Actions
+[#45977485506](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/45977485506)
+passed both jobs on exact code/test SHA
+`05dfdb13e910cfca6161c1ae7cd186b50e274ec1` (3.10: 1953 passed, 1 skipped;
+3.13: 1953 passed, 1 skipped).
+
+Status: `WORLD-01e CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`.
+WORLD-01 remains `IN_PROGRESS`; production-save approval remains open. No claim is
+made about source renewal or population survival. The next bounded engine task is
+to analyze full-life NPC behavior at finite-source depletion, using existing
+reducers and outcomes before proposing any rule change.

@@ -126,4 +126,4 @@ WORLD-01 scope remains `IN_PROGRESS`; production-save approval remains
 
 Next, WORLD-01e checks the same finite chain under full-life NPC policies and needs.
 The focused WORLD-01d world does not establish that mixed-policy integration.
-See [the pre-execution analysis](WORLD_01E_FULL_LIFE_FINITE_SUPPLY_ANALYSIS_2026-11-27.md).
+See [the analysis and verified outcome](WORLD_01E_FULL_LIFE_FINITE_SUPPLY_ANALYSIS_2026-11-27.md).
