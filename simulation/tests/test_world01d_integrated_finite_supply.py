@@ -139,13 +139,17 @@ def _seed(store: SQLiteEventStore) -> None:
     store.append(WORLD, "world01d:bootstrap", 0, events, bootstrap=True)
 
 
-def _engine(store: SQLiteEventStore, clock: TimeEngine) -> LivingWorldEngine:
+def _engine(store: SQLiteEventStore, clock: TimeEngine, *,
+            full_life: bool = False) -> LivingWorldEngine:
     return LivingWorldEngine(
         store, clock, max_events_per_advance=5000,
         economic_enabled=True, agriculture_enabled=True,
-        economy_only_enabled=True, navigation_enabled=True,
+        economy_only_enabled=not full_life, navigation_enabled=True,
         routines_enabled=True, multi_professional_markets_enabled=True,
         compound_procurement_enabled=True,
+        consumption_enabled=full_life, survival_enabled=full_life,
+        supply_enabled=full_life,
+        professional_full_life_enabled=full_life,
     )
 
 
@@ -185,7 +189,10 @@ def _local_offer(gateway, resource: str) -> dict:
     return quotes[0]
 
 
-def test_carlos_buys_finite_ore_and_charcoal_then_finishes_forge_job(tmp_path):
+@pytest.mark.parametrize("full_life", (False, True),
+                         ids=("focused-economy", "full-life"))
+def test_carlos_buys_finite_ore_and_charcoal_then_finishes_forge_job(
+        tmp_path, full_life):
     database = tmp_path / "world01d-integrated.sqlite"
     with SQLiteEventStore(database) as db:
         _seed(db)
@@ -201,7 +208,7 @@ def test_carlos_buys_finite_ore_and_charcoal_then_finishes_forge_job(tmp_path):
         clock = TimeEngine(db)
         clock.open_session(WORLD)
         try:
-            engine = _engine(db, clock)
+            engine = _engine(db, clock, full_life=full_life)
             gateway = PlayerGateway(
                 db, clock, world_id=WORLD, player_id=PLAYER, engine=engine,
             )
@@ -410,6 +417,14 @@ def test_carlos_buys_finite_ore_and_charcoal_then_finishes_forge_job(tmp_path):
             assert final.resources[FORGE]["coin_copper"] == 0
             assert final.resources[PLAYER]["coin_copper"] == 1
             assert _copper(final) == OPENING_COPPER
+            if full_life:
+                hunger = [profile["needs"]["hunger"]
+                          for profile in final.npcs.values()]
+                assert all(10 <= value < 75 for value in hunger)
+                assert any(value > 10 for value in hunger)
+                assert not final.consumptions
+                assert sum(stock.get("food", 0)
+                           for stock in final.resources.values()) == 0
 
             assert all(job["status"] == "completed" for job in (
                 mine_job[0], wood_job[0], charcoal_job, job,
