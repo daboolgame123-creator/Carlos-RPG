@@ -112,6 +112,8 @@ passed both jobs on exact code/test SHA
 
 Status: `WORLD-01e CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`.
 WORLD-01 remains `IN_PROGRESS`; production-save approval remains open. No claim is
-made about source renewal or population survival. The next bounded engine task is
-to analyze full-life NPC behavior at finite-source depletion, using existing
-reducers and outcomes before proposing any rule change.
+made about source renewal or population survival. The proposed follow-up check for
+NPC behavior after finite-source depletion was found already covered by this test's
+extended world run, one-job assertions, and atomic empty-mine retry. The next bounded
+analysis is WORLD-01f: prove an explicitly chosen player miner contract using an
+existing finite reserve and funded wage.

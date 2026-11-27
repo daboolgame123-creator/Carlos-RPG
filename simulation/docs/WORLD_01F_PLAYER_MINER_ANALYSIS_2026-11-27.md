@@ -74,3 +74,26 @@ Do not change engine source, Schema46, Rules73, production rules, the main story
 - If the generic reducer completes the contract with the declared balances, keep the
   change test-only. If it fails, inspect the exact event and failure before any engine
   patch; do not add opening stock, wages, migration, or a special miner rule.
+
+## Verified outcome
+
+The test passed on Python 3.12.14. The six-file player-work, mine, and WORLD-01
+regression bundle passed **17 tests** on Python 3.10.22, 3.12.14, and 3.13.5. The
+complete `simulation/tests` suite passed **1954 passed, 1 skipped** on Python 3.10.22
+and 3.13.5. GitHub Actions
+[#45987206045](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/45987206045)
+passed both jobs on exact code/test SHA
+`ad0927a53d79f98b9b82ff709aed0fd5c15232a8`, with 1954 passed and 1 skipped per
+version.
+
+No engine, schema, rules, story, UI, or persistent-save code changed. The result proves
+one explicitly chosen, time-bounded miner contract from a finite reserve; it does not
+create a permanent profession state. Status: `WORLD-01f CLOSED_TECHNICALLY /
+EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. WORLD-01 remains open and production-save approval
+remains `P0_PRODUCTION_NOT_APPROVED`.
+
+The earlier candidate of another full-life depletion test is redundant: WORLD-01e
+already verifies one job per NPC after source use, extended world time, and atomic
+rejection of an empty-reserve attempt. Next, analyze whether Carlos's player-mined ore
+can join the existing physical delivery and blacksmith contract path without new
+resources or engine rules.
