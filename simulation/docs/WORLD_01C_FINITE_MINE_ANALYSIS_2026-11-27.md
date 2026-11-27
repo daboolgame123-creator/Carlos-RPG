@@ -62,11 +62,13 @@ Verification: **2/2** new tests; **6/6** combined finite-mine, metal-market, fin
 charcoal and physical smelting tests on Python 3.12.14. The full suite on the
 code-and-test commit `d655ae4e20add05a407127fc0c6cc67c5b75b5c6` passed **1951 tests,
 1 skipped** on Python 3.10.22 (25:05) and Python 3.13.5 (19:45). No source code,
-Schema46/Rules73, story, UI or PR #185 changed. GitHub Actions has no run for this
-locally held commit; exact-head Actions verification is still required before closing
-WORLD-01c. WORLD-01 remains in progress.
+Schema46/Rules73, story, UI or PR #185 changed. GitHub Actions run
+[#45912907781](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/45912907781)
+passed both Python 3.10 and 3.13 jobs on exact branch head
+`28540c85271df5531cfa95900d877eda8859d705`. WORLD-01c is
+`CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`; the parent WORLD-01 remains
+in progress, and this is not production approval.
 
-Next: publish/check the exact branch head in GitHub Actions. Only after that succeeds,
-analyze WORLD-01d, an end-to-end disposable-world run that joins the proven finite mine
-and wood-to-charcoal sources to Carlos's physical procurement and blacksmith job, with
-exact opening budgets and no extra stock introduced to make the test pass.
+Next: analyze WORLD-01d, an end-to-end disposable-world run that joins the proven finite
+mine and wood-to-charcoal sources to Carlos's physical procurement and blacksmith job,
+with exact opening budgets and no extra stock introduced to make the test pass.
