@@ -1,8 +1,8 @@
 # Carlos RPG — CI and simulation performance audit
 
-**Date:** 2026-11-27
+**Date:** 2026-11-28
 
-**Status:** `AB_VALIDATED_LOCALLY / REALISTIC_SCALE_LOCAL / FULL_CI_PASS / CI-00_PARTIAL / CI-03_PARTIAL`
+**Status:** `AB_VALIDATED_LOCALLY / REALISTIC_SCALE_LOCAL / EXACT_SHA_CI_PENDING / CI-00_PARTIAL / CI-03_PARTIAL`
 
 **Work branch:** `chore/carlos-ci-performance-audit-20261127`
 
@@ -10,15 +10,15 @@
 
 **PR #185:** still open and draft; head `416e26b6c037b2fc504c8454d9b607aadeee7eba`; no merge or PR update was made.
 
-**Realistic scale benchmark source:** `8218cdc173d3df67dba4544a0e42d086e97ea689`. The benchmark was run locally on this exact code SHA; its full regression CI passed on the unchanged benchmark code at `460c5992a939fc7e86d40650c8d63875fc814b00`.
+**Realistic scale benchmark source:** `d399ffc970b139a5359208cf7c9fb8ee80395dd8` (including configurable checkpoint intervals). Earlier full regression run #46076122193 passed on parent code SHA `460c5992a939fc7e86d40650c8d63875fc814b00`; it does not include the new checkpoint option. Exact-SHA full CI for `d399ffc970b139a5359208cf7c9fb8ee80395dd8` is running as run [#46080863733](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46080863733).
 
-**Full regression for this audit branch:** [run #46076122193](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46076122193) passed on exact code SHA `460c5992a939fc7e86d40650c8d63875fc814b00`. Both Python jobs and every smoke/compatibility step succeeded; each reported **1,958 passed, 1 skipped**.
+**Parent-code regression:** [run #46076122193](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46076122193) passed on SHA `460c5992a939fc7e86d40650c8d63875fc814b00`: both Python jobs and every smoke/compatibility step succeeded; each reported **1,958 passed, 1 skipped**. The added `--checkpoint-seconds` harness option is pending exact-SHA validation in run #46080863733.
 
 The measured A/B change is limited to the three-day test fixture: it writes a derived SQLite snapshot after each quarter-day advance and asserts the snapshot equals the returned world state. It does not change engine behavior, workflow definitions, event history, saves, or story files. The current `main` branch was not used.
 
 ## Findings
 
-1. **The full regression suite, rather than setup or smoke checks, dominates CI time.** The latest exact-code CI run executed 1,958 tests plus 1 skipped. Pytest itself took **23:47 on Python 3.10** and **22:06 on Python 3.13**; the complete jobs took 24:42 and 22:53 respectively. The Python matrix runs in parallel.
+1. **The full regression suite, rather than setup or smoke checks, dominates CI time.** The latest completed parent-code CI run executed 1,958 tests plus 1 skipped. Pytest itself took **23:47 on Python 3.10** and **22:06 on Python 3.13**; the complete jobs took 24:42 and 22:53 respectively. The Python matrix runs in parallel.
 2. **Two three-day end-to-end tests consume 7:14 of a 19:42 local suite run (36.7%).** Each test advances the same seven-NPC economy through 12 quarter-day commands, validates resources, and verifies replay. These are valuable acceptance tests, not disposable overhead.
 3. **The slow test repeatedly replays its growing event history.** In the measured provisioned three-day test, `store.load` was called 50 times and `apply_event` 70,889 times. `apply_event`, checked event decoding, and the recursive `_freeze`/`_thaw` paths dominate the profiled call tree. This is evidence for a test-workload/replay cost, not yet proof that any one engine function should be optimized.
 4. **The pure survival reducer scales well by itself, while whole-engine advances grow faster.** The existing 100-NPC engine benchmark completed one 60-second command in a median 2.256 seconds, but its NPCs have no labor or investigation resources and it does not model a functioning economy. It is a technical baseline, not a forecast for a village with wages, production, routes, and social activity.
@@ -139,13 +139,13 @@ Workflow inventory is presence-based and overlapping: **160** `.github/workflows
 ## Recommendations and next step
 
 1. **A/B test-only optimization — locally validated.** Checkpoint derived snapshots after each quarter-day advance. Both scenarios retained all conservation/activity assertions; event counts, aggregate digests, final outcomes, and the final full genesis replay matched. The two cases ran 75.1% faster in the same-machine sample.
-2. **The checkpoint optimization passed full exact-SHA CI.** Run #46071708587 passed on SHA `ee791a6ed761b7ad92e8253fdd72955d01a3c121`. The harness and audit documentation then passed the later full matrix on SHA `460c5992a939fc7e86d40650c8d63875fc814b00` (run #46076122193); both Python 3.10 and 3.13 reported **1,958 passed, 1 skipped**, and all smoke/compatibility steps passed.
+2. **The test-fixture checkpoint optimization passed full exact-SHA CI.** Run #46071708587 passed on SHA `ee791a6ed761b7ad92e8253fdd72955d01a3c121`. The harness and audit documentation then passed the later full matrix on SHA `460c5992a939fc7e86d40650c8d63875fc814b00` (run #46076122193); both Python 3.10 and 3.13 reported **1,958 passed, 1 skipped**, and all smoke/compatibility steps passed. This predates the separate `--checkpoint-seconds` harness option.
 3. **Initial realistic scale benchmark — locally verified.** [The opt-in harness](../simulation/scenarios/test_village/bench_realistic_world_scale.py) scales 4–32 NPCs across 1–8 finite sectors for 900 simulated seconds, exercising autonomous decisions, funded production wages, wood/charcoal material trades, road travel, owned-food consumption, recorded speech, SQLite snapshots, and genesis replay. Two independent databases per size produced identical event/state digests. Measurements are in the next section.
-4. **Next measurement before optimizing NPC scheduling.** Extend the harness to a longer fixed horizon and a controlled shared-market case; retain event-ledger determinism and do not turn local timings into CI thresholds or capacity claims.
-5. **Do not optimize the pure survival reducer first.** It reaches 1,000 NPCs in about 27 ms in isolation; current evidence points more strongly to repeated replay and whole-engine state validation.
+4. **Bounded long horizon remains unmeasured.** Several 96-hour diagnostics were stopped before completion; traces show the process still in `LivingWorldEngine.advance` applying events, so no valid long-run timing or replay measurement exists. Defer shared-market and longer-horizon claims until the measured per-event cost has been reviewed and bounded.
+5. **Next engine investigation.** Analyze whether event projection validation and recursive freeze/thaw can be reduced without weakening tamper rejection, immutable state, deterministic replay, SQLite atomicity, or snapshot parity. Define targeted acceptance tests before any engine edit; current work changes only the opt-in benchmark harness.
 6. **Design fast feedback separately from release evidence.** Use targeted probes for changes; run the full exact-SHA Python 3.10/3.13 matrix for code closure. A docs-only path needs an explicit always-running success/failure aggregate so required checks cannot silently become skipped.
 
-### Realistic multi-sector scale baseline
+### Initial realistic multi-sector scale baseline (SHA 8218)
 
 Environment: Python **3.12.14**, Linux `6.18.57-x86_64-with-glibc2.41`, harness SHA `8218cdc173d3df67dba4544a0e42d086e97ea689`. Each point simulates **900 seconds**, has **3** finite timber units and exactly funded job cycles per sector, and reports the median of **2 fresh SQLite databases**. Timings are descriptive; there is no hardware-dependent pass threshold.
 
@@ -160,12 +160,29 @@ Across the 32-NPC run, the log contains **96** recorded NPC decisions, **24** co
 
 The one-sector case also ran twice each on Python **3.10.22** and **3.13.5**. Both versions produced the same 130-event count, event-ledger digest, state digest, and activity counts as Python 3.12.14. Their wall times are recorded by the harness but are not compared across Python versions.
 
-The full suite's pytest time on the exact audit SHA was **12:25 on Python 3.10** and **15:44 on Python 3.13**. The prior full run took **12:28** and **10:19** respectively. The run-to-run change, especially on 3.13, is CI timing variability; the benchmark harness is opt-in and was not part of `pytest -q` collection.
+The full suite's pytest time on the parent benchmark SHA was **12:25 on Python 3.10** and **15:44 on Python 3.13**. The prior full run took **12:28** and **10:19** respectively. The run-to-run change, especially on 3.13, is CI timing variability; the benchmark harness is opt-in and was not part of `pytest -q` collection.
 
 This is a representative, deliberately bounded workload: sectors repeat independently and do not compete in one shared market. It covers several existing engine systems together, but it is not a 96-hour/seven-day sustainability test or a performance forecast. Work grew faster than the event count in these samples; that is a profiling lead, not proof of a specific bottleneck.
+
+### Latest checkpoint-harness follow-up — source SHA `d399ffc970b139a5359208cf7c9fb8ee80395dd8`
+
+Python 3.12.14, 900 simulated seconds, median of two fresh SQLite samples; the harness uses one advance command and one snapshot checkpoint for this duration.
+
+| Sectors | NPCs | Events | Advance median | Full genesis replay | Snapshot load | Snapshot write | Advance rows |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 4 | 130 | 0.144126 s | 0.070004 s | 0.002295 s | 0.073551 s | 90 |
+| 2 | 8 | 249 | 0.374539 s | 0.196628 s | 0.003231 s | 0.193952 s | 168 |
+| 4 | 16 | 487 | 1.244678 s | 0.593786 s | 0.005411 s | 0.595127 s | 324 |
+| 8 | 32 | 963 | 4.182911 s | 2.056551 s | 0.010046 s | 2.037985 s | 636 |
+
+The one-sector case repeated on Python 3.10.22 and 3.13.5 with the same 130-event count, activity totals, event digest `816ef09901a399489930bd4cf1d5669a9fa2f5b7283bef10e042a009c08a7d1e`, and state digest `bc8463b3010384c3fa1183d737986a38f25eaa0b3d5f367485fc92970ee71d9b` as Python 3.12.14.
+
+cProfile of the 32-NPC workload recorded 184,834,696 calls (141,111,550 primitive) in 64.964 profiler seconds. `domain.apply_event` accumulated 60.811 s, `_decode_checked` 48.848 s, `SQLiteEventStore.load` 34.660 s, `LivingWorldEngine.advance` 31.593 s, `_freeze` 19.093 s, `_thaw` 12.488 s, and `SQLiteEventStore.verify` 14.175 s. These totals overlap. Profiled median advance/replay were 15.797/7.088 s versus unprofiled 4.183/2.057 s; profiler time is diagnostic only.
+
+Three 96-hour diagnostics were stopped before completion: no-checkpoint and six-hour-checkpoint runs after about nine minutes, plus a 900-second-checkpoint run around 98 seconds after 27/384 checkpoints and about 5,188 events. Captured traces remained in `LivingWorldEngine.advance` applying events, not final genesis replay. These attempts provide no complete long-horizon timing, throughput, or replay result.
 
 ### Remaining audit gaps
 
 - CI-00 is partial: required checks could not be read, and the 160-workflow inventory has not yet mapped every branch filter, duplicate behavior, and historical dependency.
-- CI-03 now has a local full-suite duration profile, one representative cProfile, simple population/replay/reducer baselines, the realistic 4–32-NPC multi-sector baseline above, and a test-only checkpoint A/B with full exact-SHA CI. The longer-horizon/shared-market measurement is still open.
-- The benchmark commit passed full exact-SHA Python 3.10/3.13 CI at `460c5992a939fc7e86d40650c8d63875fc814b00`. No engine or workflow optimization has been implemented.
+- CI-03 has a local full-suite duration profile, cProfile traces, population/replay/reducer baselines, the realistic 4–32-NPC multi-sector baseline, and a test-only checkpoint A/B. The 96-hour diagnostic was stopped while still advancing events and produced no usable result. Shared-market/long-horizon measurements remain open.
+- Parent benchmark code passed full exact-SHA Python 3.10/3.13 CI at `460c5992a939fc7e86d40650c8d63875fc814b00`; checkpoint-harness SHA `d399ffc970b139a5359208cf7c9fb8ee80395dd8` awaits run #46080863733. No engine or workflow optimization has been implemented.
