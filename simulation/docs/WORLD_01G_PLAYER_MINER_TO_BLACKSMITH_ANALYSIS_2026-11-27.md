@@ -69,9 +69,11 @@
   **11/11** على Python 3.10.22 و3.13.5.
 - الانحدار الكامل `simulation/tests`: **1955 passed, 1 skipped** على Python
   3.10.22 خلال 27:14، وعلى Python 3.13.5 خلال 21:29.
-- الحالة: `LOCAL_VERIFIED / EXACT_HEAD_ACTIONS_PENDING`. لم يتغير مصدر المحرك أو
-  Schema46/Rules73 أو القصة أو الواجهة أو `main` أو PR #185. لا تُغلق المهمة تقنيًا
-  قبل فحص Actions على SHA الكود/الاختبار المنشور.
+- الحالة: `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. نجحت Actions على
+  SHA `d2aac3fbdba5d768deaddb730005d761018c9696` في
+  [التشغيل #45998760804](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/45998760804):
+  **1955 passed, 1 skipped** على Python 3.10 و3.13. لم يتغير مصدر المحرك أو
+  Schema46/Rules73 أو القصة أو الواجهة أو `main` أو PR #185.
 
 النمط المستخدم اقتصاد مركّز لعزل قرار كارلوس وسلسلة المواد؛ لم يُختبر في هذا النطاق
 السلوك الحياتي الذاتي للبائعين بالتوازي. الفحم مخزون افتتاحي معلن، لا محصول هذه
