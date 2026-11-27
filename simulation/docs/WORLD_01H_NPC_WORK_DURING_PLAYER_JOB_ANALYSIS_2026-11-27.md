@@ -42,15 +42,19 @@
 
 ## التنفيذ والتحقق
 
-- الملف المتوقع: `simulation/tests/test_world01h_npc_work_during_player_job.py` مع هذا
+- الملف المضاف: `simulation/tests/test_world01h_npc_work_during_player_job.py` مع هذا
   التحليل وتحديث سجل المهام والتسليم بعد نتائج الانحدار وActions.
 - الاختبار الموجّه الحالي نجح **1/1** على Python 3.13.5؛ المجموعة المركزة التي تشمل
-  WORLD-01d/f/g/h نجحت **5/5** على Python 3.10.22 و3.13.5.
+  WORLD-01d/f/g/h نجحت **5/5** على Python 3.10.22 و3.13.5؛ الاختبار الموجه وحده
+  نجح **1/1** على Python 3.12.14.
 - الانحدار الكامل `simulation/tests`: **1956 passed, 1 skipped** على Python 3.10.22
   خلال 29:56، وعلى Python 3.13.5 خلال 22:29.
-- الحالة الحالية: `LOCAL_VERIFIED / EXACT_HEAD_ACTIONS_PENDING` حتى نجاح Actions على
-  SHA الكود/الاختبار المنشور. لم يتغير مصدر المحرك أو Schema46/Rules73 أو القصة أو
-  الواجهة أو `main` أو PR #185. لا يثبت هذا النطاق استدامة الاقتصاد أو نجاة أي NPC.
+- الحالة: `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER` على SHA الكود/الاختبار
+  `65164d9016ba8e4f24014f114034b67f79397cd4`. نجح Actions
+  [#46008013870](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46008013870)
+  على Python 3.10 و3.13 (1956 passed + 1 skipped لكل منهما)، ونجحت smoke tests.
+  لم يتغير مصدر المحرك أو Schema46/Rules73 أو القصة أو الواجهة أو `main` أو PR #185.
+  لا يثبت هذا النطاق استدامة الاقتصاد أو نجاة أي NPC.
 
 الخطوة التالية بعد الإثبات: وصل هذه الاستقلالية بعالم كارلوس المتكامل من دون إعادة تفسير
 العمل المستقل كضمان للنجاة؛ يبقى WORLD-01 الأوسع وP0 للحفظ الإنتاجي مفتوحين.
