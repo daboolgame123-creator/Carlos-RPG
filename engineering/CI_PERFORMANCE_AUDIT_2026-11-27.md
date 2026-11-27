@@ -142,7 +142,7 @@ Workflow inventory is presence-based and overlapping: **160** `.github/workflows
 2. **The test-fixture checkpoint optimization passed full exact-SHA CI.** Run #46071708587 passed on SHA `ee791a6ed761b7ad92e8253fdd72955d01a3c121`. The harness and audit documentation then passed the later full matrix on SHA `460c5992a939fc7e86d40650c8d63875fc814b00` (run #46076122193); both Python 3.10 and 3.13 reported **1,958 passed, 1 skipped**, and all smoke/compatibility steps passed. This predates the separate `--checkpoint-seconds` harness option.
 3. **Initial realistic scale benchmark — locally verified.** [The opt-in harness](../simulation/scenarios/test_village/bench_realistic_world_scale.py) scales 4–32 NPCs across 1–8 finite sectors for 900 simulated seconds, exercising autonomous decisions, funded production wages, wood/charcoal material trades, road travel, owned-food consumption, recorded speech, SQLite snapshots, and genesis replay. Two independent databases per size produced identical event/state digests. Measurements are in the next section.
 4. **Bounded long horizon remains unmeasured.** Several 96-hour diagnostics were stopped before completion; traces show the process still in `LivingWorldEngine.advance` applying events, so no valid long-run timing or replay measurement exists. Defer shared-market and longer-horizon claims until the measured per-event cost has been reviewed and bounded.
-5. **Next engine investigation.** Analyze whether event projection validation and recursive freeze/thaw can be reduced without weakening tamper rejection, immutable state, deterministic replay, SQLite atomicity, or snapshot parity. Define targeted acceptance tests before any engine edit; current work changes only the opt-in benchmark harness.
+5. **Projection-freeze optimization follow-up.** The next investigation was bounded to the recursive `_freeze` scalar path and has now been implemented as PERF-01-FREEZE; see the measured results below. It leaves validators, reducers, schema/rules, event writes, and persistence untouched. Any further optimization needs a separate profile and acceptance analysis.
 6. **Design fast feedback separately from release evidence.** Use targeted probes for changes; run the full exact-SHA Python 3.10/3.13 matrix for code closure. A docs-only path needs an explicit always-running success/failure aggregate so required checks cannot silently become skipped.
 
 ### Initial realistic multi-sector scale baseline (SHA 8218)
@@ -184,8 +184,28 @@ cProfile of the 32-NPC workload recorded 184,834,696 calls (141,111,550 primitiv
 
 Three 96-hour diagnostics were stopped before completion: no-checkpoint and six-hour-checkpoint runs after about nine minutes, plus a 900-second-checkpoint run around 98 seconds after 27/384 checkpoints and about 5,188 events. Captured traces remained in `LivingWorldEngine.advance` applying events, not final genesis replay. These attempts provide no complete long-horizon timing, throughput, or replay result.
 
+### PERF-01-FREEZE — exact scalar fast path in immutable projections
+
+Analysis identified repeated `isinstance(value, dict)` / `isinstance(value, list)` checks for the scalar leaves in normalized event projections. The scoped implementation at code commit `ec742b6bce77fa37ea83e0b17584c8cc3781a9d8` returns exact JSON primitive values first, uses exact built-in container fast paths, and retains recursive `isinstance` fallbacks for dict/list subclasses. Sorted mapping keys, tuple conversion, immutable mapping proxies, and validator behavior remain unchanged; no schema/rules, reducer, event, or SQLite code changed.
+
+Acceptance checks cover scalar types and identity-by-value, nested sorted immutable mappings, list conversion, subclass compatibility, existing isolation/rejection behavior, event integrity, and replay. The focused projection, integrity, and replay set passed **36/36** on Python 3.12.14 in 1.07 s. `compileall` passed on Python 3.13; Python 3.10 was unavailable in the local environment, so the dual-version exact-head CI remains required.
+
+The same realistic benchmark command ran before and after on Python 3.12.14, 900 simulated seconds, 1/2/4/8/16 sectors, two repetitions per point. Sector counts, event counts, event digests, state digests, and resulting world state matched for every point. Median advance/replay seconds were:
+
+| Sectors / NPCs | Before advance | After advance | Before replay | After replay |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 / 4 | 0.142813 | 0.149165 | 0.072854 | 0.071310 |
+| 2 / 8 | 0.384279 | 0.382326 | 0.195306 | 0.211034 |
+| 4 / 16 | 1.214338 | 1.202956 | 0.604495 | 0.610155 |
+| 8 / 32 | 4.242629 | 4.205284 | 2.038314 | 2.057586 |
+| 16 / 64 | 15.706245 | 15.963435 | 7.565835 | 7.492428 |
+
+These two-sample unprofiled timings move in both directions and are within run noise; they do **not** support a broad wall-clock or population-capacity gain. A diagnostic cProfile of the 32-NPC/two-repeat workload changed from 184,834,696 calls and 64.964 profiled seconds to 148,506,096 calls and 58.876 seconds. `_freeze` call count remained 20,453,074; its self time fell from 13.489 to 11.097 seconds and cumulative time from 19.093 to 12.998 seconds. Profile totals overlap and cProfile slows the workload substantially, so this is evidence the targeted path costs less under instrumentation, not a native throughput guarantee.
+
+Exact-SHA Python 3.10/3.13 full CI is pending; do not close PERF-01 until both matrix jobs and workflow smoke steps succeed on the final code SHA.
+
 ### Remaining audit gaps
 
 - CI-00 is partial: required checks could not be read, and the 160-workflow inventory has not yet mapped every branch filter, duplicate behavior, and historical dependency.
-- CI-03 has a local full-suite duration profile, cProfile traces, population/replay/reducer baselines, the realistic 4–32-NPC multi-sector baseline, and a test-only checkpoint A/B. The 96-hour diagnostic was stopped while still advancing events and produced no usable result. Shared-market/long-horizon measurements remain open.
-- Checkpoint-harness SHA `d399ffc970b139a5359208cf7c9fb8ee80395dd8` passed exact-SHA CI #46080863733: 1,958 passed + 1 skipped in each Python version, all 90 steps succeeded. No engine or workflow optimization has been implemented.
+- CI-03 has a local full-suite duration profile, cProfile traces, population/replay/reducer baselines, the realistic 4–32-NPC multi-sector baseline, a test-only checkpoint A/B, and the bounded PERF-01 freeze optimization. The 96-hour diagnostic was stopped while still advancing events and produced no usable result. Shared-market/long-horizon measurements remain open.
+- Checkpoint-harness SHA `d399ffc970b139a5359208cf7c9fb8ee80395dd8` passed exact-SHA CI #46080863733: 1,958 passed + 1 skipped in each Python version, all 90 steps succeeded. At that audit point no engine optimization had been implemented; the later scoped `_freeze` fast path and its pending CI are recorded under PERF-01-FREEZE above.
