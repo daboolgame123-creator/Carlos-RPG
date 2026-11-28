@@ -202,7 +202,7 @@ The same realistic benchmark command ran before and after on Python 3.12.14, 900
 
 These two-sample unprofiled timings move in both directions and are within run noise; they do **not** support a broad wall-clock or population-capacity gain. A diagnostic cProfile of the 32-NPC/two-repeat workload changed from 184,834,696 calls and 64.964 profiled seconds to 148,506,096 calls and 58.876 seconds. `_freeze` call count remained 20,453,074; its self time fell from 13.489 to 11.097 seconds and cumulative time from 19.093 to 12.998 seconds. Profile totals overlap and cProfile slows the workload substantially, so this is evidence the targeted path costs less under instrumentation, not a native throughput guarantee.
 
-Exact-SHA Python 3.10/3.13 full CI is pending; do not close PERF-01 until both matrix jobs and workflow smoke steps succeed on the final code SHA.
+Exact-SHA full CI [#46084550760](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46084550760) succeeded on tested code/documentation SHA `3e7bb653554e84d5bb7264b627aa362dbb07ce89`. Both Python 3.10.22 and 3.13.18 reported **1,959 passed, 1 skipped**; the pytest step took 12:42 and 10:08 respectively. All **90/90 steps per job** succeeded, including compile, compatibility and SQLite smoke checks. The follow-up docs-only closure commit records this evidence without changing tested source. PERF-01-FREEZE is `CLOSED_TECHNICALLY / EXACT_SHA_FULL_CI_PASS / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`; this does not imply release approval or a capacity guarantee.
 
 ### Remaining audit gaps
 
