@@ -10,7 +10,7 @@ from carlos_sim.market import close_offer
 from carlos_sim.steward_food_payroll import (
     choose_steward_earned_wage_quote_retirement,
     choose_steward_food_wage, pay_steward_food_wage,
-    validate_steward_food_wage_receipt,
+    validate_steward_food_wage_receipt, validate_steward_food_wages,
 )
 from test_play48_real_watch_income_24h import seed
 
@@ -71,6 +71,26 @@ def test_signed_wage_releases_only_a_real_unsold_local_quote(tmp_path):
     assert sum("steward_food_wage" in t for t in d["market_trades"].values()) == 1
     validate_steward_food_wage_receipt(d, d["market_trades"][earned])
     assert choose_steward_earned_wage_quote_retirement(WorldState(**d)) is None
+
+
+def test_bulk_history_validation_cannot_backfill_with_a_future_sale(tmp_path):
+    d = sample(tmp_path)
+    close_offer(d, DomainEvent("MarketOfferClosed", "salma",
+                               "owner makes funded wage stock available",
+                               d["time"], {"id": "old"}),
+                market_authorized=True)
+    pay_steward_food_wage(d, DomainEvent(
+        "MarketStewardFoodWagePaid", None, "earned local food",
+        d["time"], {"site_id": "market", "trade_id": "sale-0", "amount": 1}),
+        market_authorized=True)
+    eligible_sales = {"market": [1000, 1001]}
+    validate_steward_food_wages(d, eligible_sales)
+
+    # The first sale can only back a wage paid at time 1000 if the second,
+    # genuinely later sale is not incorrectly counted from the final ledger.
+    d["market_trades"]["sale-0"]["steward_food_wage"]["paid_at"] = 1000
+    with pytest.raises(ValueError, match="completed sale service"):
+        validate_steward_food_wages(d, eligible_sales)
 
 
 @pytest.mark.parametrize("alter", [
