@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 44026)
-Total output lines: 1783
-
 # Carlos RPG — سجل توجيه الأعمال القابلة للاستئناف
 
 ## الحالة الحالية — 28 نوفمبر 2026
@@ -122,7 +119,1284 @@ WEB-03 عند `985977b` اجتاز [الانحدار النهائي](https://git
 | ID / task | Classification / verification | Last evidence and next gate |
 | --- | --- | --- |
 | PLAY48Y genuine farm wages 48h | CHAT_EXECUTABLE / VERIFIED_CAUSAL_POSITIVE | [CI #43017271741](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43017271741) SUCCESS on Python3.10/3.13 SHA `81cddebb`: 13 NPC and 12 copper unchanged, same true 3 opening bread (2 farm/1 market in BOTH arms). Huda physically earned and ate **two** genuine farm-water-delivery wages, hunger100→86 at day2, actual deliveries3→10, bakery batches9→10, village meals4→6, hunger100 residents5→4. Finite 2 wage ceiling, no bakery-to-farm replenishment |
-| PLAY48V genuine Hana wages 96h | CHAT_EXECUTABLE / VERIFIED_NEGATIVE_ENDURANCE | [CI #43007291657](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007291657) SUCCESS on 3.10/3.13 at `37cd8fb5`: authentic 2 new Hana market-owned food wages, but BOTH A/B ar…32026 tokens truncated…CI before technical closure.
+| PLAY48V genuine Hana wages 96h | CHAT_EXECUTABLE / VERIFIED_NEGATIVE_ENDURANCE | [CI #43007291657](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007291657) SUCCESS on 3.10/3.13 at `37cd8fb5`: authentic 2 new Hana market-owned food wages, but BOTH A/B arms 13/13 hunger100 by day4 and **0** deliveries, jobs, meals and trade in hours72-96. This is *not* recovery |
+| PLAY48X full 44/59 version regression | CHAT_EXECUTABLE / VERIFIED | [CI #43014260381](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43014260381) 1696/1696 tests PASS **each 3.10/3.13** at code SHA `b939992d`; authentic old43/58 SQLite save rejected without a byte change. This is rejection, NOT migration |
+| PLAY48Y2 96h all-employment income | CHAT_EXECUTABLE / VERIFICATION_PENDING | [CI #43028088939](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028088939) true same-genesis 13-NPC 24/48/72/96h Huda farm wages A/B, genuine per-profession personal copper, market affordability and post72 activity, 3.10/3.13, code SHA `5a2e1472`; check final log `PLAY48Y2_AUTHENTIC_96H_HUDA_FARM_WAGE_AND_THIRTEEN_INCOMES` before claim |
+| PLAY48Z missing farm food route | CHAT_EXECUTABLE / VERIFIED_NEGATIVE_BARRIER | [CI #43028314540](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028314540) SUCCESS 2/2 tests on each Python at source SHA `df833e9f`: bakery→farm road is real but return freight is **coin_copper**, while food lane is bakery→market. No trusted food freight exists to refill farm pay. Earlier tuple/list test-oracle failed; corrected without engine change |
+| PLAY48Y2 full source regression | CHAT_EXECUTABLE / VERIFICATION_PENDING | [CI #43028515837](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43028515837) Python3.10+3.13 full historical+new suite at code SHA `abe2e976`, no claim before final results |
+| PLAY48Z real bakery→farm procurement | BLOCKED_BY_DEPENDENCY / DESIGN_ONLY | [Physical supply design](PLAY48Z_BAKERY_TO_FARM_PHYSICAL_SUPPLY_DESIGN.md). Requires trusted bakery/farm sale or barter, real farm ownership, cargo on bakery→farm road, conflict with coin remittance, physical receipt, Huda proven worksite service and safety guards. **Do not fabricate return bread**; resolve after Y2 results |
+| PLAY48 release | RELEASE_NO_GO | No confirmed 168h independent recovery, no approved save migration, full final integrative review nor `main` merge, no PLAY49 |
+
+
+
+## PLAY-48X — current version regression contract (2026-11-11)
+
+**Priority:** Current, isolated integration branch `integration/play48x-schema44-regression-contract-20261111`. Stage `PLAY48_OPEN / RELEASE_NO_GO`, old production saves never migrated and `main` unmodified. Detailed [PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md](PLAY48X_SCHEMA44_REGRESSION_AND_LEGACY_GATE.md).
+
+| Task | State / objective | Verified evidence / pending gate |
+| --- | --- | --- |
+| PLAY48U real new Hana market wage | VERIFIED_CAUSAL_POSITIVE_48H | [CI 42999941836](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42999941836) SUCCESS Python3.10/3.13: +2 physically earned Hana meals, Hana hunger100→60, 5→4 villagers at hunger100; no extra deliveries |
+| PLAY48W both market courier contracts | VERIFIED_NEGATIVE_HUDA_48H | [CI 43007695830](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007695830) SUCCESS both Python versions: Hana food wages real; Huda never meets market-service payout conditions, earns 0 and remains hunger100 |
+| PLAY48V actual 96h | VERIFICATION_PENDING | [CI 43007291657](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007291657), check both Python runs and actual post72 jobs, deliveries, sales, personal meals. Do not infer success from prior green 48h |
+| PLAY48X full historical schema44/rules59 regression | VERIFICATION_PENDING | Old [full run 43007340412](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43007340412) 33 **version pins** failed / 1661 passed per Python. Explicitly upgraded current-version assertions in 23 test files and two candidate-current CI pins only; [new full run 43014260381](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43014260381) pending final on 3.10/3.13 |
+| PLAY48X legacy save safety | VERIFIED_NEGATIVE_GATE | [new run 43014260381](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/43014260381) successful short gate both Pythons: real save created under frozen original 43/58, rejected without byte mutation by new 44/59; two additional new-world tests pass each |
+| Release / phase | **RELEASE_NO_GO** | No old-world migration approval, no merge, no 168h independent physical recovery proof, no PLAY49 |
+
+
+
+## PLAY-48S — actual employer bread wages after physical courier service (2026-11-11)
+
+**PLAY48_OPEN / RELEASE_NO_GO, Schema 43 / Rules 58 unchanged, no main merge.** Current isolated branch `experiment/play48s-authentic-courier-food-wages-20261111`. Reviewed previous PLAY48R full comparison [CI #42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865) succeeded Python 3.10/3.13 at SHA `bb86167d`: fertile east plot yielded 15 vs 10 actual grain, 9 vs 7 baked loaves, but same 6 meals and same 4/13 at hunger100 at day2. Supply is a separate problem from food ownership. [Technical S wages and test limits](PLAY48S_FUNDED_COURIER_FOOD_WAGE.md).
+
+| Item | State | Verification |
+| --- | --- | --- |
+| S0: existing wages integration | CHAT_EXECUTABLE / BRANCH_COMMITTED | Same authentic 13 NPCs/12 copper/3 initial food, with one farm-owned bread for Huda after real water service, one market-owned for Hana after real logistics service. Employer food escrow debits initial site stock, does not print food; first payments secured by existing reducer. Wood/charcoal jobs, fertile yield and 2 real couriers remain |
+| S1: exact 12h A/B | CHAT_EXECUTABLE / VERIFIED | [run 42924173716](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42924173716), commit `99b615d`: 3.10+3.13 short gate SUCCESS; Huda and Hana both earned **one personally owned loaf** for genuine service; both hunger 49 and 0 consumed at 12h. Same 12 copper, 3 initial loaves, no forged pay. Earlier first two runs failed an invalid *test oracle* (over-strict adjacency/timestamp), now corrected with exact SQLite command/proof checks |
+| S2: exact 48h A/B | CHAT_EXECUTABLE / VERIFICATION_PENDING | Same [run 42924173716](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42924173716), long jobs in progress at last check; identical genesis, only food salary timing flag differs; requires real meals, hunger, paid receipts, trade and transport proof, no inference from 12h gate |
+| S3: sustainable wages | BLOCKED_BY_DEPENDENCY / NOT_IMPLANTED | Current contract is **one-off** and cannot be declared repeatable; investigate new payer-funded later receipts only after S1/S2 and explicit auth/rules/version design. Not permitted to eat consigned cargo, mint bread, pay unearned service or bypass critical hunger guard |
+| S4: full 168h closing | BLOCKED_BY_DEPENDENCY / NOT_IMPLANTED | No 7day recovery, full latest-SHA test, or production release approval claimed. Previous PLAY48R [full regression #42919617997](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919617997) **SUCCESS 1,694 tests each Python 3.10 and 3.13**, but not the new PLAY48S code |
+
+
+
+## PLAY-48R — experimental physically harvested fertile-field comparison (2026-11-11)
+
+**Status: PLAY48_OPEN / RELEASE_NO_GO**, Schema 43 / Rules 58 unchanged. Branch `experiment/play48r-fertile-field-real-harvest-20261111`. This is NOT a production yield rule or claim that hunger is solved. [Full scope, hypotheses, and evidence](PLAY48R_FERTILE_FIELD_TRIAL.md).
+
+| Task | Classification / state | Evidence and next gate |
+| --- | --- | --- |
+| PLAY48-R0 | CHAT_EXECUTABLE / VERIFIED | Trusted opt-in fertile east-field 12-unit crop harvest vs original 7, same 13 NPCs, 12 copper, 3 opening bread, finite seed/water, original roads and 24h time. Dual-Python 3.10/3.13 genesis/provenance checks passed [run 42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865), code SHA `bb86167d`. Necessary 7d upper bound 55→90 with observed rain; zero-future-rain upper bound only 27 in new trial, no recovery inferred |
+| PLAY48-R1 | CHAT_EXECUTABLE / VERIFICATION_PENDING | Same [run 42919278865](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919278865), actual two physical 13-NPC villages through 24/48h, crop/event/wage and SQLite replay; do NOT claim food-sales improvement until result verified |
+| PLAY48-R2 | CHAT_EXECUTABLE / VERIFICATION_PENDING | [full Python regression #42919617997](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42919617997), code unchanged after `bb86167d` with extra workflow, exact source-based SHA `aa836e46`. Await actual 3.10/3.13 final |
+| PLAY48-R3 | BLOCKED_BY_DEPENDENCY / PLANNED | Select a physically credible sustainable resource/soil/water input contract after genuine R1 results, with causality and no time-zero invisible subsidy; 72–168h A/B and independent review still required |
+| PLAY48-S onward | BLOCKED_BY_DEPENDENCY / PLANNED | Credible recurring actual courier food access, bakery grain reserve and 7-day acceptance rely on durable R outcomes. Do not bypass hunger safety or start PLAY49 |
+
+
+
+## PLAY-48Q — food carrying-capacity and real 48h courier lockup (2026-11-10)
+
+**Authoritative current evidence:** [PLAY48Q_CAUSAL_FOOD_CAPACITY_DECISION.md](PLAY48Q_CAUSAL_FOOD_CAPACITY_DECISION.md). Phase remains `PLAY48_OPEN / RELEASE_NO_GO`, Schema 43 / Rules 58, experimental branch `analysis/play48q-seven-day-physical-food-capacity-20261110`. No `main` merge, no P0 approval. Prior PLAY48H0 entries below are historical and not authoritative current status.
+
+| Task | Classification / state | Exact evidence / next gate |
+| --- | --- | --- |
+| PLAY48-O | CHAT_EXECUTABLE / VERIFIED_NEGATIVE | 13-NPC 96h A/B #42907827424 SUCCESS 3.10/3.13 at `066a084b`; no deliveries or jobs after hour 72; 12/13 hunger100 day4 |
+| PLAY48-P | CHAT_EXECUTABLE / VERIFIED_CAUSAL_AUDIT | Food receipt #42914270367 SUCCESS at `fc400a80`; 7 real bakes/deliveries by day2, 4 unsold loaves, both couriers hunger100 and disabled by safety threshold |
+| PLAY48-Q | CHAT_EXECUTABLE / VERIFIED_CAPACITY_BOUND | #42916907455 SUCCESS at code SHA `5ac20345` Python3.10/3.13; ≥61 meals needed to keep 13 below hunger90 at day7; ≤55 physical bread-equivalent units with observed eight-water scenario, and even hypothetical fully pre-funded 3-grain opening buffer is ≤58. Transport 52/day nominal schedule is NOT actual delivery. Test-only branch doc follow-up is not a newer CI assertion |
+| PLAY48-R | CHAT_EXECUTABLE / PLANNED | Prove real production and documented water/material sources sufficient for 13 without minted resources or adding hidden labor, plus adversarial feasibility tests |
+| PLAY48-S | CHAT_EXECUTABLE / PLANNED | Employer-owned, physically earned repeatable courier food access with paid services, not entrusted-cargo consumption, double-payment or threshold bypass |
+| PLAY48-T | BLOCKED_BY_DEPENDENCY / PLANNED | Actual 3-grain bakery storage target from true surplus after R; never falsify stock during famine |
+| PLAY48-U | BLOCKED_BY_DEPENDENCY / PLANNED | Honest identical or explicitly difference-controlled 0–168h A/B, physical replay, all receipts/necessity, final same-SHA full CI + disposition; no premature stage closure |
+
+
+
+## PLAY-48H — Preventive food compensation for genuine courier services (2026-11-10)
+
+**Current:** `PLAY48H_H0_ANALYSIS_COMMITTED / H1_IMPLEMENTATION_NOT_STARTED / PLAY48_OPEN / RELEASE_NO_GO`.  
+**Independent analysis branch:** `feature/play48h-preventive-provision-contract-20261110`; parent `37a240ca9d16ae6d24740694c516189eb4041f82` (PLAY-48G exact tested 13-NPC negative-control). Schema **42** / Rules **57** unchanged by H0.
+
+| ID | Task | Verified status | Next gate |
+| --- | --- | --- | --- |
+| PLAY48-F-FULL | 7-NPC autonomous aid, historical full regression | **SUCCESS** [42820514763](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42820514763), 1,694 Python 3.10 + 1,694 Python 3.13, exact `5cde7f17d989658d501b4145c1e8fabb40255ae3` | Not evidence of 13-NPC recovery |
+| PLAY48-G | Genuine 13-NPC 72→96h relief-enabled vs identical blocked control | **SUCCESS as negative result** [42821426908](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42821426908), exact `37a240ca9d16ae6d24740694c516189eb4041f82` | No new work/sale/meal; five unsold market loaves; avoid fabricated donor |
+| PLAY48-H0 | Audit actual service receipts, market stock ownership, wage authority and version impact; executable 13-NPC preflight | **DESIGN + TEST SOURCE COMMITTED; H0 CI PENDING** | [contract decision](PLAY_48_PREVENTIVE_PROVISION_CONTRACT.md) and `test_play48h_provision_preflight.py` must pass on exact H0 HEAD |
+| PLAY48-H1 | Implement contract-backed, funded, single-redemption preventive food provisioning without inventing stock; test in 13-NPC world from t=0 | **NOT STARTED / DESIGN GATE** | Confirm market-offer/escrow interaction first, choose justified Schema/Rules bump and isolated old-save refusal test |
+| PLAY48-CLOSE | Genuine post-72h attributable delivery plus later job/sale/meal, physical/cash/food custody and full historical exact-SHA green | **BLOCKED / RELEASE_NO_GO** | Review exact final implementation and dispose of external review independently; P0 and `main` remain unchanged |
+
+No acceptance of PLAY-49 or production migration follows from the H0 probe. The existing source has verified production wages, but **not** a signed food-for-delivery contract. Do not call a merely unreserved market loaf a wage, or invent an income source.
+
+## PLAY-48 — repeated physical production, started 2026-11-10
+
+**Operative state: `PLAY48_OPEN / RELEASE_NO_GO`.** Independent experimental
+branch `feature/play48-repeatable-physical-loops-20261110`, based on verified
+PLAY-47 integration `1dd038d`. Schema **42** / Rules **57**, `main`
+unchanged; no production save approval.
+
+| ID | Task | Classification | State | Evidence / next gate |
+| --- | --- | --- | --- | --- |
+| PLAY48-A | Bounded two-run real wood/carpentry and ore/forge, real shop purchases, cash and wages, zero-funds failure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42808944705](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808944705); enhanced tests [42809457769](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42809457769) |
+| PLAY48-B | Two autonomous ore+charcoal smelts, actual repairer demand, one sale funds two distinct jobs | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42809457769](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42809457769) — 51 passed/1 external-fixture skip per Python; repeat end-product demand not solved |
+| PLAY48-C | Genuine 13-NPC 96-hour scarcity/hunger/courier blockade, no claimed recovery | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_AS_NEGATIVE_CONTROL | [CI 42808714301](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42808714301) — SUCCESS each Python; 5 unsold loaves, 12 copper, no day-4 new work or deliveries |
+| PLAY48-D | Real 8-NPC funded downstream demand in 2 construction/2 repair sites with delayed shifts | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_IN_BOUNDED_SCOPE | [CI 42812662593](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42812662593), [time parity 42813190428](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42813190428); 8 real trades, 4 terminal jobs, 12 copper, no engine changes |
+| PLAY48-E | Physically paid food assistance using existing event types: purchase → 3 roads → promise → handover → meal → courier delivery | CHAT_EXECUTABLE | CLOSED_TECHNICALLY_AS_MANUAL_SERVICE_PROOF | [CI 42814104944](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42814104944) SUCCESS each Python, 57 pass/1 skip; **manual driver, not autonomous day-four relief** |
+| PLAY48-F | Opt-in NPC-funded one-loaf request → personally known market → own-copper sale → six physical donor legs → voluntary assistance → meal → courier restart | CHAT_EXECUTABLE | TARGETED_CLOSED_IN_7_NPC_EXPERIMENT / FULL_NO_GO | [90 passed per Python 42820201025](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42820201025); [proof and constraints](PLAY_48_AUTONOMOUS_AID.md); independent 13-NPC post72 proof still absent |\n| PLAY48-AUTO-13NPC | Establish legitimate personally funded co-present relief + physically learned delivery routes in **genuine 13-NPC** world after hour 72 | BLOCKED_BY_DEPENDENCY | OPEN / NO_PRODUCTION_CLAIM | No synthetic ownership, supplier omniscience, unwitnessed contact, spent consignment cash, or free employer subsidy; compare identical-weather control before claiming recovery |
+| PLAY48-CLOSE | Final exact-SHA targeted/full regressions, honest day-four unresolved limitation, external review disposition | BLOCKED_BY_DEPENDENCY | OPEN / RELEASE_NO_GO | Historical F full CI and G genuine negative-control CI are SUCCESS on their own exact SHAs; H1 and final combined exact-SHA tests are still outstanding. P0, genuine historic-save migration and `main` still independent. |
+
+[PLAY-48 evidence, diagnostics and accepted risks](PLAY_48_REPEATABLE_PRODUCTION.md).
+The **six earlier Draft engineering PRs #63–#68** remain unmerged and separate;
+MIG-05 production approval is not a prerequisite for disposable PLAY-48 trials.
+Do not call the new tests a complete seven-day recovery, adopt made-up wood or
+iron regeneration, or skip tests because a work queue line changed.
+
+> **Historical record below:** the PLAY-47 pre-promotion queue was written
+> before its closure gate. The verified technical promotion later landed at
+> `38ef0049478e4d62fd465dadc7c1eaf406b9b4d2` on the integration
+> history, with full [CI 42731120034](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731120034)
+> and targeted [CI 42731103345](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42731103345)
+> green for Python 3.10/3.13. The PLAY-47 entries are retained as archival
+> decision context and **do not re-open PLAY-47 or block disposable PLAY-48**.
+> Schema 42/Rules 57 remain the current simulation versions.
+>
+## PLAY-47 — closure verification batch (updated 2026-11-10 UTC)
+
+**Current unverified-candidate state: OPEN / RELEASE NO-GO**; Schema **42** /
+Rules **57**. The final documentation candidate is
+`feature/play47-technical-closure-20261110`, based on runtime `0f8c31f` in
+`feature/play47-closure-verification-20261109`. It changes no runtime, test or
+workflow code. Its [gated decision](PLAY_47_TECHNICAL_CLOSURE_DECISION.md) becomes
+`CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER` only after its own exact
+SHA passes all required checks and is fast-forwarded to integration.
+Integration is `feature/play47-npc-economic-endurance-20261109` at
+`0f8c31f`, advanced without force after the verified #57–59 stack at `77ddb54`
+and then the complete runtime candidate matrix. Runtime `0f8c31f` has **1,694
+full + 179 targeted per Python** green, including both seven-day cases, with
+identical reports across versions. The final proposal SHA
+must independently pass all checks before activation. No PLAY-48, OpenCode
+assignment, `main` update or canonical story edit.
+
+The task states below are the **proposed operative states after gated
+promotion**. Before activation, the candidate's funding/custody/endurance/closure
+rows remain verification-pending; only the already-promoted stack is closed.
+
+| ID | Work | Dependencies | Classification | Operative state after promotion | Evidence | Activation requirement |
+| --- | --- | --- | --- | --- | --- | --- |
+| PLAY-47-STACK | Verify #57–60 and fast-forward | exact-head targeted/full 3.10 + 3.13 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | [CI evidence](PLAY_47_CLOSURE_EVIDENCE.md), 0f8c31f | Runtime accepted; documentation decision remains gated |
+| PLAY-47-FUNDING | Food access before immobility | existing cash custody | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | quote at hunger 80/90, provision control | Final exact-SHA CI; no new wage contract |
+| PLAY-47-CUSTODY | Reject invalid incoming market receipts | reproduced #59 failure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | unchanged-ledger regressions | Final exact-SHA CI on both Pythons |
+| PLAY-47-7D | Seven-day wet/dry scarcity, reopen and clock parity | physical and accounting invariants | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | `test_play47_closure_endurance.py` | Both complete cases on each Python; inspect reported outcomes |
+| PLAY-47-CLOSE | Enact the prepared technical decision | exact decision-SHA full + all four targeted jobs | READY_FOR_VERIFICATION | CLOSED_TECHNICALLY | [decision](PLAY_47_TECHNICAL_CLOSURE_DECISION.md) | Inspect final logs, record accepted SHA/run links, verified fast-forward |
+
+Incoming copper breaking custody is an integrity defect, distinct from famine.
+An unreserved personal loaf alone does not make its market settlement valid.
+The evidence report records the reproduced failure and the future contract's
+payer, delivery entitlement, separation of funds and idempotency requirements.
+
+## مرجع العمل عند تجدد الرصيد — 2026-11-09
+
+راجع [تسليم المحادثة الجديدة](CARLOS_NEXT_CHAT_HANDOFF.md) و[خطة تسريع PLAY-46→51](CARLOS_ACCELERATION_PLAN_2026-11-09.md) و[نماذج OpenCode/Low–Max](OPENCODE_AVAILABLE_MODELS_2026-11-09.md). **الأولوية الفعلية: إغلاق PLAY-46 وفق أحدث CI ثم PLAY-47 بعد البوابة**. لا تعتبر الأرقام المخططة إنجازات، ولا تتجاوز الانحدار الكامل أو مؤشرات نزاهة الاقتصاد.
+
+## أولوية التسريع — النسخة القابلة للعب أولًا (8 نوفمبر 2026)
+
+- **PLAY-30:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. فرع تجارب فقط، دمج PR #18 في `design/play29-seven-day-provisions-20261108` عند `186c79fc0fe28deead8f052dfc769bb840abcf7c`. الاختبارات الشاملة [42486981474](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42486981474) **1,670 ناجحة لكل Python 3.10/3.13**؛ انعدام استدامة الغذاء **مُثبت ومُعلن**، وليس عيب نزاهة مخفيًا. تقرير [الإغلاق](PLAY_30_TECHNICAL_CLOSURE.md).
+- **PLAY-31 — مسار اللعب العمودي التجريبي:** `CHAT_EXECUTABLE / VERIFICATION_PENDING`. الفرع `feature/play31-seven-npc-offline-vertical-slice-20261108`؛ الواجهة `scenarios/test_village/play_village_local.py`. يمكن لكارلوس دخول قرية ذات سبع شخصيات مستقلة، خمسة مواقع، طريق بيت/سوق يستغرق 90 ثانية، رؤية محلية وحوار وحركة وشراء وأكل وهدايا وانتظار، وموجز `handoff` لا يكشف الأسرار. الحفظ مؤقت داخل SQLite ويتلف عند الخروج؛ ليست القصة الأصلية.
+- **الدليل الموجّه:** [PLAY-31](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42490987807) — **21 اختبارًا ناجحًا لكل Python 3.10/3.13** على شيفرة `245dc608438d16dccea1ca6deaaf4f603a9caa83`. تعديلات لاحقة تخص workflow والتوثيق فقط. **الاختبار الشامل النهائي على أحدث SHA مطلوب قبل الإغلاق**.
+- **تسريع CI:** ضبط `concurrency.cancel-in-progress=true` في workflow الفحص الشامل لإلغاء تشغيلات الفرع المتقادمة بدل استهلاك عشرات الدقائق في دفعات superseded.
+- **الترتيب العملي:** (1) إتمام بوابة PLAY-31 واختبار تشغيل يدوي واضح؛ (2) حزمة لعب قصيرة متماسكة لكارلوس بقرارات/أفعال/تجربة UI محلية إن أمكن؛ (3) المهام والمهارات والمغامرة والصراع ضمن قواعد العالم؛ (4) استدامة اقتصادية أشمل بعد توفر لعبة عملية للاختبار. لا يُستخدم النموذج اللغوي كسلطة أحداث ولا تُعتمد أحداث غير مرئية للاعب.
+- **الحدود:** `main` والقصة الأصلية دون تغيير، Schema **39** / Rules **51**. المراجعة الخارجية و`P0_PRODUCTION_NOT_APPROVED` مفتوحان، ولا نسخ حفظ طويلة الأمد أو اتصال شبكة غير موثوق.
+- **تشغيل:** [PLAY-31 quickstart](PLAY_31_OFFLINE_QUICKSTART.md).
+
+
+## Latest verified milestone — PLAY-29 (2026-11-08)
+
+- **Technical decision:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`, **no self-sufficiency claim**. World version **Schema 39 / Rules 51**, disposable worlds; source `1a4a4021367c670781eea5dee030fe9d93e65f37`, seven-day test-only SHA `d67fefc09dddb17175e3799492167e4d4b03196c`.
+- [Full CI #42476104910](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42476104910): **1,670 green on Python 3.10 + 1,670 green on 3.13**; [controlled 72h A/B #42475946942](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42475946942) SUCCESS; [7-day CI #42476455377](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42476455377) SUCCESS on both.
+- **Measured outcomes:** at 72h, action-cost calibration reduced NPCs at hunger=100 from **7 to 0**. On day 7 with only initial finite rations and two water units, all **7 of 7 reach hunger 100**, personal food reaches 0, 43 meals consumed, crops mature **2**, deliveries **6**. This is a **structural supply failure**, not an engine integrity failure.
+- **Scope:** frozen, opt-in time-zero hunger clock and action-cost policy; no implicit resource creation; existing defaults and historical fail-closed behavior preserved.
+- **Next independently scoped task, PLAY-30 (analysis / evidence first):** improve physical crop yield/capacity, finite land/water/weather, paid ownership and distribution to NPCs; test hunger, replay, conservation and negative cases on real 7-NPC worlds. Do not declare long-term sustainability until reproducible trials prove it. P0 production and external review remain open; `main` untouched.
+- **Docs:** [final report](PLAY_29_FINAL_REPORT.md), [daily observation / acceptance](PLAY_29_ACCEPTANCE_GATE.md).
+
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-27 (8 نوفمبر 2026)
+
+- **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`؛ P0 غير معتمد، `main` والقصة الأصلية لم يمسّا.
+- **الفرع:** `simulation-engine-phase-play-27-physical-supply`، **SHA الشيفرة المختبرة:** `9cbe31aec2725c39e6accf53ac5956c5e0b5cdfc`؛ Schema **36** / Rules **48**؛ commit توثيق الإغلاق منفصل ولا يدّعي CI الخاص بالشيفرة.
+- **بوابة PLAY-27:** [42426820039](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42426820039) `SUCCESS` — **144 ناجحة على Python 3.10 و144 على 3.13**، ستة عوالم حقيقية بسبعة NPC.
+- **بوابة الانحدار والتوافق:** [42426820040](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42426820040) `SUCCESS` — **1,582 ناجحة لكل إصدار**، صفر فشل، وفحوص الفرق التاريخية الأصلية ناجحة.
+- **المواقع:** البئر `well`، الحقل `farm`، المخبز `bakery`، السوق `market`، ومكان نوم كارلوس `home`. هدى تتعلم كل طريق **محليًا عند الوصول** وتسلك مسارًا ثابتًا ذهابًا وإيابًا ضمن رحلات مؤقتة؛ لا نقل فوري ولا تفتيش مخزون المواقع البعيدة.
+- **المواد:** هدى تنقل **وحدتين ماء** من البئر للحقل ثم **وحدتين قمح** من الحقل للمخبز ثم **رغيفين** للمساحة السوقية. **6 تحميلات و6 تسليمات** في العالم المموّل، وحصادان وخبزتان وصفقة واحدة خلال **260,700 ثانية (أكثر من 3 أيام)**؛ النحاس ثابت 12. بئر جاف/عدم وجود بذرة/غياب المندوبة → لا حصاد أو خبز؛ ماء واحد → دورة واحدة.
+- **حماية:** `SupplyCircuitConfigured` موثوق، `SupplyCargoPicked/Delivered` بصلاحية منفصلة `supply_authorized` محفوظة في SQLite، ملكية شخصية للحمولة أثناء الطريق، شرط وصول فعلي ووسيلة نقل صحيحة، تحقّق replay/restore، رفض الحدث المزور والتحميل المزدوج والقفز، والتزام زمن الرحلة؛ لا تستهلك هدى رغيف الزبون إذا جاعت.
+- **الحياة اليومية:** حالة الاختبار الاقتصادية عطلت نشاط NPC غير الاقتصادي. تجربة أخرى فعّلت الاستقلاب الحقيقي لأكثر من 3 أيام وكشفت بلوغ الجوع/الإرهاق **100** وتوقف الحصاد؛ **هذا فشل استدامة مقصود وصريح، لا نجاح بقاء القرية**.
+- **الحدود:** ماء البئر محدود **بمخزون ابتدائي ولا يتجدد**، مسار هدى التجريبي ثابت/واحد، لا رواتب أو أسعار متغيّرة أو أمطار أو علاج شامل للجوع/الموت أو موارد لا نهائية. لا ترحيل تلقائي لقاعدة البيانات القديمة؛ المراجعة الخارجية وP0 وPLAY-14g و03-A/03-A7c باقية.
+- **الوثائق:** [تقرير PLAY-27](PLAY_27_PHYSICAL_SUPPLY_REPORT.md)، [الخطة](PLAY_27_PHYSICAL_SUPPLY_PLAN.md).
+- **التالي للتحليل PLAY-28:** محاكاة بقاء حقيقية مع الراحة والحاجة للطعام والعمل، نظام مياه محدود متجدد بظروف مناخية/آبار قابلة للاستنزاف، ثم توزيع النقل عبر عقود ومسارات غير مثبتة. قبل ادعاء استدامة يجب اجتياز اختبار أيام بأفعال NPC كاملة وحدود أحداث محسوبة.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-26 (8 نوفمبر 2026)
+
+- **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`؛ **P0 غير معتمد**، لا دمج إلى `main`، والقصة الأصلية دون تغيير.
+- **الفرع:** `simulation-engine-phase-play-26-crop-cycle`؛ **آخر SHA للشيفرة/الاختبارات المثبت:** `c4c0638d24658df24288a95554aa5b0fec70ed21`؛ **Schema 35 / Rules 47**، مع حفظ تفويض أحداث الزراعة في SQLite ورفض الإصدارات القديمة دون ترحيل تلقائي.
+- **CI الموجّه:** [42422616448](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42422616448) **SUCCESS: 127 اختبارًا ناجحًا لكل Python 3.10/3.13** مع خمسة عوالم تجريبية مستقلة تحوي سبعة NPC.
+- **CI الشامل:** [42422616440](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42422616440) **SUCCESS: 1,565 اختبارًا ناجحًا لكل إصدار** (**+19 عن PLAY-25**)، صفر فشل، وبوابات توافق الإصدارات الفعلية ناجحة، على **نفس SHA**.
+- **المسار المستقل:** نورا `farmer` تزرع بذرة بأداة `hoe` خلال **60 ثانية** → بدء نمو موثق يستهلك **ماءً واحدًا** → يوم منطقي **86,400 ثانية** حتى النضج → نورا تحصد باستخدام `sickle` خلال 60 ثانية → باسم يخبز 90 ثانية → سلمى تعرض → عادل يشتري برصيد محلي حقيقي ويأكل؛ **اللاعب لم يأمر أي NPC، بل قدّم أوامر انتظار فقط**.
+- **تجربة t=173,300:** بذرة1 وماء2 → **محصولان ناضجان/حصادان/خبزتان وصفقة واحدة** وماء0؛ ماء1 → محصول واحد/خبز واحد؛ غياب الماء/البذور/المعول → صفر حصاد؛ غياب المنجل يمنع الحصاد ويشغل سعة الحقل. إجمالي النحاس ثابت عند 12 في عالم التمويل، والبذور والماء يخضعان لتدقيق الموارد. شراء واحد فقط بسبب نفاد نقود عادل، وليس فشل إنتاج.
+- **السلامة:** تحصين تهيئة الحقل/التصريح/مواعيد النضج، منع التكرار أو التسريع والتزوير، `atomic` rollback، حفظ واسترجاع SQLite، `player handoff` لا يكشف السجلات الخاصة، إيقاف الميزات القديمة افتراضيًا، وفحوص توافق تاريخية لا تُخفي إلا سجل الحقل **الفارغ** مع شرط صريح.
+- **الحدود المهمة:** اختبار اليومين يستخدم `economy_only_enabled=True`: يُبقي النشاط الاقتصادي ويعطل الأفعال العادية والضغط الصحي المتراكم لتقليل عدد الأحداث؛ **لا إثبات لبقاء NPC أو استدامة لانهائية**. لا أمطار أو إعادة تزويد بالماء أو نقل بين المواقع أو أجور أو أسعار ديناميكية أو موت بالجوع. نموذج نمو زراعي تجريبي سببي مبسط.
+- **ملفات:** [تقرير PLAY-26](PLAY_26_CROP_CYCLE_REPORT.md)، [الخطة](PLAY_26_CROP_CYCLE_PLAN.md)، `simulation/src/carlos_sim/agriculture.py`، `simulation/scenarios/test_village/play_crop_cycle.py`، `simulation/tests/test_play_crop_cycle_batch_26.py`، `.github/workflows/play26-crop-cycle.yml`.
+- **التالي للتحليل — PLAY-27:** ربط مياه/طقس أو مصادر ماء فيزيائية ونقل المحصول بين مواقع حقيقية، ثم اختبار متعدد الأيام **باحتياجات NPC كاملة** ضمن حدود حدث/أداء قابلة للقياس؛ لا إعلان استدامة حتى إثباتها. `PLAY-14g` و`03-A7c / 03-A` و`P0_PRODUCTION_NOT_APPROVED` والمراجعة الخارجية باقية مفتوحة.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-25 (8 نوفمبر 2026)
+
+- **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`؛ لا اعتماد P0 ولا دمج `main`.
+- **الفرع:** `simulation-engine-phase-play-25-finite-harvest`؛ **SHA الشيفرة والاختبارات المثبت:** `2b468a5aab1ee3e3f747ecb31de6c8c6f57b4c1d`؛ Schema **34** / Rules **46** ثابتان. Commit التوثيق النهائي لاحق للشيفرة المختبرة.
+- **الأدلة:** [CI الموجّه 42416063725](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42416063725) = **108 ناجحة لكل Python 3.10/3.13** مع أربع تجارب حقيقية بسبع شخصيات؛ [CI الشامل 42416063670](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42416063670) = **1,546 ناجحة لكل إصدار** وصفر فشل (**+19 اختبارًا عن PLAY-24**).
+- **الإنجاز:** نورا المزارعة تحصد وحدة `crop_ready` مملوكة للموقع باستخدام منجل وبعد **60 ثانية من العمل الحقيقي**؛ باسم يحول القمح إلى طعام بعد **90 ثانية إضافية**؛ سلمى تعرض طعامًا في الموقع؛ وعادل يشتري ويأكل وفق رصيده وجوعه دون أوامر اقتصادية مصطنعة للاعب.
+- **العوالم الأربعة عند t=300:** محصول1/نحاس2/منجل1 → حصاد1/خبز1/عرض1/صفقة1؛ محصول1/نحاس0 → حصاد1/خبز1/صفقة0؛ محصول0 → 0؛ منجل0 → 0. مجموع النحاس ثابت داخل كل عالم، والسلع محفوظة مع احتساب المواد المحجوزة داخل عمل قيد التنفيذ. سيناريوهات test-only بعالم عمل مشترك، وليست القصة الأصلية.
+- **إصلاح حقيقي:** تقييد قرار العمل العادي بموقع العمل والمناوبة المعلنين **حتى إن كان التخطيط الروتيني معطّلًا**، ليطابق التحقق الصارم في مُسقِط الأحداث ولا يفشل أمر انتظار ذري بسبب قرار NPC غير صالح.
+- **الحدود:** **لا نمو محاصيل أو إعادة زراعة أو تجدد أرض؛** `crop_ready` مخزون حصاد ناضج محدود في bootstrap. لا نقل بين مواقع، أجور، اقتصاد متعدد الأيام، موت جوعًا أو موافقة إنتاجية. المراجعة الخارجية مؤجلة.
+- **التقرير:** [PLAY-25](PLAY_25_FINITE_HARVEST_REPORT.md) و[الخطة](PLAY_25_FINITE_HARVEST_PLAN.md). التالي للتحليل **PLAY-26 — زراعة/نمو موارد بشروط بيئية وفترة زمنية حقيقية ونقل مواد، ثم اختبار متعدد الأيام**. `PLAY-14g`، `03-A7c / 03-A`، P0 والمراجعة مفتوحة.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-24 (7 نوفمبر 2026)
+
+- **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`، والمراجعة الخارجية وP0 مفتوحتان؛ لا دمج إلى `main`.
+- **الفرع:** `simulation-engine-phase-play-24-economic-autonomy`؛ **SHA الشيفرة والاختبارات المثبت:** `3772434491259610a373907db3acdae5bc36bb36`؛ **Schema 34 / Rules 46 دون تغيير**.
+- **CI الموجّه:** [42413896793](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42413896793) = `SUCCESS`، **89 ناجحة لكل Python 3.10/3.13**، وثلاثة عوالم اقتصادية حقيقية تضم 7 NPC.
+- **CI الشامل:** [42413896808](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42413896808) = `SUCCESS`، **1,527 ناجحة لكل Python 3.10/3.13**، صفر فشل.
+- **السلوك:** الخباز باسم يختار إنتاج رغيف من قمح مملوك للموقع بعد 90 ثانية إن سمحت المناوبة والصحة والأداة؛ أمين السوق ينشر عرضًا محليًا فعليًا؛ المشتري الجائع يشتري وفق المعرفة المحلية والرصيد؛ وبعد الملكية يأكل مستقلًا. لا تُفرض هذه الأفعال بأوامر اختبار صريحة. المنظومة اختيارية فقط.
+- **تجربة 180 ثانية:** قمح1/نحاس2 → إنتاج1/عرض1/شراء1/3 وجبات NPC وإجمالي 12 نحاس؛ قمح1/نحاس1 → إنتاج1/عرض1/شراء0/2 وجبات وإجمالي 11؛ قمح0/نحاس2 → إنتاج0/شراء0/2 وجبات وإجمالي 12. الحسابات ثابتة **داخل كل عالم بحسب bootstrap الخاص به**؛ لا طعام أو أجر أو نحاس مجاني. باسم يأكل بعد إكمال عمله عند t=90، وعادل بعد الشراء عند t=180.
+- **الفحوص:** 19 اختبارًا جديدًا؛ عمالة/مدة مناوبة، منافسة ورصيد، سفر/غياب، منع العمل المزدوج، atomic rollback، حفظ وإعادة فتح وتكافؤ، وعزل معلومات اللاعب. الأفعال القديمة لم تتغير عند تعطيل الميزات الجديدة.
+- **النطاق:** لا إعادة تجدد للقمح أو أجور أو استدامة طويلة أو موت من الجوع. هذا **إغلاق تقني وليس اعتماد P0**، والمراجعة الخارجية مؤجلة.
+- **وثائق:** [تقرير PLAY-24](PLAY_24_ECONOMIC_AUTONOMY_REPORT.md)، [خطته](PLAY_24_ECONOMIC_AUTONOMY_PLAN.md)، واختبارات وسيناريو PLAY-24.
+- **التالي للتحليل:** PLAY-25 — مصادر المواد الأولية والاستدامة الاقتصادية الاختيارية مع فحص سلامة الموارد؛ خطط قبل التنفيذ. المهام `PLAY-14g` و`03-A7c / 03-A` والجوع المؤدي للوفاة وP0 ما زالت مفتوحة. `main` والقصة الأصلية دون تعديل.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-23 (7 نوفمبر 2026)
+
+- **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`، لا دمج `main` ولا اعتماد إنتاج.
+- **الفرع:** `simulation-engine-phase-play-23-food-chain`؛ **آخر Commit للشيفرة والاختبارات المثبت:** `23f64c5627c5a141dd00ffc560dccc29eac2190c`. Schema **34** / Rules **46** ثابتان.
+- **الفحص الشامل:** [42407810466](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42407810466) = `SUCCESS`؛ **1,508 اختبار ناجح لكل Python 3.10/3.13**.
+- **الفحص الموجّه والتشغيل:** [42407810568](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42407810568) = `SUCCESS`؛ **70 اختبار ناجح لكل إصدار** مع سيناريوهين حقيقيين لـ360 ثانية لكل منهما (بيع/احتفاظ).
+- **التنفيذ:** عالم اختباري مع سبعة NPC؛ إضافة وحدة قمح واحدة وفرن واحد و2 نحاس لعادل في bootstrap فقط؛ الخباز باسم يحول القمح إلى وحدة طعام بعد 90 ثانية. سلمى تنشر عرضًا بملكية موقع الساحة، وفي عالم البيع يشتري عادل بسعر 2 نحاس؛ في عالم الاحتفاظ تبقى السلعة في الموقع. عند أول tick مستقل بعد الإنتاج `t=91` أكل عادل في عالم البيع فعليًا (جوع 80→55)، ولم يأكل في عالم الاحتفاظ (الجوع 80). عند `t=360` سُجلت 6 وجبات NPC لكل مسار مع اختلاف المصدر/الرصيد: بيع wild3/site0؛ احتفاظ wild2/site1.
+- **سلامة الحقوق والمحاسبة:** إجمالي تسع وحدات غذاء/قمح مكافئ ثابت (8 سابقًا + 1 قمح خام)، إجمالي 12 نحاس ثابت، حفظ SQLite واسترجاع genesis/رفض عمليات فاسدة دون mutation. لا منح رواتب أو وجبات مجانية، ولا تسريب بيانات NPC في player handoff.
+- **حد لا يجوز تجاوزه:** بدء العمل والإعلان عن البيع واختيار شراء عادل في نافذة التجهيز **قرارات صريحة لمنسق الاختبار** وليست نابعة من تخطيط اقتصادي مستقل؛ لا تتظاهر بأن اقتصاد القرية صار تلقائيًا. عاشت بقية الشخصيات استقلاليًا بعد `t=90`. لا تجدد للقمح ولا إنتاج دوري مستدام ولا نظام موت جوعًا.
+- **ملفات:** [PLAY_23_FOOD_CHAIN_PLAN.md](PLAY_23_FOOD_CHAIN_PLAN.md)، [PLAY_23_FOOD_CHAIN_REPORT.md](PLAY_23_FOOD_CHAIN_REPORT.md)، `simulation/scenarios/test_village/play_food_chain.py` واختباراتها وCI.
+- **التالي للتحليل:** PLAY-24 — دراسة قرارات الإنتاج/الشراء المحلية المستقلة تدريجيًا بقيود معرفة الشخصيات والعمل والعروض والرصيد واحتياجاتها؛ بدءًا من إنتاج حقيقي محدود في عالم مستقل، دون التحول إلى مورد أو دخل سحري.
+- **مفتوح:** `PLAY-14g`، `03-A7c`، `03-A`، `P0_PRODUCTION_NOT_APPROVED`، `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`؛ القصة الأصلية و`main` لم تُمسّا.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-22 (7 نوفمبر 2026)
+
+- **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`؛ لم تُدمج في `main` ولم تُعتمد للإنتاج.
+- **الفرع:** `simulation-engine-phase-play-22-ecology-endurance`؛ **SHA الشيفرة/الاختبارات المثبت:** `2639d61437e7086a9ac1223a17789f43b29d2fee`؛ Schema **34** / Rules **46** دون تغيير.
+- **CI شامل:** [42405841422](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42405841422) — `SUCCESS`، **1,493 ناجحة لكل Python 3.10 و3.13**.
+- **CI مخصص:** [42405841495](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42405841495) — `SUCCESS`، **34 ناجحة لكل إصدار** وسيناريوهان حقيقيان، كل منهما **ساعة واحدة (3,600 ثانية) من زمن اللعبة**.
+- **النتائج الحقيقية:** عند t=600 نفدت جميع الوحدات الثماني من الغذاء الابتدائي (أو كانت قد أُكلت/خُزّنت لدى كارلوس). عند t=1,800 أصبح **7/7 NPC** عند جوع >=90 في كلا المسارين؛ لا موت من الجوع في قواعد المحرك. حالة `observe`=8 وجبات NPC/5 جمع ناجح/1 فشل؛ `compete`=7 وجبات NPC/4 جمع ناجح/2 فشل؛ 7 رحلات NPC مسجّلة لكل حالة. لا موارد مخترعة.
+- **الحفظ:** 30 أمر انتظار مُحدّد لكل عالم، نقاط عند 600/1800/3600، snapshots مع `verify` كامل من genesis، اختبار SQLite reopen ورفض التكرار والمراجعة القديمة، فصل واجهة اللاعب عن تدقيق NPC الخاص.
+- **ملفات:** [PLAY_22_ENDURANCE_PLAN.md](PLAY_22_ENDURANCE_PLAN.md) و[PLAY_22_ENDURANCE_REPORT.md](PLAY_22_ENDURANCE_REPORT.md).
+- **التالي للتحليل:** PLAY-23 — حل فجوة **الإنتاج الغذائي الفعلي → ملكية الغذاء → حصول السكان عليه/أكله** بمواد أولية ووقت وعمال ومقابل حقيقيين، لا تموين مجاني ولا قرارات مفروضة على NPC؛ اختبر حالات فشل ووثّق أنه لا توجد استدامة دورية حتى إثباتها.
+- **مفتوح دون تغيير:** `PLAY-14g`، `03-A7c`، `03-A`، `P0_PRODUCTION_NOT_APPROVED`، `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. القصة الأصلية و`main` لم يُمسّا.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-21 (7 نوفمبر 2026)
+
+- **الحالة:** `CLOSED_TECHNICALLY / EXTERNAL_REVIEW_DEFERRED_BY_OWNER`؛ لا اعتماد إنتاج P0 ولا دمج في `main`.
+- **الفرع:** `simulation-engine-phase-play-21-ecology`، **آخر SHA للشيفرة/الاختبارات المختبر:** `0c4141ca09771033eee6e7b5f413e77f981a9bc8`.
+- **الاختبارات الشاملة:** [42402278581](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42402278581) — **1,481 ناجحة لكل Python 3.10 و3.13**.
+- **الاختبارات الموجهة والسيناريو الحقيقي:** [42402278675](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42402278675) — **51 ناجحة لكل إصدار**؛ سيناريوهان فعليان، 360 ثانية زمن عالم لكل واحد.
+- **التقدم:** تم تشغيل نظم البحث المحلي لدى NPC، معرفة الطعام المحدودة، السفر إليه، ندرة المورد، المساعدة والأكل معًا في عالم PLAY-21 الاختياري فقط. لم تتغير وظائف عوالم PLAY-15/20.
+- **نتيجة مؤكدة:** ترك كارلوس الطعام = 4 جمع ناجح و7 وجبات NPC؛ أخذه وحدة = 3 جمع ناجح و6 وجبات و1 محاولة جمع فاشلة؛ 7 رحلات و7 سجلات مساعدة في كل حالة؛ حفظ SQLite وإعادة التشغيل وتكافؤ النتائج بين الإصدارين، دون خلق طعام. إجمالي الطعام الأصلي 8 وحدات محفوظ في الحالتين.
+- **ملفات:** [PLAY_21_ECOLOGY_PLAN.md](PLAY_21_ECOLOGY_PLAN.md) و[PLAY_21_ECOLOGY_REPORT.md](PLAY_21_ECOLOGY_REPORT.md).
+- **التالي للتحليل لا للتنفيذ الآلي:** PLAY-22 — فحص الأداء والتقدم في زمن عالم أطول، ثم ربط إنتاج/استهلاك الطعام على نحو فعلي وبموارد محدودة دون منح الأجور أو الغذاء مجانًا. راقب حدود الأحداث والمدة الفعلية قبل الوعد بأيام كاملة.
+- **غير محسوم:** NPC starvation/death، جوع/صحة كارلوس، الاقتصاد اليومي المستدام، `PLAY-14g`، `03-A7c`، `03-A`، `P0_PRODUCTION_NOT_APPROVED`، والمراجعة الخارجية. Schema 34 / Rules 46 بلا تغيير، والقصة الأصلية/`main` لم يُمسّا.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-20 (7 نوفمبر 2026)
+
+- **الإغلاق:** PLAY-20a–e `CLOSED_TECHNICALLY`، مع تأجيل المراجعة المستقلة وعدم اعتماد إنتاج P0.
+- **الفرع:** `simulation-engine-phase-play-20-village-adversity`، **SHA الكود والاختبارات:** `cf9654b9017117397d4f03751e174a7a31bd8d76`.
+- **CI شامل:** [42400314460](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42400314460) — **1,470 ناجحة لكل Python 3.10 و3.13**.
+- **CI مختص:** [42400314534](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42400314534) — **67 ناجحة لكل إصدار**، بما فيها ساعتان تجريبيتان لمسارين مختلفين (3,600 ثانية من زمن اللعبة لكل مسار).
+- **الوقائع:** 7/7 NPC، 381 فعل NPC و25 حديثًا اجتماعيًا ووجبتا NPC في كل مسار؛ لا سفر NPC في وضع الجوع التجريبي خلال الساعة، لكن السفر المستقل مثبت باختبار منفصل في الوضع العادي. مخزون الغابة الأصلي 4 نضب، والشراء البعيد/المتأخر أو أثناء السفر وطلبات الطعام المستنفد رُفضت دون طفرات في الموارد.
+- **الحفظ:** snapshot دوري للتحسين مع تطابق replay، إعادة فتح SQLite دون وقت تلقائي، رفض تكرار/تعارض revision وسقف الأحداث دون آثار جزئية.
+- **المرجع:** [PLAY_20_ADVERSITY_REPORT.md](PLAY_20_ADVERSITY_REPORT.md) و[PLAY_20_ADVERSITY_PLAN.md](PLAY_20_ADVERSITY_PLAN.md).
+- **الحد:** مرور ساعة لا يثبت البقاء أيامًا؛ موت NPC من الجوع غير مُنمذج. لا تتخيل بقاء مستدامًا أو تتحول نتيجة `7/7` إلى ادعاء نجاة.
+- **المفتوح دون تغيير:** `PLAY-14g`, `03-A7c`, `03-A`, `P0_PRODUCTION_NOT_APPROVED`, `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. لا دمج في `main` أو تغيير القصة.
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-19 (7 نوفمبر 2026)
+
+- **الدفعة المغلقة تقنيًا:** `PLAY-19` — رحلة تكاملية واحدة
+  تُنفّذ الأوامر الحقيقية من كارلوس، مع سبعة NPC مستقلين،
+  السوق/الهدية/الحوار/الاستطلاع/الحركة/الطعام/الحفظ/الاستئناف.
+- **الفرع:** `simulation-engine-phase-play-19-integrated-village-journey`.
+  **آخر SHA مختبَر للشيفرة والاختبارات:**
+  `2ec97071f45ee3ca0daa3f881436b818253d03d7`.
+- **الفحص الشامل الناجح:**
+  [42388930586](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42388930586)
+  — **1,459 ناجحًا لكل من Python 3.10 و3.13**.
+  **الفحص التكاملي المخصص:**
+  [42388930518](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42388930518)
+  — **106 ناجحًا لكل إصدار** مع تشغيل الرحلة الحقيقي.
+- **النتائج الفعلية:** t0 ساحة/شراء 3 أرغفة بـ6 نحاس/
+  إهداء رغيف/أكل رغيف؛ t1 نشاط NPC ومحادثات محلية؛
+  t41 وصول المخبز ولقاء نورا وهي تستريح؛ t81 ساحة؛
+  t131 غابة مع هدى وليلى؛ t191 جمع وحدة طعام وأكلها
+  وحفظ SQLite؛ t201 استئناف صريح. 7/7 NPC،
+  12 سجل فعل، 7 سجل سفر، 7 تبادل اجتماعي.
+  كارلوس بقي معه رغيف و4 نحاس. تم التحقق من حفظ
+  الموارد وعدم تسرب معرفة بعيدة أو آثار صحة مفترضة.
+- **ملفات:** `simulation/scenarios/test_village/play_integrated_journey.py`
+  و`simulation/tests/test_play_integrated_journey_batch_19.py`،
+  [PLAYABLE_BATCH_19_INTEGRATED_JOURNEY.md](PLAYABLE_BATCH_19_INTEGRATED_JOURNEY.md)،
+  [PLAY_19_REAL_JOURNEY_REPORT.md](PLAY_19_REAL_JOURNEY_REPORT.md)،
+  وفحص `.github/workflows/play19-integrated-journey.yml`.
+- **إصلاح CI:** مسار سيناريو القرية وحزمة `carlos_sim` للعملية
+  الفرعية في pytest الشامل عولج قبل نجاح آخر SHA. لا تَعُد
+  إلى مراحل PLAY-01–19 المغلقة.
+- **التالي للتحليل (غير مُنفَّذ):** `PLAY-20` —
+  استكشاف المواقف الحقيقية الخارجة عن المسار المقصود
+  (الذهاب إلى السوق بعد انشغال سلمى، استنزاف الطعام،
+  أنشطة 7 NPC خلال مدة أطول، رفض الطلبات، الانتقال
+  والحديث أثناء السفر)، مع تشغيلين مختلفين للحفظ
+  واستنتاج العواقب من المحرك لا من الراوي. لا تضف
+  خصائص صحية أو حماية سردية غير مُثبتة.
+- **مفتوح:** `PLAY-14g`، `03-A7c`، `03-A`،
+  `P0_PRODUCTION_NOT_APPROVED`، `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`.
+  لا دمج في `main` أو تعديل القصة الأصلية.
+
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-18 (7 نوفمبر 2026)
+
+- **آخر دفعة مغلقة تقنيًا:** `PLAY-18` — مشاهدة كارلوس
+  التفاعلات الاجتماعية المحلية التي حدثت فعلًا بين NPCs أثناء
+  `wait`، دون كلماتهم أو نواياهم أو علاقاتهم الخاصة.
+- **الفرع:** `simulation-engine-phase-play-18-local-social-witness`.
+  **SHA الشيفرة/الاختبارات المثبت:** `6d7a12523c1cd65a0be5b01d376271f3d1692211`.
+- **CI الشامل:** [42386508944](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42386508944)
+  — **1,454 ناجحًا على Python 3.10، و1,454 على Python 3.13**؛
+  **CI المخصص:** [42386508907](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42386508907)
+  — **76 ناجحًا لكل إصدار**.
+- **إثبات الخصوصية والسلوك:** `PlayerObserved` صادق في
+  نفس أمر الانتظار والموضع والتوقيت قبل `SocialMessageSent`
+  الصحيح؛ يُعرَض فقط `actor_id / recipient_id / talking / location_id / at`.
+  لا تسريب نصوص/نوع كلام/درجات الثقة؛ لا سماع بعيد/أثناء
+  السفر؛ NPC آخر أو لاعب آخر لا يملك ذكريات كارلوس؛ الحفظ
+  والاستعادة والتحقق من SQLite متطابقة. لا تعديل تلقائي من
+  `scene` أو `handoff`.
+- **المهمات القديمة:** عُدّلت توقعات PLAY-04 وPLAY-16
+  المحددة بعد إثبات أن الحديث القريب موجود، دون تخفيف
+  ضوابط خصوصية الطعام والنشاط. لا تُعد إعادة هذه المهام.
+- **توافق الحفظ:** Schema 34 / Rules 46، `main` وقصة كارلوس
+  الأصلية لم يتغيرا؛ لا اعتماد رسمي.
+- **التالي للتحليل قبل التنفيذ:** `PLAY-19` —
+  اختبار لعب تكاملي للقرية بسبع شخصيات عبر الحركة والوقت
+  والبيع والإهداء وجمع الطعام والأكل والذاكرة والحوار،
+  مع استئناف SQLite والتحقق من العواقب. ابدأ بقياس
+  الثغرات الفعلية، ولا تضف آليات غير مبررة.
+- **ما بقي مفتوحًا:** `PLAY-14g`، `03-A7c`، `03-A`،
+  `P0_PRODUCTION_NOT_APPROVED`،
+  `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. لا دمج في `main`.
+
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-17 (7 نوفمبر 2026)
+
+- **المرحلة المغلقة تقنيًا:** `PLAY-17` — ذاكرة النشاط الفيزيائي الذي
+  رآه كارلوس عند `look` (العمل، الراحة، البحث عن الطعام، الإنتاج)
+  دون اختراع سبب أو كشف أسرار NPC.
+- **الفرع:** `simulation-engine-phase-play-17-visible-activity-memory`.
+  **SHA الشيفرة والتوثيق المختبر:** `c4395dd2bf5ad0fd4173976bcfcca356574dbe7a`.
+- **الفحص الشامل:** [42384887628](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42384887628)
+  — 1,446 نجاحًا لكل من Python 3.10 وPython 3.13؛
+  **الفحص المخصص:** [42384828329](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42384828329)
+  — 54 نجاحًا لكل إصدار.
+- **الحدود مثبتة:** `scene` لا يكتب ذاكرة؛ `look` فقط يوثّق
+  نشاط NPC حاضر في نفس الموقع والزمن؛ المشاهدات المزوّرة والبعيدة
+  ترفض؛ الشاهد الآخر لا يرى ذكريات كارلوس؛ يعاد فتح SQLite
+  وبناؤه من أحداثه دون تعديل؛ انتهاؤه لاحقًا لا يمحو المشاهدة.
+- **الملفات:** `player_activity_scene.py`، `player_gateway.py`،
+  `player_perception.py`، `store.py`، اختبارات
+  `test_player_visible_activity_memory_batch_17.py` ودليل
+  [PLAYABLE_BATCH_17_VISIBLE_ACTIVITY_MEMORY.md](PLAYABLE_BATCH_17_VISIBLE_ACTIVITY_MEMORY.md).
+- **التوافق:** Schema 34 / Rules 46 محفوظان، إضافة اختيارية
+  متحققة لحمولة `PlayerObserved` دون تغيير معنى الأحداث القديمة؛
+  `main` والقصة الأصلية لم يُعدلا.
+- **التالي للتحليل (غير منفذ):** `PLAY-18` — نشاط اجتماعي
+  مُلاحظ قرب كارلوس، إن أمكن استنتاجه من الأحداث الفعلية،
+  دون تسريب حوار خاص أو خلق محادثات عن بُعد. حلّل العقود
+  والمصادر والاختبارات قبل قرار التنفيذ، ونفّذ في فرع مستقل.
+- **مفتوح:** `PLAY-14g`، `03-A7c`، `03-A`،
+  `P0_PRODUCTION_NOT_APPROVED` و`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`.
+  لا تعُد للمهام PLAY-01–17 المغلقة، ولا تعتمد الاستخدام الإنتاجي.
+
+
+## آخر نقطة مؤكدة للاستئناف — PLAY-16 (7 نوفمبر 2026)
+
+- **آخر مرحلة مغلقة تقنيًا:** `PLAY-16` — الذاكرة الدائمة للوجبات التي
+  شاهدها كارلوس بنفسه أثناء انتظار فعلي بجانب NPC. فرع العمل:
+  `simulation-engine-phase-play-16-witnessed-memory`.
+- **SHA الشيفرة/الاختبارات المثبت:** `1bb3628e572c7ac163adf964ec74ff932069f466`.
+  [CI الشامل 42383637934](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42383637934):
+  **1,438 ناجحًا على Python 3.10 و1,438 على Python 3.13**.
+  [CI المخصص 42383948159](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42383948159):
+  **48 ناجحًا لكل إصدار** على `16b0b468`.
+- **الملفات الأساسية:** `living_world.py`، `player_gateway.py`،
+  `player_perception.py`، الاختبارات
+  `test_player_witnessed_memory_batch_16.py`، ودليل
+  [PLAYABLE_BATCH_16_WITNESSED_MEMORY.md](PLAYABLE_BATCH_16_WITNESSED_MEMORY.md).
+- **اختبار الشخصيات:** باسم شوهد يأكل في الساحة؛ وجبة نورا البعيدة
+  لا تتسرب؛ لا تسرّب لبيانات الجوع/المخزون، ولا لذاكرة لاعب آخر.
+  استعادة SQLite وsnapshot والقراءة دون تعديل مثبتة.
+- **نمط الحفظ:** Schema 34 / Rules 46، لم يُغيّرا. `main` لم يُدمج،
+  والقصة الأصلية بلا تغيير. لا مصادقة شبكة ولا اعتماد إنتاجي.
+- **التالي المقترح للتحليل قبل التنفيذ:** `PLAY-17` — توسيع ذكريات
+  المشاهدات الواقعية المحدودة إلى نشاط ظاهر مُثبت عند `look`
+  (مع احترام زمن الموقع، خصوصية NPC، وغياب التخمين). لا تعدّ هذه
+  المهمة منفذة أو معتمدة. اختبر أي دفعة جديدة في فرع مستقل
+  مع فحص شخصيات وحفظ/استعادة وCI على SHA محدد.
+- **ما يزال مفتوحًا:** `PLAY-14g`، `03-A7c` و`03-A`،
+  `P0_PRODUCTION_NOT_APPROVED` و`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`.
+  لا إعادة للعمل المغلق PLAY-01–16.
+
+
+## أمر الاستئناف الفوري لأي محادثة جديدة — قرار 2026-11-07
+
+**سياسة العمل:** دفعات تطوير، لا مهمة واحدة لكل «تابع». المرجع الأول `AGENTS.md` ثم `WORK_ROUTING_PROTOCOL.md` (التحديث المؤرخ 2026-11-07). المطلوب استغلال الفترة المحدودة للاشتراك للوصول إلى نسخة عالم **قابلة للعب**؛ 3–8 مهام مستقلة قابلة للتحقق في الدفعة إن أمكن، مع **التحليل أولًا**، اختبارات شخصيات/تزوير/SQLite، ثم CI نهائي على SHA محدد لكل Python 3.10/3.13. لا تتوقف بعد كل تعديل صغير ولا تضغط التقدم على حساب الجودة أو تخلق نجاحًا غير مثبت. لا تغيّر `main`.
+
+**نقطة انطلاق موثقة قبل هذا التحديث:** الفرع `simulation-engine-phase-03a7c-observation-contract`، آخر نجاح شامل لشفرة المحرك `ba5e885a78056da842f0a8cbe2ada152e3729e8d` (GitHub Actions `42314040340` على Python 3.10 و3.13). آخر تعديل توثيقي قبل سياسة الدفعات `5e9ac61c`. **تحقّق من HEAD وCI مجددًا** عند البدء؛ لا تفترض أنهما لم يتغيرا.
+
+**المهمة المفتوحة:** `03-A7c` (والأم `03-A`) ما زالتا `OPEN`. الذاكرة التاريخية لمشاهدة الراحة والرعاية مثبتة باختبارات؛ أما **مصدر علامة جسدية واقعية موثوقة** (عرج/جرح ظاهر...) فلم يُنفّذ، وممنوع اشتقاقه من رقم شدة الإصابة أو مجرد الراحة. ابدأ بتحليل اعتماديات المهمة وما يمكن إنجازه منها؛ إن كانت محجوبة، انتقل إلى أعمال مستقلة حقيقية على قاعدة خضراء، مع إعطاء أولوية للمسار الحرج نحو لعب كارلوس وليس التوثيق لذاته.
+
+**ملاحظة تاريخية:** جدول ترتيب مهام J1c2b-CI أسفل هذه الفقرة هو سجل من فرع عمل سابق، وليس أمرًا لإعادة تنفيذ مهمة مغلقة أو لإيقاف العمل على 03-A7c. اعتبر أحدث تسجيل مؤرخ وحالة GitHub الفعلية مرجعًا، وصنّف كل دفعة قبل تنفيذها.
+
+
+**آخر مراجعة:** 2026-11-06. **المرجع الحاكم:** [WORK_ROUTING_PROTOCOL.md](WORK_ROUTING_PROTOCOL.md). هذا سجل أولي حقيقي لما نعرفه حاليًا، وليس ادعاء بأن جميع المراحل المستقبلية قد فُصّلت أو اختُبرت. راجع HEAD وCI عند كل بدء.
+
+| ID | عنوان | اعتماديات | تصنيف التنفيذ | الحالة | البيئة/الدليل | سبب التعليق أو خطوة التنفيذ |
+|---|---|---|---|---|---|---|
+| J1c2b-CI | إصلاح انحدار النسخة Schema29/Rules37 وبصمة التوافق الدلالي | آخر كود J1c2b على فرع 04a-j1 | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | CI الكامل `42246881990` وadversarial `42246881991` ناجحان على `88c110e1c77d724424eb105a3fea0dd6d541bd3e`؛ محليًا 977/977 على 3.10 و3.13. | أُغلق السبب الجذري (إسقاط `local_institutions`) والافتراض المتقادم Rules 36. لا يُغيّر هذا اعتماد P0 أو المراجعة الخارجية. |
+| J1c2b-REG | توثيق واختبار تسجيل مؤسسة تأسيسية محدودة الصلاحية | J1c2b-CI | `READY_FOR_VERIFICATION` | `CLOSED_TECHNICALLY` | نفس CI الناجح؛ أُعيد تمرين استعادة 7 أشخاص/38 حدثًا محليًا على `88c110e`، ورُفض ملف 28/36 حقيقي دون تغيير (sha256 `fffff56c…`). | إغلاق هندسي فقط؛ الاستعادة الإنتاجية/Windows الحقيقية تبقى `EXT-002`/`EXT-003` غير محققة. |
+| J1c2b-LAW | قواعد شرعية السلطة ونقل ملكية قانونية نافذة | J1c2b-CI، تعريف منبع الحق وهوية الممتلكات والموافقة والجهة | `DECISION_REQUIRED` | `WAITING_DECISION` | لا يوجد قانون نافذ في Schema29/Rules37؛ المسودات غير ملزمة | وثّق التصميم والبدائل؛ لا تُنشئ ملكية ملزمة أو محكمة دون اعتماد العقد القانوني وقواعد الثقة. |
+| EXT-001 | مراجعة خصومية مستقلة | حسب شروط التسليم | `EXTERNAL_EXECUTION_REQUIRED` | `WAITING_EXTERNAL` | [سجل الخارج](EXTERNAL_VALIDATION_LEDGER.md) | مؤجلة بقرار المالك، ليست نجاحًا؛ لا تمنع تطوير ميزات تجريبية مستقلة خالية من العيوب المانعة. |
+| EXT-002 | تجربة استعادة فعلية على جهاز/سيرفر الإنتاج | البيئة النهائية ونسخ احتياطية معزولة | `EXTERNAL_EXECUTION_REQUIRED` | `WAITING_EXTERNAL` | [سجل الخارج](EXTERNAL_VALIDATION_LEDGER.md) | يمنع الاستخدام الإنتاجي إلى حين تحقق حقيقي؛ يمكن اختبار منطق مستقل على CI. |
+| EXT-003 | اختبار النسخ والاستعادة على Windows المستهدف | بيئة Windows | `EXTERNAL_EXECUTION_REQUIRED` | `WAITING_EXTERNAL` | [سجل الخارج](EXTERNAL_VALIDATION_LEDGER.md) | غير مختبر؛ لا تفترض تكافؤ التشغيل مع Linux. |
+| EXT-004 | توثيق هوية واجهة شبكة غير موثوقة | تصميم API وهويات/صلاحيات فعلية | `CHAT_PARTIAL_EXTERNAL_GATE` | `BLOCKED` | [سجل الخارج](EXTERNAL_VALIDATION_LEDGER.md) | يمكن وضع تصميم/اختبارات محاكاة هنا؛ يحظر كشف API للاعبين حتى تحقق الثقة والاعتماد الإنتاجي. |
+
+## ترتيب الاختيار الفعلي عند «تابع»
+
+1. عالج **J1c2b-CI** أولًا؛ لأنه عيب مانع في الفرع الحالي ويمكن التحقيق فيه بأدوات GitHub. لا تخفِه تحت بند «عمل خارجي».
+2. بعدها أثبت **J1c2b-REG** على SHA ناجح وحدّث البوابات.
+3. بالنسبة إلى **J1c2b-LAW**: افصل مهام التحليل التي يمكن إنجازها هنا عن قرارات صاحب المشروع غير المحسومة؛ لا تقفز من المسودة إلى سلطة قضائية.
+4. تجارب `EXT-001` إلى `EXT-004` لا تعدّ منجزة. إذا وصلت إلى عمل يعتمد على أي منها، صنّفه `BLOCKED_BY_DEPENDENCY` وابحث عن عمل مستقل وفق بروتوكول التوجيه، ولا تجعل رقم المرحلة وحده مبررًا للتقدم.
+5. أي مهمة جديدة تُضاف هنا **قبل البدء بها** برقم واضح، اختبار محدد، اعتماديات وتصنيف. لا تُعاد تسمية مهمة فاشلة إلى مهمة ناجحة.
+
+**ملاحظة مهمة:** هذا الجدول لا يعني أن العمل على المراحل 03/04/05 متاح تلقائيًا؛ يجب إثبات أن المهمة المختارة مستقلة ويمكن تنفيذها على أساس أخضر. الوثيقة الرسمية [ROADMAP.md](ROADMAP.md) تصف المراحل الكبرى.
+
+## OpenCode handoff (2026-11-06)
+
+For the ready external desktop review, use [OPENCODE_VERIFICATION_HANDOFF_2026-11-06.md](OPENCODE_VERIFICATION_HANDOFF_2026-11-06.md). First fix J1c2b-CI semantic parity gate; then perform independent code review and isolated Windows backup/reopen drills. Do not mark the production server recovery or unimplemented network authentication as tested. Keep all logs tied to the final code SHA.
+
+## J1c2b-CI evidence update (2026-11-06)
+
+- **Observed failure:** full CI `42229493643` on code `617b931da5cc3b433525ae6410f5e878dfc87012` reported `976 passed` in pytest, then the Phase 01-T flag-off parity step failed with `legacy_semantic_digest` old `7d2be0d6c63594aaf7d6aa60f03be97a9c01747a7606931c66b2cc91c710bdf9` vs new `e665f86fb0e164dfa64095130ed75c8995c86f1d0922d8127d83a71264633157`.
+- **Root cause (proven, not assumed):** J1c2b added the empty `local_institutions` collection to `WorldState` for Schema 29. `bench_event_parity.py` strips version fields and post-baseline empty collections, but its strip list had not been extended. Field-by-field comparison of the same seven-NPC/51-event run under genuine 01-S and current code showed: identical `events_digest`, identical values for every shared semantic field, and only the additional empty `local_institutions` key. No behavioral or event-log divergence was found.
+- **Fix:** add `local_institutions` to the semantic projection in `bench_event_parity.py`, `bench_food_knowledge_parity.py`, and `bench_scarcity_disabled_parity.py`; add a regression guard in `tests/test_knowledge_compatibility.py` covering all three benches. No expected hash was replaced and no parity assertion was weakened.
+- **Local verification:** Python 3.13 and 3.10 full suite each `976 passed, 1 skipped`. Parity restored exactly: 01-T `7d2be0d6…`, 01-U `e2fa8107…`, 01-V `ef830145…`; 02-F, 02-G and 01-R parity checks also pass locally.
+- **First pushed CI (`42244658986`):** pytest and the adversarial workflow passed, but the 01-U parity step failed because the workflow still pinned the candidate to **Rules 36** while J1c2b had bumped it to **37**. This was a second stale version expectation, not a digest divergence.
+- **Follow-up fix:** update the 01-U and 01-V candidate pins to 37 (baselines remain 18) and add `test_ci_parity_gates_pin_current_rules_version` so the next version bump cannot silently leave the workflow stale. Emulating both gate scripts locally now passes.
+- **Exact-SHA CI (green):** [Simulation regression suite `42246881990`](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42246881990) and [adversarial `42246881991`](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42246881991) succeeded on `88c110e1c77d724424eb105a3fea0dd6d541bd3e`; both matrix jobs (Python 3.10/3.13) completed successfully. Local final-code suite: `977 passed, 1 skipped` on each.
+- **Genuine 28/36 rejection:** created an actual Schema 28 / Rules 36 SQLite world with the predecessor code (`ecd79f0`), then opened it with the current code. `load()` raised `UnsupportedVersion`; world/event/snapshot rows and the whole-file SHA-256 (`fffff56c9d7dc5375acd6fd5b73662aeafa7dd7705d2a208ae8dead75532a893`) were unchanged, and `PRAGMA integrity_check` returned `ok`.
+- **Status:** J1c2b-CI and the CI/tooling blocker on J1c2b-REG are `CLOSED_TECHNICALLY`. J1c2b-LAW remains `WAITING_DECISION`; production P0 and real Windows/server recovery remain external and unverified.
+
+
+## Independent health branch work queue — 2026-11-06
+
+| ID | Title | Dependencies | Classification | Status | Evidence | Next step |
+|---|---|---|---|---|---|---|
+| 03-A7a | Self-only, read-only injury decision advisory | Verified 03-A6 `2ca67e83` (Schema32/Rules40) | `CHAT_EXECUTABLE` | `IN_PROGRESS` | New independent `simulation-engine-phase-03a-injury-behavior` branch | Implement pure policy from own persisted injuries, reject cross-NPC leakage, run dual-Python full CI |
+| 03-A7b | Integrate own-injury effect into deterministic NPC decision/event replay | 03-A7a exact-SHA green and planned replay contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Requires verified 03-A7a read-only policy | Review NPCService/LivingWorldEngine/forage parity and version bump before editing |
+| 03-A7c | Observations and disclosure of another NPC's visible injury | knowledge observation provenance + approved visibility contract | `DECISION_REQUIRED` | `WAITING_DECISION` | No general diagnosis or omniscient observer | Define observable symptoms and what NPC can infer |
+
+## 03-A8a — health recovery reservation integrity (2026-11-06)
+
+| ID | Task | Dependencies | Classification | Status | Evidence | Next |
+|---|---|---|---|---|---|---|
+| 03-A8a | Reject paid recovery without matching durable schedule at atomic append/replay boundaries | Verified 03-A6 and 03-A7b | `CHAT_EXECUTABLE` | `CLOSED_TECHNICALLY` | SHA `75dc8141`; CI `42290286511` — 1125/1125 on Python 3.10/3.13 | Recovery reservation invariant verified; external review deferred |
+| 03-A7c | Cross-NPC visible symptoms and disclosure contract | Explicit observation/knowledge policy | `DECISION_REQUIRED` | `WAITING_DECISION` | Current engine does not establish diagnosis or peer knowledge | Do not implement auto-disclosure until visible symptom rules are adopted |
+
+
+## 03-A7c observation decision draft — 2026-11-06
+
+- **Task:** `03-A7c` — Cross-NPC visible injury observations.
+- **Classification / status:** `DECISION_REQUIRED / WAITING_DECISION`; parent `03-A` still open.
+- **Proposal:** [PHASE_03A7C_OBSERVATION_DECISION_DRAFT.md](PHASE_03A7C_OBSERVATION_DECISION_DRAFT.md) distinguishes optional, explicit local qualitative symptom observations from private injury truth and diagnosis. Owner has **not** approved the proposed defaults.
+- **Next:** obtain owner choice between limited symptom observation and deferral; only then plan implementation, versioning, character adversarial tests, full dual-Python CI and exact-SHA verification. No injury disclosure code implemented by this documentation task.
+
+## 03-A7c continuation — limited visible symptoms (2026-11-07)
+
+Owner's "تابع" following the limited observation recommendation authorizes
+the **qualitative local observation principle**, not a fabricated symptom
+producer. See [implementation gate](PHASE_03A7C_IMPLEMENTATION_GATE.md).
+
+| ID | Title | Dependencies | Execution classification | Status | Evidence / next step |
+|---|---|---|---|---|---|
+| 03-A7c-guard | Non-disclosure / SQLite reopen regression baseline | 03-A8a green | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Branch `simulation-engine-phase-03a7c-observation-contract`, tests at `f4121af6`; check final SHA dual-Python CI |
+| 03-A7c-source | Trustworthy visible symptom provenance | Supported physical action/outcome source | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Do not derive limp/collapse from injury severity alone |
+| 03-A7c-observe | Explicit observer-scoped local knowledge event | 03-A7c-source | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Deterministic visibility and trusted provenance required |
+| 03-A7c-replay | Full adversarial/snapshot/replay/parity acceptance | 03-A7c-observe | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | NPC scenarios + Python 3.10/3.13 exact-SHA CI |
+
+The earlier `DECISION_REQUIRED` entry is a dated historical gate, not a claim
+that 03-A7c was implemented or closed. Parent 03-A stays OPEN.
+
+
+## 03-A7c factual activity evidence — 2026-11-07
+
+| ID | Title | Dependencies | Classification | Status | Evidence / next |
+|---|---|---|---|---|---|
+| 03-A7c-rest-evidence | Project only the visibly running rest action under a recorded local sighting, without injury inference or automatic memory | 03-A7c-guard, existing action schedule / NPCObserved | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Code `62cdd7b0`, multi-NPC/healthy-vs-injured/reopen tests `67af6c2a`; verify full Python 3.10/3.13 CI on latest SHA |
+| 03-A7c-medical-sign-source | Record validated *physical injury symptom* from causal injury/action evidence | Real physical sign source, not numeric severity or resting alone | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Visible rest is not a medical observation; no fabricated limp or collapse |
+| 03-A7c-observer-memory | Persist historical qualitative health observation scoped to observer | 03-A7c-medical-sign-source and trusted event contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | No auto-sharing, diagnosis, severity leak, or player-view expansion |
+
+This is a bounded independent 03-A7c slice, not parent completion.
+
+
+## 03-A7c local scene projection — 2026-11-07
+
+| ID | Title | Dependencies | Classification | Status | Evidence / next |
+|---|---|---|---|---|---|
+| 03-A7c-scene | Return only observer-scoped, current-tick visible resting activity for a recorded local NPC sighting | Existing verified 03-A7c rest evidence and NPCObserved | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Pure projector at `461d0285`, seven-NPC tests at `2a010ac0`, final SHA CI required; no medical inference, event, or claim persisted |
+| 03-A7c-medical-source | Evidence-backed physical sign distinct from rest | Authorized physical source not reducible to severity | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Cannot assert limp or collapse from injury ledger alone |
+| 03-A7c-private-memory | Observer-scoped historical qualitative health claim | 03-A7c-medical-source and event/capability contract | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | Must reject fabricated symptoms and preserve replay across SQLite reopen |
+
+The scene projection is not closure of the parent 03-A7c task.
+
+
+## 03-A7c conservative interpretation — 2026-11-07
+
+| ID | Title | Dependencies | Classification | Status | Evidence / next |
+|---|---|---|---|---|---|
+| 03-A7c-neutral-interpretation | Project a factually supported rest observation with explicitly unknown cause, identical for injured and healthy subjects | Verified 03-A7c local scene projector | `CHAT_EXECUTABLE` | `VERIFICATION_PENDING` | Code `e12a8221`, regression tests `4024d628`; require exact-final-SHA dual Python CI |
+| 03-A7c-subjective-interpretation | Explain individually different suspicion using only observer-owned proven memories | Trusted observer historical knowledge evidence and approved inference policy | `BLOCKED_BY_DEPENDENCY` | `BLOCKED` | No subjective guess may be persisted as a medical fact |
+
+This subtask does NOT implement durable symptom memory, an illness diagnosis or
+the complete 03-A7c feature. Parent 03-A remains OPEN.
+
+
+## 03-A7c observer-specific historical activity memory — 2026-11-07
+
+| Task | Status | Evidence / qualification |
+|---|---|---|
+| 03-A7c-activity-memory | `VERIFICATION_PENDING` | Code `11fb80e6`, reducer `30f38247`, explicit atomic movement API `6329f6a8`; tests `151ced1f` and seven-NPC `cf9f1c91`; require exact final-SHA dual Python CI. Observer-only, visible-rest *behavior*, cause unknown; does not imply clinical health |
+| 03-A7c-physical-signs | `BLOCKED` | No trusted physical limb/visible injury impairment source; rest alone is insufficient |
+| 03-A7c-health-memory | `BLOCKED` | Requires clinical-sign source, separate medical observation policy, adversarial provenance validation |
+
+No automatic observer knowledge, hearsay, treatment or merging. Parent 03-A OPEN.
+
+
+## 03-A7c evidence check and pending idempotency follow-up — 2026-11-07
+
+- `03-A7c-activity-memory-base`: `CLOSED_TECHNICALLY`, **not**
+  `APPROVED` — GitHub Actions run `42305932829` on `91e6004e`;
+  Python 3.10 and Python 3.13 both SUCCESS. Covers opt-in local
+  visible-rest memory, healthy/injured indistinguishability, seven NPCs,
+  SQLite replay and tamper rejection. External adversarial review deferred.
+- `03-A7c-activity-memory-integrity`: `VERIFICATION_PENDING` — newer
+  tests for duplicate same-tick observations, two separate remembered times,
+  no invented acknowledgement, no automatic food-knowledge re-sharing,
+  pending delivery deduplication and its later acknowledgement; latest
+  test commit `90804577`, documentation follow-up on same branch.
+- `03-A7c-medical-symptom-source`: `BLOCKED_BY_DEPENDENCY` — no
+  trusted event-sourced physical symptom; no limp inferred from rest or
+  severity.
+- `03-A7c-medical-observer-memory`: `BLOCKED_BY_DEPENDENCY` on
+  medical-symptom-source, distinct from proven behavioral resting memory.
+
+No cross-branch merge and no closure of parent 03-A7c / 03-A.
+
+## 03-A7c finite resting-memory capacity — 2026-11-07
+
+- `03-A7c-memory-capacity`: `CHAT_EXECUTABLE / VERIFICATION_PENDING`.
+  Source `61d8510a`, 65-distinct-tick integration test `1b7bf9af`.
+  When one observer has 64 visible-rest memories, the next explicit
+  `NPCObserved` must still commit; only additional memory projections are
+  skipped. Pending inbox deliveries count against available capacity.
+  Exact final-SHA Python 3.10/3.13 CI is required before closure.
+- Previous idempotency regression `ccb09cc0` obtained GitHub Actions success
+  at its own exact SHA; later pending-delivery and capacity changes must be
+  tested independently.
+- No medical-sign producer or health diagnosis created. Parent 03-A7c OPEN.
+
+
+## 03-A7c memory integrity acceptance — 2026-11-07
+
+- `03-A7c-memory-capacity`: `CLOSED_TECHNICALLY` after GitHub Actions
+  `42307726165` on source-and-test SHA `8c3fc68165bb5f28548dfc07b150cbd14da5c519`:
+  Python 3.10 SUCCESS; Python 3.13 SUCCESS. This verifies 64 pending
+  deliveries do not admit a 65th forged direct delivery; the prior 65-tick
+  accepted-memory and nonblocking-observation test is green on
+  `9be0a4d0` run `42307467599` in both environments.
+- `03-A7c-activity-memory-integrity`: `CLOSED_TECHNICALLY` for the
+  tested behavior-only scope (not medical symptom detection).
+- `03-A7c-medical-symptom-source`: `BLOCKED_BY_DEPENDENCY`.
+  A numeric injury, fatigue, or rest is not ground truth for an externally
+  visible limp, wound, or collapse. Never fabricate a medical sign.
+- Parent `03-A7c` and `03-A` remain OPEN. No main merge.
+
+
+## 03-A7c visible supportive-care follow-up — 2026-11-07
+
+- `03-A7c-care-sighting` — `VERIFICATION_PENDING`: current read-only
+  grounded projection `d97f39cd`; tests for actual funded Adel→Nora care
+  `6f8f0813` (at that exact SHA, GitHub CI success), followed by new
+  regressions `4ddc2eb1` for Adel departing while appointment remains
+  pending, and snapshot/SQLite reopen without leaking care to Salma.
+  Recheck final SHA dual Python CI before closing this narrow subtask.
+- `03-A7c-physical-injury-sign` — `BLOCKED_BY_DEPENDENCY`: pending
+  supportive care is *not* proof of a physical symptom or diagnosis.
+  There is no trusted producer for limp/wound/collapse.
+- `03-A7c` parent and `03-A` are OPEN; `main` unchanged.
+
+
+## 03-A7c ordered care witnessing (2026-11-07)
+
+- `03-A7c-ordered-care-evidence`: `VERIFICATION_PENDING`.
+  The older same-tick care scene returned false evidence when a witness
+  looked before the care activity started. Replaced with an opt-in
+  `care_enabled=True` single-command `NPCObserved` +
+  `NPCInformationDelivered` + `NPCBeliefReceived` sequence.
+  Reducer validates physical care against treatment state; store requires
+  the care delivery to follow the observer's own observation in that
+  SAME append, and rejects a `RecoveryStarted` between them.
+  Code commits `467b1fef`, `41016531`, `794dd725`, `26abe8f1`,
+  `e33b1966`; regression tests `ac4717ac`, `376a04c9`,
+  `ff43efbd`. Final-SHA dual Python CI required.
+- Visible care still means only an external care interaction, never a
+  guaranteed physical symptom or medical diagnosis. Parent
+  `03-A7c` and `03-A` remain OPEN.
+
+
+## 03-A7c historical supportive care recall — 2026-11-07
+
+- Ordered care observation: `CLOSED_TECHNICALLY` against CI
+  `42310095549` at `ebb0f8ee`, Python 3.10/3.13 both success.
+- Historical care memory: `VERIFICATION_PENDING`; pure
+  `recall_supportive_care` reads only the observer's previous validated
+  `visible-care` belief, never injury severity, cause or resource details.
+  Implementation `c1301fc9` and tests `b54b76b6` cover Basim retaining
+  factual memory after Adel finishes, Salma/Huda/Omar not learning it,
+  repeated observation not duplicating the record, time-zero look before
+  care not predicting it, and snapshot/SQLite replay. Require final SHA CI.
+- No actual physical wound, limp, collapse or medical diagnosis producer yet.
+  Parent 03-A7c / 03-A remain OPEN; no merge to main.
+
+
+## 03-A7c care-memory adversarial completion (2026-11-07)
+
+- `03-A7c-care-memory-integrity`: `VERIFICATION_PENDING` — commit
+  `3dfbc713` adds 65 distinct-tick care observations against a 64-memory
+  ceiling while care remains genuinely pending and tests that forged
+  recipient, caregiver or diagnosed illness cannot create accepted care
+  evidence. Exact final SHA must pass the Python 3.10/3.13 CI.
+- Prior tests for Basim/Salma observer-owned care memories after treatment,
+  snapshot/replay and same-tick ordering remain mandatory. Parent
+  03-A7c / 03-A still OPEN; physical injury symptom source not implemented.
+
+
+## 03-A7c interruption witness test (2026-11-07)
+
+- `03-A7c-historical-care-interruption`: `VERIFICATION_PENDING`
+  at `9611616a`. Integration scenario: Basim observes Adel actually caring
+  for Nora; Adel leaves via a timed physical route; care becomes invisible
+  immediately, but the true older first-hand memory remains after the due
+  appointment is interrupted. No refund, cure, omniscient knowledge for
+  Huda, or revision/replay mismatch.
+- Prior care-memory integrity and 65-tick history completed successfully
+  on exact SHA `a109911e` (run `42311461630`, Python 3.10/3.13).
+  Keep the new interruption test separate until its own final-SHA green run.
+- The physical injury symptom model is still unimplemented; 03-A7c and
+  parent 03-A remain OPEN and no change to `main`.
+
+
+## 03-A7c — verified care memory and travel boundary (2026-11-07)
+
+- `03-A7c-historical-care-interruption`: `CLOSED_TECHNICALLY` —
+  GitHub Actions `42312139434`, commit `49d93f41`,
+  both Python 3.10 and 3.13 SUCCESS. Adel's real departure leaves
+  Basim's already witnessed care memory intact, while the unfinished
+  funded appointment interrupts without miraculous healing.
+- `03-A7c-historical-care-travel`: `CLOSED_TECHNICALLY` —
+  GitHub Actions `42312298248`, exact commit `ab7c04a3`,
+  both Python 3.10 and 3.13 SUCCESS. Basim keeps his prior
+  factual memory after traveling away but gains no remote sight of care.
+- `03-A7c-activity-and-care-behavioral-memory`: `CLOSED_TECHNICALLY`
+  for the current limited *visible activity* scopes; full medical symptom
+  observation is **NOT** complete. Previous dual-Python green tests cover
+  observer identity isolation, 64-record limits, 65-tick witness trials,
+  fake actor/source/time rejection, SQLite snapshots and replay,
+  same-logical-tick event ordering, and genuine independent witnesses.
+- `03-A7c-physical-symptom-source`: `BLOCKED_BY_DEPENDENCY` —
+  source-of-truth still tracks injuries but no grounded visible wound,
+  limp or other physical sign is produced by a verified event. Ordinary
+  rest and supportive care are not such signs.
+- `03-A7c` parent and `03-A` remain `OPEN`, no merge to `main`.
+  Do not claim symptom observation or full gate closure on the basis of
+  behavioral memory coverage.
+
+
+## 03-A7c rest-sighting same-tick integrity (2026-11-07)
+
+- `03-A7c-rest-scene-ordering`: `VERIFICATION_PENDING`.
+  A plain `NPCObserved` only recorded occupants and a tick; it could
+  falsely imply that the witness saw a rest action which started later
+  in the same tick. The pure `observed_resting_activity` projector now
+  also requires that observer's verified `visible-rest` first-hand
+  belief minted by explicit `observe(activity_enabled=True)` while
+  rest was actually running (`99a3f141`). The event-store append gate
+  requires first-hand rest evidence to follow the same observer's
+  `NPCObserved` inside one atomic command (`c36e5ebb`).
+  Old read-only scene tests were updated to opt in to actual witness
+  evidence; regressions include same-tick rest starting after a look,
+  pending-delivery first-hand provenance, and time-bound replay
+  (`709df6d9`). The changed observable-scene contract is opt-in and
+  must pass Python 3.10 and 3.13 on exact final SHA.
+- Strictly do not equate recorded rest with a physical injury symptom.
+  The trusted visible limp/wound/collapse source remains
+  `BLOCKED_BY_DEPENDENCY`; parent `03-A7c` and `03-A` remain OPEN.
+
+
+## 03-A7c same-tick rest integrity — verified closure 2026-11-07
+
+- `03-A7c-rest-scene-ordering`: `CLOSED_TECHNICALLY` at exact
+  commit `ba5e885a78056da842f0a8cbe2ada152e3729e8d`.
+  GitHub Actions run `42314040340`: both Python 3.10 and 3.13
+  `SUCCESS`. Full suite covers direct and independent observation,
+  pending delivery, no retroactive same-second rest memory, no causal
+  diagnosis, replay, reopening, and backward-compatibility CI gates.
+- Older intermediary commits had regression failures from tests still using
+  passive observations, an invalid command ID, and an unsupported
+  argument to the action service. All corrected in the verified head.
+- `03-A7c` is **NOT CLOSED** as a parent: physical externally
+  observable injury symptoms are still absent. A trusted physical
+  action-result producer, rigorous event provenance and local
+  qualitative witness pipeline remain prerequisites.
+- Neither `main` nor schema/rules versions are changed.
+
+## First playable-first batch — BATCH-PLAY-01 (2026-11-07, planned before code)
+
+Independent of blocked `03-A7c` physical symptom producer; only the existing
+trusted local-player gateway and disposable test session are used. **No
+canonical story import, HTTP exposure or production permission.**
+
+| ID | Deliverable | Dependencies | Classification | Status | Acceptance |
+|---|---|---|---|---|---|
+| PLAY-01a | Player-only, read-only JSON narrative handoff | Verified PlayerGateway / SQLite, no health dependency | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Only scene + player's own RPG status + player's recorded memory, coherent revision; never raw WorldState/NPC ledger |
+| PLAY-01b | Local temporary demo `scene` and `handoff` commands | PLAY-01a; existing demo | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Read-only, no character auto-decision, no hidden nearby NPC beliefs; command IDs unaffected |
+| PLAY-01c | Disposable resumable demo `scene` and `handoff` commands | PLAY-01a; backup P0 gate stays open | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Does not create a new checkpoint / advance time; fresh restart yields consistent safe projection |
+| PLAY-01d | NPC, end-to-end CLI, privacy, save/replay tests | PLAY-01a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Nora/Basim/remote Sara, travel, look, wait, forged input; dual Python 3.10/3.13 entire workflow green on final SHA |
+
+This batch is an **offline playable vertical-slice improvement**, not an
+implementation or closure of the physical symptom subphase. Verify end-to-end
+CI at the final commit before declaring anything `CLOSED_TECHNICALLY`.
+
+
+## BATCH-PLAY-01 — Technical closure verified (2026-11-07)
+
+**Accepted code SHA:** `45b876f237fac483842e702bf9c5dd6fb4f81ab8`.
+**Exact-SHA full GitHub Actions:** [run 42316561009](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42316561009) —
+Python 3.10 SUCCESS and Python 3.13 SUCCESS, including the CLI subprocesses,
+the 7-NPC privacy scene, independent local evidence, read-only handoff,
+SQLite resume/replay, and regression/parity gates.
+
+- `PLAY-01a` `CLOSED_TECHNICALLY`: `player_handoff()` emits a
+  JSON-compatible scene/status/memory envelope solely from the player's
+  trusted `PlayerGateway`. Rejects `WorldState`/plain dicts, refuses
+  mismatched revisions, exposes no remote facts or other NPC clinical data.
+- `PLAY-01b` `CLOSED_TECHNICALLY`: `scene` and `handoff` work in
+  the existing offline temporary CLI without moving Carlos, writing an
+  observation, advancing time or changing command IDs.
+- `PLAY-01c` `CLOSED_TECHNICALLY`: identical functionality in the
+  existing opt-in **disposable** resumable demo. No new checkpoint on a
+  read-only command, no bypass of `--disposable-test` or backup P0.
+- `PLAY-01d` `CLOSED_TECHNICALLY`: end-to-end tests exercise
+  Carlos, Nora, Basim, Sara, Adel, Salma, Huda and Omar as independent
+  actors, reject remote interaction with Huda and ensure the player's
+  remembered observation excludes remote NPCs and private injury data.
+  The real CLI parser's `carlos> ` prompt prefix is handled explicitly.
+- User-facing invocation instructions: [PLAYABLE_BATCH_01_GUIDE.md](PLAYABLE_BATCH_01_GUIDE.md).
+- This is an incremental **offline playable test slice**, not the complete
+  Carlos story, automatic narration, external authentication, a production
+  save, or a medical symptom source. `03-A7c` and `03-A` remain OPEN,
+  `P0_PRODUCTION_NOT_APPROVED`, independent review deferred by owner.
+  No Schema/Rules version bump, `main` merge or original story edits.
+
+
+## PLAY-02 — seven-NPC autonomous offline scene (2026-11-07)
+
+Batch analysis/plan before code, independent of the blocked 03-A7c physical
+symptom source. **Priority: a playable living test-world instead of more
+isolated engine services.** No change to the canonical Carlos story.
+
+| ID | Scope | Dependencies | Classification | Initial status | Acceptance |
+|---|---|---|---|---|---|
+| PLAY-02a | Trusted disposable multi-location 7-NPC + Carlos setup with initialized action counters | Schema32/Rules42 and existing player gateway | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Seven named NPCs, actual roads and simulated travel; no invented private NPC memory, no unbacked stock |
+| PLAY-02b | Explicit wait advances self-directed NPC schedules while Carlos remains player-controlled | PLAY-02a + LivingWorldEngine | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | At least two NPC actions progress, player never auto-acts, atomic event replay and deterministic time |
+| PLAY-02c | New self-contained local living-world CLI with scene, look, status, remember, handoff, talk, move, wait | PLAY-02a–b, PLAY-01a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | No model API, no automatic world-time progress while paused; player-only handoff |
+| PLAY-02d | Multi-NPC integration tests including forbidden remote talk, travel, privacy, NPC autonomy, replay, and real CLI subprocess | PLAY-02a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Full final-SHA Python 3.10/3.13 CI success; no default fixture changes |
+| PLAY-02e | Human-readable Windows trial guide and safety limits | PLAY-02c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY | Clear run commands, explicitly disposable, P0 unchanged |
+
+**Dependency gates:** all PLAY-02 tasks are independent of 03-A7c medical
+symptom provenance; do not change `main` or `AGENTS.md` here. Gate closure
+on the exact final SHA, not an earlier green test run. Distinguish NPC
+autonomy from narrative authorship: only actual engine events advance
+the characters and the human decides Carlos's actions.
+
+## PLAY-02 — closure of disposable autonomous village batch (2026-11-07)
+
+**Five tasks `PLAY-02a`–`PLAY-02e` `CLOSED_TECHNICALLY`, code SHA
+`898bb448b7b6d25585df45b1a13e6a53efa78b97`.**
+Verified in [full GitHub Actions 42317917984](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42317917984):
+**1,218 passed on Python 3.10 and 1,218 passed on Python 3.13**;
+both matrix jobs SUCCESS. Full CI includes historic version/parity gates.
+
+- PLAY-02a: fresh, trusted, isolated, non-canonical local world with Carlos,
+  seven autonomous NPCs (Basim, Salma, Adel, Nora, Huda, Omar, Layla),
+  three sites, timed actual roads, only explicitly initialized abstract
+  action counters, and demonstrative RPG profile.
+- PLAY-02b: `PlayerGateway` drives `LivingWorldEngine` with opt-in
+  NPC navigation and local social autonomy when **Carlos's human chooses**
+  `wait`. NPCs can work/rest/travel independently; Carlos is never given
+  an autonomous NPC planner and elapsed world time never runs in background.
+- PLAY-02c: `play_living_village.py` presents `scene`, `look`,
+  `status`, `remember`, `handoff`, `move`, `talk` and `wait` in an
+  offline disposable terminal session. Player-only handoff remains factual
+  and cannot expose remote characters or NPC private medical/intent data.
+- PLAY-02d: seven integration tests verify physical road time, lack of
+  teleportation, player ownership, independent decisions, remote-talk
+  rejection, exact SQLite snapshot/reopening, deterministic two-file
+  simulation and real subprocess interaction. All in the final SHA's
+  1,218-test full regression.
+- PLAY-02e: [Windows hands-on guide](PLAYABLE_BATCH_02_LIVING_VILLAGE.md)
+  written, no API or provider connection required.
+
+**Explicit limits:** disposable experiment only; temporary SQLite is
+discarded when CLI exits. This is not original Carlos story import, nor
+production P0 restore approval, nor a medical observable symptom source.
+`03-A7c` / `03-A` remain OPEN, `EXTERNAL_REVIEW_DEFERRED_BY_OWNER`
+and `P0_PRODUCTION_NOT_APPROVED`; `main` unchanged. No Schema or Rules
+version changes. Any future batch must classify independent work first,
+plan, execute, exercise NPC tests, and validate exact final SHA.
+
+## PLAY-03 — resumable offline seven-NPC living village (planned 2026-11-07)
+
+Owner-approved batch scheduling: analyze dependencies before implementation;
+target an actual, restartable test-play loop, not a new medical symptom rule
+or undocumented production approval. Existing exact-green baseline
+`c541e4ee`, CI `42318425675` SUCCESS on both Python 3.10 and 3.13.
+`03-A7c` remains OPEN. `main` and canonical story files are immutable.
+
+| ID | Deliverable | Prerequisite | Classification | State / acceptance |
+|---|---|---|---|---|
+| PLAY-03a | Bind a *trusted same-session* NPC autonomous engine to `ResumableTestSession` | `PLAY-02`, `01-Z` | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: refuse forged gateway, mismatched world/player/store/clock, closed session; no world writes |
+| PLAY-03b | `play_living_resumable.py` local executable with `--new/--resume`, `--disposable-test`, explicit request IDs and immutable checkpoints | PLAY-03a | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: actual seven-NPC simulation after restart, `scene/handoff/remember` read-only, repeat commands rejected, unknown args do not change world |
+| PLAY-03c | Deterministic NPC + player multi-process smoke tests | PLAY-03a/b | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: Basim/Nora/Salma/Adel/Huda/Omar/Layla, mid-player-travel, no remote speech, SQLite verify/reopen, duplicate IDs, unchanged logical time after shutdown |
+| PLAY-03d | Fault/compatibility/authorization tests for new/resume/checkpoint | PLAY-03b | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: reject missing disposable opt-in, wrong save, old version, mismatched checkpoint SHA, no overwrites/no accidental reset; retain P0 gate |
+| PLAY-03e | Concise Windows copy/run/resume tutorial | PLAY-03b | `CHAT_EXECUTABLE / CLOSED_TECHNICALLY`: user can complete real stop/restart with no API; distinguish experimental save from production |
+  
+Acceptance: targeted scenarios and complete GitHub Actions matrix on **exact
+final implementation SHA**, Python 3.10 and 3.13, with SQLite replay and
+legacy parity gates; no invented success before the CI result. No dependency
+on an unimplemented visible-injury producer. Every new durable change is
+disposable-test only and must not silently allow production games.
+
+## PLAY-03 — verified technical closure of restartable seven-NPC batch (2026-11-07)
+
+All five tasks `PLAY-03a`–`PLAY-03e` are **CLOSED_TECHNICALLY**
+on exact tested SHA `e9706feda7d9c948e0f86599f60874d2284aafdb`.
+GitHub Actions [run 42326538567](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42326538567) is
+**SUCCESS in both Python 3.10 and 3.13** — `1,230 passed`
+in each; full workflow also checks backwards compatibility and semantic
+parity.
+
+- PLAY-03a: `ResumableTestSession.bind_gateway()` accepts only a
+  `PlayerGateway` bound to the identical active store, clock, world
+  and human player; rejects foreign identities and closed sessions.
+  Binding is read-only and retains the preexisting P0 test-only gate.
+- PLAY-03b: new `play_living_resumable.py` can create/resume the seven-NPC
+  living village. NPCs continue deterministic action/travel only during
+  a human-triggered wait; persisted command IDs prevent double actions.
+  A valid matching checkpoint at the saved revision is mandatory on
+  resume; new worlds reject existing same-prefix backup folders.
+- PLAY-03c: subprocess tests across actual separate Python processes
+  verify persistent memories, NPC schedules, Carlos's mid-route timing,
+  seven independent characters, no out-of-session simulation time,
+  and exact SQLite replay.
+- PLAY-03d: tests reject missing `--disposable-test`, invalid commit
+  shapes, missing backup folder/checkpoint, corrupt manifests, mismatched
+  commit provenance, stale database version, existing file overwrite,
+  forged gateway, and duplicate request IDs; failures leave saved world
+  intact.
+- PLAY-03e: user-ready Windows/PowerShell
+  [instructions](PLAYABLE_BATCH_03_RESUME.md) cover explicit create,
+  `id` commands, safe reading, quit and subsequent resume.
+- `main` and original Carlos story unmodified, Schema 32 / Rules 42
+  unchanged, **no API connection** and no background time. The new saved
+  world is **experimental and disposable-test only**, not an approved
+  canonical save. `P0_PRODUCTION_NOT_APPROVED` and
+  `EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. `03-A7c` physical
+  symptom source and parent `03-A` still OPEN.
+
+This closure records the verified code SHA; the commit containing the
+documentation-only status update needs its own CI observation if exact-HEAD
+status is later requested. Do not equate this technical closure with
+production restoration authorization.
+
+## PLAY-04 — current player-visible NPC activity scene (planned 2026-11-07)
+
+Analysis: PLAY-03 saves and continues a living village, but `scene` and
+`handoff` currently show only occupants and roads: Carlos cannot see
+nearby NPCs **doing** anything. A safe incremental slice is read-only
+current visible behavior, not guessed motives, medical signs, diagnoses,
+secret tasks or a retrospective observation memory. No new event, schema
+migration, auto-player or unapproved production save is needed.
+
+| Task | Scope | Dependency | Route | Status |
+|---|---|---|---|---|
+| PLAY-04a | Pure `WorldState`-only co-located visible-activity projector for running rest/work/forage and real local production | Existing validated event-sourced actions, movement and production | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04b | Wire bounded output to `PlayerGateway.inspect` and hence `player_handoff` (only when player physically present; no change to player-in-transit view) | PLAY-04a, PLAY-01 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04c | Multi-person adversarial and lifecycle tests: Carlos, Nora, Basim, Adel, Salma, Huda, Omar, Layla; remote privacy, no diagnoses, current only, exact due tick, replay and SQLite reopen | PLAY-04a/b | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04d | Real local AND resumable CLI / JSON handoff regressions and read-only idempotence | PLAY-04b, PLAY-02/03 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-04e | Instructions clarifying a visible action does not establish motivation, cause, past knowledge or medical symptoms | PLAY-04b | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+
+Conservative visibility rules: player physically co-located **now**, NPC
+not traveling, action truly running at current logical tick; expose
+`actor_id` and bounded activity label **only**. Never emit private
+needs, goals, injury, duration/due time, job recipe, wages, stock, action
+ID or NPC knowledge. Deliberate `look` still records identity only;
+`scene` is a read-only **current** projection, not persistent witnessing.
+During travel, no scene activities. Preserve previous saved worlds and
+existing `PlayerObserved` event contract: Schema32/Rules42 unchanged.
+Tests on exact final code SHA must succeed in Python 3.10 and 3.13.
+
+Note: `03-A7c` physical injury symptom producer remains blocked and
+is **not** implemented or completed by these activity labels; `main`
+and canonical story stay untouched, P0 production unapproved.
+
+## PLAY-04 — verified technical closure of current visible NPC activities (2026-11-07)
+
+**All five tasks `PLAY-04a`–`PLAY-04e` CLOSED_TECHNICALLY**
+at exact code SHA `35d963c0d21c3265ac6704aa4d7016a00dc9f514`.
+GitHub Actions [run 42328003868](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42328003868)
+**SUCCESS**: **1,240 passed on Python 3.10** and **1,240 passed on Python
+3.13**, including historic version/parity and all new NPC integration tests.
+
+- PLAY-04a: pure `visible_player_activities` accepts a validated
+  `WorldState` and real player ID. It projects only **current
+  co-located, nontravelling, actually running** `rest`, `work`,
+  `forage` or a genuine funded production job as the bounded labels
+  `resting/working/foraging/producing`. Nothing is inferred from private
+  injuries, intentions, profession alone or merely scheduled future work.
+- PLAY-04b: `PlayerGateway.inspect` includes `activities` only in
+  `present` scenes. A travelling Carlos receives the original
+  route/remaining-time view, with **no** remote activity data.
+  `player_handoff` carries the same bounded present observation and
+  remains revision-coherent, without a new event or command.
+- PLAY-04c: independent seven-NPC observations exercise Basim working,
+  Nora resting with/without a private injury, Adel/Salma/Huda/Omar/Layla
+  isolation, a physical bakery production job, actual seven-NPC
+  foraging, exact activity completion tick, SQLite snapshot/reopen,
+  and denial of forged world/nonplayer input.
+- PLAY-04d: real local and resume CLI subprocesses confirm new activity
+  visibility, unchanged time/memory/revision from repeated
+  `scene/handoff`, persisted activity through safe SQLite reopen and
+  unchanged checkpoint counts. Earlier intermediate CI failures came
+  exclusively from the test harness writing literal `\\n` instead of
+  actual command separators; corrected prior to verified green SHA.
+- PLAY-04e: see
+  [PLAYABLE_BATCH_04_VISIBLE_ACTIVITY.md](PLAYABLE_BATCH_04_VISIBLE_ACTIVITY.md)
+  for the distinction between **current visibility** and **durable
+  player memory**. `look` still records only nearby identities;
+  don't invent past actions in `remember`.
+
+**Explicit boundaries:** `03-A7c` and `03-A` remain OPEN; a visible
+rest is not a medical symptom or diagnosis and no trusted physical
+wound/limp producer is implemented. `P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. Schema 32, Rules 42;
+no migration, `main` merge or canonical story modification.
+This closing documentation commit is subsequent to the independently
+verified code SHA and has its own CI status.
+
+## PLAY-05 — Player market purchasing and personal supply ledger (planned 2026-11-07)
+
+**Analysis before implementation:** Local NPC market already has posted offers,
+finite stock, trusted price matching, exact recorded transfers and durable
+event replay. Carlos presently cannot buy; player-only RPG `inventory` domain
+is intentionally unimplemented. Scope this batch strictly to **initialized
+entity-owned resource balances** for Carlos, never fabricate RPG equipment or
+allow a player to spend an NPC's funds.
+
+| Task | Scope and strict dependency | Route | State |
+|---|---|---|---|
+| PLAY-05a | Extend validated MarketTradeExecuted for a physically present human buyer, and preserve existing NPC seller/stock ownership and conservation; existing NPCMarketService.buy must stay NPC-only | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05b | Trusted `PlayerGateway.offers`, `supplies`, and `buy`: only local public quote, own initialized balances, bounded quantity/price, no in-transit exchange, exact revision and dedup ID | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05c | Add a small finite bread-and-copper test market to disposable seven-NPC fixture, clearly marked as demo setup; `offers/supplies/buy` in both temporary and restartable CLIs | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05d | Integration/adversarial NPC and player tests: Basim/Salma seller/local witness, Nora/Huda remote isolation, inventory conservation, price bait, stock depletion, busy/stale/travel/duplicate/replay/reopen | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-05e | Windows guide: identify distinct entity-owned resources vs unimplemented RPG inventory; exact CI matrix on final code SHA and no parent-phase premature closure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+
+**Security:** A purchased resource is real on `state.resources[carlos]`, NOT
+yet `rpg_profiles[carlos].inventory`. No user-supplied actor identity on
+PlayerGateway buys, no unofficial HTTP client exposure; NPCMarketService
+must not gain the right to purchase as a human. A trade cannot be remote
+or during physical travel, needs a present/unoccupied real seller and
+initialized buyer pay/goods balances. Any input failure or stale
+command rejects without changing state. No schema migration, main merge,
+original story import, medical symptom producer, automatic currency minting,
+production P0 authorization or background play. Full GitHub Actions
+Python 3.10 + 3.13 required at exact code SHA to close tasks.
+
+## PLAY-05 — verified technical closure of Carlos's finite market purchases (2026-11-07)
+
+All five owner-approved tasks `PLAY-05a`–`PLAY-05e`
+**CLOSED_TECHNICALLY** at exact code SHA
+`d3e90f68f68b5a376bf976a866649ac6e1ca12f8`.
+GitHub Actions [run 42329804953](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42329804953):
+**1,262 passed on Python 3.10 and 1,262 passed on Python 3.13**,
+both jobs SUCCESS including all historic parity and regression gates.
+
+- PLAY-05a: `MarketTradeExecuted` now supports a human-controlled buyer
+  only when physically present, not in transit and backed by an exact
+  authorized local purchase. All offers remain NPC-posted and backed by
+  finite real owner stock; ledger validation permits real player buyers
+  without weakening transfer conservation. `NPCMarketService.buy` is
+  explicitly still NPC-only; human orders go through `PlayerGateway`.
+- PLAY-05b: new `PlayerGateway.supplies`, `offers` and `buy` project
+  only Carlos's known owned resource balances, actionable **local**
+  public quotes, and trusted price-locked transactions. Exact revisions,
+  bounded inputs and durable command IDs reject double spends or stale
+  orders. `player_handoff` now includes bounded `player_supplies`
+  with the same revision, not an NPC's wallet or secret inventory.
+- PLAY-05c: **opt-in disposable** `setup_living_market_world` adds Salma
+  with 3 own bread, 0 copper, Carlos with 10 copper, 0 bread and an
+  NPC-posted 2-copper bread quote. In-world trade conserves exactly
+  3 loaves and 10 copper; the original bare seven-NPC fixture remains
+  unchanged. Both living CLI variants implement `offers`, `supplies`
+  and `buy` with a checkpoint only after successful mutations.
+- PLAY-05d: independent NPC/player tests exercise Salma busy, Basim
+  co-location, Nora/Huda/Omar/Layla remote secrecy, invalid or changed
+  price/quantity, overselling, denied NPC-service impersonation,
+  no untrusted event capability, player travel, stale revision,
+  repeated request IDs, SQLite snapshot/reopen and real two-process
+  CLI stop/resume. All pass on the accepted code SHA.
+- PLAY-05e: Windows tutorial and strict ownership distinction documented
+  in [PLAYABLE_BATCH_05_MARKET.md](PLAYABLE_BATCH_05_MARKET.md).
+  Earlier intermediary CI had a **test-only** failure expecting
+  a Python dict repr in the CLI receipt instead of `total_paid: 4`;
+  fixed in the exact green SHA and no accounting bug established.
+
+**Limits remain:** `state.resources[carlos]` is a resource owner ledger,
+not the unimplemented RPG `inventory` or `equipment`. Do not
+fabricate combat, food consumption by player, experience points, items
+or money outside initialized source/atomic transfers.
+`03-A7c` and parent `03-A` remain OPEN, physical medical sign source
+blocked, `P0_PRODUCTION_NOT_APPROVED`,
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER`. No Schema/Rules bump,
+canonical story mutation, `main` merge, remote API or unattended play.
+This closure documentation commit is subsequent to the accepted green
+code SHA and may have its own CI run.
+
+## PLAY-06 — Player-owned market receipts (2026-11-07)
+
+**Analysis before implementation:** PLAY-05's existing MarketTradeExecuted
+ledger persists real trades with trusted buyer identity, price and resource
+conservation. A bounded read-only projection makes Carlos's own purchases
+visible across travel, save/reopen and narrator handoff. This does not depend
+on the blocked medical observation producer or production P0.
+
+| Task | Dependency and scope | Route | State |
+|---|---|---|---|
+| PLAY-06a | PLAY-05 green SHA; player-only bounded receipts | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06b | PLAY-06a; coherent handoff includes five own receipts | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06c | PLAY-06a; temporary/restartable CLI purchases command | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06d | PLAY-06a–c; Basim trade privacy, Carlos travel/duplicate, readonly, adversarial limits, replay/reopen, CLI tests | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-06e | PLAY-06a–d; guide, final SHA/dual-Python CI and technical closure | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+
+**Acceptance:** exact final code SHA must pass full Python 3.10/3.13 matrix.
+Do not expose other buyers, NPC balance ledgers or private before/after
+numbers; don't create resources, read-side events or checkpoints. No
+schema/rules bump, original story change or main merge. 03-A7c/03-A, P0 and
+independent-review gates remain open. Don't declare closure without CI proof.
+
+Verification branch: simulation-engine-phase-play-06-receipts (triggers the
+full matrix on push). This task remains open until its exact run is checked.
+
+### PLAY-06 technical closure (2026-11-07)
+
+All five tasks PLAY-06a–PLAY-06e are CLOSED_TECHNICALLY.
+The full dual-Python suite passed on **exact code-and-test SHA**
+25fdbf5e30dd23f0471d4287cfa7585a47484545 in
+[Actions run 42352820512](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42352820512):
+**1,270 passed on Python 3.10** and **1,270 passed on Python 3.13**.
+Both matrix jobs ended in SUCCESS, with compileall, regression, parity,
+historic baselines, SQLite/replay and scenario smoke checks green.
+
+Eight additional PLAY-06 tests include real Basim NPC buying before Carlos,
+private receipt filtering, fraud rejection, player travel visibility, no
+read-side mutation, mixed-revision handoff detection, SQLite snapshot/reopen,
+temporary CLI, and checkpoint-preserving two-process resumable CLI.
+
+The history carries **only owned player receipts** (up to 20, most recent
+five in handoff); it neither fabricates goods nor exposes the full NPC market
+ledger. Schema 32 / Rules 42 unchanged. This documentation-only closure
+commit follows the tested SHA and is not a claim of new post-commit CI.
+Parent 03-A/03-A7c still OPEN, external review deferred, production P0
+unapproved, and main/original story untouched.
+
+## PLAY-07 — Player-to-NPC finite gifts and independently chosen receipt (2026-11-07)
+
+**Preimplementation analysis:** A market trade already conserves finite resources,
+but NPC assistance is NPC-to-NPC and a social `offer_help` is only speech, not
+a transfer. Therefore using either as a player gift would misstate ownership.
+A new `PlayerGiftDelivered` reducer and dedicated durable gift_authorized
+command capability are required, with Schema 33 / Rules 43 explicit versioning.
+A nearby NPC's existing deterministic acceptance of help offers controls
+whether the gift can complete; no automatic gratitude, hunger relief or RPG XP.
+This batch depends on PLAY-06 green SHA and is independent of 03-A7c/P0.
+
+| Task | Scope and prerequisites | Route | Status |
+|---|---|---|---|
+| PLAY-07a | New atomic conserved gift event, separate recorded authorization and replay; based on PLAY-06 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07b | Trusted player-bound give command with exact revision and dedup ID; depends on 07a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07c | CLI give in temporary/restartable village; depends on 07b | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07d | NPC behavior, privacy, attempts/forgery, conservation, duplicate, route/time and snapshot/reopen CLI tests; 07a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-07e | Windows guide and exact full dual-Python CI closure; depends on 07d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+
+**Security/validation gates:** Python 3.10 and 3.13 full CI on final code SHA,
+fixed balances for donor/recipient, deny NPC impersonation and unauthorized
+replay, no hidden NPC inventory exposed and no new arbitrary legal authority.
+Gift transfer is a deliberate player action only, never an automatic hunger
+or medical cure. P0 production remains NOT_APPROVED; independent review deferred;
+03-A7c and parent 03-A remain OPEN. Do not merge to main.
+
+### PLAY-07 verified technical closure (2026-11-07)
+
+PLAY-07a–PLAY-07e all **CLOSED_TECHNICALLY** against exact final
+code-and-tests SHA `989cee8d21c4e91c917fb2d68b788cfd778bd0f4`.
+[GitHub Actions run 42354191763](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42354191763)
+is **SUCCESS** with **1,293 passed on Python 3.10** and
+**1,293 passed on Python 3.13**. Both jobs also passed all existing smoke,
+compatibility/parity, historical saved-world rejection and replay checks.
+
+The first completed trial exposed 18 *test/CI-only outdated current-version
+pins* (32/42); after investigating the precise failures, 22 targeted updates
+in 16 tests/workflow files synchronized the active expected version to
+Schema 33 / Rules 43 while retaining historical frozen-version assertions.
+The final green SHA above is authoritative; earlier red SHA runs were not used
+as proof. Dedicated SQLite gift authorization survives replay, rejected/remote
+NPC gifts do not create resources, duplicates and stale commands are blocked,
+and all original market/survival assertions remain green.
+
+**Not approved for production:** P0_PRODUCTION_NOT_APPROVED.
+**External review:** EXTERNAL_REVIEW_DEFERRED_BY_OWNER.
+**Parent injuries:** 03-A7c and 03-A still OPEN; neither closed by this batch.
+No main merge, original story mutation, player combat or player hunger logic.
+This docs-only closure commit follows the verified test SHA and is not a
+new code test result.
+
+
+## PLAY-08 — Verified player gift history (planned 2026-11-07)
+
+**Analysis before implementation:** PLAY-07 reliably transfers finite goods
+and records an authorized \`PlayerGiftDelivered\` event, but the player cannot
+review past delivered gifts after leaving the village. Unlike NPC gossip or
+unaccepted offers, the player's own accepted gifts are firsthand history.
+A bounded read-only projection of verified events requires no new schema or
+event type and is independent of the open 03-A7c physical injury source.
+
+| Task | Scope / dependency | Route | State |
+|---|---|---|---|
+| PLAY-08a | Verified event-only own gift receipts, max 20, newest-first; PLAY-07 | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08b | Five owned receipts in revision-coherent narrator handoff; PLAY-08a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08c | Read-only \`gifts\` in temporary and resumable CLIs; PLAY-08a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08d | Tests for Basim/Nora/Salma privacy, rejected gifts, duplicate, tamper, SQLite reopen, two CLIs; PLAY-08a-c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-08e | Player guide, dual-Python exact-SHA CI and closure report; PLAY-08a-d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+
+Security: only accepted events by the bound actual player, no internal NPC
+balances or private state; no read-side command, checkpoint or time advancement.
+A failed event integrity verification must fail closed. Schema 33 / Rules 43
+unchanged. No \`main\` merge, canonical story modification, automatic NPC
+gratitude, or production P0 authorization. Pending GitHub Actions verification
+on Python 3.10 and 3.13; do not claim task closure yet.
+
+### PLAY-08 verified technical closure (2026-11-07)
+
+**PLAY-08a–PLAY-08e CLOSED_TECHNICALLY** at final code-and-test SHA
+`7308cff7409f959221f62782c4ddc3b6491054c0`.
+[GitHub Actions run 42355553139](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42355553139)
+completed SUCCESS: **1,303 passed on Python 3.10 and 1,303 passed on Python 3.13**,
+including all existing compatibility, replay, smoke and historical gates.
+Ten additional PLAY-08 tests cover bounded empty history, exact delivered gifts,
+same-tick receipts, failed/duplicate/travel attempts, player-bound identity,
+revision-coherent handoff, event tamper rejection, SQLite snapshot/reopen,
+and temporary plus two-process resumable CLI behavior.
+
+An initial CI run on `fdc10e46` failed on a **CLI indentation syntax error**.
+This was fixed on the exact verified SHA above; no earlier failing run was
+used as closure evidence. Read-only gifts do not mutate the world, create
+resources, add medical facts, or interpret NPC gratitude. Schema 33 and Rules
+43 unchanged, no new migration or outside authorization.
+
+This documentation-only technical-closure commit succeeds the verified code SHA
+and must not be described as having passed the cited earlier CI itself.
+`03-A7c` and `03-A` remain OPEN; `P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain. No change to `main` or
+canonical Carlos story files.
+
+
+## PLAY-09 — Real player-to-NPC conversation journal (planned 2026-11-07)
+
+**Analysis before implementation:** The player's local social speech and
+NPC's deterministic recorded reaction already form a durable social-message
+ledger. The narrator currently receives no read-only history of those
+conversations, so it risks inventing dialogue continuity after travel or
+restart. A verified, player-bound event projection is independent of the
+blocked 03-A7c medical symptom source and requires no schema/rules change.
+
+| Task | Scope and dependency | Route | Status |
+|---|---|---|---|
+| PLAY-09a | Player-owned, received-only conversation history, ordered by event sequence, max 20; PLAY-08 green | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09b | Revision-consistent narrator handoff: last five authentic conversations; PLAY-09a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09c | \`conversations\` read-only command on both disposable CLIs; PLAY-09a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09d | NPC privacy/independent reactions/invalid attempts/duplicates/travel/tamper/reopen and CLI tests; PLAY-09a-c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-09e | Guide and exact-SHA dual-Python full CI technical closure; PLAY-09d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+
+**Guardrails:** No invented NPC dialogue or objective trust report; only
+the player's own authored text and proven reaction categories. No raw NPC
+message ledger, hidden NPC motives, hearsay reclassification, speculative
+knowledge, new world events or read-side checkpoints. State.revision must
+match verified replay; store gate remains local and trusted (P0 OPEN).
+Schema 33 / Rules 43, 03-A7c/03-A OPEN, external review deferred.
+No \`main\` merge or canonical story modifications. Dual-Python CI verified on the exact code SHA below.
+
+### PLAY-09 verified technical closure (2026-11-07)
+
+All five tasks PLAY-09a–PLAY-09e are **CLOSED_TECHNICALLY** at the exact
+code-and-test SHA `40ea48770e5daec6cb81ce406a302dd0f0fd6dd9`.
+[GitHub Actions 42356386832](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/42356386832)
+concluded **SUCCESS**: **1,316 passed on Python 3.10** and **1,316 passed
+on Python 3.13**, including the comprehensive historical parity, replay,
+saved-world compatibility, CLI smoke and integration gates.
+
+Thirteen new PLAY-09 tests cover Basim/Salma/Adel recorded reactions; remote
+Nora/Huda/Omar/Layla isolation; duplicates, invalid speech, same-tick order,
+stale/mixed-revision handoff rejection, command privacy, travel, tamper
+rejection, SQLite snapshot/reopen, and both temporary/resumable real CLIs.
+
+Only player-authored delivered text and the NPC's recorded response **category**
+are exposed. No NPC dialogue is fabricated; no NPC private trust, hidden
+motives, third-party messages, resources or game-world time change due to
+reading history. Schema 33 / Rules 43 unchanged, no migrations.
+
+The documentation-only closure commit follows the **verified code SHA** and
+is not represented by the same CI check. Phase 03-A7c/03-A remain OPEN;
+`P0_PRODUCTION_NOT_APPROVED` and
+`EXTERNAL_REVIEW_DEFERRED_BY_OWNER` remain unchanged. No `main` merge
+or canonical story changes.
+
+
+## PLAY-10 — Player asks NPC about an evidenced food location (planned 2026-11-07)
+
+**Analysis before implementation:** PLAY-09 records actual social speech, while
+01-T/01-X already provide NPC-local food observations and replay-safe player
+hearsay. A trusted one-command interaction can combine the existing
+\`request_help\` reaction with an NPC's own evidenced belief, *only when* the
+character's independent response is \`considered\`. This does not invent
+dialogue, update medical observation contracts, or depend on P0 production.
+A finite test-only food fixture creates observable evidence, not free player food.
+
+| Task | Scope / dependency | Route | Status |
+|---|---|---|---|
+| PLAY-10a | Atomic player question and conditional NPC response using existing social + hearsay events; PLAY-09 green | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10b | Seed truly initialized local \`wild_food\` and valid Basim/Omar sightings in isolated market demo only; 10a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10c | \`askfood <npc> <site>\` in disposable temporary and resumable CLI; 10a | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10d | NPC independent choices, privacy, nonexistent/remote/unknown claims, dedup, forged hearing, replay and save tests; 10a–c | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+| PLAY-10e | Guide, full exact-SHA Python 3.10 + 3.13 matrix and closure; 10a–d | CHAT_EXECUTABLE | CLOSED_TECHNICALLY |
+
+**Security/causality:** A valid site name alone provides zero world truth.
+NPC's own known fact, proper direct or non-instantly re-shared source, and
+pre-request willingness must all hold. No change to schema 33/rules 43,
+no RPG inventory/XP, no narrator omniscience, no hidden needs/trust exposed,
+no time advance from speech, no main/story edits. Open 03-A7c/03-A,
+P0_PRODUCTION_NOT_APPROVED and EXTERNAL_REVIEW_DEFERRED_BY_OWNER remain.
+All tasks require exact final code SHA dual-Python CI before technical closure.
 
 ### PLAY-10 verified technical closure (2026-11-07)
 
