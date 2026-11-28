@@ -384,6 +384,8 @@ def validate_production_state(state: dict[str, Any]) -> None:
                      or state["entities"][player_worker]["controller"] != "player")):
             raise ValueError("persisted player work contract has no matching player")
     busy: set[str] = set()
+    running_action_npcs: set[str] | None = None
+    traveling_npcs: set[str] | None = None
     reservation_count: dict[tuple[str, str], int] = {}
     for ident, job in jobs.items():
         if not _valid_name(ident, MAX_ID) or not isinstance(job, dict):
@@ -465,11 +467,21 @@ def validate_production_state(state: dict[str, Any]) -> None:
                     or job["finished_at"] is not None
                     or job["output_before"] is not None
                     or job["output_after"] is not None
-                    or state["entities"][who]["location_id"] != job["site_id"]
-                    or any(a["npc_id"] == who and a["status"] == "running"
-                           for a in state["actions"].values())
-                    or any(t["npc_id"] == who and t["status"] == "traveling"
-                           for t in state["travels"].values())):
+                    or state["entities"][who]["location_id"] != job["site_id"]):
+                raise ValueError("production worker busy elsewhere or job overdue")
+            if running_action_npcs is None:
+                running_action_npcs = {
+                    action["npc_id"] for action in state["actions"].values()
+                    if action["status"] == "running"
+                }
+            if who in running_action_npcs:
+                raise ValueError("production worker busy elsewhere or job overdue")
+            if traveling_npcs is None:
+                traveling_npcs = {
+                    travel["npc_id"] for travel in state["travels"].values()
+                    if travel["status"] == "traveling"
+                }
+            if who in traveling_npcs:
                 raise ValueError("production worker busy elsewhere or job overdue")
             busy.add(who)
             sid = _sid(ident)

@@ -164,6 +164,51 @@ def test_corrupted_recipe_job_or_schedule_snapshot_is_rejected(tmp_path):
         assert db.load("test").to_dict() == initial.to_dict()
 
 
+@pytest.mark.parametrize("busy_kind", ("action", "travel"))
+def test_running_production_rejects_worker_with_concurrent_action_or_travel(
+        tmp_path, busy_kind):
+    with SQLiteEventStore(tmp_path / f"busy-{busy_kind}.sqlite") as db:
+        setup(db, routes=busy_kind == "travel")
+        clock = TimeEngine(db)
+        clock.open_session("test")
+        start(db, clock, "basim", "batch")
+        initial = db.load("test")
+        damaged = initial.to_dict()
+        order = damaged["next_schedule_order"]
+
+        if busy_kind == "action":
+            ident = "parallel"
+            schedule_id = f"npc-action:{ident}"
+            due = 180
+            damaged["actions"][ident] = {
+                "npc_id": "basim", "action": "work", "start": 0,
+                "due": due, "schedule_id": schedule_id, "status": "running",
+                "result": None, "completed_at": None,
+            }
+            payload = {"__npc_action_id": ident}
+        else:
+            ident = "parallel"
+            schedule_id = f"npc-travel:{ident}"
+            due = 50
+            damaged["travels"][ident] = {
+                "npc_id": "basim", "route_id": "bakery-square",
+                "origin": "bakery", "destination": "square", "start": 0,
+                "due": due, "schedule_id": schedule_id, "status": "traveling",
+                "arrived_at": None,
+            }
+            payload = {"__npc_travel_id": ident}
+
+        damaged["scheduled"][schedule_id] = {
+            "due": due, "order": order, "kind": "signal",
+            "payload": payload, "interrupt": False,
+        }
+        damaged["next_schedule_order"] = order + 1
+
+        with pytest.raises(ValueError, match="production worker busy elsewhere"):
+            WorldState.from_dict(damaged)
+        assert db.verify("test").to_dict() == initial.to_dict()
+
+
 def test_split_time_vs_lumped_time_same_product_and_job_ledger(tmp_path):
     results = []
     for name, waits in (("one", (90,)), ("split", (20, 30, 40))):
