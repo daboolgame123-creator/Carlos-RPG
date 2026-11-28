@@ -1,9 +1,10 @@
 # أحدث تسليم — تحليل PERF-02 لكلفة نسخ إسقاطات العالم (28 نوفمبر 2026)
 
 بدأت المهمة على فرع مستقل `perf/carlos-projection-copy-analysis-20261128` من رأس
-`19f9573`. هذا تسليم **تحليل فقط**؛ لم تتغير الشيفرة أو Schema/Rules أو بيانات
-العالم. فحص GitHub أكد `main` عند `25059fa63a35034b5d3c3fc46efef8c45750004d`
-وPR #185 مسودة مفتوحة عند `416e26b6c037b2fc504c8454d9b607aadeee7eba`.
+`19f9573`. هذا تسليم تحليل وأداة تشخيص اختيارية؛ لم تتغير شيفرة المحرك أو
+Schema/Rules أو بيانات العالم. فحص GitHub أكد `main` عند
+`25059fa63a35034b5d3c3fc46efef8c45750004d` وPR #185 مسودة مفتوحة عند
+`416e26b6c037b2fc504c8454d9b607aadeee7eba`.
 
 قورنت cProfile لقياسي 32 NPC/900 ثانية قبل وبعد PERF-01: استدعاءات `_thaw`
 ثابتة عند **23,854,618**، وزمنه التراكمي 12.488→12.523s؛ `WorldState.to_dict`
@@ -13,14 +14,14 @@
 ScheduledEventFired (120)، ScheduledEventCreated (112)، NPCDecisionRecorded
 (96)، وNPCActionStarted (96) كأنواع متكررة.
 
-اكتمل تدقيق حمولات `ScheduledEventFired` العشر: كل حمولة صحيحة تختار فرعًا واحدًا،
-لكن الكتابات المساعدة قد تمتد لعدة خرائط، وتعمل كل مدققات `_decode_checked` كاملة
-بعد الحدث. مصالحة الحيازة قد تضيف كتابة أخرى عند تفعيل lots. القرار
-`ANALYSIS_COMPLETE / GENERAL_COW_NO_GO / IMPLEMENTATION_NOT_STARTED`: لا ننفذ
-copy-on-write عامًا كتغيير موضعي؛ لم يفصل القياس كلفة النسخ عن المدققات بما يبرر
-المخاطر. لم تتغير الشيفرة أو Schema/Rules أو بيانات العالم. **الخطوة التالية:**
-benchmark تشخيصي يعزل تكلفة بناء الإسقاط وكل validator ومصالحة الحيازة، مع بصمات
-مطابقة ودون إضافة حدود زمنية إلى pytest. راجع [تقرير PERF-02](../../engineering/PROJECTION_COPY_PERFORMANCE_ANALYSIS_2026-11-28.md)
+اكتمل تدقيق الحمولات العشر لـ`ScheduledEventFired` والقياس التشخيصي لكل validators
+على 4–32 NPC. تطابقت بصمات السجل والحالة وأعداد الأحداث مع المعيار العادي؛ تصدرت
+`validate_production_state` ثم `validate_market` ثم `validate_npc_state`. المعيار لا
+يفعل lots، لذا مصالحة الحيازة غير مقاسة. الحالة
+`DIAGNOSTIC_COMPLETE / GENERAL_COW_NO_GO / ENGINE_CODE_UNCHANGED`. **الخطوة التالية:**
+قياس فهرسة محلية لتجنب إعادة مسح `actions` و`travels` لكل وظيفة جارية في
+`validate_production_state`، مع اختبارات رفض التزامن قبل تقرير التنفيذ. الأداة
+والتفاصيل في [تقرير PERF-02](../../engineering/PROJECTION_COPY_PERFORMANCE_ANALYSIS_2026-11-28.md)
 و[قائمة العمل](WORK_QUEUE.md).
 
 ---
