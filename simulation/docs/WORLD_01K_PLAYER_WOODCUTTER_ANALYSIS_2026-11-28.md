@@ -70,3 +70,17 @@
 - لا يضيف نظام اختيار مهنة أو قاموس مهن؛ ذلك CAREER-01 بعد إغلاق هذه الدورة.
 - الاختبار لا يضمن توفر اختبار SQLite الأصلي طويل المدى؛ يسجل أي تجاوز تاريخي
   كما هو ولا يصفه بالنجاح.
+
+## نتائج التحقق — 28 نوفمبر 2026
+
+- الاختبار الجديد: **1/1 في 0.67s** على Python 3.12.14.
+- عقد الخباز مع WORLD-01j: **8/8 في 8.29s** على Python 3.12.14.
+- `git diff --check` ناجح.
+- الكود والاختبار على SHA `dd821768d7b7df1728b338e24c0821f7fc15329b` اجتازا
+  [Simulation regression #46125619450](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46125619450):
+  **1963 passed, 1 skipped** على كل من Python 3.10 و3.13، و90/90 خطوة ناجحة لكل وظيفة.
+- [NEEDS/browser workflow #46125619433](https://github.com/daboolgame123-creator/Carlos-RPG/actions/runs/46125619433)
+  نجح على Linux 3.10/3.13 وWindows 3.13. لم يُدمج أي PR.
+
+الحالة `CLOSED_TECHNICALLY / EXACT_SHA_FULL_CI_PASS`. هذا يخص الدورة التجريبية
+فقط؛ لا يعني اعتماد حفظ إنتاجي أو إغلاق P0 أو دمج PR.
