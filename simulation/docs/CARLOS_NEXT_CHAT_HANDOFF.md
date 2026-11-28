@@ -13,16 +13,15 @@
 ScheduledEventFired (120)، ScheduledEventCreated (112)، NPCDecisionRecorded
 (96)، وNPCActionStarted (96) كأنواع متكررة.
 
-المرشح عالي المخاطر هو مشاركة بنيوية/نسخ عند الكتابة داخل مسار reducer. لا تنفيذ
-قبل تدقيق مجموعات الكتابة متعددة الخرائط، مع إبقاء `to_dict()` نسخة مستقلة وكل
-مدققات `_decode_checked` كاملة. معايير العزل والذرية والحتمية والقبول الأدائي
-المقترحة في [تحليل PERF-02](../../engineering/PROJECTION_COPY_PERFORMANCE_ANALYSIS_2026-11-28.md).
-
-الحالة `ANALYSIS_COMPLETE / IMPLEMENTATION_NOT_STARTED`. أُنجزت مراجعة أولية
-للأحداث الخمسة الأعلى تكرارًا؛ تبين أن `ScheduledEventFired` ديناميكي وأن المدققات
-تقرأ خرائط خارج مجموعة الكتابة. **الخطوة التالية:** استكمال خريطة الفروع المجدولة
-والمدققات قبل قرار go/no-go؛ لا يبدأ الكود ولا تخفف المدققات أو العزل. راجع
-[قائمة العمل](WORK_QUEUE.md).
+اكتمل تدقيق حمولات `ScheduledEventFired` العشر: كل حمولة صحيحة تختار فرعًا واحدًا،
+لكن الكتابات المساعدة قد تمتد لعدة خرائط، وتعمل كل مدققات `_decode_checked` كاملة
+بعد الحدث. مصالحة الحيازة قد تضيف كتابة أخرى عند تفعيل lots. القرار
+`ANALYSIS_COMPLETE / GENERAL_COW_NO_GO / IMPLEMENTATION_NOT_STARTED`: لا ننفذ
+copy-on-write عامًا كتغيير موضعي؛ لم يفصل القياس كلفة النسخ عن المدققات بما يبرر
+المخاطر. لم تتغير الشيفرة أو Schema/Rules أو بيانات العالم. **الخطوة التالية:**
+benchmark تشخيصي يعزل تكلفة بناء الإسقاط وكل validator ومصالحة الحيازة، مع بصمات
+مطابقة ودون إضافة حدود زمنية إلى pytest. راجع [تقرير PERF-02](../../engineering/PROJECTION_COPY_PERFORMANCE_ANALYSIS_2026-11-28.md)
+و[قائمة العمل](WORK_QUEUE.md).
 
 ---
 
