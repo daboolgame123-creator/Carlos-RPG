@@ -25,8 +25,8 @@ def player_gift_receipts(store: SQLiteEventStore, state: WorldState,
     total = 0
     # DESC seq is the durable order, even when several gifts share one tick.
     for (raw,) in store.db.execute(
-            "SELECT payload FROM events WHERE world_id=? ORDER BY seq DESC",
-            (state.world_id,)):
+            "SELECT payload FROM events WHERE world_id=? AND seq<=? ORDER BY seq DESC",
+            (state.world_id, state.revision)):
         obj = json.loads(raw)
         if (obj.get("event_type") != "PlayerGiftDelivered"
                 or obj.get("actor_id") != player_id):

@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 
 SCHEMA_VERSION = 46
-RULES_VERSION = 72
+RULES_VERSION = 73
 
 
 def _thaw(value: Any) -> Any:
@@ -33,10 +33,20 @@ def _thaw(value: Any) -> Any:
 
 
 def _freeze(value: Any) -> Any:
-    if isinstance(value, dict):
+    # Normalized projections contain many scalar leaves. Return exact JSON
+    # primitives before the slower container checks used for custom inputs.
+    typ = type(value)
+    if typ in (str, int, float, bool) or value is None:
+        return value
+    if typ is dict:
         # Match the deterministic key order produced by the previous
         # json.dumps(sort_keys=True) + json.loads snapshot normalization,
         # including in the fast internal event-projection path.
+        return MappingProxyType({k: _freeze(value[k]) for k in sorted(value)})
+    if typ is list:
+        return tuple(_freeze(v) for v in value)
+    # Preserve support for dict/list subclasses at private callers too.
+    if isinstance(value, dict):
         return MappingProxyType({k: _freeze(value[k]) for k in sorted(value)})
     if isinstance(value, list):
         return tuple(_freeze(v) for v in value)

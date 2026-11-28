@@ -84,8 +84,8 @@ def recall_player_events(store: SQLiteEventStore, state: WorldState,
     witnessed: list[dict[str, Any]] = []
     pending_witness: tuple[str, DomainEvent] | None = None
     rows = store.db.execute(
-        'SELECT payload, command_id FROM events WHERE world_id=? ORDER BY seq',
-        (state.world_id,))
+        'SELECT payload, command_id FROM events WHERE world_id=? AND seq<=? ORDER BY seq',
+        (state.world_id, state.revision))
     for raw, command_id in rows:
         obj = json.loads(raw)
         if obj.get('event_type') not in ('PlayerObserved', 'PlayerHearsayReceived',

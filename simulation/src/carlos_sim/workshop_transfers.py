@@ -1,8 +1,8 @@
-"""PLAY-43: atomic, locally authorized NPC-owned input deposit into a workshop.
+"""PLAY-43/WORLD-01b: atomic, local delivery of owned inputs to a workshop.
 
-A generic sale gives the NPC a physical commodity, NOT instant workshop stock.
-The worker has to bring their own material to the proper recipe site, then
-deposit it with an event audited alongside purchases and production jobs.
+A market purchase gives a worker a physical commodity, NOT instant workshop
+stock. A qualified NPC or the player named by a signed recipe must bring their
+own material to that recipe's site and deposit it as a recorded event.
 
 No untracked inventory mutations, credit, minting or site-to-site teleport.
 The existing command log and EventStore enforce idempotency and replay.
@@ -25,8 +25,8 @@ def deposit_workshop_material(
     """One event debits owned carried material and credits local shop stock."""
     payload = event.data
     if (not authorized or set(payload) != {"site_id", "resource", "quantity"}
-            or event.actor_id is None or event.actor_id not in state["npcs"]):
-        raise ValueError("workshop deposit requires trusted real NPC and exact fields")
+            or event.actor_id is None):
+        raise ValueError("workshop deposit requires a trusted worker and exact fields")
     who, site, item, amount = (
         event.actor_id, payload["site_id"], payload["resource"],
         payload["quantity"],
@@ -36,16 +36,39 @@ def deposit_workshop_material(
             or item == MONEY or item in FORBIDDEN or
             type(amount) is not int or not 1 <= amount <= MAX_BATCH):
         raise ValueError("invalid workshop material, worksite or bounded quantity")
-    if not _present(state, who, site):
+    entity = state["entities"].get(who)
+    if entity is None or entity["location_id"] != site:
         raise ValueError("material depositor must be physically at the site and free")
-    if state["entities"][who]["controller"] != "npc":
-        raise ValueError("depositor must be a true NPC")
+    if entity["controller"] == "npc":
+        if who not in state["npcs"] or not _present(state, who, site):
+            raise ValueError("NPC material depositor must be physically present and free")
+        eligible = lambda recipe: (
+            "player_worker_id" not in recipe
+            and recipe["role"] == state["npcs"][who]["role"]
+        )
+    elif entity["controller"] == "player":
+        from .movement import _in_transit
+        from .player_foraging import player_forage_signal
+        from .player_needs import player_rest_signal
+        from .production import is_producing
+
+        player_state = WorldState.from_dict(state)
+        busy_action = any(
+            action["npc_id"] == who and action["status"] == "running"
+            for action in state["actions"].values()
+        )
+        if (_in_transit(state, who) or is_producing(state, who) or busy_action
+                or player_forage_signal(player_state, who) is not None
+                or player_rest_signal(player_state, who) is not None):
+            raise ValueError("material depositor must be physically at the site and free")
+        eligible = lambda recipe: recipe.get("player_worker_id") == who
+    else:
+        raise ValueError("material depositor must be a player or real NPC")
     # The deposit must serve a recipe this worker can physically perform.
-    role = state["npcs"][who]["role"]
     if not any(
             recipe["site_id"] == site and any(
                 resource == item for resource, _ in recipe_inputs(recipe))
-            and recipe["role"] == role
+            and eligible(recipe)
             for recipe in state["production_recipes"].values()):
         raise ValueError("not a real local production input for this worker")
     personal = state["resources"].get(who, {})

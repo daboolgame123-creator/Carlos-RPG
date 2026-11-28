@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from carlos_sim import PlayerGateway
+from carlos_sim import PlayerGateway, SQLiteEventStore, TimeEngine
 from carlos_sim.player_gateway import PlayerCommandResult
 from carlos_sim.player_handoff import player_handoff
 from carlos_sim.resumable_play import ResumableTestSession
@@ -70,6 +70,35 @@ def test_multiple_same_tick_gifts_are_counted_not_deduplicated(tmp_path):
         assert gw.gifts(limit=1).details["total"] == 2
         assert_finite_market(db, player_bread=0, player_copper=6,
                              salma_bread=3, salma_copper=4)
+
+
+def test_gift_history_stops_at_the_verified_revision(tmp_path, monkeypatch):
+    db, clock, gw = village(tmp_path)
+    with db:
+        purchase(db, gw, "bread-before-read")
+        writer = SQLiteEventStore(tmp_path / "player-market.sqlite")
+        try:
+            writer_clock = TimeEngine(writer)
+            writer_clock.open_session(WORLD)
+            writer_gw = living_player_gateway(writer, writer_clock)
+            original_verify = db.verify
+
+            def verify_then_commit(world_id):
+                verified = original_verify(world_id)
+                writer_gw.give(
+                    "salma", "bread", 1, command_id="concurrent-gift",
+                    expected_revision=verified.revision,
+                )
+                return verified
+
+            monkeypatch.setattr(db, "verify", verify_then_commit)
+            # The committed gift lands after verification but before the
+            # history SELECT. It belongs to the next revision, not this view.
+            assert gw.gifts().details == {"total": 0, "recent": ()}
+            monkeypatch.setattr(db, "verify", original_verify)
+            assert gw.gifts().details["total"] == 1
+        finally:
+            writer.close()
 
 
 def test_rejections_duplicates_and_travel_do_not_add_gifts(tmp_path):

@@ -271,6 +271,8 @@ def validate_market(state: dict[str, Any]) -> None:
                 or not o["posted_at"] <= o["closed_at"] <= state["time"]):
             raise ValueError("market closure has no valid timestamp")
     sold: dict[str, int] = {}
+    eligible_sales_by_site: dict[str, list[int]] = {}
+    has_payroll_receipts = False
     for ident, t in trades.items():
         if (not _id(ident) or not isinstance(t, dict) or set(t) not in (TRADE_KEYS, TRADE_KEYS | {"steward_food_wage"})
                 or t["offer_id"] not in offers):
@@ -289,8 +291,7 @@ def validate_market(state: dict[str, Any]) -> None:
                 or not o["posted_at"] <= t["executed_at"] <= state["time"]):
             raise ValueError("invalid market trade identity, price or provenance")
         if "steward_food_wage" in t:
-            from .steward_food_payroll import validate_steward_food_wage_receipt
-            validate_steward_food_wage_receipt(state, t)
+            has_payroll_receipts = True
         numbers = [t[k] for k in TRADE_KEYS if k.endswith("_before") or k.endswith("_after")]
         if not all(_balance(n) for n in numbers):
             raise ValueError("market trade balances must be known and bounded")
@@ -299,7 +300,19 @@ def validate_market(state: dict[str, Any]) -> None:
                 or t["pay_source_before"] - t["pay_source_after"] != t["total_paid"]
                 or t["pay_target_after"] - t["pay_target_before"] != t["total_paid"]):
             raise ValueError("trade must conserve goods and currency without invention")
+        stall = stalls.get(t["site_id"])
+        if (stall is not None
+                and stall.get("food_wage_sales_required") == 2
+                and t["stock_owner_id"] == t["site_id"]
+                and t["seller_id"] == stall["keeper_id"]
+                and t["resource"] == "food"
+                and t["payment_resource"] == "coin_copper"
+                and t["total_paid"] >= 1):
+            eligible_sales_by_site.setdefault(t["site_id"], []).append(t["executed_at"])
         sold[t["offer_id"]] = sold.get(t["offer_id"], 0) + t["quantity"]
+    if has_payroll_receipts:
+        from .steward_food_payroll import validate_steward_food_wages
+        validate_steward_food_wages(state, eligible_sales_by_site)
     for ident, o in offers.items():
         if o["quantity"] - o["remaining"] != sold.get(ident, 0):
             raise ValueError("offer remaining is inconsistent with its actual sales")

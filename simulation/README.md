@@ -2,11 +2,18 @@
 
 ## Current development — 26 November 2026
 
-The current experimental player branch is `feature/carlos-engine-needs-20261126`,
-based on verified WEB-03. See the [whole-project review and ordered plan](docs/ENGINE_REVIEW_AND_PLAN_2026-11-26.md)
-and [live handoff](docs/CARLOS_NEXT_CHAT_HANDOFF.md). It adds genuine player hunger,
-food consumption and timed rest to the local Arabic browser (Schema46 / Rules72).
-Old45/71 saves are rejected unchanged; this is not a production migration.
+The engine work continues from PR #185's verified head `416e26b6` on separate
+local branches. READ-01 is followed by PLAY-LOOP on
+`feature/carlos-player-baker-20261126`. See the [whole-project review and ordered
+plan](docs/ENGINE_REVIEW_AND_PLAN_2026-11-26.md), [PLAY-LOOP analysis](docs/PLAY_LOOP_ANALYSIS_2026-11-26.md),
+and [live handoff](docs/CARLOS_NEXT_CHAT_HANDOFF.md). PLAY-LOOP adds one explicitly
+contracted player baking job using existing production, scheduled completion,
+funded wages and market/eating/rest commands (Schema46 / Rules73). Rules72 saves
+are rejected unchanged; there is no migration, story edit, PR update or `main` merge.
+Code/test commit `06d61da77c2df656cd5ac672bd4fd63f5557714b`: the focused work suite
+passes on Python 3.10/3.12/3.13; the full Python 3.13 suite passes **1942 tests
+(1 skipped)**. Python 3.10 full suite passed **1941 tests (1 skipped)** before the
+last focused test was added; all 7 work tests pass on its final code.
 
 From `simulation/`, start the disposable seven-NPC village:
 

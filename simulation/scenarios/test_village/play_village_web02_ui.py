@@ -529,6 +529,11 @@ def friendly_result(result: Any, command: str, before: Any, after: Any) -> str:
 
 def render_web02(gateway: Any, csrf: str, notice: str) -> bytes:
     """Read-only HTML presentation; every action remains an actual POST."""
+    with gateway.store.read_consistent(gateway.world_id):
+        return _render_web02_read(gateway, csrf, notice)
+
+
+def _render_web02_read(gateway: Any, csrf: str, notice: str) -> bytes:
     scene = gateway.inspect()
     supplies = gateway.supplies()
     status = gateway.status()

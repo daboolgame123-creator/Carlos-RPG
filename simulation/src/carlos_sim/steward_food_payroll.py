@@ -7,6 +7,7 @@ cargo, physical coin or the protected operating food unit. No salary until
 both the service and the physical local employer stock really exist.
 """
 from __future__ import annotations
+from bisect import bisect_right
 from typing import Any
 from .domain import DomainEvent, WorldState
 from .market import _id, _present, MAX_AMOUNT
@@ -112,8 +113,8 @@ def pay_steward_food_wage(state: dict[str, Any], event: DomainEvent, *,
     }
 
 
-def validate_steward_food_wage_receipt(state: dict[str, Any],
-                                        trade: dict[str, Any]) -> None:
+def _validate_steward_food_wage_receipt_shape(
+        state: dict[str, Any], trade: dict[str, Any]) -> tuple[str, int]:
     site, who = trade["site_id"], trade["seller_id"]
     stall = state["market_stalls"].get(site)
     wage = trade["steward_food_wage"]
@@ -134,16 +135,48 @@ def validate_steward_food_wage_receipt(state: dict[str, Any],
             or wage["site_before"] - wage["site_after"] != 1
             or wage["worker_after"] - wage["worker_before"] != 1):
         raise ValueError("steward wage must be a contracted, conserved local food receipt")
+
+    return site, wage["paid_at"]
+
+
+def validate_steward_food_wage_receipt(state: dict[str, Any],
+                                        trade: dict[str, Any]) -> None:
+    site, at = _validate_steward_food_wage_receipt_shape(state, trade)
     eligible, paid = _earned_sales(state, site)
     # Every persisted payment must be backed by two separately completed
     # authentic owner-food sales not later than that receipt's payment time.
     # A paid receipt can never backfill with future sales.
-    at = wage["paid_at"]
     paid_through = sum(1 for _, t in paid
                        if t["steward_food_wage"]["paid_at"] <= at)
     sold_through = sum(1 for _, t in eligible if t["executed_at"] <= at)
     if sold_through < PAYMENT_SALES * paid_through:
         raise ValueError("steward payroll exceeds completed sale service")
+
+
+def validate_steward_food_wages(
+        state: dict[str, Any], eligible_sales_by_site: dict[str, list[int]]) -> None:
+    """Validate all receipts using one timestamp index per contracted site.
+
+    ``eligible_sales_by_site`` is collected while ``validate_market`` already
+    walks its fully checked trade records. This preserves every per-receipt
+    funding check while avoiding a full market-history scan for each receipt.
+    """
+    trades = state.market_trades if isinstance(state, WorldState) else state["market_trades"]
+    paid_by_site: dict[str, list[int]] = {}
+    for trade in trades.values():
+        if "steward_food_wage" not in trade:
+            continue
+        site, at = _validate_steward_food_wage_receipt_shape(state, trade)
+        paid_by_site.setdefault(site, []).append(at)
+
+    for site, paid_times in paid_by_site.items():
+        sale_times = sorted(eligible_sales_by_site.get(site, ()))
+        paid_times.sort()
+        for at in paid_times:
+            sold_through = bisect_right(sale_times, at)
+            paid_through = bisect_right(paid_times, at)
+            if sold_through < PAYMENT_SALES * paid_through:
+                raise ValueError("steward payroll exceeds completed sale service")
 
 
 def choose_steward_earned_wage_quote_retirement(

@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from typing import Sequence
 from collections.abc import Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from .domain import WorldState, DomainEvent, apply_event, canonical, canonical_hash, SCHEMA_VERSION, RULES_VERSION
 
 class RevisionConflict(Exception): pass
@@ -24,6 +26,8 @@ class SQLiteEventStore:
     def __init__(self, path: str | Path):
         self.db = sqlite3.connect(str(path), isolation_level=None)
         self._active_worlds: set[str] = set()
+        self._read_projection = ContextVar(
+            f"carlos_sqlite_read_projection_{id(self)}", default=None)
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.execute("PRAGMA busy_timeout=5000")
         self.db.executescript("""
@@ -102,7 +106,54 @@ class SQLiteEventStore:
         except (ValueError, TypeError, json.JSONDecodeError) as exc:
             raise IntegrityError("invalid stored state") from exc
 
+    @contextmanager
+    def _read_transaction(self):
+        """Pin a consistent SQLite read view, reusing an enclosing transaction."""
+        if self.db.in_transaction:
+            yield
+            return
+        self.db.execute("BEGIN")
+        try:
+            yield
+            self.db.execute("COMMIT")
+        except BaseException:
+            if self.db.in_transaction:
+                self.db.execute("ROLLBACK")
+            raise
+
+    @contextmanager
+    def read_consistent(self, world_id: str):
+        """Verify one immutable event-derived projection for a short read request.
+
+        Repeated load/verify calls in the scope reuse this state. The SQLite
+        transaction stays open until the caller has finished projecting its
+        response, so head, snapshot and event-history queries see one database
+        revision. No state is cached after the scope exits.
+        """
+        active = self._read_projection.get()
+        if active is not None:
+            if active[0] != world_id:
+                raise ValueError("a consistent read scope is bound to one world")
+            yield active[1]
+            return
+        if self.db.in_transaction:
+            raise RuntimeError("cannot open a consistent read inside another transaction")
+        with self._read_transaction():
+            state = self.verify(world_id)
+            token = self._read_projection.set((world_id, state))
+            try:
+                yield state
+            finally:
+                self._read_projection.reset(token)
+
     def load(self, world_id: str, *, use_snapshot: bool = True) -> WorldState:
+        active = self._read_projection.get()
+        if active is not None and active[0] == world_id:
+            return active[1]
+        with self._read_transaction():
+            return self._load(world_id, use_snapshot=use_snapshot)
+
+    def _load(self, world_id: str, *, use_snapshot: bool) -> WorldState:
         row = self._world_row(world_id)
         state = self._decode_state(row[4], row[5])
         if state.world_id != world_id or state.revision != 0:
@@ -203,6 +254,8 @@ class SQLiteEventStore:
         Never expose this method or its bootstrap switch to untrusted callers.
         A future application authorization layer must guard the capability.
         """
+        if self._read_projection.get() is not None:
+            raise InvalidEvent("writes are forbidden inside a consistent read scope")
         if not isinstance(command_id,str) or not command_id or type(expected_revision) is not int or expected_revision < 0 or not events:
             raise ValueError("command ID, expected revision and nonempty event batch required")
         if type(bootstrap) is not bool or type(clock_authorized) is not bool or type(npc_authorized) is not bool or type(action_authorized) is not bool or type(movement_authorized) is not bool or type(social_authorized) is not bool or type(assistance_authorized) is not bool or type(consumption_authorized) is not bool or type(survival_authorized) is not bool or type(rpg_authorized) is not bool or type(production_authorized) is not bool or type(market_authorized) is not bool or type(loan_authorized) is not bool or type(taking_authorized) is not bool or type(claim_authorized) is not bool or type(complaint_authorized) is not bool or type(permission_authorized) is not bool or type(claim_transfer_authorized) is not bool or type(injury_authorized) is not bool or type(recovery_authorized) is not bool or type(gift_authorized) is not bool or type(agriculture_authorized) is not bool or type(supply_authorized) is not bool or type(hydrology_authorized) is not bool:
@@ -587,6 +640,8 @@ class SQLiteEventStore:
             raise
 
     def snapshot(self, world_id: str) -> WorldState:
+        if self._read_projection.get() is not None:
+            raise InvalidEvent("snapshots are forbidden inside a consistent read scope")
         self.db.execute("BEGIN IMMEDIATE")
         try:
             state = self.load(world_id)
@@ -600,11 +655,24 @@ class SQLiteEventStore:
 
     def verify(self, world_id: str) -> WorldState:
         """Rebuild from genesis and compare to the latest snapshot-based projection."""
-        full = self.load(world_id,use_snapshot=False)
-        quick = self.load(world_id)
-        if canonical_hash(full.to_dict()) != canonical_hash(quick.to_dict()):
-            raise IntegrityError("snapshot and full replay disagree")
-        return full
+        active = self._read_projection.get()
+        if active is not None and active[0] == world_id:
+            return active[1]
+        with self._read_transaction():
+            full = self.load(world_id, use_snapshot=False)
+            latest_snapshot = self.db.execute(
+                "SELECT 1 FROM snapshots WHERE world_id=? ORDER BY revision DESC LIMIT 1",
+                (world_id,),
+            ).fetchone()
+            # With no snapshot, load() has already rebuilt the world from the
+            # authoritative log. Replaying the same log a second time adds no
+            # integrity evidence.
+            if latest_snapshot is None:
+                return full
+            quick = self.load(world_id)
+            if canonical_hash(full.to_dict()) != canonical_hash(quick.to_dict()):
+                raise IntegrityError("snapshot and full replay disagree")
+            return full
 
     def player_view(self, world_id: str) -> dict:
         """Safe-by-default: do not publish entities, resources or hidden state.

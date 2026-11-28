@@ -8,8 +8,9 @@
 
 1. [SAVE_MIGRATION_PLAN.md](SAVE_MIGRATION_PLAN.md) — Migration صريح للحفظ مع مصادر إصدارات حقيقية، نسخة SQLite معزولة، توافق أحداث ومعانٍ، فشل آمن واختبارات استعادة.
 2. [CI_PERFORMANCE_PLAN.md](CI_PERFORMANCE_PLAN.md) — قياس أسباب البطء، فصل Feedback السريع عن Release gate، تحسين الأداء من Profiling، ثم مراجعة Workflows بدون إسقاط اختبارات.
-3. [سياسة التوافق الأصلية](../simulation/docs/SAVE_COMPATIBILITY_POLICY.md) و[EXTERNAL_VALIDATION_LEDGER.md](../simulation/docs/EXTERNAL_VALIDATION_LEDGER.md) هما مرجع الحفظ وP0؛ الخطتان لا تلغيان شروطهما.
-4. [WORK_QUEUE.md](../simulation/docs/WORK_QUEUE.md) و[ROADMAP.md](../simulation/docs/ROADMAP.md) للتطوير المرحلي. لا تُفسّر حالة قديمة فيهما بدل فحص GitHub/قرار إغلاق PLAY-47 الفعلي.
+3. [CI_PERFORMANCE_AUDIT_2026-11-27.md](CI_PERFORMANCE_AUDIT_2026-11-27.md) — نتائج أول قياس لزمن الاختبارات وقياسات التوسع، مع فجوات التدقيق والخطوة التجريبية التالية.
+4. [سياسة التوافق الأصلية](../simulation/docs/SAVE_COMPATIBILITY_POLICY.md) و[EXTERNAL_VALIDATION_LEDGER.md](../simulation/docs/EXTERNAL_VALIDATION_LEDGER.md) هما مرجع الحفظ وP0؛ الخطتان لا تلغيان شروطهما.
+5. [WORK_QUEUE.md](../simulation/docs/WORK_QUEUE.md) و[ROADMAP.md](../simulation/docs/ROADMAP.md) للتطوير المرحلي. لا تُفسّر حالة قديمة فيهما بدل فحص GitHub/قرار إغلاق PLAY-47 الفعلي.
 
 ## ترتيب التنفيذ المعتمد للتخطيط، لا التنفيذ
 

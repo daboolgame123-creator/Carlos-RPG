@@ -1,6 +1,8 @@
 """Phase 01-O: replay SQL batching must not weaken event-store integrity."""
 from __future__ import annotations
 
+import threading
+
 import pytest
 
 from carlos_sim import DomainEvent, SQLiteEventStore, TimeEngine
@@ -62,3 +64,62 @@ def test_missing_command_is_detected_by_left_join_replay(tmp_path):
                          ("test", "setup"))
         with pytest.raises(IntegrityError, match="command is missing"):
             store.load("test", use_snapshot=False)
+
+
+def test_load_keeps_one_sqlite_read_view_during_concurrent_append(tmp_path):
+    filename = tmp_path / "concurrent-read.sqlite"
+    with SQLiteEventStore(filename) as seed:
+        seed.create_world("test")
+
+    head_read = threading.Event()
+    writer_commit_attempt = threading.Event()
+    loaded: list[object] = []
+    errors: list[BaseException] = []
+
+    def read_world() -> None:
+        try:
+            with SQLiteEventStore(filename) as reader:
+                original_world_row = reader._world_row
+
+                def pause_after_head(world_id: str):
+                    row = original_world_row(world_id)
+                    head_read.set()
+                    assert writer_commit_attempt.wait(5)
+                    return row
+
+                reader._world_row = pause_after_head
+                loaded.append(reader.load("test"))
+        except BaseException as exc:  # surfaced in the owning test thread
+            errors.append(exc)
+
+    def append_time() -> None:
+        try:
+            assert head_read.wait(5)
+            with SQLiteEventStore(filename) as writer:
+                clock = TimeEngine(writer)
+                clock.open_session("test")
+
+                def trace_writer(sql: str) -> None:
+                    if sql.strip().upper() == "COMMIT":
+                        writer_commit_attempt.set()
+
+                writer.db.set_trace_callback(trace_writer)
+                clock.advance("test", seconds=60, command_id="writer-time",
+                              expected_revision=0)
+        except BaseException as exc:
+            errors.append(exc)
+
+    read_thread = threading.Thread(target=read_world)
+    write_thread = threading.Thread(target=append_time)
+    read_thread.start()
+    write_thread.start()
+    read_thread.join(10)
+    write_thread.join(10)
+    assert not read_thread.is_alive()
+    assert not write_thread.is_alive()
+    assert not errors
+    assert len(loaded) == 1
+    assert loaded[0].revision == 0
+    with SQLiteEventStore(filename) as store:
+        assert store.load("test").revision == 1
+        assert store.verify("test").revision == 1

@@ -72,8 +72,8 @@ def verify(predecessor: Path) -> dict:
     ).strip()
     if source_changes:
         raise ValueError("predecessor simulation source must be unchanged")
-    if (SCHEMA_VERSION, RULES_VERSION) != (46, 72):
-        raise AssertionError("candidate must use the explicit player-needs version")
+    if (SCHEMA_VERSION, RULES_VERSION) != (46, 73):
+        raise AssertionError("candidate must use the explicit player-work version")
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join((
         str(predecessor / "simulation" / "src"),
@@ -107,7 +107,7 @@ def verify(predecessor: Path) -> dict:
         return {
             "status": "AUTHENTIC_WEB03_SAVE_REJECTED_UNCHANGED",
             "predecessor_sha": actual_sha,
-            "source_version": [45, 71], "candidate_version": [46, 72],
+            "source_version": [45, 71], "candidate_version": [46, 73],
             "source_sha256": before,
             "source_time": original["time"],
             "source_revision": original["revision"],
